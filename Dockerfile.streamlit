@@ -1,0 +1,26 @@
+FROM python:3.12-slim
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    g++ \
+    make \
+ && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+
+COPY pyproject.toml ./
+# If your pyproject references a README, copy it for build-time metadata
+COPY README.md ./
+# Copy source tree for src-layout packaging
+COPY src/ /app/src/
+
+# Copy runtime config (prompts, configs)
+COPY config/ /app/config/
+
+RUN pip install --no-cache-dir -U pip \
+ && pip install --no-cache-dir . \
+ && pip install --no-cache-dir streamlit
+
+# or if streamlit script lives elsewhere:
+# COPY streamlit/ /app/streamlit/
+
+EXPOSE 8501
+CMD ["streamlit", "run", "src/polaris_rag/streamlit/polaris_interface.py", "--server.port=8501", "--server.address=0.0.0.0"]

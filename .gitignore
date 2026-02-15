@@ -1,0 +1,11 @@
+.venv/
+hf_cache/
+models/
+qdrant_data/
+qdrant_storage/
+persist/
+__pycache__/
+*.pt
+*.bin
+*.dylib
+.env

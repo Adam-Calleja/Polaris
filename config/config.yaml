@@ -1,0 +1,103 @@
+# generator_llm: 
+#   model_name: "meta-llama/Llama-3.1-8B-Instruct"
+#   api_base: "http://localhost:8078/v1"
+#   model_kwargs:
+#     max_tokens: 512
+#     temperature: 1
+#     # repetition_penalty: 1.2
+
+# generator_llm: 
+#   type: "HuggingFaceTGI"
+#   inference_server_url: "http://localhost:8078"
+#   temperature: 1
+#   repetition_penalty: 1.2
+#   max_new_tokens: 512
+#   model_kwargs: {}
+
+generator_llm:
+  type: "openai_chatlike"
+  # model_name: "meta-llama/Llama-3.3-70B-Instruct"
+  model_name: "meta-llama/llama-4-scout-17b-16e-instruct"
+  # api_base: "http://localhost:8080/v1"
+  # api_base: "https://llm.hpc.cam.ac.uk/v1"
+  api_base: "https://api.groq.com/openai/v1"
+  api_key: "${POLARIS_LLM_API_KEY}"
+  model_kwargs:
+    max_tokens: 384
+    temperature: 0.8
+    top_p: 0.9
+    stop: ["\nUser:", "\n\nUser:"]
+    frequency_penalty: 0.3
+    presence_penalty: 0.2
+
+evaluator_llm:
+  type: "OpenAILike"
+  model_name: "Qwen/Qwen2.5-72B-Instruct"
+  api_base: "http://localhost:8080/v1"
+  model_kwargs:
+    max_tokens: 1024
+    temperature: 0
+    top_p: 0.9
+    stop: ["</ANS>"]
+
+embedder:
+  type: "OpenAILike"
+  # model_name: "Qwen/Qwen3-Embedding-8B"
+  api_base: "${EMBED_API_BASE}"
+  model_name: "Qwen/Qwen3-Embedding-0.6B"
+  api_key: "${POLARIS_LLM_API_KEY}"
+  model_kwargs: {}
+
+vector_store:
+  type: "qdrant"
+  host: "qdrant"
+  port: 6333
+  collection_name: "support_tickets_test"
+  token: null
+
+doc_store:
+  type: "simple"
+
+storage_context:
+  persist_dir: "data/storage/local"
+
+retriever:
+  # NOTE: "hybrid" (BM25 + vector) requires local documents to be loaded so BM25 can build an index.
+  # If the corpus is empty, BM25 indexing will fail. Use vector-only retrieval by default.
+  type: "vector"
+  top_k: 5
+  score_threshold: 0.0
+  filters: {}
+
+document_loader:
+  conditions:
+    - tag: "a"
+      condition: "not element.parent.find_all(string=True, recursive=False)"
+    - tag: "div"
+      condition: "element.get('role', '').strip().lower() == 'navigation'"
+    - tag: "div"
+      condition: "'class' in element.attrs and element.attrs['class'] == ['toctree-wrapper', 'compound']"
+    - tag: "li"
+      condition: "element.find('a', class_='reference internal') and element.find('ul') and all(not li.get_text(strip=True) for li in element.find_all('li'))"
+  tags: ["nav", "footer", "title"]
+  link_classes: ['reference', 'internal']
+
+jira_api_credentials:
+  username: "ac2650@cam.ac.uk"
+  password: "${JIRA_API_TOKEN}"
+
+prompts:
+  - "pkg:polaris_rag.prompts:hpc_rag_assistant_v1.json"
+  - "pkg:polaris_rag.prompts:hpc_ticket_summarizer_v1.json"
+
+prompt_name: "hpc_rag_assistant"
+
+ingestion:
+  jira:
+    start_date: null
+    end_date: null
+    limit: null
+    exclude_summaries: []
+  debug:
+    dump_processed_tickets: false
+    dump_path: "data/debug/jira_processed_tickets.txt"

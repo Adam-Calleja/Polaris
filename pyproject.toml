@@ -1,0 +1,87 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "polaris-rag"
+version = "0.1.0"
+description = "Polaris RAG pipeline"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{ name = "Adam Calleja", email = "ac2650@cam.ac.uk" }]
+license = { text = "Proprietary" }
+
+dependencies = [
+  "pyyaml>=6.0",
+  "jinja2>=3.1",
+
+  # --- Runtime (API/RAG) dependencies ---
+  # LangChain
+  "langchain-core>=0.1",
+  "langchain-openai>=0.1",
+  "langchain-community>=0.1",
+
+  # LlamaIndex core + integrations used at runtime
+  "llama-index-core>=0.10",
+  "llama-index-vector-stores-qdrant>=0.1",
+  "llama-index-retrievers-bm25>=0.1",
+  "llama-index-llms-openai-like>=0.1",
+  "llama-index-embeddings-openai-like>=0.1",
+
+  # Vector DB client
+  "qdrant-client>=1.7",
+
+  # Tokenizers / HF utilities (required by llama-index openai_like + your tokenisation paths)
+  "tiktoken>=0.5",
+  "transformers>=4.36",
+]
+
+[project.optional-dependencies]
+ingestion = [
+  "requests>=2.31",
+  "beautifulsoup4>=4.12",
+  "atlassian-python-api>=3.41",
+]
+llm = [
+  "langchain-core>=0.1",
+  "langchain-openai>=0.1",
+  "langchain-community>=0.1",
+  "llama-index-llms-openai-like>=0.1",
+  "llama-index-embeddings-openai-like>=0.1",
+  "llama-index-embeddings-huggingface>=0.1",
+]
+retrieval = [
+  "llama-index-core>=0.10",
+  "llama-index-vector-stores-qdrant>=0.1",
+  "llama-index-retrievers-bm25>=0.1",
+  "qdrant-client>=1.7",
+]
+tokenizers = [
+  "tiktoken>=0.5",
+  "transformers>=4.36",
+]
+eval = [
+  "ragas>=0.1",
+]
+
+api = [
+  "fastapi>=0.110",
+  "uvicorn[standard]>=0.27",
+  "requests>=2.31",
+  "beautifulsoup4>=4.12",
+  "atlassian-python-api>=3.41",
+]
+
+[project.scripts]
+polaris-ingest-jira = "polaris_rag.cli.ingest_jira_tickets:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+packages = { find = { where = ["src"] } }
+include-package-data = true
+
+[tool.setuptools.package-data]
+polaris_rag = [
+  "prompts/hpc_rag_assistant_v1.json",
+  "prompts/hpc_ticket_summarizer_v1.json",
+]

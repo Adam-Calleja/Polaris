@@ -1,0 +1,43 @@
+FROM python:3.12-slim
+
+# System deps (add build-essential if you compile anything)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    gcc \
+    g++ \
+    make \
+  && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy only packaging metadata first for better layer caching
+COPY pyproject.toml ./
+
+# Copy README if referenced by pyproject.toml
+COPY README.md ./
+
+# Copy source code for src-layout packaging
+COPY src/ ./src/
+
+# Copy runtime config (prompts, configs)
+COPY config/ /app/config/
+
+# Copy any scripts if needed
+COPY scripts/ /app/scripts/
+
+# If you use poetry/uv/pip-tools, adjust accordingly
+# COPY poetry.lock ./
+
+# Install your package (and runtime deps)
+RUN pip install --no-cache-dir -U pip \
+ && pip install --no-cache-dir ".[api,ingestion]"
+
+# Expose API port
+EXPOSE 8000
+
+# Healthcheck (optional)
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+  CMD curl -fsS http://localhost:8000/health || exit 1
+
+# Run with uvicorn
+CMD ["uvicorn", "polaris_rag.app.api:app", "--host", "0.0.0.0", "--port", "8000"]

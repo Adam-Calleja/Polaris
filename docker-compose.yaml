@@ -1,0 +1,61 @@
+services:
+  rag-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    environment:
+      - POLARIS_CONFIG=/app/config/config.yaml
+      - POLARIS_LLM_API_KEY=${POLARIS_LLM_API_KEY}
+      - EMBED_API_BASE=http://embed:8081/v1
+      # If you want to override API bases for LLM/embeddings inside Docker:
+      # - LLM_API_BASE=http://llm:8080/v1
+      # - EMBED_API_BASE=http://embed:8080/v1
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount config if you want to edit without rebuild
+      - ./config:/app/config:ro
+      # Persist dir for your StorageContext (highly recommended)
+      - ./persist:/app/persist
+    depends_on:
+      - qdrant
+      - embed
+
+  qdrant:
+    image: qdrant/qdrant:v1.14.1
+    ports:
+      - "6333:6333"
+    volumes:
+      - ./qdrant_data:/qdrant/storage
+
+  embed:
+    platform: linux/amd64
+    build:
+      context: .
+      dockerfile: Dockerfile.embed
+    image: rag_project-embed
+    environment:
+      - MODEL_ID=Qwen/Qwen3-Embedding-0.6B
+      - TRUST_REMOTE_CODE=1
+      - NORMALIZE_EMBEDDINGS=1
+      - MAX_LENGTH=512
+      - HF_HOME=/data/hf
+      - TRANSFORMERS_CACHE=/data/hf
+      - HF_TOKEN
+      - HUGGINGFACE_HUB_TOKEN
+    volumes:
+      - ./hf_cache:/data/hf
+    ports:
+      - "8081:8081"
+
+  streamlit:
+    build:
+      context: .
+      dockerfile: Dockerfile.streamlit
+    environment:
+      # Inside docker, use service name rag-api
+      - RAG_API_BASE=http://rag-api:8000
+    ports:
+      - "8501:8501"
+    depends_on:
+      - rag-api
