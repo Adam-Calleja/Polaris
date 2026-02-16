@@ -1,2 +1,0 @@
-[console_scripts]
-polaris-ingest-jira = polaris_rag.cli.ingest_jira_tickets:main

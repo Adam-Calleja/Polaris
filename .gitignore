@@ -9,3 +9,4 @@ __pycache__/
 *.bin
 *.dylib
 .env
+*.egg-info/
