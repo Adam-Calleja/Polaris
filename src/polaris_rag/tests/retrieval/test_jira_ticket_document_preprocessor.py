@@ -1,13 +1,13 @@
 import pytest
 import copy
-from src.retrieval.document_preprocessor import (
+from polaris_rag.retrieval.document_preprocessor import (
     adf_to_text,
     build_jira_ticket_text,
     preprocess_jira_ticket,
     preprocess_jira_tickets,
 )
 
-import src.retrieval.document_preprocessor as document_preprocessor
+import polaris_rag.retrieval.document_preprocessor as document_preprocessor
 
 def _make_base_ticket(
     key: str = "TEST-1",

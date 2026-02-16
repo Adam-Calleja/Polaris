@@ -2,8 +2,8 @@ from types import SimpleNamespace
 
 import pytest
 
-import src.retrieval.text_splitter as text_splitter
-from src.retrieval.text_splitter import get_chunks_from_jira_ticket
+import polaris_rag.retrieval.text_splitter as text_splitter
+from polaris_rag.retrieval.text_splitter import get_chunks_from_jira_ticket
 
 
 class DummyTokenizer:
