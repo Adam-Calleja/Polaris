@@ -1,0 +1,4611 @@
+[TICKET_KEY] HPCSSUP-99134
+[SUMMARY] Please find attached for processing our Purchase Order MA2-4362647
+
+CLASSIFICATION
+Category: Procurement / Purchase Order Submission
+Technical HPC Action Required (based on visible text): Unknown (cannot determine from message alone)
+Finance/Procurement Action Required: Yes (PO processing workflow)
+Urgency: Low
+
+QUICK ASSESSMENT
+The sender has submitted Purchase Order MA2-4362647 and asked for confirmation of receipt. The message also provides EORI information (if needed) and Goods-In opening hours. Based on the visible ticket text alone, the safe and correct handling is to:
+1) confirm receipt,
+2) review the attached PO to determine what action is required (e.g., invoicing/procurement processing and whether any HPC-specific actions such as crediting resource hours apply),
+3) route the PO to the appropriate Finance/Procurement workflow,
+4) request any missing details required to proceed.
+
+ACTION STEPS (HELPDESK)
+
+1) Verify attachment availability (internal)
+   - Confirm a PO document is attached and readable in the ticketing system.
+   - Confirm the PO number MA2-4362647 appears on the document.
+
+2) Determine required processing path (internal)
+   - From the PO document, identify:
+     a) supplier / contact details (if not already clear),
+     b) what is being purchased (e.g., equipment/services vs. HPC resource/usage credit),
+     c) quantity/amount (if applicable),
+     d) any project/account/cost-centre information required for processing.
+   - If the PO indicates an HPC-specific deliverable (e.g., purchase of compute/resource hours), escalate/route to the HPC finance workflow and request confirmation of the target project/account and quantity if not explicit.
+   - If the PO is general procurement, route to the standard Procurement/Finance mailbox.
+
+3) Forward to Finance/Procurement (internal)
+   - Forward the PO (and ticket context) to the appropriate Finance/Procurement contact point.
+   - Include PO number in subject and internal note for traceability.
+
+4) Respond to sender with confirmation of receipt (external)
+   - Send a brief confirmation that the PO was received and is being processed.
+   - Do NOT claim any internal processing step has completed unless it has been verified (e.g., do not claim hours were credited, accounts updated, invoices raised, etc.).
+
+5) Ticket update and closure (internal)
+   - Resolve the ticket once confirmation of receipt has been sent and the PO has been routed appropriately.
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+Ask only if the PO/attachment does not clearly specify these items:
+- Which project/account/cost centre should this be associated with?
+- What exactly is being purchased (e.g., HPC resource/compute time vs. goods/services)?
+- If compute/resource is being purchased: how many hours/units should be applied?
+
+EXAMPLE CUSTOMER REPLY (CONFIRMATION OF RECEIPT)
+
+Subject: Re: Purchase Order MA2-4362647 – Confirmation of Receipt
+
+Dear Stephen,
+
+Thank you for your email.
+
+We confirm receipt of Purchase Order MA2-4362647. We will review the attached PO and have forwarded it to the appropriate team for processing. If any further information is required, we will contact you.
+
+Kind regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not state or imply that any resource/account changes have been made unless explicitly confirmed by the operator performing the action.
+- Do not guess quantities, project codes, or required technical steps from the email alone when attachments are not visible to the assistant.
+- EORI and Goods-In details do not require action unless Finance/Procurement requests them as part of the processing workflow.
+
+----------
+
+[TICKET_KEY] HPCSSUP-98836
+[SUMMARY] Missing Files After RDS Directory Change?
+
+CLASSIFICATION
+Category: Storage / Path & Symlink / RDS
+Technical Action Required: Yes (diagnose path/symlink + confirm correct new location)
+Escalation Required: Possibly (if storage path mapping needs staff-side confirmation)
+Urgency: Medium (data access blocked)
+
+QUICK ASSESSMENT
+User can no longer access files under /rds/user/ejs237/rds-dirac-dp012/ejs237/ and has been told the directory moved to /rds/project/dirac_vol2/rds-dirac-dp012, but that new location is not valid/accessible for them. On CSD3, /rds is Lustre-based storage and user-visible paths under /rds/user/ejs237/ are often exposed via convenience symlinks under ~/rds. Therefore, the most likely cause is that the user is following an outdated or broken path/symlink after a storage reorganisation. Next steps are to (1) inspect the relevant symlinks, (2) identify the correct new target path, and (3) update the user’s link(s) accordingly.
+
+ACTION STEPS (HELPDESK)
+
+1) Confirm what the user is actually accessing
+   Ask the user to run:
+     hostname
+     ls -ld /rds/user/ejs237
+     ls -l ~/rds
+   Purpose: confirm they are on CSD3 and see whether ~/rds contains a symlink for the relevant project area.
+
+2) Identify whether the path is a symlink and where it points
+   Ask the user to run (adjust name to the relevant project directory label they used before):
+     ls -l ~/rds
+     readlink -f ~/rds/rds-dirac-dp012
+     ls -ld ~/rds/rds-dirac-dp012
+   Expected signal:
+     - If readlink fails or points to a non-existent location, the link is broken/outdated.
+     - If it points somewhere valid but permissions deny, it may be a membership/ACL issue.
+
+3) Determine the correct new location (helpdesk-side confirmation)
+   Because the user reports /rds/project/dirac_vol2/rds-dirac-dp012 “does not appear valid”, do NOT assume the target.
+   Use internal knowledge/tools (or storage team confirmation) to identify the correct canonical path for this project’s data on the current filesystem layout.
+
+4) Update the user-facing link/path (only once the correct target is confirmed)
+   If the correct target path has been confirmed, instruct:
+     cd ~/rds
+     rm rds-dirac-dp012
+     ln -s <CONFIRMED_TARGET_PATH> rds-dirac-dp012
+     ls -ld rds-dirac-dp012
+   Notes:
+     - Use rm only for the symlink in ~/rds, not for real directories.
+     - If rds-dirac-dp012 is not in ~/rds but the user relies on a deep /rds/user path, provide the correct canonical path they should use going forward.
+
+5) Validate access
+   Ask the user to run:
+     ls -lah ~/rds/rds-dirac-dp012
+     ls -lah <CONFIRMED_TARGET_PATH>
+   Confirm they can see expected directories/files.
+
+IF THIS FAILS (LIKELY BRANCHES)
+
+A) Permission denied at the new target
+   - Confirm the user’s project membership and directory ACLs/groups.
+   - Ask for:
+       id
+       groups
+       ls -ld <CONFIRMED_TARGET_PATH>
+   - Escalate to storage admins if ACL/group membership needs adjustment.
+
+B) Target path truly does not exist
+   - The “dirac_vol2” path the user was given may be incorrect or incomplete.
+   - Re-check the correct storage mapping for that project (staff-side), then provide the correct path and update symlink accordingly.
+
+C) User is using the wrong environment/path for I/O
+   - Remind them that active data should live on /rds (not /home) and that /rds/user areas may be presented via ~/rds symlinks for convenience.
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- What exact error do you see when accessing the old and new paths? (e.g., "No such file or directory" vs "Permission denied")
+- What is the exact project directory name you used previously under /rds/user/ejs237/ ?
+- Please paste output of:
+    ls -l ~/rds
+    readlink -f ~/rds/rds-dirac-dp012
+
+EXAMPLE CUSTOMER REPLY (USER-FACING)
+
+Subject: Re: Missing Files After RDS Directory Change?
+
+Hello Eun-jin,
+
+Thanks for getting in touch. On CSD3, many project directories under /rds/user/ejs237/ are typically accessed via convenience symlinks under ~/rds.
+
+Could you please run the following and paste the output?
+
+  ls -l ~/rds
+  readlink -f ~/rds/rds-dirac-dp012
+
+This will let us confirm whether the path you’re using is a broken/outdated symlink following the directory move. Once we confirm the correct new location for your project data, we can point your ~/rds link to the right place.
+
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not guess the new canonical target path; confirm it before instructing link changes.
+- Avoid destructive commands on /rds; only remove symlinks in ~/rds when you are certain they are symlinks.
+- Do not claim files were moved or recovered unless you have explicit evidence of the correct new location and access has been validated.
+
+----------
+
+[TICKET_KEY] HPCSSUP-98820
+[SUMMARY] RDS and RCS licence renewal
+
+CLASSIFICATION
+Category: Storage / Licence Management
+Technical Action Required: No
+Portal Action Required: Yes (Self Service)
+Urgency: Low
+
+QUICK ASSESSMENT
+User requests renewal of RDS and RCS licences and transfer of licence ownership. These actions are handled via the Self Service Storage Portal.
+
+ACTION
+Direct user to:
+https://selfservice.uis.cam.ac.uk/
+
+Do not process renewal or ownership changes manually via ticket.
+
+EXAMPLE CUSTOMER REPLY
+
+Hello Brian,
+
+These actions can be taken within the relevant storage licences on the Self Service Storage Portal:
+https://selfservice.uis.cam.ac.uk/
+
+Please let us know if you encounter any difficulties.
+
+Best regards,  
+HPC Support
+
+----------
+
+[TICKET_KEY] HPCSSUP-98814
+[SUMMARY] Login issues
+
+CLASSIFICATION
+Category: Authentication / Portal Login
+Technical Action Required: No (user guidance only)
+Escalation Required: No
+Urgency: Medium (access blocked)
+
+QUICK ASSESSMENT
+User is attempting to log in via “Sign in with Keycloak” and expects to authenticate using University of Liverpool credentials. The correct login method for external users is via the “MyAccessID” option beneath the login boxes.
+
+ACTION
+Instruct user to:
+- Click the “MyAccessID” button under the login fields.
+- Authenticate using their institutional credentials.
+- Follow official documentation if required.
+
+Do not:
+- Reset credentials.
+- Modify account settings.
+- Escalate unless MyAccessID authentication fails.
+
+EXAMPLE CUSTOMER REPLY
+
+Hello Yingjie,
+
+You need to click the “MyAccessID” button underneath the login boxes to log in with your university credentials.
+
+Please see this guidance:
+https://docs.hpc.cam.ac.uk/hpc/user-guide/pvc.html#users-accessing-open-on-demand-via-the-portal
+
+Best regards,
+HPC Support
+
+----------
+
+[TICKET_KEY] HPCSSUP-98799
+[SUMMARY] Copy-paste text between local and SRCP
+
+CLASSIFICATION
+Category: SRCP / Secure Desktop / Data Transfer
+Technical Action Required: No (policy clarification only)
+Security Impact: Yes (clipboard isolation is intentional)
+Urgency: Low
+
+QUICK ASSESSMENT
+User is attempting to copy/paste text between their local machine and the SRCP virtual desktop (TurboVNC) and reports that clipboard sync does not function bidirectionally. They also ask whether SSH access to SRCP is possible as an alternative.
+
+Clipboard isolation is enforced by design under SRCP security policy. Direct copy/paste between local and SRCP environments is not permitted. SSH access is not offered as a workaround.
+
+ACTION
+Inform user that:
+- Copy/paste from outside SRCP into the platform is not permitted due to security policy.
+- Data/text transfer must occur via approved secure channels.
+- Provide documentation link for Secure Windows Desktop (SWD) guidance.
+
+Do not:
+- Suggest policy bypass.
+- Recommend enabling clipboard sharing.
+- Offer SSH access as an alternative method.
+
+EXAMPLE CUSTOMER REPLY
+
+Hello Shilin,
+
+The copy-paste function from outside of the SRCP is not possible, as this would violate SRCP security policies.  
+
+You can transfer data or files into the platform using the approved secure channels described here:
+https://docs.hpc.cam.ac.uk/srcp/swd/index.html
+
+Best regards,  
+HPC Support
+
+----------
+
+[TICKET_KEY] HPCSSUP-98754
+[SUMMARY] Quote for RDS storage costs
+
+CLASSIFICATION
+Category: Storage / RDS Licence / Custom Quote
+Technical Action Required: Yes (licence update + filesystem change)
+Finance Action Required: Yes (formal quotation + PO required)
+Escalation Required: Yes (Storage Services team)
+Urgency: Medium
+
+QUICK ASSESSMENT
+User requests:
+- Custom quote for RDS duration extension
+- Reduction from 700TB to 400TB
+- Rebase of licence expiry date
+- Confirmation of cost calculation
+- Later: deletion of specific directories
+
+Self Service cannot generate this quote; Storage Services must issue a formal quotation and reference.
+
+PUBLISHED PRICING (Research Data Store)
+Minimum quantity: 1TB
+Minimum term: 1 year
+Standard price: £54.00 per TB per year
+Volume price: £39.36 per TB per year
+
+PROVISIONAL ESTIMATE (BASED ON PUBLISHED PRICING)
+
+400TB × £39.36 = £15,744.00
+
+Pro-rata adjustment for 52 days already paid on 700TB:
+700 × £39.36 = £27,552.00
+52/365 × £27,552.00 ≈ £3,925.12
+
+Estimated payable:
+£15,744.00 − £3,925.12 ≈ £11,818.88
+
+(Note: Minor rounding differences may occur depending on calculation method.)
+
+ACTION
+
+1) Escalate to Storage Services
+   - Confirm revised capacity (400TB)
+   - Confirm new start/end dates
+   - Calculate official extension cost and pro-rata adjustment
+   - Issue formal quotation with reference number
+
+2) Await PO
+   - Do not update portal or filesystem until PO is received.
+
+3) Upon receipt of PO
+   - Update storage licence in portal (capacity + duration)
+   - Apply corresponding filesystem quota changes.
+
+EXAMPLE CUSTOMER REPLY (PROVISIONAL ESTIMATE)
+
+Hi Yasin,
+
+Based on the published RDS volume pricing of £39.36 per TB per year, a 400TB extension for one year would be:
+
+400 × £39.36 = £15,744.00
+
+Applying a pro-rata adjustment for the 52 days already paid on the existing 700TB allocation:
+
+Estimated adjustment ≈ £3,925.12
+
+Estimated total payable ≈ £11,818.88
+
+Please note this is an estimate based on published pricing. A formal quotation with reference number will be issued by the Storage Services team shortly.
+
+Kind regards,
+HPC Support
+
+EXAMPLE CUSTOMER REPLY (FORMAL QUOTE)
+
+Hi Yasin,
+
+Many thanks for getting in touch. Please find the formal quotation below:
+
+[Quote block with reference number and confirmed totals]
+
+Kind regards,
+Storage Services Team
+
+EXAMPLE CUSTOMER REPLY (POST-PO)
+
+Hi Yasin,
+
+Many thanks. I have updated your project in the portal and on the filesystem.
+
+Kind regards,
+RCS Team
+
+----------
+
+[TICKET_KEY] HPCSSUP-98750
+[SUMMARY] Purchase Order for RDS Duration Extension
+
+CLASSIFICATION
+Category: Storage / RDS Licence / Procurement (PO)
+Technical Action Required: No
+Finance Action Required: Yes (user departmental finance raises PO)
+Escalation Required: Yes (storage reduction + bespoke quote request to Storage Services)
+Urgency: Low
+
+QUICK ASSESSMENT
+User is asking HPC Support to produce a Purchase Order for an RDS duration extension and storage reduction. HPC Support cannot raise departmental purchase orders because we do not have access to the user’s funding points. The user must request the PO via their department finance team. The storage reduction / bespoke RDS quote request should be submitted to support@hpc.cam.ac.uk for escalation to the relevant Storage Services team.
+
+ACTION
+- Explain we cannot produce POs on behalf of users.
+- Tell user to contact their departmental finance team to raise the PO.
+- Tell user to submit the storage reduction / bespoke RDS quote request to support@hpc.cam.ac.uk so it can be escalated.
+
+EXAMPLE CUSTOMER REPLY
+
+Hello Yasin,
+
+We do not produce purchase orders for users of our services, as we do not have access to the funding points used for departmental purchase orders. You will need to contact your finance team within your department to raise the PO.
+
+Please submit your enquiry for reducing storage to support@hpc.cam.ac.uk so we can escalate it to the relevant team.
+
+Best regards,
+HPC Support
+
+----------
+
+[TICKET_KEY] HPCSSUP-98706
+[SUMMARY] MFA reset request
+
+CLASSIFICATION
+Category: Authentication / MFA (TOTP) / Reset
+Technical Action Required: Possibly (staff-side MFA reset after identity verification)
+Escalation Required: No
+Urgency: Medium (access blocked)
+
+QUICK ASSESSMENT
+User switched phone and no longer has their MFA codes. First check whether they can transfer authenticator codes from the old phone. If not, MFA reset is possible but requires identity verification (quick video call + photo ID). After reset, user must re-enrol by logging in (SSH and/or web) to obtain a new QR code.
+
+ACTION
+
+1) Ask if they still have the old phone
+   - If yes: advise transferring codes using vendor guidance:
+     - Microsoft Authenticator backup/restore
+     - Google Authenticator transfer/export
+
+2) If transfer not possible: arrange MFA reset with identity verification
+   - Set up a short MS Teams video call (≤ 5 minutes)
+   - User presents photo ID for verification
+   - Offer times within service desk hours (Mon–Fri 9am–5pm, excl. holidays)
+
+3) After reset: instruct user how to obtain a new QR / TOTP
+   - SSH method:
+     ssh <CRSid>@multi.hpc.cam.ac.uk
+     Enter UIS/Raven password when prompted
+     Scan the displayed QR code into authenticator app
+     Expect a token labelled similar to “CSD3:SSH Login”
+   - Web portal method:
+     Log in as normal; a QR code will be shown to enrol
+     Expect a token labelled similar to “CSD3:<CRSid>”
+
+4) Provide official MFA documentation link
+
+EXAMPLE CUSTOMER REPLY (INITIAL)
+
+Hello Bart,
+
+Have you still got your old phone? If so, you may be able to transfer the authenticator codes to your new phone.
+- Microsoft Authenticator: https://support.microsoft.com/en-us/account-billing/back-up-account-credentials-in-microsoft-authenticator-bb939936-7a8d-4e88-bc43-49bc1a700a40
+- Google Authenticator: https://support.google.com/accounts/answer/1066447?hl=en&co=GENIE.Platform%3DAndroid
+
+If you can’t transfer the codes over, we can reset your MFA. To do so we’ll need a quick video call (no more than 5 minutes) where you can present photo ID for verification. Please let me know a suitable time and date (Service Desk hours are 9am–5pm, Mon–Fri, excluding holidays) and I can send an MS Teams invite.
+
+Best regards,
+HPC Support
+
+EXAMPLE CUSTOMER REPLY (POST-RESET INSTRUCTIONS)
+
+Hello Bart,
+
+This is to confirm that your MFA has been reset. To enrol a new TOTP via SSH, please run:
+
+ssh <CRSid>@multi.hpc.cam.ac.uk
+
+You will be prompted for your UIS/Raven password and then shown a QR code to scan into your authenticator app. If all goes well, you should see a token labelled “CSD3:SSH Login” (or similar).
+
+If you use the web interface, log in as normal and a QR code will appear for you to scan. This token is typically labelled “CSD3:<CRSid>”.
+
+Documentation:
+https://docs.hpc.cam.ac.uk/hpc/user-guide/mfa.html
+
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not reset MFA without identity verification.
+- Do not request sensitive documents over email; verification should be done via the agreed video call process.
+- Do not claim MFA has been reset unless the staff-side action has been completed.
+
+----------
+
+[TICKET_KEY] HPCSSUP-98611
+[SUMMARY] Question about apparent discrepancy between quota and disk usage on RCS
+
+CLASSIFICATION
+Category: Storage / RCS / Quota Reporting
+Technical Action Required: No (user guidance only)
+Escalation Required: No
+Urgency: Low
+
+QUICK ASSESSMENT
+User reports discrepancy between:
+- `quota` showing ~1.17 TB used
+- `du -h` showing ~29 TB
+- Their own subdirectory appearing much larger than the quota-reported figure
+
+On RCS (Research Cold Store), this behaviour is expected. RCS is tape-backed cold storage, and quota reporting is not updated/cached in real time due to the nature of the underlying system. Additionally, `du` by default reports allocated block usage, whereas quota on RCS reflects the apparent file size accounted by the storage system.
+
+The correct way to estimate logical usage on RCS is to use:
+
+    du --apparent-size
+
+ACTION STEPS (HELPDESK)
+
+1) Clarify storage type
+   - Confirm the path is on RCS (e.g. /rcs/project/...).
+   - Explain that RCS behaves differently from RDS or /home.
+
+2) Explain expected discrepancy
+   - RCS is tape-backed cold storage.
+   - Quota values are not continuously refreshed.
+   - `du -h` reports on-disk block usage.
+   - Sparse files, compression, and tape staging can cause differences.
+
+3) Provide correct diagnostic command
+   Ask the user to run:
+     du -sh --apparent-size /rcs/project/<project-name>
+   or for a subdirectory:
+     du -sh --apparent-size /rcs/project/<project-name>/woody
+
+4) Reassure
+   - This does not indicate data loss.
+   - This does not indicate unaccounted storage.
+   - This is expected behaviour for RCS.
+
+5) Close once confirmed resolved.
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Please confirm the exact RCS path you are checking.
+- Please share the output of:
+    quota
+    du -sh /rcs/project/<project>
+    du -sh --apparent-size /rcs/project/<project>
+
+EXAMPLE CUSTOMER REPLY
+
+Subject: Re: Quota vs Disk Usage on RCS
+
+Hello Woody,
+
+Thank you for your message.
+
+This behaviour is expected on RCS. Because RCS is tape-backed cold storage, quota information is not updated in real time, and the `quota` command does not always reflect the apparent size reported by standard `du`.
+
+To obtain a figure that more closely matches the logical file size used for quota purposes, please run:
+
+  du -sh --apparent-size /rcs/project/rcs-zz485-sem-lab-cold
+
+You can also apply this to individual subdirectories (e.g. your `/woody` directory).
+
+The discrepancy you are seeing does not indicate missing or unaccounted data — it is a result of how RCS storage and quota reporting operate.
+
+Please let us know if you have any further concerns.
+
+Best regards,  
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not imply quota malfunction unless confirmed by storage administrators.
+- Do not suggest data loss without evidence.
+- Avoid recommending destructive commands.
+- Ensure users understand that RCS differs from RDS in quota behaviour.
+
+----------
+
+[TICKET_KEY] HPCSSUP-98608
+[SUMMARY] DeepMD GPU version on Dawn
+
+CLASSIFICATION
+Category: Software / GPU Compatibility / Dawn (PVC)
+Technical Action Required: No (capability clarification only)
+Escalation Required: No
+Urgency: Low
+
+QUICK ASSESSMENT
+User asks whether the GPU version of DeepMD can be used on Dawn, noting that it requires a compatible NVIDIA driver.
+
+Dawn nodes use Intel Ponte Vecchio (PVC) GPUs, not NVIDIA GPUs. NVIDIA CUDA drivers are not available on Dawn. Therefore, software that requires NVIDIA GPUs / CUDA will not run on Dawn unless it supports Intel GPUs (e.g. via oneAPI, SYCL, or other compatible backend).
+
+ACTION
+
+1) Clarify hardware
+   - Dawn uses Intel PVC GPUs.
+   - NVIDIA drivers / CUDA are not available.
+
+2) State compatibility condition
+   - If DeepMD GPU version requires NVIDIA CUDA, it will not run on Dawn.
+   - If DeepMD provides a CPU-only build or an Intel GPU-compatible backend, that may be possible instead.
+
+3) Suggest alternatives
+   - If NVIDIA GPUs are required, recommend using an NVIDIA partition (e.g. Ampere/A100) instead.
+   - Direct user to Dawn hardware documentation.
+
+EXAMPLE CUSTOMER REPLY
+
+Subject: Re: DeepMD GPU version on Dawn
+
+Hello Ruitian,
+
+Dawn uses Intel Ponte Vecchio (PVC) GPUs rather than NVIDIA GPUs. As such, NVIDIA drivers and CUDA are not available on this system.
+
+If the GPU version of DeepMD requires NVIDIA/CUDA specifically, it will not be compatible with Dawn. You may wish to check whether DeepMD provides either:
+- a CPU-only build, or
+- support for Intel GPUs (e.g. via oneAPI/SYCL).
+
+If NVIDIA GPUs are required, you would need to use an NVIDIA-based partition (e.g. Ampere).
+
+You can find details of Dawn hardware here:
+https://docs.hpc.cam.ac.uk/hpc/user-guide/pvc.html#hardware
+
+Best regards,  
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not imply NVIDIA drivers can be installed on Dawn.
+- Do not suggest unsupported driver installation.
+- Do not guarantee software compatibility without confirmed vendor support.
+
+----------
+
+[TICKET_KEY] HPCSSUP-98575
+[SUMMARY] Query on extending SL3 CPU usage and annual reset
+
+CLASSIFICATION
+Category: SL3 / CPU Credits / Service Level Policy
+Technical Action Required: No
+Finance Action Required: No
+Escalation Required: No
+Urgency: Low
+
+QUICK ASSESSMENT
+User reports reaching SL3 CPU allocation and asks:
+1) Whether additional CPU hours can be requested.
+2) Whether SL3 free usage resets annually and when.
+
+SL3 CPU credits are allocated at the project account level (shared across all users on that project). Credits are refreshed quarterly (not annually) at the start of each academic quarter.
+
+ACTION
+
+1) Clarify allocation model
+   - SL3 CPU credits are assigned to the project account.
+   - Usage is shared across all members of that project.
+   - Individual users do not receive personal allocations.
+
+2) Clarify refresh schedule
+   - Credits refresh at the start of each academic quarter:
+     • 1 February – 30 April
+     • 1 May – 31 July
+     • 1 August – 31 October
+     • 1 November – 31 January
+
+3) Direct to policy documentation
+   - Service levels and SL3 policy page.
+
+4) Do not:
+   - Manually add credits.
+   - Promise additional allocation.
+   - Escalate unless there is a policy exception.
+
+EXAMPLE CUSTOMER REPLY
+
+Subject: Re: SL3 CPU allocation and reset
+
+Hello Wenhao,
+
+SL3 CPU credits are allocated to the project account and are shared between all users who have access to that account — they are not assigned per individual user.
+
+SL3 project credits are refreshed at the start of each academic quarter (three-month periods):
+- 1 February – 30 April
+- 1 May – 31 July
+- 1 August – 31 October
+- 1 November – 31 January
+
+You can read more about SL3 service levels and policies here:
+https://docs.hpc.cam.ac.uk/hpc/user-guide/policies.html#service-levels
+
+Please let us know if you have any further questions.
+
+Best regards,  
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not imply additional CPU hours can be granted outside policy.
+- Do not treat SL3 credits as personal allocations.
+- Do not promise resets outside the defined quarterly schedule.
+
+----------
+
+[TICKET_KEY] HPCSSUP-98537
+[SUMMARY] Interactive Jupyter Notebooks crashing before loading
+
+CLASSIFICATION
+Category: Open OnDemand / Jupyter / Service Disruption
+Technical Action Required: Possibly (service-side investigation)
+Escalation Required: Yes (if filesystem/service incident ongoing)
+Urgency: Medium (interactive workflows blocked)
+
+QUICK ASSESSMENT
+User reports that OnDemand Jupyter notebooks reach “Starting” state and then crash. The output log shows:
+
+- `module: command not found`
+- `jupyter: command not found`
+- Timeout waiting for notebook port
+
+These errors normally indicate that:
+- The module environment was not initialised properly, or
+- The underlying filesystem/environment (e.g. RDS) was unavailable at session start.
+
+From the ticket resolution, there was an active RDS filesystem disruption at the time. Therefore this was a service-side incident, not a user misconfiguration.
+
+ACTION (HELPDESK)
+
+1) Check for active incidents
+   - Verify whether RDS or related shared filesystems are degraded.
+   - Confirm whether other users are reporting similar failures.
+   - Check service status / internal comms.
+
+2) Do NOT ask the user to debug their environment immediately
+   - The presence of multiple `module: command not found` entries in an OnDemand-generated script strongly suggests an environment failure rather than a user error.
+   - Avoid requesting script changes unless no incident exists.
+
+3) Confirm disruption (if applicable)
+   - If RDS or environment disruption is confirmed:
+     - Inform user that a service issue is ongoing.
+     - Provide reassurance that notebooks should function once resolved.
+
+4) If no incident is active (alternate branch)
+   - Check:
+       echo $MODULEPATH
+       which module
+       module list
+       which jupyter
+   - Confirm correct partition/environment in OnDemand form.
+   - Escalate to platform admins if environment initialisation is broken.
+
+EXAMPLE CUSTOMER REPLY (SERVICE INCIDENT CONFIRMED)
+
+Subject: Re: Interactive Jupyter Notebooks crashing
+
+Hello Tim,
+
+We were experiencing some disruption on the RDS filesystem at the time you attempted to start the notebook, which would explain the environment failing to initialise.
+
+This should hopefully be resolved soon. 
+
+Best wishes,  
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not attribute failure to user configuration when a known service disruption exists.
+- Do not suggest modifying system scripts under /ondemand.
+- Avoid unnecessary troubleshooting steps during confirmed incidents.
+- If repeated reports occur without an active incident, escalate to platform administrators.
+
+----------
+
+[TICKET_KEY] HPCSSUP-98532
+[SUMMARY] [ukaea] Partition Query
+
+CLASSIFICATION
+Category: Slurm / Partition Configuration / Scheduler Policy
+Technical Action Required: No (configuration clarification only)
+Escalation Required: No (unless policy change requested)
+Urgency: Low
+
+QUICK ASSESSMENT
+User observes that nodes in the `ukaea-icl-himem` partition (cpu-q-[429-440,442-444]) are also appearing in the general `ukaea-icl` partition. As a result, although `ukaea-icl-himem` appears empty, the nodes are running jobs from the general partition, preventing immediate testing.
+
+This configuration is intentional.
+
+The higher-memory nodes are shared between:
+- `ukaea-icl-himem` (higher memory per CPU requirement)
+- `ukaea-icl` (general partition)
+
+The scheduler is configured so that:
+- Himem nodes may run jobs from the general partition when no himem jobs are waiting.
+- If himem jobs are queued, the scheduler will prioritise them appropriately.
+- Nodes may therefore be busy with general jobs even if the himem queue is empty at that moment.
+
+This mirrors the configuration used on Cambridge icelake/icelake-himem and cclake/cclake-himem partitions.
+
+ACTION
+
+1) Confirm configuration is intentional.
+2) Explain scheduler behaviour clearly:
+   - Himem nodes are not reserved exclusively.
+   - They backfill general jobs when idle.
+   - Himem jobs will be prioritised when submitted.
+3) Do not suggest misconfiguration unless confirmed by cluster admins.
+4) Escalate only if the user is requesting a policy/configuration change rather than clarification.
+
+EXAMPLE CUSTOMER REPLY
+
+Subject: Re: ukaea-icl-himem partition behaviour
+
+Hello Jez,
+
+The overlap between `ukaea-icl-himem` and `ukaea-icl` is intentional and mirrors how the Cambridge icelake/icelake-himem partitions are configured.
+
+The higher-memory nodes are allowed to run jobs from the general `ukaea-icl` partition when there are no himem jobs waiting. This avoids leaving those nodes idle. If there is demand for the himem partition, the scheduler will prioritise those jobs accordingly.
+
+This means that although the himem queue may appear empty at a given moment, the nodes can still be occupied by general jobs and you may need to wait for those jobs to complete before himem resources become available.
+
+I hope this clarifies the setup.
+
+Best regards,  
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not imply scheduler misconfiguration without confirmation.
+- Do not promise dedicated reservation of himem nodes unless policy changes are approved.
+- Avoid recommending workarounds that bypass scheduling policy.
+
+----------
+
+[TICKET_KEY] HPCSSUP-98497
+[SUMMARY] File Permission Query
+
+CLASSIFICATION
+Category: Storage / RDS / Permissions & ACLs
+Technical Action Required: No (user guidance only)
+Escalation Required: No (unless ACLs/groups are misconfigured)
+Urgency: Low–Medium (group collaboration friction)
+
+QUICK ASSESSMENT
+User is a data manager for RDS project rds-HvBBlpwx4dc and reports:
+
+1) Running:
+   du -sh /rds/project/rds-HvBBlpwx4dc/
+   results in multiple “Permission denied” errors.
+
+2) Difficulty granting access to new group members because files created by one user are not automatically accessible to others.
+
+This indicates standard Unix permission behaviour combined with missing or inconsistent default ACL configuration.
+
+RDS projects are expected to use:
+- Project-level Unix groups (e.g. rds-*-managers / rds-*-users)
+- POSIX ACLs (setfacl) to enforce consistent group access
+- Default ACLs (d:) to ensure newly created files inherit correct permissions
+
+ACTION STEPS (HELPDESK)
+
+1) Confirm project group structure
+   - Verify the user is in the appropriate project groups:
+       id
+   - Typical structure:
+       rds-HvBBlpwx4dc-managers
+       rds-HvBBlpwx4dc-users
+
+2) Explain why "Permission denied" appears in du
+   - If subdirectories are owned by individuals with restrictive permissions (e.g. 700),
+     other project members cannot traverse them.
+   - du attempts to enter all directories and reports errors when traversal fails.
+
+3) Recommend standard RDS permission model
+   Refer user to:
+   https://docs.hpc.cam.ac.uk/storage/rds/permissions.html
+
+   Explain that project directories should:
+   - Be group-owned by the appropriate rds-* group
+   - Have group execute bit set on directories (required for traversal)
+
+4) Provide ACL-based solution (recommended approach)
+
+   To grant group read/execute on an existing directory tree:
+       setfacl -R -m g:rds-HvBBlpwx4dc-users:rx /rds/project/rds-HvBBlpwx4dc
+
+   To ensure new files and directories inherit correct permissions:
+       setfacl -R -d -m g:rds-HvBBlpwx4dc-users:rx /rds/project/rds-HvBBlpwx4dc
+
+   Clarify:
+       The extra `d:` sets the *default ACL*.
+       This ensures that newly created items inherit the correct group permissions.
+
+5) Optional: set default directory mask (if appropriate)
+   Users may also ensure directories are created with group execute bit enabled
+   (e.g. via umask 002 within collaborative groups).
+
+6) Do NOT:
+   - Suggest 777 permissions.
+   - Suggest changing ownership unless necessary.
+   - Escalate unless group membership is incorrect at system level.
+
+IF PROBLEM PERSISTS
+
+- Check actual ACLs:
+    getfacl /rds/project/rds-HvBBlpwx4dc
+- Confirm directory group ownership:
+    ls -ld /rds/project/rds-HvBBlpwx4dc
+- Verify new member is in correct Unix group.
+
+EXAMPLE CUSTOMER REPLY
+
+Subject: Re: File permission management on RDS project
+
+Hello James,
+
+On RDS projects we recommend following the permissions model described here:
+https://docs.hpc.cam.ac.uk/storage/rds/permissions.html
+
+In general, project members should be in either the rds-HvBBlpwx4dc-managers or rds-HvBBlpwx4dc-users group so that access is controlled at the group level rather than per individual user.
+
+To ensure that new files and directories automatically inherit the correct group permissions, you can set a default ACL on the project directory, for example:
+
+  setfacl -R -d -m g:rds-HvBBlpwx4dc-users:rx /rds/project/rds-HvBBlpwx4dc
+
+The extra `d:` sets the default ACL, which applies to newly created items and ensures they inherit the correct group permissions.
+
+You may also need to update existing files/directories using:
+
+  setfacl -R -m g:rds-HvBBlpwx4dc-users:rx /rds/project/rds-HvBBlpwx4dc
+
+This approach should prevent the need to manually adjust permissions each time a new group member joins.
+
+Please let us know if you would like us to check the current ACLs on the project directory.
+
+Best wishes,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Avoid recommending overly permissive modes (e.g. 777).
+- Default ACLs are the preferred collaborative model on RDS.
+- Ensure group-based access rather than per-user manual fixes.
+- Only escalate if Unix group membership is incorrect at system level.
+
+----------
+
+[TICKET_KEY] HPCSSUP-98324
+[SUMMARY] Public Key Authentication
+
+CLASSIFICATION
+Category: Authentication / SSH / Public Key
+Technical Action Required: No (user self-service)
+Escalation Required: No
+Urgency: Low
+
+QUICK ASSESSMENT
+User is an internal Cambridge account holder (CRSid email visible in ticket metadata).
+Internal users authenticate via UIS/Raven and can install their own SSH public keys.
+
+HPC Support does not manually install public keys.
+
+ACTION
+
+User should install their own public key using:
+
+    ssh-copy-id <CRSid>@login.hpc.cam.ac.uk
+
+or
+
+    ssh-copy-id <CRSid>@multi.hpc.cam.ac.uk
+
+They will be prompted for their UIS/Raven password. This appends the key to:
+
+    ~/.ssh/authorized_keys
+
+
+EXAMPLE CUSTOMER REPLY
+
+Dear Ayoife,
+
+Since you are an internal user, you can authenticate with your UIS password and install your SSH public key yourself.
+
+From your local machine, please run:
+
+  ssh-copy-id <CRSid>@login.hpc.cam.ac.uk
+
+You will be prompted for your password, and this will append your key to your CSD3 account.
+
+Please let us know if you encounter any issues.
+
+Best wishes,
+HPC Support
+
+
+SAFETY / POLICY NOTES
+- Never request or handle private keys.
+- Do not accept SSH keys via email for manual installation.
+- Do not manually install public keys on behalf of users; internal users must use the supported self-service method (e.g. ssh-copy-id).
+
+----------
+
+[TICKET_KEY] HPCSSUP-98311
+[SUMMARY] Compiling LAMMPS on Ampere
+
+CLASSIFICATION
+Category: Software / Compilation / GPU (Ampere)
+Technical Action Required: No (user to retry with updated stack)
+Escalation Required: Possibly (if issue persists after stack update)
+Urgency: Low–Medium
+
+QUICK ASSESSMENT
+User reports CUDA driver errors when compiling a newer version of LAMMPS with the GPU package on Ampere. The older stable version works.
+
+Likely cause: mismatch between CUDA/toolchain versions and the currently loaded software stack.
+
+ACTION
+
+Ask the user to retry compilation using the updated module stack:
+
+    module load rhel8/ampere/base
+    module load gcc/14.3.0/vlhhcp6m
+    module load cmake/3.31.10/gcc/7ddsybx7
+    module load cuda/12.8.1/gcc/kdeps6ab
+    module load openmpi/4.1.8/gcc/hemliivg
+
+Then re-run the build and benchmark test.
+
+If the issue persists after loading the updated stack, request:
+- Full build output
+- Exact LAMMPS version
+- Full error message from runtime test
+
+EXAMPLE CUSTOMER REPLY
+
+Hi Max,
+
+Could you please try compiling again using the newest Ampere software stack:
+
+  module load rhel8/ampere/base
+  module load gcc/14.3.0/vlhhcp6m
+  module load cmake/3.31.10/gcc/7ddsybx7
+  module load cuda/12.8.1/gcc/kdeps6ab
+  module load openmpi/4.1.8/gcc/hemliivg
+
+After loading these modules, please rebuild and test again.
+
+Let us know how you get on.
+
+Best wishes,
+HPC Support
+
+
+SAFETY / POLICY NOTES
+- Do not recommend installing custom CUDA drivers.
+- Do not suggest modifying system-level GPU drivers.
+- Keep troubleshooting limited to supported module stacks unless escalation is required.
+
+----------
+
+[TICKET_KEY] HPCSSUP-98296
+[SUMMARY] Repeated password requests
+
+CLASSIFICATION
+Category: Data Transfer / FileZilla / SFTP Client Behaviour
+Technical Action Required: No (user workflow guidance)
+Escalation Required: No
+Urgency: Low–Medium
+
+QUICK ASSESSMENT
+User is downloading folders containing ~3000 images each and is prompted to enter a password for every individual file transfer. This is a common drawback of some GUI SFTP clients (e.g., FileZilla), which can prompt for credentials per transfer when handling many small files.
+
+This is not evidence of an HPC authentication issue.
+
+ACTION
+Advise the user to compress many small files into a single archive (tar or zip) before downloading, then transfer the single archive instead of thousands of individual files.
+
+Example (run on the remote server in the directory containing the CT scans):
+
+  tar -czf ct_scans.tar.gz <ct_scan_folder>/
+
+Then download `ct_scans.tar.gz` as a single file.
+
+EXAMPLE CUSTOMER REPLY
+
+Dear Ket,
+
+Unfortunately this is one of the drawbacks if you are using e.g., FileZilla. You will be prompted to enter credentials for every transfer.
+
+We normally suggest compressing the files into a tar or zip to make the transfer smoother and easier, then downloading the single archive file. For example:
+
+  tar -czf ct_scans.tar.gz <ct_scan_folder>/
+
+Best wishes,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not imply authentication malfunction unless there is additional evidence (e.g. failed logins elsewhere).
+- Avoid recommending insecure transfer methods.
+- Keep guidance aligned with supported/helpdesk-standard workflows.
+
+----------
+
+[TICKET_KEY] HPCSSUP-98292
+[SUMMARY] DAWN Access Assistance
+
+CLASSIFICATION
+Category: Account Provisioning / DAWN / Project Access
+Technical Action Required: Yes (account provisioning once invitation accepted)
+Escalation Required: Possibly (confirm invitation + provisioning state)
+Urgency: Medium (user awaiting access)
+
+QUICK ASSESSMENT
+User is requesting access to DAWN and has provided name, email, and SSH key.
+
+Correct process for DAWN access:
+1) User must be invited to the DAWN project by the PI via Waldur.
+2) User must accept the invitation in the DAWN access portal.
+3) Once accepted, provisioning is triggered and a local DAWN account is created.
+4) User receives an email to set up their password.
+5) User logs into the DAWN portal and accepts the project invitation.
+
+Helpdesk should NOT:
+- Manually create accounts before invitation is accepted.
+- Install SSH keys manually from email.
+- Bypass the Waldur provisioning workflow.
+
+ACTION STEPS (HELPDESK)
+
+1) Confirm invitation status
+   - Check whether the PI has invited the user in Waldur.
+   - If not invited → instruct user to contact PI.
+
+2) Confirm invitation acceptance
+   - If invited but not accepted → instruct user to log into portal and accept invitation.
+   - Provide documentation link.
+
+3) Confirm provisioning state
+   - If invitation accepted and provisioning ticket exists → confirm local account creation.
+   - Ensure password setup email has been sent.
+
+4) Post-provisioning guidance
+   - Inform user that:
+       • A local DAWN account has been created.
+       • They should set their password via the email received.
+       • They must log into the DAWN access portal and accept the project invitation.
+
+5) Do NOT:
+   - Accept SSH keys via email.
+   - Manually append SSH keys.
+   - Share temporary credentials.
+   - Create accounts outside the provisioning system.
+
+IF USER PROVIDES SSH KEY
+- Acknowledge receipt but do not install manually.
+- Once account exists, user can install key themselves after first login.
+
+EXAMPLE CUSTOMER REPLY (PRE-INVITATION)
+
+Hello Jun,
+
+You need to be invited to the DAWN project by the PI via Waldur. Once this has been done, you will receive an invitation which you must accept before we can create your DAWN login account.
+
+Please see this guidance:
+https://docs.hpc.cam.ac.uk/hpc/user-guide/pvc.html#users-accessing-open-on-demand-via-the-portal
+
+Best wishes,
+HPC Support
+
+EXAMPLE CUSTOMER REPLY (POST-PROVISIONING)
+
+Hello Jun,
+
+We have created your local DAWN account, and you should have received an email to set up your password.
+
+Using the email and password, please log in to the DAWN access portal and accept the project invitation.
+
+Best wishes,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Never manually install SSH keys received via email.
+- Never request or handle private keys.
+- Do not create accounts outside the approved provisioning workflow.
+- Ensure invitation acceptance precedes account creation.
+- Do not bypass Waldur/project-based access controls.
+
+----------
+
+[TICKET_KEY] HPCSSUP-98278
+[SUMMARY] Cannot login to the HPC web portal
+
+CLASSIFICATION
+Category: Authentication / Web Portal / Browser Behaviour
+Technical Action Required: No (user-side troubleshooting)
+Escalation Required: No (unless issue persists across users)
+Urgency: Medium (access blocked)
+
+QUICK ASSESSMENT
+User reports that they still cannot log in via:
+
+  https://login-web.hpc.cam.ac.uk/
+
+despite being told the login issue was resolved.
+
+This is most consistent with:
+- Browser caching/session persistence issues, or
+- A stale redirect/session cookie.
+
+No evidence of account-level authentication failure.
+
+ACTION STEPS (HELPDESK)
+
+1) Rule out browser cache/session issue
+   Ask user to:
+   - Clear browser cache and cookies for login-web.hpc.cam.ac.uk
+   - Try an incognito/private window
+   - Try a different browser
+
+2) Provide forced redirect link
+   Ask them to test:
+
+   https://login-web.hpc.cam.ac.uk/nginx/stop?redir=/pun/sys/dashboard/
+
+   This forces the nginx redirect to reset the login path.
+
+3) Confirm behaviour
+   - If redirect link works → likely cached session issue.
+   - If both links fail → escalate to web portal admins.
+
+4) Do NOT:
+   - Reset password unless authentication failure is confirmed.
+   - Modify account without evidence.
+   - Assume global outage unless multiple reports exist.
+
+EXAMPLE CUSTOMER REPLY
+
+Hello Yiran,
+
+Could you please try clearing your browser cache or opening the portal in a private/incognito window?
+
+If that does not resolve it, please try logging in via the following link:
+
+  https://login-web.hpc.cam.ac.uk/nginx/stop?redir=/pun/sys/dashboard/
+
+This forces a redirect and can resolve cached session issues.
+
+Please let us know whether this works.
+
+Best wishes,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not imply account compromise.
+- Do not suggest credential changes unless authentication failure is confirmed.
+- Escalate only if issue persists across multiple users or browsers.
+
+----------
+
+[TICKET_KEY] HPCSSUP-98277
+[SUMMARY] Scheduling jobs during maintenance
+
+CLASSIFICATION
+Category: Slurm / Cluster Performance / Power Management
+Technical Action Required: No (policy clarification only)
+Escalation Required: No
+Urgency: Low–Medium
+
+QUICK ASSESSMENT
+User observes that jobs submitted during reduced power consumption periods appear to run significantly slower and may time out. They ask whether there is a Slurm constraint (e.g. a #SBATCH flag) to prevent jobs from starting when the cluster is in a low-power state.
+
+On CSD3, Slurm does not start jobs on “degraded performance” nodes. Jobs are scheduled only when requested resources are available. Reduced power states do not cause Slurm to allocate partially performing resources. 
+
+Apparent slowdowns are more likely caused by:
+- I/O contention (e.g. high demand on RDS shared filesystem),
+- General cluster load,
+- Application-level variability.
+
+There is no Slurm flag to prevent job start based on power mode, as power state does not change the allocated CPU/GPU specification.
+
+ACTION
+
+1) Clarify scheduler behaviour
+   - Slurm will only start jobs once requested resources are available.
+   - Reduced power consumption periods do not change the allocated hardware specification for a job.
+
+2) Explain likely causes of slowdown
+   - Shared filesystem (RDS) performance varies depending on demand.
+   - High I/O workloads across users can impact runtime.
+   - Jobs may therefore run longer than expected.
+
+3) Provide practical mitigation advice
+   - Ensure jobs request realistic walltime.
+   - Consider profiling I/O behaviour.
+   - If appropriate, prevent automatic requeue by adding:
+       #SBATCH --no-requeue
+     (only if user specifically wants jobs not to restart after interruption).
+
+4) Do NOT:
+   - Suggest that jobs are intentionally throttled.
+   - Promise guaranteed full-speed operation during all cluster states.
+   - Suggest non-existent Slurm flags related to power state.
+
+EXAMPLE CUSTOMER REPLY
+
+Subject: Re: Job behaviour during reduced power periods
+
+Hi Clara,
+
+The cluster power status does not affect how Slurm allocates resources. Slurm will only start your job once the requested CPUs/GPUs become available, and jobs are not started on partially performing hardware.
+
+If you are seeing slowdowns, this is more likely due to general system load or performance variation on the shared RDS filesystem, whose performance can fluctuate depending on demand.
+
+There isn’t a Slurm flag that prevents jobs from starting based on power state. If needed, you can ensure your jobs are not requeued automatically by adding:
+
+  #SBATCH --no-requeue
+
+Otherwise, we would recommend reviewing walltime requests and considering whether I/O demand could be contributing to the longer runtimes.
+
+Best wishes,  
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not imply cluster misconfiguration without evidence.
+- Do not suggest unsupported scheduler constraints.
+- Avoid attributing performance issues to “power throttling” unless formally confirmed by cluster administrators.
+
+----------
+
+[TICKET_KEY] HPCSSUP-98114
+[SUMMARY] Unusually long queue time – checking expected start time
+
+CLASSIFICATION
+Category: Slurm / Scheduling / Queue Monitoring
+Technical Action Required: No (user guidance only)
+Escalation Required: No
+Urgency: Low
+
+QUICK ASSESSMENT
+User asks whether there is a way to check the expected wait/start time for a queued Slurm job.
+
+Slurm provides an estimated start time calculation based on current queue state and scheduling policy. This estimate can change if cluster load or priorities change.
+
+ACTION
+
+Advise the user to run:
+
+  squeue -u <CRSid> --start
+
+This will display the estimated start time for their queued jobs.
+
+Clarify that:
+- The reported time is an estimate only.
+- It may change depending on demand, priority, and resource availability.
+- There is no guaranteed start time while a job is queued.
+
+Do NOT:
+- Promise a fixed start time.
+- Adjust job priority.
+- Escalate unless there is evidence of scheduler malfunction.
+
+EXAMPLE CUSTOMER REPLY
+
+Dear Kai,
+
+To check the estimated start time for your queued jobs, you can run:
+
+  squeue -u <your CRSid> --start
+
+This will show Slurm’s current estimate of when each job is expected to begin. Please note that this is only an estimate and may change depending on system demand and scheduling priorities.
+
+Best wishes,  
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not guarantee start times.
+- Avoid implying scheduler fault unless independently verified.
+- Ensure advice aligns with documented Slurm behaviour.
+
+----------
+
+[TICKET_KEY] HPCSSUP-98039
+[SUMMARY] Slurm jobs not executing
+
+CLASSIFICATION
+Category: Slurm / Account Balance / Project Credits
+Technical Action Required: No (user guidance only)
+Escalation Required: No
+Urgency: Medium (jobs not starting)
+
+QUICK ASSESSMENT
+User reports that submitted Slurm jobs remain in the queue and notes that `mybalance` shows only 1 computing hour remaining.
+
+If a project account has insufficient remaining compute hours, jobs charged to that account will not start.
+
+ACTION
+
+1) Confirm cause
+   - If `mybalance` shows only 1 remaining compute hour on the specified project account, this is likely preventing the job from running.
+
+2) Advise corrective step
+   - Cancel the queued job.
+   - Resubmit using a project account with sufficient available hours (e.g. an SL3-GPU account if appropriate and available to the user).
+
+3) Do NOT:
+   - Manually add hours.
+   - Override scheduler/accounting restrictions.
+   - Escalate unless the balance appears incorrect.
+
+EXAMPLE CUSTOMER REPLY
+
+Dear Tigran,
+
+Yes, if `mybalance` shows that there is only 1 computing hour remaining on the LIO-SL2-GPU account, this would prevent your job from starting.
+
+Please cancel the current job and resubmit it using a project account with sufficient available hours.
+
+Best regards,  
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not imply accounting errors without verification.
+- Do not bypass project credit limits.
+- Ensure the user selects an account they are authorised to use.
+
+----------
+
+[TICKET_KEY] HPCSSUP-97991
+[SUMMARY] Quote for 200 SL2-GPU hours
+
+CLASSIFICATION
+Category: Procurement / GPU Resource Purchase / Quotation
+Technical Action Required: No (user to follow published process)
+Finance Action Required: Yes (user departmental PO required)
+Escalation Required: No
+Urgency: Low
+
+QUICK ASSESSMENT
+User requests:
+- A quote for 200 SL2-GPU hours
+- Creation of an SL2-GPU account under a named PI
+
+GPU hours and account creation follow the published charges and procurement process. Pricing and ordering instructions are provided on the official charges page.
+
+ACTION
+
+1) Direct user to official pricing page:
+   https://www.hpc.cam.ac.uk/charges
+
+2) Advise user to:
+   - Review the published SL2-GPU pricing.
+   - Follow the process for raising a purchase order via their departmental finance team.
+   - Submit required account creation details as described on the charges page.
+
+3) Do NOT:
+   - Generate ad hoc pricing outside published rates.
+   - Create accounts before procurement process is followed.
+   - Escalate unless pricing discrepancy or policy exception is requested.
+
+EXAMPLE CUSTOMER REPLY
+
+Hello Fiona,
+
+Please follow the instructions and pricing information available on our charges page:
+
+https://www.hpc.cam.ac.uk/charges
+
+This page outlines the process for purchasing SL2-GPU hours and for requesting account creation. Once your departmental finance team has raised the appropriate purchase order, we can proceed accordingly.
+
+Best regards,  
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not provide unofficial pricing.
+- Do not create accounts without the required procurement steps.
+- Ensure users follow the documented purchase workflow.
+
+----------
+
+[TICKET_KEY] HPCSSUP-97962
+[SUMMARY] SSH login requests TOTP but MFA not set up yet
+
+CLASSIFICATION
+Category: Authentication / Account Provisioning / MFA
+Technical Action Required: No (account application required)
+Escalation Required: No
+Urgency: Medium (user cannot complete login)
+
+QUICK ASSESSMENT
+User reports:
+- Able to reach login.hpc.cam.ac.uk
+- Prompted for TOTP
+- Has not received QR code
+- login-web reports invalid username/password
+- multi.hpc.cam.ac.uk disconnects after password
+
+This strongly indicates that the user does not yet have a fully provisioned CSD3 account with MFA enrolment enabled.
+
+MFA (TOTP) enrolment occurs only after an account has been formally created via the official HPC application process.
+
+ACTION
+
+1) Confirm whether the user has applied for an HPC account
+   Direct them to:
+   https://www.hpc.cam.ac.uk/rcs-application
+
+2) Explain that:
+   - Account creation must be triggered via the official application form.
+   - MFA enrolment (QR code) is generated only after the account is provisioned.
+   - The behaviour they are seeing is consistent with an account not yet fully created.
+
+3) Do NOT:
+   - Reset MFA (no MFA exists yet).
+   - Attempt manual account creation via ticket.
+   - Troubleshoot login-web further until account status is confirmed.
+
+4) If the user confirms they have already applied:
+   - Check provisioning status internally.
+   - Escalate only if application is stuck in provisioning.
+
+EXAMPLE CUSTOMER REPLY
+
+Subject: Re: SSH login requests TOTP but MFA not set up yet
+
+Hello Jin,
+
+Have you previously applied for an account via the official HPC application form?
+
+https://www.hpc.cam.ac.uk/rcs-application
+
+If not, please complete this form with your details and your PI’s details and submit it. This will trigger the account provisioning process. Once your account is created, you will then be able to enrol in MFA (you will be presented with a QR code during login).
+
+If you have already submitted the form, please let us know and we can check the status for you.
+
+Best regards,  
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not assume MFA malfunction when account may not yet exist.
+- Do not attempt to bypass the official account creation workflow.
+- MFA enrolment is tied to successful account provisioning.
+
+----------
+
+[TICKET_KEY] HPCSSUP-97859
+[SUMMARY] Running TensorFlow on Ampere: "module load python/3.8.11/gcc-9.4.0-yb6rzr6" not found
+
+CLASSIFICATION
+Category: Software / TensorFlow / Ampere GPU / Modules
+Technical Action Required: No (user environment clarification)
+Escalation Required: No
+Urgency: Low
+
+QUICK ASSESSMENT
+The user is attempting to follow the official TensorFlow GPU instructions:
+https://docs.hpc.cam.ac.uk/hpc/software-packages/tensorflow.html
+
+They report that:
+
+  module load python/3.8.11/gcc-9.4.0-yb6rzr6
+
+“doesn’t work”.
+
+The documentation indicates that these steps must be run within an interactive session on an Ampere GPU node. The Python module is available within the Ampere software stack. If the module cannot be loaded, this is most likely due to the environment context (e.g. not being on an Ampere node or the module environment having been altered).
+
+There is no evidence that the documentation is outdated or that the module has been removed.
+
+ACTION STEPS (HELPDESK)
+
+1) Confirm execution context
+
+Ask the user to confirm they are running the instructions inside an interactive session on an Ampere GPU node.
+
+Example:
+
+  srun --partition=ampere --gres=gpu:1 --time=01:00:00 --pty bash
+
+Then check module availability:
+
+  module avail python/3.8.11
+
+Expected output should include:
+
+  python/3.8.11/gcc-9.4.0-yb6rzr6
+
+2) Attempt module load
+
+If the module appears in module avail, attempt:
+
+  module load python/3.8.11/gcc-9.4.0-yb6rzr6
+
+3) If the module still does not load
+
+Ask the user to provide the exact error message produced when running:
+
+  module load python/3.8.11/gcc-9.4.0-yb6rzr6
+
+and confirm:
+  - The hostname (to verify they are on an Ampere GPU node)
+  - Whether they have modified the module environment (e.g. using module purge)
+
+Only escalate if:
+  - The module does not appear in module avail while on an Ampere node, or
+  - The load error indicates a system-side module configuration issue.
+
+EXAMPLE CUSTOMER REPLY
+
+Hello William,
+
+The TensorFlow instructions must be run within an interactive session on an Ampere GPU node.
+
+Could you please start an Ampere session, for example:
+
+  srun --partition=ampere --gres=gpu:1 --time=01:00:00 --pty bash
+
+and then run:
+
+  module avail python/3.8.11
+
+You should see:
+
+  python/3.8.11/gcc-9.4.0-yb6rzr6
+
+If it appears but does not load, please send us the exact error message and the output of:
+
+  hostname
+
+so we can investigate further.
+
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not assume the module has been removed without checking module avail.
+- Do not recommend installing a custom Python or modifying system module paths.
+- Keep troubleshooting limited to confirming correct execution context and module visibility.
+
+----------
+
+[TICKET_KEY] HPCSSUP-97741
+[SUMMARY] CSD3 login - vm462
+
+CLASSIFICATION
+Category: Authentication / SSH Login / Account Lockout
+Technical Action Required: No (diagnosis + user guidance)
+Escalation Required: No (unless lock persists beyond normal timeout)
+Urgency: Medium (user access blocked)
+
+QUICK ASSESSMENT
+User reports:
+- Previously able to log into CSD3 headnodes.
+- After an idle period, login fails.
+- After entering password and MFA, system prompts for password again.
+- Appears as though password is incorrect.
+
+This pattern is consistent with an account lock due to multiple unsuccessful login attempts. On CSD3, repeated failed authentication attempts (including incorrect password or expired credentials) will trigger a temporary lock. The lock clears automatically after a defined timeout period.
+
+A common contributing factor is recent UIS/Raven password changes, which automatically propagate to CSD3 authentication.
+
+ACTION STEPS (HELPDESK)
+
+1) Check account status (internal)
+   - Confirm whether the account is in a locked state due to failed attempts.
+   - Confirm there is no wider authentication incident.
+
+2) Inform user of temporary lock behaviour
+   - Explain that repeated failed login attempts can trigger a temporary lock.
+   - State that the lock clears automatically after approximately 30 minutes.
+   - No manual reset is required unless the lock persists.
+
+3) Clarify correct credential usage
+   - User must enter their current UIS/Raven password (not an old HPC-specific password).
+   - After password, they must provide the correct TOTP associated with CSD3 (e.g. SSH token).
+
+4) If issue persists after timeout
+   Request:
+     - Exact hostname used (e.g. login.hpc.cam.ac.uk, login-icelake, multi.hpc.cam.ac.uk)
+     - Exact error message shown after failure
+     - Confirmation that UIS/Raven password works for other services
+
+5) Escalate only if:
+   - Lock does not clear after timeout window
+   - Account shows unexpected authentication failure state
+   - MFA system appears inconsistent
+
+DO NOT:
+- Reset the password.
+- Reset MFA without evidence.
+- Suggest creating a new account.
+
+EXAMPLE CUSTOMER REPLY
+
+Subject: Re: CSD3 login issue
+
+Dear Vijay,
+
+It appears that your account has been temporarily locked due to multiple unsuccessful login attempts. This lock will clear automatically after approximately 30 minutes.
+
+Once it has cleared, please ensure that you are entering your current UIS/Raven password when prompted in the terminal, followed by your CSD3 MFA code.
+
+If you continue to experience issues after waiting for the lock to clear, please let us know the exact hostname you are connecting to and the full error message shown.
+
+Best wishes,  
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not disclose internal authentication logs.
+- Do not confirm password correctness.
+- Avoid manual intervention unless lock persists abnormally.
+- UIS/Raven password changes automatically propagate to CSD3 authentication.
+
+----------
+
+[TICKET_KEY] HPCSSUP-97739
+[SUMMARY] HPC password
+
+CLASSIFICATION
+Category: Authentication / SSH Login / Password Clarification
+Technical Action Required: No (user guidance only)
+Escalation Required: No
+Urgency: Medium (access blocked)
+
+QUICK ASSESSMENT
+User is attempting to SSH to login-icelake.hpc.cam.ac.uk and reports not knowing their HPC password, stating they may never have set one.
+
+On CSD3, there is no separate HPC-specific password for internal users. Authentication uses the user’s UIS/Raven password, followed by the appropriate CSD3 TOTP token for SSH access.
+
+ACTION
+
+1) Clarify authentication model
+   - HPC password = UIS/Raven password.
+   - There is no separate password to set during activation.
+
+2) Clarify SSH login sequence
+   When connecting via:
+     ssh <CRSid>@login-icelake.hpc.cam.ac.uk
+
+   The user should:
+     a) Enter their current UIS/Raven password.
+     b) Enter their TOTP code associated with CSD3 SSH (typically labelled “CSD3:ssh” or similar in their authenticator app).
+
+3) If login still fails
+   Ask:
+     - Have you recently changed your UIS/Raven password?
+     - Do you have the correct CSD3 SSH MFA token configured?
+     - What exact error message appears after entering password/TOTP?
+
+4) Do NOT:
+   - Reset password directly.
+   - Provide or request passwords.
+   - Create a separate HPC password.
+
+EXAMPLE CUSTOMER REPLY
+
+Subject: Re: HPC password
+
+Dear Fay,
+
+There is no separate HPC password to set up. Your HPC login password is the same as your UIS/Raven password.
+
+When connecting via SSH, please enter your current UIS/Raven password when prompted, followed by the TOTP code associated with your CSD3 SSH login (usually labelled “CSD3:ssh” in your authenticator app).
+
+If you continue to experience issues, please let us know the exact error message shown after entering your credentials.
+
+Best wishes,  
+HPC Support
+
+SAFETY / POLICY NOTES
+- Never request or store user passwords.
+- Do not imply a separate HPC password exists.
+- Escalate only if authentication failures persist after confirming correct credential usage.
+
+----------
+
+[TICKET_KEY] HPCSSUP-97675
+[SUMMARY] SRCP Epi platform - storage query (follow-up on storage architecture and cost model)
+
+CLASSIFICATION
+Category: SRCP / Storage Architecture / RFS
+Technical Action Required: No (clarification only)
+Escalation Required: No
+Urgency: Low
+
+FOCUS OF RESPONSE
+User’s second query:
+
+“My understanding is that somehow storage for SRCP is provisioned on RFS. Is this RFS dedicated hardware that is isolated for use by a particular platform? Or does it work differently? In which case, is there the option to have dedicated RCS hardware, which will be cheaper?”
+
+QUICK ASSESSMENT
+SRCP storage is provisioned using RFS-backed storage that is logically and operationally isolated per platform/project. It is not pooled with general-purpose RDS/RCS environments, and users cannot directly mount external RCS storage within SRCP. There is no model for attaching separate “dedicated RCS hardware” to SRCP as a cheaper alternative.
+
+ACTION
+
+1) Clarify storage model
+   - SRCP storage is provisioned as isolated RFS shares associated specifically with SRCP projects.
+   - These shares are separated from other storage systems and not user-configurable.
+   - The isolation is by design due to SRCP security requirements.
+
+2) Clarify hardware/cost question
+   - SRCP storage is not dynamically attached from arbitrary RCS pools.
+   - There is no option to provision separate “dedicated RCS hardware” for SRCP at a reduced cost.
+   - SRCP environments have a defined architecture and approved storage pathways only.
+
+3) If cost optimisation is the underlying concern
+   - Suggest reviewing retention strategy (e.g., archive/export workflow outside SRCP if appropriate).
+   - Explain that external storage (e.g., RCS) would require controlled export and re-import, not live mounting.
+
+4) Do NOT:
+   - Suggest bypassing SRCP isolation.
+   - Imply that SRCP storage can be merged with other RCS/RDS resources.
+   - Promise alternative hardware provisioning unless formally approved.
+
+EXAMPLE CUSTOMER REPLY
+
+Subject: Re: SRCP storage architecture
+
+Dear Tom,
+
+SRCP storage is provisioned using RFS shares that are logically and operationally isolated for SRCP projects. These are separate from other RCS/RDS storage systems and are not directly accessible or mountable from outside the platform.
+
+It is not possible to attach separate “dedicated RCS hardware” to SRCP as a lower-cost alternative. The SRCP architecture and its storage pathways are fixed by design due to the security requirements of the platform.
+
+If you are looking to reduce storage costs, one option would be to export data from SRCP and archive it to a nominated RCS project outside the platform, but this would not be a live integration.
+
+Please let us know if you would like to discuss possible workflows for archiving data.
+
+Best wishes,  
+HPC Support
+
+SAFETY / POLICY NOTES
+- Maintain SRCP security model integrity.
+- Do not suggest storage sharing across security domains.
+- Avoid speculative statements about hardware provisioning beyond documented architecture.
+
+----------
+
+[TICKET_KEY] HPCSSUP-97660
+[SUMMARY] Adding new user to the lab RFS/RDS space
+
+CLASSIFICATION
+Category: Storage / RDS & RFS / Provisioning
+Technical Action Required: No (user action pending)
+Escalation Required: No
+Urgency: Low–Medium (access pending)
+
+QUICK ASSESSMENT
+A new user (vj292) has been added to both an RDS and RFS-NFS project via the self-service portal but remains in “Provisioning” state. The most common cause of this status is that the user has not yet accepted the storage service Terms & Conditions in the UIS Self Service portal. Until this step is completed, the provisioning workflow cannot proceed and access will not be activated.
+
+ACTION STEPS (HELPDESK)
+
+1) Confirm provisioning state (internal)
+   - Verify that the user appears as “Provisioning” on the relevant RDS and RFS projects.
+   - Check whether Terms & Conditions acceptance is outstanding.
+
+2) Instruct user to accept Terms & Conditions
+   Ask the new member (vj292) to:
+   - Visit: https://selfservice.uis.cam.ac.uk/account/
+   - Click on each relevant storage project:
+       • rds-djh1002-hodson-rds
+       • rfs-djh1002-hodson-rfs-nfs
+   - Accept the storage Terms & Conditions for each project.
+
+3) Explain workflow
+   - Once Terms & Conditions are accepted, a provisioning request is automatically generated.
+   - HPC Support will then activate access.
+   - All relevant parties will receive automatic email confirmation once provisioning completes.
+
+4) Do NOT:
+   - Manually override provisioning before Terms & Conditions are accepted.
+   - Escalate unless provisioning remains stalled after acceptance.
+
+IF PROVISIONING DOES NOT COMPLETE AFTER ACCEPTANCE
+
+- Confirm acceptance timestamp in portal.
+- Check whether an automatic provisioning ticket was generated.
+- Escalate to storage administration only if backend provisioning fails after acceptance.
+
+EXAMPLE CUSTOMER REPLY
+
+Subject: Re: Provisioning status for new lab member
+
+Dear Joanna,
+
+Thank you for your message.
+
+Victor’s access is currently showing as “Provisioning” because he has not yet accepted the storage service Terms & Conditions.
+
+Could he please visit:
+
+  https://selfservice.uis.cam.ac.uk/account/
+
+and click on the relevant project links to accept the Terms & Conditions for each storage project?
+
+Once this is completed, a provisioning request will automatically be generated and we will activate his access. All parties will receive confirmation by email once this has been processed.
+
+Best wishes,  
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not bypass the mandatory Terms & Conditions acceptance process.
+- Do not grant access before provisioning workflow completes.
+- Ensure both RDS and RFS projects are covered if both were requested.
+
+----------
+
+[TICKET_KEY] HPCSSUP-97622
+[SUMMARY] TumourVue SRCP platform
+
+CLASSIFICATION
+Category: SRCP / New Platform Provisioning / Resource Request
+Technical Action Required: Yes (new SRCP platform setup)
+Portal/Form Action Required: Yes (SRCP resource request form submission)
+Escalation Required: Yes (SRCP platform provisioning team)
+Urgency: Medium–High (students starting next week; high IP / Level 3 data)
+
+QUICK ASSESSMENT
+The PI is requesting the creation of a new SRCP Level 3 platform (high IP value) for a new project (TumourVue), separate from an existing platform (Predict), with funding in place for one year. Three Masters students will require access with permissions similar to an existing workflow (Python-based image analysis).
+
+This is not a simple user-access request. It requires submission of an SRCP resource request form to initiate provisioning of a new platform, including:
+- Platform creation
+- Security level confirmation (Level 3)
+- Funding confirmation
+- Storage and compute allocation
+- Role definitions
+
+ACTION STEPS (HELPDESK)
+
+1) Clarify request type
+   - Confirm that this is a new SRCP platform (not just additional users).
+   - Confirm that Level 3 classification is required.
+
+2) Direct PI to SRCP resource request form
+   Provide link:
+     https://www.hpc.cam.ac.uk/form/srcp-resource-request
+
+   Explain that this form initiates:
+     - New platform provisioning
+     - Security review
+     - Resource allocation
+     - Funding linkage
+
+3) Provide documentation for security levels
+   Refer to:
+     https://docs.hpc.cam.ac.uk/srcp/user-onboarding/index.html#user-onboarding
+
+   Clarify:
+     - Level 3 environments are designed for high IP / sensitive research data.
+     - Appropriate role selection must be specified for student users.
+
+4) After submission (internal)
+   - Confirm form submission received.
+   - Attach updates to the resource request ticket.
+   - Escalate to SRCP provisioning team.
+   - Do not promise specific timelines until confirmed.
+
+5) Do NOT:
+   - Manually create the platform outside the formal workflow.
+   - Add users before platform provisioning is complete.
+   - Confirm approval until security and provisioning checks are complete.
+
+QUESTIONS TO ASK (ONLY IF NOT CLEAR IN FORM)
+- Confirm expected duration (1 year initially).
+- Confirm estimated storage requirements.
+- Confirm number of users and roles required.
+- Confirm whether this is fully isolated from existing Predict platform.
+
+EXAMPLE CUSTOMER REPLY
+
+Subject: Re: TumourVue SRCP Platform Request
+
+Dear Gita,
+
+To create a new SRCP platform for TumourVue, you will need to submit an SRCP resource request using the following form:
+
+  https://www.hpc.cam.ac.uk/form/srcp-resource-request
+
+This will initiate the provisioning process for a new Level 3 platform, including security review and resource allocation.
+
+You may also find the following documentation helpful when selecting the appropriate level and roles:
+
+  https://docs.hpc.cam.ac.uk/srcp/user-onboarding/index.html#user-onboarding
+
+Once the form has been submitted, we will process the request and provide updates via the associated ticket.
+
+Best wishes,  
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not bypass the SRCP resource request process.
+- Ensure Level 3 designation is formally captured in the request.
+- Do not grant access prior to completion of provisioning and security approval.
+- Avoid committing to deadlines until the provisioning team confirms scheduling.
+
+----------
+
+[TICKET_KEY] HPCSSUP-97621
+[SUMMARY] Help creating python/conda environment on CSD3
+
+CLASSIFICATION
+Category: Software / Python / Conda Environment Management
+Technical Action Required: No (user-side configuration guidance)
+Escalation Required: No
+Urgency: Low–Medium (environment setup blocked)
+
+QUICK ASSESSMENT
+User attempted to create a conda environment with:
+
+  conda create -n gnn-crn -c conda-forge python=3.12
+  conda activate gnn-crn
+  conda install -c conda-forge numpy=2.3.5
+
+and encountered an UnsatisfiableError involving Python 3.12, NumPy 2.3.5, and multiple core libraries.
+
+The conflict is caused by incompatible package constraints — specifically NumPy 2.x binary compatibility changes combined with packages in the user’s requirements that depend on NumPy <2. This is not specific to CSD3; it is a dependency resolution issue.
+
+Additionally, users should avoid relying on any centrally provided miniconda installation if outdated, and instead install their own Miniconda in their `hpc-work` space.
+
+ACTION STEPS (HELPDESK)
+
+1) Recommend personal Miniconda installation (if not already done)
+
+   Install Miniconda into hpc-work following:
+     https://www.anaconda.com/docs/getting-started/miniconda/install#linux-terminal-installer
+
+   Install into:
+     ~/hpc-work/miniconda3
+
+   Then initialise:
+     source ~/hpc-work/miniconda3/bin/activate
+     conda init
+     source ~/.bashrc
+
+2) Create a clean environment with explicit Python version
+
+   Use a specific patch version to reduce solver ambiguity:
+
+     conda create -n HPCSSUP-97621 python=3.12.4 -y
+     conda activate HPCSSUP-97621
+
+3) Avoid forcing NumPy 2.x unless all dependencies support it
+
+   The earlier failure occurred because:
+     - NumPy 2.x introduces binary-breaking changes.
+     - Some common packages (e.g. matplotlib 3.8.x) require numpy<2.
+     - Explicitly installing numpy=2.3.5 makes the environment logically unsatisfiable.
+
+   Therefore:
+     - Do NOT pin NumPy 2.x unless required.
+     - Let conda resolve NumPy automatically.
+
+4) Install special packages from conda-forge if required
+
+   For example (if rdkit needed):
+
+     conda install -c conda-forge rdkit=2025.09.2 -y
+
+5) Install remaining requirements via pip
+
+     pip install -r requirements.txt
+
+   (This assumes no incompatible hard pins inside requirements.txt.)
+
+6) Best Practice on CSD3
+
+   - Install Miniconda in hpc-work (not /home).
+   - Avoid using outdated central conda modules.
+   - Avoid mixing incompatible major-version pins (e.g. numpy==2.x with legacy stack).
+   - Build environments on login nodes (lightweight), not compute nodes.
+
+IF PROBLEM PERSISTS
+
+Ask for:
+  - Full requirements.txt
+  - Exact conda commands used
+  - Output of:
+      conda info
+      conda list
+
+EXAMPLE CUSTOMER REPLY
+
+Subject: Re: Conda environment conflicts on CSD3
+
+Hi Nico,
+
+The error you’re seeing is due to incompatible package constraints rather than anything specific to CSD3. In particular, NumPy 2.x introduces binary changes and some packages (e.g. matplotlib 3.8.x) require `numpy<2`, which makes the environment logically impossible to solve when you explicitly request `numpy==2.3.5`.
+
+We recommend installing your own Miniconda into your `hpc-work` area and creating a clean environment, for example:
+
+  conda create -n myenv python=3.12.4 -y
+  conda activate myenv
+
+Then allow conda to resolve NumPy automatically rather than forcing version 2.x. After that, you can install your remaining requirements using:
+
+  pip install -r requirements.txt
+
+This approach should resolve the dependency conflict.
+
+Please let us know if you continue to experience issues.
+
+Best wishes,  
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not recommend modifying system Python.
+- Do not suggest installing packages into central/shared environments.
+- Avoid advising installation on compute nodes.
+- Keep all installs within user-controlled directories (e.g. hpc-work).
+
+----------
+
+[TICKET_KEY] HPCSSUP-97477
+[SUMMARY] Getting write permission to rds project
+
+CLASSIFICATION
+Category: Storage / RDS Permissions / Project Roles
+Technical Action Required: No (permission governance guidance)
+Escalation Required: No
+Urgency: Medium (write access blocked)
+
+QUICK ASSESSMENT
+User requests read/write access to an RDS project and assumes only one Data Manager can exist. On RDS projects, multiple Data Managers are allowed. If the user is currently a Data User, write capability should be granted by project governance (Data Owner/Data Manager) either by role reassignment or by applying permissions according to RDS permissions guidance.
+
+ACTION
+
+1) Clarify role model
+   - Data Owners can appoint multiple Data Managers.
+   - Data Users cannot self-assign elevated permissions.
+
+2) Direct user to project governance path
+   - Ask user to contact the Data Owner or existing Data Manager for:
+     a) role change to Data Manager, or
+     b) permission grant aligned with RDS ACL guidance.
+
+3) Provide documentation link
+   https://docs.hpc.cam.ac.uk/storage/rds/permissions.html
+
+EXAMPLE CUSTOMER REPLY
+
+Hello Emilia,
+
+Data Owners can add as many Data Managers as required on an RDS project.
+
+If you are currently a Data User, you will need to ask the Data Owner or a Data Manager to either:
+1) reassign your role to Data Manager, or  
+2) grant the required permissions in line with the RDS permissions guidance:
+https://docs.hpc.cam.ac.uk/storage/rds/permissions.html
+
+Best wishes,  
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not change project roles/permissions without Data Owner or Data Manager authorisation.
+- Do not imply Helpdesk can bypass project governance for access control.
+
+----------
+
+[TICKET_KEY] HPCSSUP-96933
+[SUMMARY] SSH login failing
+
+CLASSIFICATION
+Category: Authentication / SSH / MFA (TOTP)
+Technical Action Required: No (user configuration issue)
+Escalation Required: No
+Urgency: Medium (access blocked)
+
+QUICK ASSESSMENT
+User can successfully log into login-web.hpc.cam.ac.uk but receives “Permission denied” when attempting SSH login to login-cpu.hpc.cam.ac.uk.
+
+User reports:
+- Raven/UIS password is correct.
+- MFA works for login-web.
+- SSH host key accepted.
+- Password recently changed.
+
+Web login MFA and SSH MFA are separate enrolments. A common cause of this behaviour is that MFA has not yet been enrolled for SSH access (multi.hpc.cam.ac.uk), even though web MFA works.
+
+ACTION
+
+1) Explain SSH MFA requirement
+   - Clarify that SSH requires a separate MFA enrolment from login-web.
+
+2) Provide documentation
+   https://docs.hpc.cam.ac.uk/hpc/user-guide/mfa.html#walkthrough-ssh-to-multi-hpc-cam-ac-uk
+
+3) Instruct user to enrol SSH MFA via:
+
+   ssh <CRSid>@multi.hpc.cam.ac.uk
+
+   They should:
+   - Enter UIS/Raven password.
+   - Scan the displayed QR code into their authenticator app.
+   - Confirm a new token is created (label similar to “CSD3:SSH Login”).
+
+4) After enrolment, retry SSH to:
+
+   ssh <CRSid>@login-cpu.hpc.cam.ac.uk
+
+5) If this does not resolve the issue:
+   - Ask the user to paste the full SSH output (including prompts but excluding any codes).
+   - Escalate only if MFA enrolment succeeds but authentication still fails.
+
+EXPECTED OUTCOME
+Once SSH MFA is enrolled correctly, authentication via SSH should succeed using:
+- UIS/Raven password
+- TOTP from the new “CSD3:SSH Login” token
+
+EXAMPLE CUSTOMER REPLY
+
+Hello Vivek,
+
+Although your MFA is working for login-web, SSH access requires MFA to be set up separately.
+
+A common cause of this behaviour is that SSH MFA has not yet been enrolled. Please follow the walkthrough here:
+
+https://docs.hpc.cam.ac.uk/hpc/user-guide/mfa.html#walkthrough-ssh-to-multi-hpc-cam-ac-uk
+
+You can begin the enrolment process by running:
+
+  ssh <CRSid>@multi.hpc.cam.ac.uk
+
+You will be prompted for your UIS/Raven password and then shown a QR code to scan into your authenticator app.
+
+Once this is complete, please try SSH again to:
+
+  ssh <CRSid>@login-cpu.hpc.cam.ac.uk
+
+If the issue persists, please paste the full SSH output and we’ll investigate further.
+
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not assume password error if login-web works.
+- Do not reset MFA without identity verification.
+- Do not suggest bypassing MFA.
+- Avoid implying internal verification of MFA enrolment unless explicitly confirmed.
+
+----------
+
+[TICKET_KEY] HPCSSUP-96776
+[SUMMARY] Fw: Unable to submit slurm jobs on callender+
+
+CLASSIFICATION
+Category: Slurm / Account & Partition Configuration
+Technical Action Required: No (user-side correction)
+Escalation Required: No (unless account not present in mybalance)
+Urgency: Medium (job submission blocked)
+
+QUICK ASSESSMENT
+User reports:
+
+  sbatch: error: Batch job submission failed:
+  Invalid account or account/partition combination specified
+
+They attempted to submit using:
+  #SBATCH --account=callender+
+  #SBATCH --partition=cclake
+
+This error typically indicates one of the following:
+
+1) The Slurm account name is incorrect (account names are case-sensitive).
+2) The account name does not exactly match the allocation shown in Slurm.
+3) The account/partition combination is not valid for the user.
+4) The user is not using the correct Slurm account identifier format.
+
+The correct way to determine valid accounts is via the `mybalance` command.
+
+ACTION STEPS (HELPDESK)
+
+1) Ask the user to confirm available accounts
+   Instruct them to run:
+
+     mybalance
+
+   This will display the exact account names and usage limits.
+
+2) Confirm account string matches exactly
+   - Account names are case-sensitive.
+   - Hyphens and underscores are distinct.
+   - Plus signs (“+”) are not normally used in Slurm account names.
+
+3) Ensure correct SBATCH syntax
+   In the submission script:
+
+     #SBATCH --account=<EXACT_ACCOUNT_NAME_FROM_MYBALANCE>
+     #SBATCH --partition=<VALID_PARTITION_FOR_ACCOUNT>
+
+4) Validate partition compatibility
+   If unsure, ask the user to provide:
+
+     mybalance
+     sinfo -s
+
+   Confirm that:
+   - The account is listed.
+   - The partition is valid for that account.
+   - The user is a member of that Slurm account.
+
+5) If the account does not appear in `mybalance`
+   - Verify account membership.
+   - Escalate to cluster administration if necessary.
+
+COMMON CAUSES TO CHECK
+
+- Typographical error in account name.
+- Using an informal label (e.g. project nickname) instead of the Slurm account identifier.
+- Case mismatch.
+- Replacing hyphens with underscores.
+- Using outdated account name.
+
+EXAMPLE CUSTOMER REPLY
+
+Subject: Re: Unable to submit Slurm jobs on callender+
+
+Hello Megha,
+
+The error you’re seeing usually indicates that the account name or account/partition combination is not valid.
+
+Could you please run:
+
+  mybalance
+
+This will show the exact Slurm account names available to you. Account names are case-sensitive and must match exactly in your submission script.
+
+Once you have confirmed the correct account name, update your script to include:
+
+  #SBATCH --account=<exact account name>
+  #SBATCH --partition=<valid partition>
+
+If you’re still seeing the error after confirming the account name from `mybalance`, please send the output of `mybalance` and your updated submission script so we can take a closer look.
+
+Best wishes,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not assume account misconfiguration without verifying `mybalance`.
+- Do not manually alter Slurm accounts unless membership is confirmed missing.
+- Avoid guessing account names; always use system-reported identifiers.
+
+----------
+
+[TICKET_KEY] HPCSSUP-96609
+[SUMMARY] Adding student collaborators to RDS disk and supervisor's accounts
+
+CLASSIFICATION
+Category: Storage Membership / Slurm Account Access
+Technical Action Required: Yes (conditional – Slurm account membership)
+Portal Action Required: Yes (RDS membership via Self Service)
+Escalation Required: Conditional (PI approval required for Slurm accounts)
+Urgency: Low–Medium (collaborator onboarding)
+
+QUICK ASSESSMENT
+User requests:
+
+1) Add two students to an RDS storage project:
+   rds-posecraft-5SVx1x5hoTY
+
+2) Add the same users to multiple Slurm accounts:
+   OZTIRELI-SL2-CPU
+   OZTIRELI-SL2-GPU
+   OZTIRELI-SL3-CPU
+   OZTIRELI-SL3-GPU
+
+Key principles:
+
+- RDS project membership is managed by the Data Owner or Data Manager via the Self Service portal. HPC Support does not directly administer storage memberships.
+- Slurm account access can only be granted with explicit approval from the PI/account owner.
+
+ACTION STEPS (HELPDESK)
+
+1) RDS Membership
+   - Inform user that storage project membership is controlled via the Self Service portal.
+   - Direct them to confirm that the Data Owner or Data Manager has added the students.
+   - If necessary, advise them to check:
+       https://selfservice.uis.cam.ac.uk/
+
+2) Slurm Account Access
+   - Confirm whether explicit approval from the account owner (PI) has been provided.
+   - If not, request written approval from the PI before proceeding.
+   - Once approval is received, add the users to the specified Slurm accounts.
+
+3) Do NOT:
+   - Add users to Slurm accounts without PI approval.
+   - Modify storage memberships manually.
+   - Assume requester has authority unless they are confirmed Data Owner/PI.
+
+QUESTIONS TO ASK (IF APPROVAL NOT CLEAR)
+
+- Are you the Data Owner or Data Manager of the RDS project?
+- Can the PI/account owner confirm approval for adding these users to the Slurm accounts?
+
+EXAMPLE CUSTOMER REPLY
+
+Subject: Re: Adding collaborators to RDS and Slurm accounts
+
+Dear Zhilin,
+
+Regarding the RDS project, storage memberships are managed by the Data Owner or Data Manager via the Self Service portal. We do not directly administer storage project memberships. Please ensure the relevant Data Owner/Data Manager has added the students through:
+
+  https://selfservice.uis.cam.ac.uk/
+
+For the Slurm accounts, we can add the students once we have explicit approval from the account owner (PI). If this has not yet been provided, could the PI please confirm approval?
+
+Once confirmed, we will proceed accordingly.
+
+Best wishes,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Storage access must follow Data Owner governance.
+- Slurm account additions require PI approval.
+- Do not bypass project ownership controls.
+- Maintain auditability of account access changes.
+
+----------
+
+[TICKET_KEY] HPCSSUP-96250
+[SUMMARY] "[UKAEA] AIRR Access Last Resort"
+
+CLASSIFICATION
+Category: AIRR / Authentication / Keycloak (External User)
+Technical Action Required: Yes (local Keycloak account creation)
+Escalation Required: Yes (AIRR team)
+Urgency: Medium (invitation expiry deadline)
+
+QUICK ASSESSMENT
+User has been invited to join the “UKAEA Early Adopters” project on AIRR and requests creation of a local Keycloak account.
+
+Key points:
+- User is external (UKAEA email).
+- Invitation link has an expiry date.
+- “Local Keycloak entry” indicates use of the documented “without MyAccessID (last resort)” workflow.
+- Account must be created in Keycloak before the user can accept the AIRR invitation via “Sign in with Keycloak”.
+
+ACTION STEPS (HELPDESK)
+
+1) Confirm invitation context (internal)
+   - Verify invitation exists for the user email.
+   - Confirm project name: “UKAEA Early Adopters”.
+   - Confirm partition/access level requested.
+
+2) Escalate to AIRR team (if not directly handled by HPC Support)
+   - Forward ticket to AIRR administrators.
+   - Include:
+       • Full name
+       • Organisation
+       • Email
+       • Project/partition name
+   - Mark urgency if invitation expiry is near.
+
+3) Create local Keycloak account (AIRR/admin action)
+   - Create account using provided email.
+   - Trigger password setup email.
+   - Ensure account is linked to the appropriate realm.
+
+4) Notify user
+   - Inform them they will receive a password setup email.
+   - Advise checking spam/junk folders.
+   - Instruct them to:
+       a) Set password,
+       b) Visit invitation link,
+       c) Choose “Sign in with Keycloak”,
+       d) Use newly created credentials.
+
+5) Provide documentation link
+   - Reference official guidance for “Accessing without MyAccessID (last resort)”.
+
+6) Do NOT:
+   - Manually approve the project membership unless that is part of the AIRR workflow.
+   - Ask for passwords.
+   - Override the invitation process.
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Has the invitation expired?
+- Have you received the password setup email?
+- Are you able to access the invitation link successfully?
+
+EXAMPLE CUSTOMER REPLY
+
+Subject: Re: UKAEA Early Adopters – AIRR Access
+
+Hi Waqar,
+
+Your local Keycloak account has now been set up. You should shortly receive an email to set your password (please check your spam/junk folder if it does not appear).
+
+Once your password is set, please visit the invitation link and select “Sign in with Keycloak”, then log in using your new credentials.
+
+For reference, please see:
+https://docs.hpc.cam.ac.uk/hpc/user-guide/pvc.html#accessing-without-myaccessid-last-resort
+
+Please let us know if you encounter any issues.
+
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not transmit passwords via email.
+- Do not request sensitive credentials.
+- Ensure external accounts are created only through the approved Keycloak workflow.
+- Respect invitation expiry deadlines but do not bypass approval controls.
+
+----------
+
+[TICKET_KEY] HPCSSUP-96168
+[SUMMARY] HPC Job Scheduling Delay
+
+CLASSIFICATION
+Category: Slurm / Scheduling / Service Level Priority
+Technical Action Required: No
+Escalation Required: No
+Urgency: Low–Medium (long wait time but system functioning)
+
+QUICK ASSESSMENT
+User reports a GPU job taking almost two weeks to start and asks whether there is an issue with their setup.
+
+From the job script:
+- Account: SVOBODA-SL3-GPU
+- Partition: ampere
+- GPUs requested: 4
+- Wall time: 12:00:00
+
+There are no configuration errors visible in the submission script. The most likely cause of delay is scheduler priority and service level.
+
+Key scheduling principles:
+- SL3 accounts operate at the non-paying service level.
+- Paying service-level jobs receive higher priority.
+- Priority increases over time while waiting (aging factor).
+- Large GPU requests (e.g. 4 GPUs) may experience longer queue times depending on demand.
+- Cancelling and resubmitting resets priority and can increase overall wait time.
+
+ACTION STEPS (HELPDESK)
+
+1) Confirm no configuration errors
+   - The script contains valid SBATCH directives.
+   - Correct partition and account syntax used.
+   - No obvious resource mis-specification.
+
+2) Explain scheduling behaviour
+   - Jobs are prioritised according to service level and fair-share policy.
+   - Paying activity can temporarily delay SL3 jobs.
+   - Jobs steadily gain priority the longer they wait.
+
+3) Provide best practice guidance
+   - Do not cancel and resubmit while waiting.
+   - Consider reducing resource request (e.g., fewer GPUs) if flexible.
+   - Use `squeue -u <CRSid>` to monitor queue position.
+   - Use `scontrol show job <jobid>` to inspect priority factors if desired.
+
+4) Do NOT:
+   - Escalate unless there is evidence of scheduler malfunction.
+   - Promise faster scheduling.
+   - Modify account priority.
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- What is the Job ID?
+- Has the job been pending (PD) the entire time?
+- What does `scontrol show job <jobid>` report under Reason= ?
+
+EXAMPLE CUSTOMER REPLY
+
+Subject: Re: HPC Job Scheduling Delay
+
+Dear Amogh,
+
+There is nothing wrong with your account or submission script. Your job is running under an SL3 (non-paying) GPU account, and at times there can be significant demand from higher-priority paying accounts.
+
+Please note that each paying job can occupy its allocated GPUs for up to 36 hours. Jobs steadily increase in priority the longer they wait, so cancelling and resubmitting would be counterproductive as it resets that priority.
+
+Your job will run when sufficient resources become available.
+
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not imply scheduler malfunction without evidence.
+- Do not recommend priority manipulation.
+- Avoid suggesting users circumvent service-level policy.
+- Reinforce correct queueing behaviour and expectations.
+
+----------
+
+[TICKET_KEY] HPCSSUP-95566
+[SUMMARY] Support for job submissions
+
+CLASSIFICATION
+Category: Slurm / GPU Scheduling / Walltime Limits
+Technical Action Required: No (policy explanation + workflow guidance)
+Escalation Required: No
+Urgency: Medium (jobs being cancelled due to time limit)
+
+QUICK ASSESSMENT
+User reports GPU jobs being cancelled after ~36 hours with error:
+
+  *** JOB <jobid> CANCELLED DUE TO TIME LIMIT ***
+
+They would like to run jobs longer than 3 days and maximise GPU allocation usage.
+
+Key principles:
+- GPU partitions enforce a maximum walltime limit (e.g. 36 hours).
+- This is a scheduler policy limit, not a configuration error.
+- The limit applies regardless of remaining budgeted GPU hours.
+- Allocated GPU hours (account balance) ≠ maximum walltime per job.
+- Long-running workflows should use checkpointing and job chaining.
+
+ACTION STEPS (HELPDESK)
+
+1) Confirm policy limit
+   - Explain that the 36-hour walltime is an enforced scheduler limit.
+   - It cannot be overridden per job at the user level.
+
+2) Clarify allocation model
+   - GPU hour budget defines total consumption allowed.
+   - Walltime limit defines maximum duration of a single job.
+   - Having remaining hours does not permit exceeding the per-job limit.
+
+3) Recommend checkpointing (best practice)
+   - Modify code to periodically write restart/checkpoint files.
+   - Submit jobs so that they resume from the last checkpoint.
+   - Use job arrays or chained submissions to continue computation.
+
+4) Optional: suggest job chaining
+   - Use dependent jobs:
+       sbatch --dependency=afterok:<jobid> next_job.sh
+   - Or include automatic resubmission logic if checkpoint detected.
+
+6) Do NOT:
+   - Promise walltime extensions.
+   - Modify partition policy.
+   - Suggest splitting allocation across multiple concurrent long jobs to bypass limits.
+
+QUESTIONS TO ASK (IF NEEDED)
+- Which partition/account are you using?
+- How long does your full workflow need to run?
+- Does your code support checkpoint/restart?
+
+EXAMPLE CUSTOMER REPLY
+
+Subject: Re: Support for job submissions
+
+Hi Sam,
+
+The 36-hour walltime limit is a scheduler policy on the GPU partition and cannot be extended for individual jobs. Even if you have sufficient GPU hours remaining in your allocation, the maximum runtime per job is still capped.
+
+To run longer workflows, we recommend implementing checkpointing so that your job can resume from the last saved state once the walltime is reached. You can then submit follow-up jobs to continue from the checkpoint.
+
+Please let us know if you would like guidance on setting up checkpointing or job dependencies.
+
+Best wishes,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Walltime limits are enforced at scheduler level.
+- Allocation balance does not override per-job limits.
+- Avoid suggesting policy circumvention.
+- Promote checkpoint/restart as standard HPC best practice.
+
+----------
+
+[TICKET_KEY] HPCSSUP-95541
+[SUMMARY] Q about how to request CPUs on Wilkes
+
+CLASSIFICATION
+Category: Slurm / GPU-CPU Resource Ratios / Wilkes3 (Ampere)
+Technical Action Required: No (scheduler policy clarification)
+Escalation Required: No
+Urgency: Low
+
+QUICK ASSESSMENT
+User is running on Wilkes3 (Ampere) requesting:
+- 1 node
+- 1 GPU
+- 1 task
+- Wants to increase CPUs from 32 to 76 while still using only 1 GPU.
+
+On Wilkes3 Ampere nodes, Slurm enforces a CPU-per-GPU ratio:
+- Maximum 32 CPUs per GPU.
+- This is a scheduler-level constraint.
+- Users cannot request arbitrary CPU counts independent of GPU count.
+
+Therefore:
+- 1 GPU → maximum 32 CPUs.
+- To request ~76 CPUs, the user must request 3 GPUs (32 × 3 = 96 CPUs maximum available).
+
+The scheduler will not allow 76 CPUs with only 1 GPU.
+
+ACTION STEPS (HELPDESK)
+
+1) Explain enforced policy
+   - Ampere nodes allocate CPUs in proportion to GPUs.
+   - 32 CPUs per GPU maximum.
+   - This prevents GPU starvation and ensures fair resource use.
+
+2) Calculate requirement
+   - 76 CPUs ÷ 32 CPUs per GPU ≈ 2.38 GPUs.
+   - Since GPUs are indivisible, user must request 3 GPUs.
+
+3) Provide correct submission guidance
+   Example directives:
+     #SBATCH --gres=gpu:3
+     #SBATCH --cpus-per-task=76
+   (Ensure CPUs requested do not exceed 32 × GPUs requested.)
+
+4) Clarify limitations
+   - Cannot exceed enforced CPU-per-GPU ratio.
+   - Cannot request fractional GPUs.
+   - Cannot override scheduler policy.
+
+5) Do NOT:
+   - Suggest bypassing CPU limits.
+   - Recommend modifying system configuration.
+   - Escalate unless a policy exception is formally requested.
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Which Wilkes partition are you using?
+- Are you using --ntasks or --cpus-per-task?
+- Do you require 76 CPUs per task or across tasks?
+
+EXAMPLE CUSTOMER REPLY
+
+Subject: Re: CPU request on Wilkes
+
+Hello Mel,
+
+On Wilkes3 (Ampere), Slurm enforces a maximum of 32 CPUs per GPU to avoid starving GPUs of CPU resources. This means that if you request 1 GPU, you can receive at most 32 CPUs.
+
+To obtain approximately 76 CPUs, you would need to request 3 GPUs (since 32 × 3 = 96 CPUs available). GPUs must be requested in whole numbers, so fractional allocations are not possible.
+
+For example:
+
+  #SBATCH --gres=gpu:3
+  #SBATCH --cpus-per-task=76
+
+Please let us know if you need help adjusting your submission script.
+
+Best wishes,
+HPC Support
+
+SAFETY / POLICY NOTES
+- CPU-per-GPU ratio is scheduler-enforced.
+- Do not imply the limit can be overridden.
+- Avoid suggesting inefficient resource usage beyond policy.
+- Ensure guidance aligns with documented Wilkes3 resource allocation rules.
+
+----------
+
+[TICKET_KEY] HPCSSUP-95504
+[SUMMARY] Issues with GPU compilation of a package (LAMMPS + symmetrix, CUDA ≥12)
+
+CLASSIFICATION
+Category: Software / Compilation / GPU (Ampere, ukaea-amp)
+Technical Action Required: No (user rebuild with supported stack)
+Escalation Required: No (unless failure persists after rebuild)
+Urgency: Medium (runtime failure on GPU partition)
+
+QUICK ASSESSMENT
+User successfully compiled LAMMPS + symmetrix with a custom CUDA 12.4.1 toolchain, but runtime fails on ukaea-amp with:
+
+- Open MPI component warnings (libosmcomp.so.4, libfabric.so.1 not found)
+- Process exited on signal 4 (Illegal instruction)
+
+Likely causes:
+1) Incompatible Open MPI module (built for Skylake + RHEL7) being used on Ampere (Zen3 + RHEL8).
+2) Instruction-set mismatch (e.g. -march=native during cross-compilation on login node).
+3) Mixed CUDA/MPI/compiler stack leading to ABI/runtime incompatibilities.
+
+Resolution is to rebuild using the supported Ampere test software stack with a consistent compiler/CUDA/MPI toolchain and disable native CPU flags when cross-compiling.
+
+ACTION STEPS (HELPDESK)
+
+1) Ensure clean environment
+   - Start a fresh shell.
+   - Remove old build directory:
+       cd /path/to/lammps
+       rm -rf build-gpu
+
+2) Load base modules
+       module purge
+       module load rhel8/global rhel8/slurm
+
+3) Enable Ampere test stack
+       module use /usr/local/software/spack/csd3/spack-modules/test/ampere-2025-06-01/linux-rocky8-zen3
+
+4) Load compatible toolchain
+       module load gcc/14.3.0/vlhhcp6m \
+                   cuda/12.8.1/gcc/kdeps6ab \
+                   openmpi/4.1.8/gcc/hemliivg \
+                   cmake/3.31.10/gcc/7ddsybx7
+
+   Rationale:
+   - OpenMPI built for Zen3 and RHEL8
+   - CUDA ≥12 satisfied
+   - Consistent compiler/runtime stack
+
+5) Reconfigure build
+       cmake \
+           -B build-gpu \
+           -D CMAKE_BUILD_TYPE=Release \
+           -D CMAKE_CXX_STANDARD=20 \
+           -D CMAKE_CXX_STANDARD_REQUIRED=ON \
+           -D CMAKE_CXX_COMPILER=$(pwd)/lib/kokkos/bin/nvcc_wrapper \
+           -D CMAKE_CXX_FLAGS="${CMAKE_CXX_FLAGS} -march=znver3 -ffast-math" \
+           -D BUILD_SHARED_LIBS=ON \
+           -D BUILD_OMP=ON \
+           -D BUILD_MPI=ON \
+           -D PKG_KOKKOS=ON \
+           -D Kokkos_ENABLE_SERIAL=ON \
+           -D Kokkos_ENABLE_OPENMP=ON \
+           -D Kokkos_ARCH_ZEN3=ON \
+           -D Kokkos_ENABLE_AGGRESSIVE_VECTORIZATION=ON \
+           -D Kokkos_ENABLE_CUDA=ON \
+           -D Kokkos_ARCH_AMPERE80=ON \
+           -D SYMMETRIX_KOKKOS=ON \
+           -D SYMMETRIX_SPHERICART_CUDA=ON \
+           -D SPHERICART_ARCH_NATIVE=OFF \
+           cmake
+
+   Important:
+   - Disable -march=native (SPHERICART_ARCH_NATIVE=OFF) when building on login node.
+   - Ensure CMake does not mix multiple CMAKE_CXX_COMPILER definitions.
+
+6) Build
+       cmake --build build-gpu -j
+
+7) Runtime
+   - Load the same modules used for compilation before executing.
+   - Submit via Slurm on ukaea-amp.
+   - Do not mix MPI modules between build and run.
+
+EXPECTED OUTCOME
+- No illegal instruction at runtime.
+- No Open MPI component mismatch warnings.
+- GPU-enabled LAMMPS executable runs on ukaea-amp partition.
+
+IF ISSUE PERSISTS
+Request:
+- Full submission script
+- Full build log
+- Exact runtime command
+- Output of:
+      module list
+      ldd <lammps_binary>
+      ompi_info | head
+
+SAFETY / POLICY NOTES
+- Do not recommend installing custom system-level CUDA drivers.
+- Avoid mixing MPI modules from different OS/compiler stacks.
+- Ensure consistent module environment between compilation and runtime.
+- Do not suggest modifying system libraries under /usr.
+
+----------
+
+[TICKET_KEY] HPCSSUP-95411
+[SUMMARY] Path to my RFS storage
+
+CLASSIFICATION
+Category: Storage / RFS / Access Method
+Technical Action Required: No (guidance + possible storage conversion request)
+Escalation Required: Yes (if user requests NFS-RFS conversion)
+Urgency: Low–Medium (workflow clarification)
+
+QUICK ASSESSMENT
+User is attempting to locate an RFS (Research File Share) project under /rfs/project/ on HPC and assumes it should be accessible similarly to RDS. This is incorrect.
+
+Standard RFS storage:
+- Is not directly mounted on CSD3/HPC compute or login nodes.
+- Is accessed via OS-level mounting from institutional machines (SMB on Windows, SMB/NFS on macOS/Linux).
+- Cannot be accessed through the HPC filesystem unless converted to NFS-RFS.
+
+User’s intended workflow:
+- Active work on RDS
+- Backed-up storage on RFS
+- Copy between RDS and RFS
+
+This requires clarification of storage models and possibly a request to convert the RFS project to NFS-RFS.
+
+ACTION STEPS (HELPDESK)
+
+1) Clarify storage separation
+   Explain that:
+   - RDS = high-performance Lustre storage mounted on HPC under /rds
+   - RFS = Research File Share (backed-up institutional storage)
+   - Standard RFS is not accessible from HPC
+
+2) Answer direct question
+   The path does not exist on HPC because RFS is not mounted there.
+   It must be accessed via:
+   - Windows/macOS mount instructions
+   - SMB/NFS mount from a workstation
+
+3) Provide supported HPC-access option
+   If user needs RFS accessible from HPC, instruct:
+   - Request conversion to NFS-RFS
+   - Provide documentation link (RFS on CSD3 – NFS-RFS)
+   - Clarify that NFS-RFS allows HPC-side mounting but may not offer RDS-level performance
+
+4) Clarify common workflow
+   Typical pattern:
+   - Active datasets → RDS
+   - Backed-up archival data → RFS or RCS
+   - Copy data between systems as required
+   - NFS-RFS if active + backed-up + HPC access needed
+
+5) If user confirms NFS-RFS is desired
+   - Ask them to email support@hpc.cam.ac.uk with:
+       Project name
+       Project ID
+       Confirmation they want RFS converted to NFS-RFS
+   - Escalate to storage team
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Do you require the RFS space to be mounted directly on HPC?
+- Is this for active HPC workflows or archival/backup only?
+
+EXAMPLE CUSTOMER REPLY
+
+Subject: Re: Path to RFS storage
+
+Hello Heather,
+
+RFS storage is not directly mounted on the HPC filesystem, which is why you cannot find it under /rfs/project/.
+
+Standard RFS is accessed by mounting it from your local machine (e.g. via SMB). It is not available on CSD3 login or compute nodes by default.
+
+If you require your RFS project to be accessible from HPC, you can request that it be converted to NFS-RFS. This allows it to be mounted on CSD3, although performance characteristics differ from RDS.
+
+Please see:
+https://docs.hpc.cam.ac.uk/storage/rfs/accessing-rfs/rfs-nfs.html
+
+If you would like to proceed with conversion to NFS-RFS, please email support@hpc.cam.ac.uk with the project name and ID and we can arrange this for you.
+
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not imply RFS is mounted on HPC by default.
+- Do not suggest manual mounting inside compute jobs.
+- Do not guarantee performance equivalence between RDS and NFS-RFS.
+- Escalate only if conversion request is explicitly confirmed.
+
+----------
+
+[TICKET_KEY] HPCSSUP-95370
+[SUMMARY] MPI-related runtime error on pvc9 (gmx_mpi / gromacs/2024.5)
+
+CLASSIFICATION
+Category: MPI / Slurm Environment / Dawn (PVC9)
+Technical Action Required: No (user-side environment correction)
+Escalation Required: No (unless issue persists after environment fix)
+Urgency: Medium (job fails in batch mode)
+
+QUICK ASSESSMENT
+The user reports an MPI bootstrap failure when running:
+
+    mpirun -np 1 gmx_mpi -h
+
+within a batch job on the pvc9 partition.
+
+Error excerpt:
+    HYD_spawn ... execvp error on file /usr/bin/srun (No such file or directory)
+
+Key observations:
+- The job works correctly in an interactive session launched via `srun`.
+- The batch script manually purges modules and loads a custom module path.
+- The error indicates Intel MPI’s Hydra bootstrap cannot locate `srun`.
+
+Most likely cause:
+The batch script is not loading the correct Dawn node environment (RHEL9 default stack), so Slurm integration and related paths (including srun) are not correctly initialised inside the job environment.
+
+ACTION STEPS (HELPDESK)
+
+1) Ensure correct base environment is loaded
+   Instruct user to add:
+
+       module load rhel9/default-dawn
+
+   immediately after `module purge` in their submission script.
+
+   This ensures:
+   - Correct RHEL9 runtime environment
+   - Proper Slurm integration
+   - Required system paths (including srun)
+   - Compatible MPI environment
+
+2) Recommend simplified module order
+   Example structure:
+
+       module purge
+       module load rhel9/default-dawn
+       module use /usr/local/dawn/software/spack-rocky9/spack-modules/dawn-2025-03-23/linux-rocky9-sapphirerapids
+       module load gromacs/2024.5
+
+   Avoid mixing incompatible stacks unless required.
+
+3) Retest with minimal command
+   After modification, test again with:
+
+       mpirun -np 1 gmx_mpi -h
+
+4) If issue persists, request:
+   - Full submission script
+   - Complete stdout and stderr files
+   - Output of:
+         which mpirun
+         which srun
+         module list
+
+EXPECTED SIGNAL AFTER FIX
+- No Hydra bootstrap error.
+- mpirun executes successfully.
+- gmx_mpi help output prints normally.
+
+BRANCH: If still failing
+- Confirm Intel MPI is correctly integrated with Slurm.
+- Verify that `srun` exists in PATH within job:
+      echo $PATH
+      ls -l /usr/bin/srun
+- Escalate to platform admins only if Slurm binary is genuinely unavailable on compute node (unlikely).
+
+EXAMPLE CUSTOMER REPLY
+
+Subject: Re: MPI-related runtime error on pvc9
+
+Hello Wei-Tse,
+
+It looks like the Dawn node environment is not being fully initialised in your batch job.
+
+Please add the following line after `module purge` in your submission script:
+
+  module load rhel9/default-dawn
+
+This loads the correct RHEL9 runtime and Slurm integration required for MPI jobs on pvc9.
+
+After adding this, please resubmit the job and let us know if the issue persists. If so, please send the full submission script and output files.
+
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not suggest installing MPI manually.
+- Do not recommend modifying system Slurm paths.
+- Avoid blaming firewall or host availability unless independently verified.
+- Keep troubleshooting limited to supported module stacks.
+
+----------
+
+[TICKET_KEY] HPCSSUP-95197
+[SUMMARY] Unable to connect to GPU node (gpu-r-4) and start new VNC session
+
+CLASSIFICATION
+Category: VNC / GPU node access
+Technical Action Required: No (user guidance)
+Escalation Required: No (unless multiple nodes affected)
+Urgency: Medium (user blocked)
+
+QUICK ASSESSMENT
+User reports:
+- When starting a new VNC session, the VNC viewer password prompt “keeps blinking” and they cannot enter the password.
+- When attempting to SSH to gpu-r-4, the connection closes immediately after entering their password:
+    "Connection closed by 10.43.79.4 port 22"
+
+This suggests gpu-r-4 is not currently usable for their session (e.g. node-specific issue). The quickest mitigation is to start a new session on a different r node.
+
+ACTION STEPS (HELPDESK)
+
+1) Advise user to start a new session on a different r node
+   - Suggest an alternative node such as gpu-r-5.
+
+2) If the user cannot start a session on any r node
+   Request:
+   - A full screenshot of the steps taken in the terminal (showing the command run and the resulting output).
+   - Any error messages shown by the VNC viewer.
+
+3) Escalation criteria (only if needed)
+   - If multiple r nodes show the same behaviour, escalate to systems to check r-node availability/VNC service health.
+
+EXAMPLE CUSTOMER REPLY
+
+Hello Iryna,
+
+It looks like gpu-r-4 is not currently usable for starting or managing your VNC session.
+
+Please set up a new session on a different r node (for example gpu-r-5). If you still cannot start a session, please send a full screenshot of the steps you are taking in the terminal (including the command and output) and any error messages from the VNC viewer.
+
+Best regards,  
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not claim a specific root cause (e.g. SSH daemon failure) without evidence.
+- Prefer the minimal workaround (use a different node) before deeper debugging.
+- Escalate only if the issue affects multiple nodes or multiple users.
+
+----------
+
+[TICKET_KEY] HPCSSUP-95016
+[SUMMARY] Dawn A100 allocation not visible on AIRR portal
+
+CLASSIFICATION
+Category: AIRR / Resource Allocation / Dawn Hardware Clarification
+Technical Action Required: No
+Portal Action Required: No
+Escalation Required: No
+Urgency: Low–Medium (allocation visibility query)
+
+QUICK ASSESSMENT
+User reports that after accepting a PI invitation for an AIRR project, they cannot see a “Dawn (A100 80GB)” allocation under “UKRI Allocatable Offerings” in the AIRR portal, and instead only see Isambard-AI offerings.
+
+The key issue is a misunderstanding of Dawn hardware. Dawn does not provide NVIDIA A100 GPUs. Dawn is based on Intel Data Centre GPU Max (Ponte Vecchio, PVC) hardware. Therefore, an “A100 allocation” would not be expected for Dawn.
+
+ACTION STEPS (HELPDESK)
+
+1) Clarify hardware type
+   - Explain that Dawn operates Intel PVC (Data Centre GPU Max) GPUs.
+   - Confirm that NVIDIA A100 GPUs are not part of the Dawn system.
+
+2) Direct user to documentation
+   - Provide official Dawn hardware documentation link.
+   - Encourage review of the hardware specifications to confirm suitability.
+
+3) Do not:
+   - Attempt to manually attach an A100 allocation.
+   - Modify AIRR portal settings.
+   - Escalate unless there is evidence of a genuine portal misconfiguration.
+
+EXAMPLE CUSTOMER REPLY
+
+Hello Giovanni,
+
+There may have been some confusion regarding the hardware.
+
+Dawn operates Intel Data Centre GPU Max (Ponte Vecchio, PVC) GPUs rather than NVIDIA A100 GPUs. As such, an A100 allocation would not be expected to appear for Dawn in the AIRR portal.
+
+You can find details of Dawn hardware here:
+https://docs.hpc.cam.ac.uk/hpc/user-guide/pvc.html#hardware
+
+Please let us know if you have any further questions.
+
+Best regards,  
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not imply NVIDIA A100 hardware is available on Dawn.
+- Do not suggest attaching incompatible GPU allocations.
+- Avoid making portal-side changes unless a confirmed provisioning error exists.
+
+----------
+
+[TICKET_KEY] HPCSSUP-94974
+[SUMMARY] Quota exceeded with no apparent reason
+
+CLASSIFICATION
+Category: Storage / RDS / Quota (Inode Limit)
+Technical Action Required: No (user action required to reduce file count)
+Escalation Required: No
+Urgency: Medium (job failing due to quota)
+
+QUICK ASSESSMENT
+The user reports “Disk quota exceeded” errors while writing files to their RDS project directory:
+
+  /home/lz307/rds/rds-vlamemory-R8GV8V7LHCg/...
+
+Although the project has a 2 TB storage quota and is only using ~614 GB, the `quota` output shows:
+
+  rds-R8GV8V7LHCg   files: 1024000*   quota: 1024000   limit: 1024000
+
+The asterisk (*) indicates that the inode (file count) quota has been reached.
+
+On RDS, inode quotas are proportional to storage allocation:
+  512,000 inodes per TiB
+
+For a 2 TiB allocation:
+  2 × 512,000 = 1,024,000 inodes
+
+The project has reached this inode limit, which prevents creation of additional files, even though space (GB/TB) remains available.
+
+This explains:
+- “[Errno 122] Disk quota exceeded” when writing new files
+- Bash errors such as:
+  “cannot create temp file for here-document: Disk quota exceeded”
+
+ACTION STEPS (HELPDESK)
+
+1) Confirm inode exhaustion
+   Ask user to run:
+     quota
+   and check for an asterisk (*) in the “files” column for the relevant RDS project.
+
+2) Explain distinction between storage quota and inode quota
+   - Storage quota = total disk space (GB/TB)
+   - Inode quota = total number of files
+   - Hitting either limit blocks new file creation
+
+3) Provide remediation options
+
+   Option A — Reduce file count (recommended)
+   - Delete unnecessary small files
+   - Consolidate many small files into archives (e.g. tar)
+   - Combine image files into fewer container formats if possible
+
+   Example:
+     tar -czf archive_episodes_12000_12100.tar.gz episode_0120*
+
+   Option B — Increase storage allocation
+   - Inode quota increases only when total RDS storage allocation increases.
+   - This requires purchasing additional storage capacity.
+   - Refer to RDS quota documentation.
+
+4) Clarify policy
+   - Inode quotas are fixed per TiB.
+   - They cannot be increased independently of storage allocation.
+
+5) Close once user confirms understanding.
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Approximately how many files are being generated?
+- Are these many small image files that could be batched/archived?
+- Would you like guidance on estimating file counts (e.g. using `find | wc -l`)?
+
+EXAMPLE CUSTOMER REPLY
+
+Subject: Re: Quota exceeded on RDS project
+
+Hello Liyou,
+
+Although your project has a 2 TB storage allocation and is not near the space limit, the RDS project has reached its inode (file count) quota.
+
+From your `quota` output:
+
+  rds-R8GV8V7LHCg   1024000* files used (limit 1024000)
+
+The asterisk indicates the inode limit has been reached. On RDS, inode quotas are set at 512,000 files per TiB of storage. For a 2 TiB allocation, this gives a maximum of 1,024,000 files.
+
+Once this file-count limit is reached, new files cannot be created, even if disk space remains available.
+
+To proceed, you will need to either:
+- Remove or consolidate a significant number of small files, or
+- Increase the total RDS storage allocation (which would proportionally increase the inode quota).
+
+You can find more details here:
+https://docs.hpc.cam.ac.uk/storage/rds/details.html#usage-quotas
+
+Please let us know if you would like advice on consolidating files or estimating file counts.
+
+Best wishes,  
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not imply a filesystem fault; this is expected quota behaviour.
+- Do not suggest modifying system quota settings directly.
+- Inode quotas are proportional to purchased storage and are not adjustable independently.
+- Avoid recommending unsafe bulk deletion commands.
+
+----------
+
+[TICKET_KEY] HPCSSUP-94925
+[SUMMARY] Quote request for Cumulus CPU hours and RDS storage
+
+CLASSIFICATION
+Category: Procurement / Pricing Information
+Technical HPC Action Required: No
+Finance Action Required: No (information only)
+Escalation Required: No
+Urgency: Low
+
+QUICK ASSESSMENT
+The user is requesting a formal quote for:
+- Cumulus CPU 200,000 hours at £0.01/CPU hour
+- Research Data Store (RDS) 10 TB for 3 years at £162/TB
+
+HPC Support does not issue formal quotes. Pricing information is published and departments must raise purchase orders via their own finance processes.
+
+ACTION STEPS (HELPDESK)
+
+1) Clarify that formal quotes are not issued.
+2) Confirm the published pricing model (if appropriate).
+3) Advise that departmental finance teams should proceed using the published rates.
+4) Do not generate bespoke quotation documents.
+5) Do not raise purchase orders on behalf of departments.
+
+EXAMPLE CUSTOMER REPLY
+
+Subject: Re: Quote request for Cumulus CPU and RDS
+
+Dear Dave,
+
+Thank you for your message.
+
+We do not issue formal quotation documents for Cumulus CPU time or RDS storage. The services are charged according to the published pricing, and your departmental finance team can proceed based on those rates.
+
+For reference:
+- Cumulus CPU usage is charged per CPU hour at the published rate.
+- RDS storage is charged per TB per year according to the current pricing schedule.
+
+If your department requires confirmation of the published pricing, this is available on the HPC documentation pages.
+
+Please let us know if you have any further questions.
+
+Best regards,  
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not generate unofficial quote documents.
+- Do not commit to pricing beyond the published rates.
+- Do not raise purchase orders on behalf of users.
+- Ensure any pricing referenced aligns with the current published documentation.
+
+----------
+
+[TICKET_KEY] HPCSSUP-94250
+[SUMMARY] Could We Add Newer CUDA modules?
+
+CLASSIFICATION
+Category: Software Stack / CUDA Module Availability
+Technical Action Required: No (guidance only)
+Escalation Required: No
+Urgency: Low
+
+QUICK ASSESSMENT
+User requests CUDA 12.4/12.6 modules for package compatibility. CUDA 12.4 and 12.6 are not officially supported, and CUDA 12.8.1 is available in the Ampere test stack.
+
+ACTION
+1) Clarify that CUDA 12.4 and 12.6 are not currently supported.
+2) Provide test stack commands for CUDA 12.8.1.
+
+EXAMPLE CUSTOMER REPLY
+
+Dear Yijiang,
+
+We do not currently provide official CUDA 12.4 or 12.6 modules. We do, however, have a newer test software stack that includes CUDA 12.8.1.
+
+Please run:
+
+module purge
+module load rhel8/slurm
+module load rhel8/global
+module use /usr/local/software/spack/csd3/spack-modules/test/ampere-2025-06-01/linux-rocky8-zen3
+module load cuda/12.8.1/gcc/kdeps6ab
+
+Please let us know if you run into any issues.
+
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not promise unsupported module versions.
+- Distinguish test stack from officially supported stack.
+
+----------
+
+[TICKET_KEY] HPCSSUP-93979
+[SUMMARY] Turbo VNC running issues
+
+CLASSIFICATION
+Category: Remote Access / TurboVNC
+Technical Action Required: No (usage correction)
+Escalation Required: No
+Urgency: Medium
+
+QUICK ASSESSMENT
+User launched VNC on a login node and attempted local port forward, causing binding/forwarding issues. Correct method is to run VNC on an interactive GPU node (e.g. `*-r-gpu`) following documented workflow.
+
+ACTION
+1) Instruct user to create VNC session on an interactive node, not login node.
+2) Share the VNC guide and expected command sequence.
+3) Confirm resolution after user retest.
+
+EXAMPLE CUSTOMER REPLY
+
+Hello Iryna,
+
+Please create your TurboVNC session on an interactive GPU node (`*-r-gpu`) rather than a login node. That should resolve the forwarding issue you’re seeing.
+
+Please follow the attached guide and let us know if you run into further issues.
+
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not encourage running long-lived GUI sessions on login nodes.
+
+----------
+
+[TICKET_KEY] HPCSSUP-93947
+[SUMMARY] Lost private side of the SSH key
+
+CLASSIFICATION
+Category: Authentication / SSH Keys (Dawn)
+Technical Action Required: Yes (append public keys)
+Escalation Required: No
+Urgency: Medium (access blocked)
+
+QUICK ASSESSMENT
+User lost private key after reinstall and needs replacement key registered. Later issue was device-specific key mismatch: each client device requires its own valid key pair, and the corresponding public key must be appended server-side.
+
+ACTION
+1) Append new public key for replacement laptop key.
+2) Clarify per-device key model (one key pair per device).
+3) If attachments fail, request public key pasted as plain text in email body.
+4) Append second device key and confirm access restored.
+
+EXAMPLE CUSTOMER REPLY
+
+Hello Alejo,
+
+You will need a valid SSH key pair on each device you connect from. Please send the public key for your office machine (you can paste it directly as plain text in the email body), and we will append it to your account.
+
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Never request private key material.
+- Accept only public keys.
+- Confirm key addition only after staff-side update is complete.
+
+----------
+
+[TICKET_KEY] HPCSSUP-93204
+[SUMMARY] sync of rcs data
+
+CLASSIFICATION
+Category: Storage / RCS Data Transfer
+Technical Action Required: No (best-practice guidance)
+Escalation Required: No
+Urgency: Low
+
+QUICK ASSESSMENT
+User is running heavy `rsync` from login node and getting disconnected. Recommended approach is session persistence (screen/tmux) or GUI transfer workflow; follow RCS transfer best practices.
+
+ACTION
+1) Recommend using `screen`/`tmux` for long transfer sessions.
+2) Optionally direct to supported GUI transfer methods for RCS.
+3) Share RCS best-practice guidance.
+
+EXAMPLE CUSTOMER REPLY
+
+Hello Yaniv,
+
+For long RCS transfers, please use a persistent terminal session (for example `screen`/`tmux`) so the transfer can continue if your SSH session drops.
+
+You can also use a supported GUI transfer method:
+https://docs.hpc.cam.ac.uk/storage/rcs/gui.html
+
+Best-practice guidance:
+https://docs.hpc.cam.ac.uk/storage/rcs/best-practice.html
+
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Avoid advising large unsupervised transfers directly from transient login sessions.
+
+----------
+
+[TICKET_KEY] HPCSSUP-93140
+[SUMMARY] Gaia Arcus cloud ceph connection issues
+
+CLASSIFICATION
+Category: Storage / CephFS / MDS connectivity (Arcus cloud)
+Technical Action Required: Yes (service-side investigation/mitigation)
+Escalation Required: Yes (Ceph/storage administrators + network)
+Urgency: High (filesystem hangs across multiple instances)
+
+QUICK ASSESSMENT
+User reports widespread CephFS mount and access hangs across multiple Arcus cloud instances, with client session state showing MDS-related reconnect/closing behaviour, repeatedly implicating mds.1:
+
+- mds.1 reconnecting
+- mds.1 closing
+- Some shares using mds.0 remain open/working while those on mds.1 are unavailable.
+- Mount attempts can time out (mount error 110 = Connection timed out).
+
+Because the issue affects multiple instances and is correlated with one MDS, this is likely a service-side CephFS/MDS or network path issue rather than a per-instance client misconfiguration. Rebooting instances may temporarily clear symptoms but does not address underlying cause.
+
+IMMEDIATE OBJECTIVE
+Restore stable CephFS access (especially for shares served by mds.1) and prevent recurrence.
+
+ACTION STEPS (HELPDESK)
+
+1) Acknowledge and treat as service incident
+   - Confirm the issue affects multiple instances and is correlated with mds.1 session state.
+   - Prioritise service-side checks over user-side troubleshooting.
+
+2) Collect minimal high-signal diagnostics from user (non-disruptive)
+   Ask for:
+   - Example affected instance name(s)
+   - Exact mount command(s) used
+   - Timestamp(s) of failures
+   - One example of:
+       mount output / error
+       and any relevant Ceph mount logs if readily available
+
+   Do NOT request extensive debugging from user while service appears degraded.
+
+3) Service-side investigation (storage/admin)
+   Check CephFS health and MDS status, focusing on mds.1:
+   - Ceph cluster health summary and recent warnings
+   - CephFS filesystem status and active/standby MDS state
+   - MDS daemon logs around the failure window
+   - Client session counts, reconnect/eviction activity, and caps issues
+   - Any ongoing rebalancing/recovery that could impact metadata latency
+
+4) Network path verification (admin)
+   Because symptoms include timeouts and MDS reconnecting/closing, verify:
+   - Routing and interface configuration on the MDS host(s)
+   - Any recent network changes affecting the MDS VLAN/overlay
+   - That any required additional routes are present and persistent
+
+5) Mitigation
+   If mds.1 is unhealthy or unreachable:
+   - Correct the underlying MDS connectivity issue (preferred)
+   - If needed, fail over / restart MDS appropriately per operational runbooks
+   - Confirm clients can re-establish sessions without repeated reconnect/closing
+
+6) Communicate workaround (optional, cautious)
+   Rebooting instances can re-establish mounts in some cases, but it may be disruptive.
+   Only suggest rebooting as a workaround if:
+   - The user confirms it is operationally acceptable, and
+   - Service stability has been restored on the backend.
+
+7) Confirm resolution
+   - Ask user to retry mounting an affected share and confirm responsiveness.
+   - Monitor for recurrence over a short window.
+
+DO NOT
+- State that the issue is definitively caused by the client or by instance configuration without evidence.
+- Advise changes to client mount options as the primary fix when service-side MDS correlation is strong.
+- Rely on instance reboots as the only resolution.
+
+EXAMPLE CUSTOMER REPLY
+
+Hello Patrick,
+
+Thanks for the detailed report — the repeated “mds.1 reconnecting/closing” messages and the fact that this is affecting multiple instances suggests a service-side CephFS/MDS connectivity issue rather than a per-instance configuration problem.
+
+We’re investigating the CephFS state now, focusing on mds.1. In the meantime, could you please share:
+- the names of one or two affected instances,
+- the approximate timestamps of the most recent timeouts,
+- and the exact mount command/output (e.g. the “Connection timed out” example)?
+
+Once we’ve stabilised the backend, we can discuss whether rebooting affected instances is worthwhile for clean remount on startup (only if it won’t be disruptive for you).
+
+Cheers,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Treat multi-instance CephFS hangs as a service incident; avoid shifting burden to users.
+- Avoid making claims about root cause unless supported by service-side evidence.
+- Suggest disruptive workarounds (instance reboot) only with explicit user confirmation and after backend stability is restored.
+- Do not request or expose sensitive infrastructure details in user-facing messages.
+
+----------
+
+[TICKET_KEY] HPCSSUP-93090
+[SUMMARY] Quote for extra GPU core times and RDS disk spaces
+
+CLASSIFICATION
+Category: CORE Procurement / Quoting
+Technical Action Required: No (quote and procurement guidance only)
+Finance Action Required: Yes
+Escalation Required: No
+Urgency: Medium
+
+QUICK ASSESSMENT
+User requests a quote for 10,000 additional GPU hours and 10TB additional RDS storage. This should be handled as a pricing/quote response with a clear cost breakdown and next-step PO guidance.
+
+ACTION STEPS (HELPDESK)
+
+1) Validate internally before replying
+   - Confirm current published rates and terms with the relevant team/process.
+   - Confirm units, duration, and VAT treatment assumptions.
+   - If any part is bespoke or unclear, get storage/finance confirmation first.
+
+2) Confirm quote inputs
+   - Additional GPU hours: 10,000
+   - Additional RDS storage: 10TB
+   - Applicable pricing:
+     - GPU hours: £0.55 per hour
+     - RDS storage: £54 per TB per year
+
+3) Provide calculation breakdown
+   - GPU: 10,000 × £0.55 = £5,500.00
+   - RDS: 10 × £54.00 = £540.00 (per year)
+   - Total ex VAT: £6,040.00
+
+4) Perform final pre-send check
+   - Reconfirm arithmetic and units in the drafted reply.
+   - Ensure VAT wording and assumptions are explicit.
+
+5) Provide procurement next step
+   - Ask user to raise and submit a PO referencing the project/account.
+   - State that VAT is additional at applicable rate.
+
+6) Scope guard
+   - Keep response limited to the quote request unless user explicitly asks for account changes or additional actions.
+
+EXAMPLE CUSTOMER REPLY
+
+Dear Wenyu,
+
+Please accept this as a written quote (ex VAT) for your request:
+
+- GPU hours: 10,000 × £0.55 = £5,500.00
+- RDS storage: 10TB × £54.00/TB/year = £540.00
+- Total (ex VAT): £6,040.00
+
+VAT is additional at the applicable rate.
+
+Please send the PO to this ticket when ready.
+
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Keep quote assumptions explicit (units, duration, ex VAT).
+- Do not apply resource or storage changes before PO receipt/approval.
+- Do not send pricing calculations externally until rates and assumptions are internally verified.
+
+----------
+
+[TICKET_KEY] HPCSSUP-92768
+[SUMMARY] check point example
+
+CLASSIFICATION
+Category: Job Runtime / Checkpointing Guidance
+Technical Action Required: No (advisory)
+Escalation Required: No
+Urgency: Low
+
+QUICK ASSESSMENT
+User asks for checkpointing examples for jobs exceeding wall time. Provide concise, generic checkpoint patterns (periodic save + resume path), point to the linked reference, and clarify that implementation must be adapted to the user’s application and CSD3 environment.
+
+ACTION
+1) Explain user-level checkpointing concept.
+2) Provide 1-2 generic checkpoint patterns the user can apply.
+3) Provide external reference as conceptual guidance.
+4) Clarify that commands/examples may need adaptation for local environment.
+
+EXAMPLE CHECKPOINT PATTERNS (GENERIC)
+1) Periodic state save + restart
+   - Run application so it writes restart files every N minutes/iterations to a checkpoint directory.
+   - On next job run, detect latest checkpoint and resume from it instead of starting from scratch.
+
+2) Pre-timeout save + requeue/next run
+   - Configure application (or wrapper) to write a final checkpoint before wall-time expiry.
+   - Submit the next job to resume from that checkpoint file.
+
+Generic wrapper pattern:
+```
+if [ -f checkpoints/latest.ckpt ]; then
+  my_app --resume checkpoints/latest.ckpt
+else
+  my_app --start
+fi
+```
+
+EXAMPLE CUSTOMER REPLY
+
+Hi Qi,
+
+We don’t have a ready CSD3-specific checkpoint script to provide, but the standard approach is:
+
+1) write restart/checkpoint files periodically during the run, and  
+2) start the next job by resuming from the latest checkpoint.
+
+Two generic patterns you can use are:
+- Periodic checkpointing: save state every N iterations/minutes, then resume from the most recent checkpoint on the next run.
+- Pre-timeout checkpointing: write a final checkpoint before wall-time is reached, then submit the next job to resume from it.
+
+For example, your wrapper logic can be:
+
+```
+if [ -f checkpoints/latest.ckpt ]; then
+  my_app --resume checkpoints/latest.ckpt
+else
+  my_app --start
+fi
+```
+
+This overview may help:
+https://rc-docs.northeastern.edu/en/latest/best-practices/checkpointing.html#the-checkpointing-technique
+
+Please note these are generic patterns and may need adaptation for your application and CSD3.
+
+Best wishes,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not imply native automatic checkpoint support unless confirmed.
+
+----------
+
+[TICKET_KEY] HPCSSUP-92750
+[SUMMARY] Accessing HPC after maintenance works
+
+CLASSIFICATION
+Category: Service Availability / Post-Maintenance
+Technical Action Required: No
+Escalation Required: No
+Urgency: Medium
+
+QUICK ASSESSMENT
+User reports inability to SSH shortly after maintenance completion notice. Correct response is that services may still be coming online; direct users to service status and communications.
+
+ACTION
+1) Inform user service restoration is still in progress.
+2) Provide status page and advise monitoring updates.
+
+EXAMPLE CUSTOMER REPLY
+
+Hello Ieva,
+
+We are still bringing services online following maintenance. Please keep an eye on service communications and the status page for updates:
+https://www.hpc.cam.ac.uk/service-status
+
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not declare full service restoration until confirmed.
+
+----------
+
+[TICKET_KEY] HPCSSUP-92485
+[SUMMARY] Request for ~/rfs Symlink in Home Directory
+
+CLASSIFICATION
+Category: Filesystem / Symlink
+Technical Action Required: No (command guidance only)
+Escalation Required: No
+Urgency: Low
+
+QUICK ASSESSMENT
+User requests a convenience symlink `~/rfs` pointing to their RFS project path.
+
+ACTION
+1) Confirm the user’s RFS project path (if not already known).
+2) Instruct user to create the symlink from their home directory:
+   - `cd $HOME`
+   - `ln -s <RFS_PROJECT_PATH> $HOME/rfs`
+3) Ask user to verify:
+   - `ls -ld $HOME/rfs`
+4) Confirm that `~/rfs` is a convenience link to the project path, not a separate storage area.
+
+EXAMPLE CUSTOMER REPLY
+
+Hello Hansheng,
+
+You can create the `~/rfs` symlink by running:
+
+cd $HOME
+ln -s <RFS_PROJECT_PATH> $HOME/rfs
+
+Then verify it with:
+
+ls -ld $HOME/rfs
+
+This creates a convenience link in your home directory to your RFS project path.
+
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not remove or overwrite an existing `~/rfs` path without checking what it currently points to.
+
+----------
+
+[TICKET_KEY] HPCSSUP-91750
+[SUMMARY] problems reading module mpi.mod
+
+CLASSIFICATION
+Category: Build/Compiler Toolchain / MPI Fortran Modules
+Technical Action Required: Yes (workaround instruction)
+Escalation Required: Optional (packaging improvement)
+Urgency: Medium
+
+QUICK ASSESSMENT
+`gfortran 13.3` with Intel MPI hit `mpi.mod` read error (`Unexpected EOF`) because Intel MPI Fortran module files in that build were available only for older gfortran ABI versions. Workaround: explicitly include compatible `gfortran/11.1.0` (or `10.2.0`) MPI module path.
+
+ACTION
+1) Confirm exact module environment and minimal repro.
+2) Explain ABI/module version mismatch.
+3) Provide compile workaround with explicit include path.
+4) Confirm successful compile with user.
+5) Track packaging improvement for future stack.
+
+EXAMPLE CUSTOMER REPLY
+
+Hi Michael,
+
+Please try compiling with an explicit MPI Fortran module include path:
+
+mpif90 -I /usr/local/software/spack/csd3/opt-2024-06-01/linux-rocky8-cascadelake/gcc-13.3.0/intel-oneapi-mpi-2021.12.1-cvatknvvaxe4ohzbsri6keicyjoy3w7f/mpi/2021.12/include/mpi/gfortran/11.1.0 -c -DMPI precision.F90
+
+(Using `.../gfortran/10.2.0` is also a valid workaround.)
+
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Be explicit this is a compatibility workaround, not ideal long-term packaging.
+
+----------
+
+[TICKET_KEY] HPCSSUP-91551
+[SUMMARY] Run MPI process on cluster
+
+CLASSIFICATION
+Category: Job Execution / MPI under Slurm
+Technical Action Required: No (user guidance with documented launch pattern)
+Escalation Required: No
+Urgency: Low
+
+QUICK ASSESSMENT
+User attempted direct `mpirun` and saw MPI startup/initialisation errors. For this environment, MPI jobs should be run inside a Slurm allocation using the documented submission pattern. Running directly from a login shell is a common cause of PMPI/launcher errors.
+
+ACTION STEPS (HELPDESK)
+1) Confirm launch context
+   - Ask whether command was run:
+     - directly on a login node, or
+     - inside a Slurm job allocation.
+
+2) Provide documented MPI job pattern
+   - Instruct user to submit via `sbatch` with account/partition/resources set.
+   - Recommend launching tasks with `srun` inside the job script.
+
+3) Provide minimal working template
+```bash
+#!/bin/bash
+#SBATCH -A <ACCOUNT>
+#SBATCH -p <PARTITION>
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --time=00:10:00
+
+module purge
+module load <required-modules>
+
+srun ~/meme-mpi/bin/meme --help
+```
+
+4) If user needs interactive testing
+   - First allocate resources interactively (documented method), then run with `srun` in that allocation.
+
+5) Reference documentation
+   - Share the MPI jobs section for the relevant partition.
+
+EXAMPLE CUSTOMER REPLY
+
+Dear Milena,
+
+This error usually occurs when MPI is launched outside a proper Slurm allocation.
+
+Please run your MPI command through a Slurm job script, for example:
+
+```bash
+#!/bin/bash
+#SBATCH -A <ACCOUNT>
+#SBATCH -p <PARTITION>
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --time=00:10:00
+
+module purge
+module load <required-modules>
+
+srun ~/meme-mpi/bin/meme --help
+```
+
+Submit with:
+
+`sbatch <script_name>.sh`
+
+Please also refer to:
+https://docs.hpc.cam.ac.uk/hpc/user-guide/a100.html?highlight=mpirun#jobs-requiring-mpi
+
+Using the documented Slurm launcher pattern should resolve this startup issue.
+
+Regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Avoid ad-hoc launcher advice that bypasses Slurm resource allocation.
+- Keep examples aligned with documented partition/account usage.
+
+----------
+
+[TICKET_KEY] HPCSSUP-91107
+[SUMMARY] Copying large file to RCS
+
+CLASSIFICATION
+Category: Storage / RCS Transfer Best Practice
+Technical Action Required: No
+Escalation Required: No
+Urgency: Low
+
+QUICK ASSESSMENT
+User asks if transferring a 108GB zip file to RCS is problematic. Large archives are acceptable. For RCS workflows, tar is usually preferred; zip is still acceptable where password protection or Windows tooling requires it. Bigger single archives are typically slower to stage/retrieve, so archive layout should match expected access/retrieval patterns.
+
+ACTION
+1) Confirm transfer is acceptable.
+2) Recommend best-practice docs.
+3) Prefer tar where feasible; zip acceptable when required (e.g. password protection).
+4) Explain operational trade-off of archive sizing (fewer large files vs faster partial retrieval).
+5) Recommend integrity verification after transfer (e.g. checksum comparison).
+
+EXAMPLE CUSTOMER REPLY
+
+Hello Simon,
+
+That is generally fine. For RCS, tar archives are usually preferred, but zip is acceptable if needed (for example for password protection).
+
+The main trade-off is that very large archives can take longer to retrieve from cold storage. If you expect partial restores, splitting data into sensible archive chunks can help operationally.
+
+After transfer, it is also good practice to verify integrity (for example with checksums) between source and destination.
+
+Best-practice guidance:
+https://docs.hpc.cam.ac.uk/storage/rcs/best-practice.html
+
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not present size threshold as a hard prohibition unless policy defines one.
+- Do not overstate archive-size rules; frame them as performance/operational trade-offs.
+
+----------
+
+[TICKET_KEY] HPCSSUP-90029
+[SUMMARY] Unable to connect to rcs.uis.cam.ac.uk
+
+CLASSIFICATION
+Category: Access / RCS SSH-MFA
+Technical Action Required: No (user onboarding guidance)
+Escalation Required: No
+Urgency: Medium
+
+QUICK ASSESSMENT
+Follow-up query: one user can log in to login-web with MFA, but still gets “Access Denied” on `rcs.uis.cam.ac.uk`. In this scenario, the most likely cause is missing SSH/storage MFA enrollment. The web MFA token and SSH/storage MFA token are separate.
+
+ACTION
+1) Clarify token separation:
+   - login-web MFA token is for web access only.
+   - SSH/storage services require the SSH TOTP token configured via `multi.hpc.cam.ac.uk`.
+2) Instruct affected users to complete SSH MFA setup using official documentation.
+3) Ask each affected user to raise their own ticket for account-specific checks if issue persists.
+
+EXAMPLE CUSTOMER REPLY
+
+Hello Shaun,
+
+If a user can access login-web but still gets “Access Denied” on `rcs.uis.cam.ac.uk`, this usually means SSH MFA is not yet set up for storage access.
+
+The web MFA token and SSH/storage MFA token are separate.
+
+For users seeing access denied on `rcs.uis.cam.ac.uk`, please ensure they complete SSH MFA setup using the documented process (via `multi.hpc.cam.ac.uk`):
+https://docs.hpc.cam.ac.uk/hpc/user-guide/mfa.html
+
+If any user still has issues after setup, please ask them to raise their own ticket so we can verify account-specific details directly.
+
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not troubleshoot third-party user accounts through one reporter without user-specific consent/context.
+
+----------
+
+[TICKET_KEY] HPCSSUP-89914
+[SUMMARY] SKA-SRC: error creating blazar lease in ska-src-science-validations tenancy
+
+CLASSIFICATION
+Category: Cloud Capacity / Azimuth / Blazar Leasing
+Technical Action Required: No (capacity explanation)
+Escalation Required: No
+Urgency: Low
+
+QUICK ASSESSMENT
+`Not enough hosts available` in Blazar indicated resource exhaustion, not a user misconfiguration.
+
+ACTION
+1) Explain that message reflects current capacity saturation.
+2) Advise retry when capacity frees.
+
+EXAMPLE CUSTOMER REPLY
+
+Hi Edward,
+
+That error indicates capacity is currently exhausted in the tenancy; it is not necessarily a setup error on your side.
+
+Please retry when resources become available.
+
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not suggest configuration changes if capacity is the real limiter.
+
+----------
+
+[TICKET_KEY] HPCSSUP-89749
+[SUMMARY] HPC login TOTP
+
+CLASSIFICATION
+Category: Account Provisioning / MFA
+Technical Action Required: No (process guidance)
+Escalation Required: No
+Urgency: Medium
+
+QUICK ASSESSMENT
+User asks about setting up TOTP for HPC login, but reports login credentials are not accepted. This may indicate either missing CSD3 account provisioning or credential mismatch. The correct flow is to confirm account status first, then proceed with MFA enrollment.
+
+ACTION
+1) Ask user to confirm whether they already have an active CSD3 account.
+2) If account is not active/provisioned, direct user to the application form.
+3) If account is active, proceed with standard SSH MFA setup guidance.
+
+EXAMPLE CUSTOMER REPLY
+
+Hi Claudio,
+
+Before proceeding with MFA setup, we first need to confirm your CSD3 account is active.
+
+If you do not yet have an active CSD3 account, please apply here:
+https://www.hpc.cam.ac.uk/rcs-application
+
+Once your account is active, we can continue with MFA setup for login.
+
+Best wishes,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not assume provisioning status without account verification data.
+- Do not troubleshoot TOTP before confirming account existence/provisioning state.
+
+----------
+
+[TICKET_KEY] HPCSSUP-89520
+[SUMMARY] [UKAEA] Request Machine Info
+
+CLASSIFICATION
+Category: System Information / Hardware Specs
+Technical Action Required: No
+Escalation Required: No
+Urgency: Low
+
+QUICK ASSESSMENT
+User requested platform-level hardware details for benchmarking. Provided high-level interconnect/topology/storage architecture info.
+
+ACTION
+Provide requested specs:
+- Interconnect: one Infiniband NDR 200 per node
+- Topology: fat-tree
+- Storage type: Lustre filesystem
+
+EXAMPLE CUSTOMER REPLY
+
+Dear Aleks,
+
+For `ukaea-spr-hbm`, the requested details are:
+- Network interconnect: one Infiniband NDR 200 per node
+- Network topology: fat tree
+- Storage type (RDS): Lustre filesystem
+
+Please let us know if you need anything further.
+
+Best wishes,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Keep responses at approved/public detail level.
+
+----------
+
+[TICKET_KEY] HPCSSUP-89172
+[SUMMARY] Citrix problem
+
+CLASSIFICATION
+Category: SRCP Access / Citrix Client Troubleshooting
+Technical Action Required: No (diagnostic guidance)
+Escalation Required: No
+Urgency: Medium
+
+QUICK ASSESSMENT
+User on VPN unable to login via Citrix Workspace app. Initial diagnostic should verify web launch path through `anywhere.cam.ac.uk` and whether SRCP desktop launches from browser. Ticket auto-closed due no response.
+
+ACTION
+1) Ask user to test web launch via `https://anywhere.cam.ac.uk/`.
+2) Verify SRCP desktop visibility and app handoff behavior.
+3) If no response, close with reopen guidance.
+
+EXAMPLE CUSTOMER REPLY
+
+Dear Daniel,
+
+While connected to VPN, please log in via:
+https://anywhere.cam.ac.uk/
+
+Do you see your SRCP virtual desktop there, and does launching from the browser open Citrix correctly?
+
+Regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not assume Citrix backend fault without basic path validation.
+
+----------
+
+[TICKET_KEY] HPCSSUP-89057
+[SUMMARY] Add DiRAC project to account
+
+CLASSIFICATION
+Category: Account Provisioning / Project Membership
+Technical Action Required: Yes (provisioning completion)
+Escalation Required: No
+Urgency: Medium
+
+QUICK ASSESSMENT
+User added DiRAC project in SAFE but account not yet visible in `mybalance`. Provisioning is not immediate; staff completed provisioning and issue resolved.
+
+ACTION
+1) Check provisioning status for requested project association.
+2) Complete pending provisioning.
+3) Confirm account now visible/usable.
+
+EXAMPLE CUSTOMER REPLY
+
+Hello Richard,
+
+Provisioning for this project is not automatic. I have now completed the required provisioning step, so the account should be available.
+
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not treat SAFE change as instantly reflected in Slurm/accounting systems.
+
+----------
+
+[TICKET_KEY] HPCSSUP-88966
+[SUMMARY] Long queue time
+
+CLASSIFICATION
+Category: Scheduling / Queue Wait Times / Service Levels
+Technical Action Required: No
+Escalation Required: No
+Urgency: Low
+
+QUICK ASSESSMENT
+User on non-paying SL3 CPU saw long waits. Correct explanation: paid workloads have higher priority; queue times fluctuate; cancelling/resubmitting loses accrued priority.
+
+ACTION
+1) Reassure no job/account fault detected.
+2) Explain SL3 prioritisation and variable wait times.
+3) Advise against cancel/resubmit behavior.
+
+EXAMPLE CUSTOMER REPLY
+
+Dear Hongyu,
+
+There is nothing wrong with your account or submission. Your jobs are on the non-paying SL3 service level, and paid activity is prioritised ahead of it.
+
+Queue time can vary significantly. Please avoid cancelling/resubmitting, as that can lose accrued priority.
+
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Avoid promising specific start-time estimates on shared queues.
+
+----------
+
+[TICKET_KEY] HPCSSUP-88843
+[SUMMARY] Setting Up Local Conda Environment for Intel GPU Usage on DAWN Cluster
+
+CLASSIFICATION
+Category: Software Environment / Dawn PVC / PyTorch-IPEX
+Technical Action Required: No (user setup guidance)
+Escalation Required: No
+Urgency: Medium
+
+QUICK ASSESSMENT
+User wants a modifiable local environment equivalent to centrally managed `pytorch-gpu`. Central env is immutable. Supported options:
+- activate central `pytorch-gpu` then layer user virtualenv, or
+- build user conda env with compatible pinned versions from Intel channel and test on PVC nodes.
+
+ACTION
+1) Confirm central env baseline works.
+2) Explain central env cannot be modified.
+3) Provide two supported approaches:
+   - `pytorch-gpu` + user virtualenv layering
+   - standalone conda env with compatible pins (`intel-extension-for-pytorch`, `pytorch`, python range) and Intel repo
+4) Require testing on PVC/PVC9 interactive node.
+5) Set required env vars for XPU runtime test.
+
+EXAMPLE CUSTOMER REPLY
+
+Hi Moritz,
+
+`pytorch-gpu` is centrally managed and cannot be modified directly.
+
+Supported options are:
+1) Activate `pytorch-gpu`, then activate your own virtualenv for extra packages.
+2) Create your own conda env with compatible versions (e.g. pinned `intel-extension-for-pytorch` + `pytorch`) and test it on PVC nodes.
+
+Please use the Dawn guidance here:
+https://docs.hpc.cam.ac.uk/hpc/user-guide/pvc.html#machine-learning-data-science-frameworks
+
+Best wishes,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not advise modifying centrally managed environments.
+
+----------
+
+[TICKET_KEY] HPCSSUP-88772
+[SUMMARY] AIRR/Dawn Storage
+
+CLASSIFICATION
+Category: Storage Path Discovery
+Technical Action Required: No
+Escalation Required: No
+Urgency: Low
+
+QUICK ASSESSMENT
+User could not locate AIRR/Dawn storage path in docs. The exact project path is user/project-specific and should be discovered from the user account rather than assumed.
+
+ACTION
+1) Ask user to check available RDS links under home:
+   - `ls -ld ~/rds/*`
+2) Ask user to identify the AIRR project path from quota/project listing:
+   - `quota`
+3) Confirm the matching path format once identified (typically `~/rds/rds-<project-id>` symlink).
+4) Clarify that `~/rds/...` is a convenience link to the underlying project path.
+
+EXAMPLE CUSTOMER REPLY
+
+Dear Phil,
+
+Your AIRR storage path is user/project specific. Please run:
+
+`ls -ld ~/rds/*`
+`quota`
+
+This will show the project link available in your account (typically `~/rds/rds-<project-id>`).  
+That entry is a symlink to the underlying project storage location.
+
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not hardcode project-specific paths unless verified for that user/account.
+
+----------
+
+[TICKET_KEY] HPCSSUP-87559
+[SUMMARY] 'ReqNodeNotAvail, Reserved for maintenance'?
+
+CLASSIFICATION
+Category: Slurm Scheduling Status Interpretation
+Technical Action Required: No (explanation + minor script advice)
+Escalation Required: No
+Urgency: Low
+
+QUICK ASSESSMENT
+User saw scheduler reason text and assumed post-maintenance fault. Actual job state was normal pending by priority. Additional optimisation: explicit `--mem` is redundant for cclake in this case.
+
+ACTION
+1) Check live job state and reason (`squeue`, `scontrol`).
+2) Explain pending-by-priority behavior.
+3) Suggest removing redundant `--mem` directive when CPU request already implies desired memory.
+
+EXAMPLE CUSTOMER REPLY
+
+Dear Hamish,
+
+Your job has submitted correctly and is pending under normal scheduler priority.
+
+For this script, `--mem=27360M` is redundant if you already request the corresponding CPU count on `cclake`; removing it can simplify scheduling requests.
+
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Distinguish temporary reason strings from real submission errors.
+
+----------
+
+[TICKET_KEY] HPCSSUP-85932
+[SUMMARY] Blank lines through QR code when trying to set up MFA
+
+CLASSIFICATION
+Category: MFA Enrollment / Client Rendering Issue
+Technical Action Required: No
+Escalation Required: No
+Urgency: Medium
+
+QUICK ASSESSMENT
+Mac terminal rendering can distort SSH QR code during MFA enrollment. Enrollment can still proceed by scanning if possible, or manually entering the secret key in authenticator app.
+
+ACTION
+1) Confirm issue is known for some Mac terminal setups.
+2) Provide manual secret-key fallback method.
+3) Clarify expected token labels for SSH vs web.
+
+EXAMPLE CUSTOMER REPLY
+
+Hi James,
+
+This is a known issue on some Mac setups where the QR may render poorly. You can still complete setup by manually entering the secret key in your authenticator app if scanning fails.
+
+Please follow:
+https://docs.hpc.cam.ac.uk/hpc/user-guide/mfa.html
+
+The SSH token should appear as `CSD3: SSH Login` (distinct from login-web token naming).
+
+Best wishes,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not reset MFA unnecessarily when manual enrollment path is available.
+
+----------
+
+[TICKET_KEY] HPCSSUP-85626
+[SUMMARY] Freesurfer 8 crashing
+
+CLASSIFICATION
+Category: Software Module Integration / Environment Setup
+Technical Action Required: Yes (module/setup correction)
+Escalation Required: No
+Urgency: Medium
+
+QUICK ASSESSMENT
+User loaded `freesurfer/8.0.0` but runtime failed with `FREESURFER: Undefined variable`, then later license-related failure and temporary modulefile regression during live edits. Working path required explicit environment setup and user license variable.
+
+ACTION
+1) Reproduce issue and validate module behavior.
+2) Instruct explicit setup sequence:
+   - `module load freesurfer/8.0.0`
+   - `source $FREESURFER_HOME/SetUpFreeSurfer.sh`
+3) Handle license requirement:
+   - user obtains license file
+   - user exports `FS_LICENSE=/path/to/license.txt`
+4) If modulefile error introduced during updates, fix and ask user to retry.
+5) Confirm successful execution.
+
+EXAMPLE CUSTOMER REPLY
+
+Hi Marialena,
+
+Please run:
+
+module load freesurfer/8.0.0
+source $FREESURFER_HOME/SetUpFreeSurfer.sh
+
+For FreeSurfer 8, also set your license path in your environment, e.g.:
+
+export FS_LICENSE=/path/to/license.txt
+
+Then retry `recon-all`.
+
+Best wishes,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not request users place license file in protected system directories.
+- Avoid modifying live module files without caution and rollback plan.
+
+----------
+
+[TICKET_KEY] HPCSSUP-83106
+[SUMMARY] SKA-SRC: Configuring an Azimuth instance with GPU and MPI compatibility
+
+CLASSIFICATION
+Category: Cloud VM Configuration / GPU Containers / MPI
+Technical Action Required: No (guidance)
+Escalation Required: Optional (if capacity constrained)
+Urgency: Medium
+
+QUICK ASSESSMENT
+User needed guidance for CUDA+MPI in Azimuth GPU VM. Recommended approach: install CUDA toolkit and Nvidia driver in VM, prefer Singularity for HPC container runtime with GPU bindings, and choose MPI runtime inside container as needed. Capacity caveat: GPU pool may be fully utilised.
+
+ACTION
+1) Confirm current GPU capacity availability.
+2) Advise VM-level CUDA/driver install for GPU instances.
+3) Recommend Singularity/Apptainer over Docker for HPC runtime.
+4) Explain MPI runtime can be selected within container image.
+
+EXAMPLE CUSTOMER REPLY
+
+Hello Bradley,
+
+On Azimuth GPU VMs, you can install the CUDA toolkit and NVIDIA open-source driver in the usual way. For HPC workflows we generally recommend Singularity/Apptainer rather than Docker, including GPU bindings to expose host GPUs.
+
+MPI runtime selection is up to your container build choice.
+
+Please note GPU capacity may currently be fully allocated, so provisioning can be constrained.
+
+Thanks,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not imply immediate GPU availability when capacity is saturated.
+
+----------
+
+[TICKET_KEY] HPCSSUP-82270
+[SUMMARY] Activating Conda Environment in Jupyter Notebook (Login-Web Interface)
+
+CLASSIFICATION
+Category: Jupyter / Login-Web / User Environment
+Technical Action Required: No
+Escalation Required: No
+Urgency: Low
+
+QUICK ASSESSMENT
+User could not select a conda environment kernel in Login-Web Jupyter. Resolution is to ensure the environment has `ipykernel` and is explicitly registered as a Jupyter kernel, then restart/reopen the notebook session.
+
+ACTION
+1) Confirm environment prerequisites
+   - Environment exists and can be activated.
+   - `ipykernel` is installed in that environment.
+2) Register the environment as a Jupyter kernel
+   - Activate env and run:
+     `python -m ipykernel install --user --name <env_name> --display-name "Python (<env_name>)"`
+3) Ask user to restart/reopen Login-Web Jupyter session and select the new kernel.
+4) If kernel still does not appear, collect diagnostics:
+   - `jupyter kernelspec list`
+   - exact env activation/install commands used.
+5) Share official docs for full workflow/reference.
+
+EXAMPLE CUSTOMER REPLY
+
+Hello Patrick,
+
+Please register your conda environment as a Jupyter kernel, then restart/reopen your Login-Web Jupyter session.
+
+Example:
+
+```bash
+conda activate <env_name>
+python -m ipykernel install --user --name <env_name> --display-name "Python (<env_name>)"
+```
+
+After that, select `Python (<env_name>)` from the Jupyter kernel menu.
+
+Full guidance:
+https://docs.hpc.cam.ac.uk/hpc/user-guide/login-web.html#adding-virtual-environments
+
+If it still doesn’t appear, please share:
+- `jupyter kernelspec list`
+- the exact commands you used to create and register the environment.
+
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Keep instructions aligned with the documented Login-Web kernel registration workflow.
+
+----------
+
+[TICKET_KEY] HPCSSUP-82248
+[SUMMARY] Unable to install packages for R in Citrix Workspace
+
+CLASSIFICATION
+Category: SRCP / Package Management / Restricted Network
+Technical Action Required: Yes (staff-managed package availability)
+Escalation Required: Yes (SRCP team)
+Urgency: Medium
+
+QUICK ASSESSMENT
+User on SRCP RStudio could not install CRAN packages due to no external internet by design. SRCP policy requires curated package availability managed by staff; users may need to use internal repo mirror and request missing packages.
+
+ACTION
+1) Explain SRCP security model (no direct external repo access).
+2) Escalate to SRCP team for package provisioning.
+3) Ask user for package list.
+4) Provide internal repo usage (`options(repos = "http://srcp-r-repo/")`).
+5) Track/fork to dedicated package request ticket if needed.
+
+EXAMPLE CUSTOMER REPLY
+
+Dear Yira,
+
+On SRCP, direct access to external package repositories is restricted by design. Please use the internal R repo:
+
+options(repos = "http://srcp-r-repo/")
+available.packages()
+
+If required packages are still missing, please send the exact package list and we can add them through the SRCP process.
+
+Regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not suggest bypassing SRCP network restrictions.
+
+----------
+
+[TICKET_KEY] HPCSSUP-81680
+[SUMMARY] Re: New Tier2 Account on CSD3 (jr908)
+
+CLASSIFICATION
+Category: Account Entitlements / CPU Access
+Technical Action Required: Yes (entitlement check)
+Escalation Required: No
+Urgency: Low
+
+QUICK ASSESSMENT
+User on a Tier2 GPU project requested CPU-only runs on icelake. The correct response is to first verify current CPU account entitlements (e.g. via `mybalance`) before advising which account to use.
+
+ACTION
+1) Verify user’s current account entitlements (`mybalance` or equivalent account view).
+2) If an SL3 CPU account is present, instruct user to submit CPU jobs with that account.
+3) If no CPU account is present, provide the correct request/provisioning path.
+4) Clarify SL2 path for larger/longer CPU requirements where applicable.
+
+EXAMPLE CUSTOMER REPLY
+
+Hi James,
+
+Please check your available project accounts with:
+`mybalance`
+
+If you see an SL3 CPU account there, you can use that for CPU-only runs on the relevant CPU partition.
+
+If you need larger/longer CPU resources than SL3 allows (or no CPU account is listed), please request the appropriate SL2 CPU access via your group lead.
+
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Confirm actual entitlement list before advising new provisioning.
+
+----------
+
+[TICKET_KEY] HPCSSUP-81206
+[SUMMARY] Can't compile code: /tmp is full warning
+
+CLASSIFICATION
+Category: Login Node Health / Temporary Filesystem
+Technical Action Required: Yes (diagnose node-specific issue)
+Escalation Required: Optional (if persistent)
+Urgency: Medium
+
+QUICK ASSESSMENT
+User reports compiler warning that `/tmp` is full and asks whether this relates to their own quota. `/tmp` is node-local temporary storage and can fill independently of the user’s `/home` or project quota.
+
+ACTION
+1) Explain what `/tmp` is:
+   - temporary local filesystem on the node,
+   - not the same as user/project quota shown by `quota`.
+2) Ask user to report the node where error occurs (`hostname`).
+3) Suggest immediate workaround: try compiling on another login node.
+4) Escalate if issue persists across multiple nodes or for multiple users.
+
+EXAMPLE CUSTOMER REPLY
+
+Hi Loren,
+
+The warning about `/tmp` means temporary space on the current node is full. This is separate from your `/home`/project quota, so your `quota` output can still look normal.
+
+Please share the output of:
+`hostname`
+
+As a workaround, please try compiling on a different login node. If the issue appears on multiple nodes, let us know and we will escalate.
+
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not assume user quota issue when warning explicitly references `/tmp`.
+
+----------
+
+[TICKET_KEY] HPCSSUP-81010
+[SUMMARY] Assistance Required: Trouble Logging into Dirac
+
+CLASSIFICATION
+Category: Authentication / Web Portal Login (Dirac)
+Technical Action Required: No (credential workflow guidance)
+Escalation Required: No
+Urgency: Medium
+
+QUICK ASSESSMENT
+User unable to log into web portal despite SAFE access. Correct flow: use SAFE-provided password and web TOTP (`CSD3:<userid>`). If login flow appears inconsistent, refresh/reset SAFE password and retry.
+
+ACTION
+1) Confirm user ID and expected credential pair (SAFE password + web token label).
+2) If not prompted correctly or repeated failure, request password reset through SAFE.
+3) Confirm successful login after reset.
+
+EXAMPLE CUSTOMER REPLY
+
+Hello Karthika,
+
+Please use the SAFE-provided password together with the web token labelled `CSD3:dc-bhuv1`.
+
+If this still fails, please request a new password through SAFE and retry.
+
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Distinguish web TOTP label from SSH token label.
+
+----------
+
+[TICKET_KEY] HPCSSUP-65611
+[SUMMARY] Using Checkpointing on SLURM (AlphaFold)
+
+CLASSIFICATION
+Category: Job Resilience / Checkpointing Policy
+Technical Action Required: No (capability clarification)
+Escalation Required: No
+Urgency: Low
+
+QUICK ASSESSMENT
+User asked about Slurm native `--checkpoint` functionality. Platform does not provide native Slurm checkpoint plugin support; users must implement checkpointing at application/workflow level. `dmtcp` module exists but compatibility with AlphaFold is user-dependent.
+
+ACTION
+1) Clarify no native Slurm checkpoint plugin on this cluster.
+2) Recommend user-level checkpoint/restart implementation.
+3) Mention `dmtcp` as optional tool to evaluate.
+
+EXAMPLE CUSTOMER REPLY
+
+Dear Lisa,
+
+Native Slurm checkpoint/restart is not enabled on this cluster, so `--checkpoint` options are not available here.
+
+Checkpointing must be implemented at application/workflow level. We do provide a `dmtcp` module, though compatibility with AlphaFold would need to be tested in your workflow.
+
+Kind regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not imply Slurm-native checkpoint flags are supported when plugin is absent.
