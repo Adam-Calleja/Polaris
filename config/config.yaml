@@ -87,10 +87,10 @@ jira_api_credentials:
   password: "${JIRA_API_TOKEN}"
 
 prompts:
-  - "pkg:polaris_rag.prompts:hpc_rag_assistant_v1.json"
+  - "pkg:polaris_rag.prompts:hpc_rag_assistant_v3_ticket_refs.json"
   - "pkg:polaris_rag.prompts:hpc_ticket_summarizer_v1.json"
 
-prompt_name: "hpc_rag_assistant"
+prompt_name: "hpc_rag_assistant_ticket_refs"
 
 ingestion:
   jira:

@@ -83,6 +83,5 @@ include-package-data = true
 
 [tool.setuptools.package-data]
 polaris_rag = [
-  "prompts/hpc_rag_assistant_v1.json",
-  "prompts/hpc_ticket_summarizer_v1.json",
+  "prompts/*.json",
 ]
