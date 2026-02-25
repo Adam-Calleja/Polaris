@@ -344,8 +344,8 @@ class QdrantIndexStore(BaseVectorStore):
         if not batch_size or batch_size <= 0 or not isinstance(batch_size, int):
             self._index.insert_nodes(nodes)
         else:
-            for counter in range(len(nodes) // batch_size + 1):
-                batch = nodes[(counter * batch_size):(counter * batch_size + batch_size)]
+            for start in range(0, len(nodes), batch_size):
+                batch = nodes[start:start + batch_size]
                 self._index.insert_nodes(batch)
 
     def query(
@@ -397,11 +397,11 @@ class QdrantIndexStore(BaseVectorStore):
     def persist(self, **kwargs):
         """Persist vector store state.
 
-        Notes
-        -----
-        Persistence is backend-specific and not yet implemented for this wrapper.
+        For Qdrant, vectors are already persisted by the database itself.
+        StorageContext still calls ``vector_store.persist(...)`` during overall
+        persistence, so this method intentionally acts as a no-op.
         """
-        raise NotImplementedError("persist() is not implemented for QdrantIndexStore.")
+        return None
 
 
 def _get_vector_store_kind(cfg):
