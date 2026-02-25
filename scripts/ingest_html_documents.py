@@ -60,6 +60,24 @@ def parse_args() -> argparse.Namespace:
         help="Override persist dir from config (optional).",
     )
 
+    parser.add_argument(
+        "--qdrant-collection-name",
+        "--collection-name",
+        required=False,
+        type=str,
+        default=None,
+        help="Override Qdrant collection name from config (optional).",
+    )
+
+    parser.add_argument(
+        "--vector-batch-size",
+        "-b",
+        required=False,
+        type=int,
+        default=16,
+        help="Batch size for vector-store inserts (default: 16).",
+    )
+
     return parser.parse_args()
 
 
@@ -86,10 +104,30 @@ def _resolve_persist_dir(cfg: GlobalConfig, cli_value: str | None) -> str:
     return str(REPO_ROOT / "data" / "storage" / "local")
 
 
+def _override_qdrant_collection_name(cfg: GlobalConfig, cli_value: str | None) -> None:
+    if not cli_value:
+        return
+
+    vector_store = cfg.raw.get("vector_store")
+    if vector_store is None:
+        cfg.raw["vector_store"] = {
+            "type": "qdrant",
+            "collection_name": cli_value,
+        }
+        return
+
+    if isinstance(vector_store, dict):
+        vector_store["collection_name"] = cli_value
+        return
+
+    raise TypeError("'vector_store' config must be a mapping to override collection_name.")
+
+
 def main() -> None:
     args = parse_args()
 
     cfg = GlobalConfig.load(args.config_file)
+    _override_qdrant_collection_name(cfg, args.qdrant_collection_name)
     container = build_container(cfg)
 
     persist_dir = _resolve_persist_dir(cfg, args.persist_dir)
@@ -120,12 +158,13 @@ def main() -> None:
         raise RuntimeError("Storage context is not available; cannot persist HTML ingestion.")
 
     print("Adding chunks to vector store...")
-    batch_size = 1
+    vector_batch_size = max(1, int(args.vector_batch_size))
     total_chunks = len(chunks)
-    for start in range(0, total_chunks, batch_size):
-        batch = chunks[start:start + batch_size]
+    print(f"Embedding/indexing {total_chunks} chunks (batch size: {vector_batch_size})...")
+    for start in range(0, total_chunks, vector_batch_size):
+        batch = chunks[start:start + vector_batch_size]
         storage_context.vector_store.insert_chunks(batch, batch_size=0)
-        print(f"Inserted {min(start + batch_size, total_chunks)}/{total_chunks} chunks")
+        print(f"Inserted {min(start + vector_batch_size, total_chunks)}/{total_chunks} chunks")
 
     print("Adding chunks to document store...")
     add_chunks_to_docstore(

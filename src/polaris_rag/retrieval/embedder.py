@@ -29,6 +29,21 @@ from typing import Any, Dict, Mapping, Optional
 import yaml
 import asyncio
 
+
+def _as_bool(value: Any, default: bool) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"1", "true", "yes", "y", "on"}:
+            return True
+        if normalized in {"0", "false", "no", "n", "off"}:
+            return False
+    return bool(value)
+
+
 class BaseEmbedder(ABC):
     """Abstract interface for text embedding.
 
@@ -332,6 +347,11 @@ class OpenAILikeEmbedder(BaseEmbedder):
             api_key: str = None,
             callback_manager: BaseCallbackHandler = None,
             model_kwargs: dict[str, Any] = None,
+            timeout: float = 60.0,
+            max_retries: int = 10,
+            embed_batch_size: int = 10,
+            num_workers: Optional[int] = None,
+            reuse_client: bool = True,
         ):
         """Initialise an OpenAI-compatible embedder.
 
@@ -352,8 +372,13 @@ class OpenAILikeEmbedder(BaseEmbedder):
             model_name=model_name,
             api_base=api_base,
             callback_manager=callback_manager,
-            model_kwargs=model_kwargs or {},
+            additional_kwargs=model_kwargs or {},
             api_key=api_key,
+            timeout=timeout,
+            max_retries=max_retries,
+            embed_batch_size=embed_batch_size,
+            num_workers=num_workers,
+            reuse_client=reuse_client,
         )
 
     def get_embedder(self) -> LlamaIndexBaseEmbedding:
@@ -426,6 +451,11 @@ class OpenAILikeEmbedder(BaseEmbedder):
             api_key=config.get("api_key"),
             callback_manager=callback_manager,
             model_kwargs=config.get("model_kwargs", {}),
+            timeout=float(config.get("timeout", config.get("request_timeout", 60.0))),
+            max_retries=int(config.get("max_retries", 10)),
+            embed_batch_size=int(config.get("embed_batch_size", 10)),
+            num_workers=config.get("num_workers"),
+            reuse_client=_as_bool(config.get("reuse_client"), True),
         )
     
 

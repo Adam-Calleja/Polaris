@@ -15,6 +15,9 @@ TRUST_REMOTE_CODE = os.getenv("TRUST_REMOTE_CODE", "1").lower() in {"1", "true",
 NORMALIZE = os.getenv("NORMALIZE_EMBEDDINGS", "1").lower() in {"1", "true", "yes"}
 MAX_LENGTH = int(os.getenv("MAX_LENGTH", "512"))
 TORCH_THREADS = int(os.getenv("TORCH_NUM_THREADS", "0"))
+USE_MODEL_ENCODE = os.getenv("USE_MODEL_ENCODE", "0").lower() in {"1", "true", "yes"}
+EMBED_MAX_BATCH_SIZE = max(1, int(os.getenv("EMBED_MAX_BATCH_SIZE", "8")))
+DISABLE_MKLDNN = os.getenv("DISABLE_MKLDNN", "1").lower() in {"1", "true", "yes"}
 INSTRUCTION = os.getenv("EMBED_INSTRUCTION", "").strip() or None
 
 app = FastAPI()
@@ -50,8 +53,16 @@ def _load_model() -> None:
     global _model, _tokenizer
 
     _patch_autocast_signature()
+    if DISABLE_MKLDNN and hasattr(torch.backends, "mkldnn"):
+        torch.backends.mkldnn.enabled = False
+
     if TORCH_THREADS > 0:
         torch.set_num_threads(TORCH_THREADS)
+        try:
+            torch.set_num_interop_threads(max(1, min(TORCH_THREADS, 2)))
+        except RuntimeError:
+            # set_num_interop_threads can only be called once per process.
+            pass
 
     _tokenizer = AutoTokenizer.from_pretrained(
         MODEL_ID,
@@ -87,7 +98,7 @@ def _mean_pool_embeddings(texts: List[str]) -> List[List[float]]:
 def _encode_embeddings(texts: List[str]) -> List[List[float]]:
     assert _model is not None and _tokenizer is not None
 
-    if hasattr(_model, "encode"):
+    if USE_MODEL_ENCODE and hasattr(_model, "encode"):
         kwargs = {"normalize_embeddings": NORMALIZE, "max_length": MAX_LENGTH}
         if INSTRUCTION:
             kwargs["instruction"] = INSTRUCTION
@@ -97,6 +108,17 @@ def _encode_embeddings(texts: List[str]) -> List[List[float]]:
         return embeddings.tolist()
 
     return _mean_pool_embeddings(texts)
+
+
+def _encode_embeddings_batched(texts: List[str]) -> List[List[float]]:
+    if len(texts) <= EMBED_MAX_BATCH_SIZE:
+        return _encode_embeddings(texts)
+
+    vectors: List[List[float]] = []
+    for start in range(0, len(texts), EMBED_MAX_BATCH_SIZE):
+        batch = texts[start:start + EMBED_MAX_BATCH_SIZE]
+        vectors.extend(_encode_embeddings(batch))
+    return vectors
 
 
 def _count_tokens(texts: List[str]) -> int:
@@ -130,7 +152,7 @@ def embeddings(request: EmbeddingsRequest) -> dict:
         raise HTTPException(status_code=400, detail="Input must be a string or list of strings.")
 
     start = time.time()
-    vectors = _encode_embeddings(texts)
+    vectors = _encode_embeddings_batched(texts)
     elapsed = time.time() - start
 
     data = [
