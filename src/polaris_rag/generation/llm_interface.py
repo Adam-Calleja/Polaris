@@ -29,11 +29,44 @@ create_llm
 from abc import ABC, abstractmethod
 from typing import Any
 from typing import Mapping, Optional
+import warnings
 import yaml
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_openai import OpenAI, ChatOpenAI
 from langchain_core.language_models.llms import LLM as LangChainBaseLLM
 from langchain_community.llms import HuggingFaceTextGenInference
+
+
+def _is_gemini_openai_compat(api_base: str | None) -> bool:
+    """Return ``True`` when the API base points to Gemini's OpenAI-compatible endpoint."""
+    if not api_base:
+        return False
+    base = api_base.lower()
+    return "generativelanguage.googleapis.com" in base and "/openai" in base
+
+
+def _sanitize_openai_kwargs(
+    api_base: str | None,
+    kwargs: dict[str, Any],
+    *,
+    context: str,
+) -> dict[str, Any]:
+    """Drop provider-incompatible OpenAI kwargs for known OpenAI-compatible backends."""
+    sanitized = dict(kwargs)
+
+    if _is_gemini_openai_compat(api_base):
+        unsupported_keys = {"frequency_penalty", "presence_penalty"}
+        removed = sorted(k for k in unsupported_keys if k in sanitized)
+        for key in removed:
+            sanitized.pop(key, None)
+        if removed:
+            warnings.warn(
+                "Dropping unsupported Gemini OpenAI-compatible params "
+                f"during {context}: {', '.join(removed)}",
+                UserWarning,
+            )
+
+    return sanitized
 
 class _SimpleGeneration:
     """Minimal generation object compatible with LangChain result structures.
@@ -237,7 +270,9 @@ class OpenAILikeLLM(BaseLLM):
         Stop sequences may be supplied at call time via ``stop`` or ``stop_list``.
         If none are provided, a conservative default of ``["User:"]`` is used.
         """
-        self.model_kwargs = model_kwargs
+        self.api_base = api_base
+        model_kwargs = _sanitize_openai_kwargs(api_base, model_kwargs, context="model init")
+        self.model_kwargs = dict(model_kwargs)
         self.default_stop_list = model_kwargs.pop("stop_list", None)
         self.stop_list = self.default_stop_list
 
@@ -374,11 +409,13 @@ class OpenAILikeLLM(BaseLLM):
         if not isinstance(prompt, str):
             prompt = prompt.to_string() if hasattr(prompt, "to_string") else str(prompt)
 
-        explicit_stop = kwargs.pop("stop", None)
-        alt_stop_list = kwargs.pop("stop_list", None)
+        run_kwargs = _sanitize_openai_kwargs(self.api_base, kwargs, context="generation")
+
+        explicit_stop = run_kwargs.pop("stop", None)
+        alt_stop_list = run_kwargs.pop("stop_list", None)
         final_stop = explicit_stop or alt_stop_list or self.default_stop_list or ["User:"]
 
-        response = self.llm.generate([prompt], stop=final_stop, **kwargs)
+        response = self.llm.generate([prompt], stop=final_stop, **run_kwargs)
         return response.generations[0][0].text
 
     def generate_prompt(
@@ -436,6 +473,7 @@ class OpenAILikeLLM(BaseLLM):
             prompt = prompt.to_string() if hasattr(prompt, "to_string") else str(prompt)
 
         run_kwargs.update(kwargs)
+        run_kwargs = _sanitize_openai_kwargs(self.api_base, run_kwargs, context="generation")
 
         if hasattr(self.llm, 'acomplete'):
             return await self.llm.acomplete(prompt, **run_kwargs)
@@ -515,7 +553,9 @@ class OpenAIChatLikeLLM(BaseLLM):
         """
         import inspect
 
-        self.model_kwargs = model_kwargs
+        self.api_base = api_base
+        model_kwargs = _sanitize_openai_kwargs(api_base, model_kwargs, context="model init")
+        self.model_kwargs = dict(model_kwargs)
         self.default_stop_list = model_kwargs.pop("stop_list", None)
         self.stop_list = self.default_stop_list
 
@@ -599,11 +639,13 @@ class OpenAIChatLikeLLM(BaseLLM):
         if not isinstance(prompt, str):
             prompt = prompt.to_string() if hasattr(prompt, "to_string") else str(prompt)
 
-        explicit_stop = kwargs.pop("stop", None)
-        alt_stop_list = kwargs.pop("stop_list", None)
+        run_kwargs = _sanitize_openai_kwargs(self.api_base, kwargs, context="generation")
+
+        explicit_stop = run_kwargs.pop("stop", None)
+        alt_stop_list = run_kwargs.pop("stop_list", None)
         final_stop = explicit_stop or alt_stop_list or self.default_stop_list or ["User:"]
 
-        response = self.llm.invoke(prompt, stop=final_stop, **kwargs)
+        response = self.llm.invoke(prompt, stop=final_stop, **run_kwargs)
         return response.content if hasattr(response, "content") else response
 
     def generate_prompt(self, prompt: str, **kwargs) -> Any:
@@ -622,6 +664,7 @@ class OpenAIChatLikeLLM(BaseLLM):
         final_stop = explicit_stop or alt_stop_list or self.default_stop_list or ["User:"]
 
         run_kwargs.update(kwargs)
+        run_kwargs = _sanitize_openai_kwargs(self.api_base, run_kwargs, context="generation")
 
         if hasattr(self.llm, 'ainvoke'):
             response = await self.llm.ainvoke(prompt, stop=final_stop, **run_kwargs)

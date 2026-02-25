@@ -15,20 +15,20 @@
 #   model_kwargs: {}
 
 generator_llm:
-  type: "openai_chatlike"
-  # model_name: "meta-llama/Llama-3.3-70B-Instruct"
-  model_name: "meta-llama/llama-4-scout-17b-16e-instruct"
+  # type: "openai_like"
+  type: "openai_chat"
+  # model_name: "llama-cam"
+  model_name: "gemini-2.5-flash"
   # api_base: "http://localhost:8080/v1"
   # api_base: "https://llm.hpc.cam.ac.uk/v1"
-  api_base: "https://api.groq.com/openai/v1"
-  api_key: "${POLARIS_LLM_API_KEY}"
+  # api_key: "${POLARIS_LLM_API_KEY}"
+  api_base: "https://generativelanguage.googleapis.com/v1beta/openai/"
+  api_key: "${GEMINI_API_KEY}"
   model_kwargs:
     max_tokens: 384
     temperature: 0.8
     top_p: 0.9
-    stop: ["\nUser:", "\n\nUser:"]
-    frequency_penalty: 0.3
-    presence_penalty: 0.2
+    stop_list: ["\nUser:", "\n\nUser:"]
 
 evaluator_llm:
   type: "OpenAILike"
@@ -46,13 +46,16 @@ embedder:
   api_base: "${EMBED_API_BASE}"
   model_name: "Qwen/Qwen3-Embedding-0.6B"
   api_key: "${POLARIS_LLM_API_KEY}"
+  timeout: 300
+  max_retries: 3
+  embed_batch_size: 2
   model_kwargs: {}
 
 vector_store:
   type: "qdrant"
   host: "qdrant"
   port: 6333
-  collection_name: "support_tickets_test"
+  collection_name: "support_docs"
   token: null
 
 doc_store:

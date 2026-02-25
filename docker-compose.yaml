@@ -6,6 +6,7 @@ services:
     environment:
       - POLARIS_CONFIG=/app/config/config.yaml
       - POLARIS_LLM_API_KEY=${POLARIS_LLM_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
       - EMBED_API_BASE=http://embed:8081/v1
       # If you want to override API bases for LLM/embeddings inside Docker:
       # - LLM_API_BASE=http://llm:8080/v1
@@ -29,16 +30,22 @@ services:
       - ./qdrant_data:/qdrant/storage
 
   embed:
-    platform: linux/amd64
+    platform: linux/arm64/v8
     build:
       context: .
       dockerfile: Dockerfile.embed
     image: rag_project-embed
+    restart: unless-stopped
     environment:
       - MODEL_ID=Qwen/Qwen3-Embedding-0.6B
       - TRUST_REMOTE_CODE=1
       - NORMALIZE_EMBEDDINGS=1
       - MAX_LENGTH=512
+      - TORCH_NUM_THREADS=4
+      - USE_MODEL_ENCODE=0
+      - EMBED_MAX_BATCH_SIZE=8
+      - DISABLE_MKLDNN=1
+      - TOKENIZERS_PARALLELISM=false
       - HF_HOME=/data/hf
       - TRANSFORMERS_CACHE=/data/hf
       - HF_TOKEN

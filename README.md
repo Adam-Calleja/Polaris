@@ -30,6 +30,7 @@ Polaris is a Retrieval-Augmented Generation (RAG) system for HPC service support
 ```bash
 # .env (example)
 POLARIS_LLM_API_KEY=your_llm_key
+GEMINI_API_KEY=your_gemini_key
 JIRA_API_TOKEN=your_jira_token
 ```
 
@@ -87,6 +88,7 @@ Configuration lives in `config/config.yaml`. Key sections include:
 
 Environment variables used by the stack:
 - `POLARIS_LLM_API_KEY`: API key for the configured LLM or embeddings provider.
+- `GEMINI_API_KEY`: API key used when `generator_llm.api_key` is configured as `${GEMINI_API_KEY}`.
 - `JIRA_API_TOKEN`: Jira API token for ticket ingestion.
 - `EMBED_API_BASE`: Base URL for the embeddings service.
 - `POLARIS_CONFIG`: Path to the runtime config used by the API.
