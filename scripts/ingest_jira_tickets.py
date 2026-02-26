@@ -94,7 +94,7 @@ def parse_args() -> argparse.Namespace:
         required=False,
         type=str,
         default=None,
-        help="Path to newline-delimited Jira keys to exclude (optional).",
+        help="Path to newline-delimited Jira keys to exclude (optional; no default exclusion file is applied).",
     )
     parser.add_argument(
         "--qdrant-collection-name",
@@ -207,7 +207,6 @@ def _resolve_exclude_keys(cfg: GlobalConfig, cli_value: str | None) -> list[str]
     jira_cfg = _get_jira_ingestion_cfg(cfg)
     cfg_inline_keys = jira_cfg.get("exclude_keys")
     cfg_file = jira_cfg.get("exclude_keys_file")
-    default_eval_file = REPO_ROOT / "data" / "test" / "eval_ticket_keys.txt"
 
     keys: list[str] = []
     if isinstance(cfg_inline_keys, list):
@@ -219,8 +218,6 @@ def _resolve_exclude_keys(cfg: GlobalConfig, cli_value: str | None) -> list[str]
         if not candidate.is_absolute():
             candidate = REPO_ROOT / candidate
         keys.extend(_read_exclude_keys_file(candidate))
-    elif default_eval_file.exists():
-        keys.extend(_read_exclude_keys_file(default_eval_file))
 
     return list(dict.fromkeys(keys))
 
