@@ -26,6 +26,7 @@ from llama_index.core import StorageContext
 
 from typing import Any, Mapping, Optional
 from polaris_rag.generation.llm_interface import BaseLLM
+from polaris_rag.retrieval.reranker import MergedCandidate, create_reranker
 
 class VectorIndexRetriever:
     """Vector-based retriever over a vector store index.
@@ -197,8 +198,7 @@ class MultiCollectionRetriever:
     final_top_k : int, optional
         Number of nodes to return after reranking. Defaults to ``10``.
     rerank : Mapping[str, Any] or None, optional
-        Reranker configuration. Supported:
-        - ``{"type": "rrf", "rrf_k": 60}`` (default)
+        Reranker configuration. Built via :func:`create_reranker`.
 
     Notes
     -----
@@ -228,17 +228,10 @@ class MultiCollectionRetriever:
 
         self.final_top_k = max(1, int(final_top_k))
         self.rerank = dict(rerank or {})
-        self.rerank_type = str(self.rerank.get("type", "rrf")).lower().strip()
-
-        if self.rerank_type != "rrf":
-            raise ValueError(
-                f"Unsupported rerank type {self.rerank_type!r}. "
-                "Supported rerankers: ['rrf']."
-            )
-
-        self.rrf_k = int(self.rerank.get("rrf_k", 60))
-        if self.rrf_k <= 0:
-            raise ValueError("'rerank.rrf_k' must be a positive integer.")
+        self.reranker = create_reranker(
+            config=self.rerank,
+            source_settings=self.source_settings,
+        )
 
     def retrieve(
             self,
@@ -260,12 +253,16 @@ class MultiCollectionRetriever:
         if not candidates:
             return []
 
-        reranked = self._rerank_rrf(candidates)
+        merged = list(candidates.values())
+        for candidate in merged:
+            self._stamp_source_metadata(node=candidate.node, source_ranks=candidate.source_ranks)
+
+        reranked = self.reranker.rerank(merged)
         return reranked[: self.final_top_k]
 
-    def _collect_candidates(self, query: str) -> dict[str, dict[str, Any]]:
+    def _collect_candidates(self, query: str) -> dict[str, MergedCandidate]:
         """Collect and deduplicate candidates returned by each source retriever."""
-        merged: dict[str, dict[str, Any]] = {}
+        merged: dict[str, MergedCandidate] = {}
 
         for source_name, retriever in self.source_retrievers.items():
             source_results = retriever.retrieve(query)
@@ -276,56 +273,26 @@ class MultiCollectionRetriever:
 
                 entry = merged.setdefault(
                     node_id,
-                    {
-                        "node": node,
-                        "best_score": self._to_float_or_none(node_with_score.score),
-                        "source_ranks": {},
-                    },
+                    MergedCandidate(
+                        node=node,
+                        best_score=self._to_float_or_none(node_with_score.score),
+                        source_ranks={},
+                    ),
                 )
 
                 # Track the best raw retrieval score seen for stable tie-breaks.
                 raw_score = self._to_float_or_none(node_with_score.score)
-                if entry["best_score"] is None or (
-                    raw_score is not None and raw_score > entry["best_score"]
+                if entry.best_score is None or (
+                    raw_score is not None and raw_score > entry.best_score
                 ):
-                    entry["best_score"] = raw_score
-                    entry["node"] = node
+                    entry.best_score = raw_score
+                    entry.node = node
 
-                prev_rank = entry["source_ranks"].get(source_name)
+                prev_rank = entry.source_ranks.get(source_name)
                 if prev_rank is None or rank < prev_rank:
-                    entry["source_ranks"][source_name] = rank
+                    entry.source_ranks[source_name] = rank
 
         return merged
-
-    def _rerank_rrf(self, candidates: dict[str, dict[str, Any]]) -> list[NodeWithScore]:
-        """Apply reciprocal-rank fusion over merged candidates."""
-        scored: list[tuple[float, float, NodeWithScore]] = []
-
-        for entry in candidates.values():
-            source_ranks = entry["source_ranks"]
-            rrf_score = 0.0
-            for source_name, rank in source_ranks.items():
-                weight = self._source_weight(source_name)
-                rrf_score += weight / (self.rrf_k + int(rank))
-
-            node = entry["node"]
-            self._stamp_source_metadata(node=node, source_ranks=source_ranks)
-
-            raw_score = entry["best_score"]
-            tie_break = raw_score if raw_score is not None else float("-inf")
-            scored.append((rrf_score, tie_break, NodeWithScore(node=node, score=rrf_score)))
-
-        scored.sort(key=lambda item: (item[0], item[1]), reverse=True)
-        return [item[2] for item in scored]
-
-    def _source_weight(self, source_name: str) -> float:
-        """Return configured source weight for RRF."""
-        source_cfg = self.source_settings.get(source_name, {})
-        weight_raw = source_cfg.get("weight", 1.0)
-        try:
-            return float(weight_raw)
-        except Exception:
-            return 1.0
 
     @staticmethod
     def _to_float_or_none(value: Any) -> float | None:
