@@ -42,10 +42,9 @@ evaluator_llm:
 
 embedder:
   type: "OpenAILike"
-  # model_name: "Qwen/Qwen3-Embedding-8B"
   api_base: "${EMBED_API_BASE}"
-  model_name: "Qwen/Qwen3-Embedding-0.6B"
-  api_key: "${POLARIS_LLM_API_KEY}"
+  model_name: "Qwen/Qwen3-Embedding-8B"
+  api_key: ""
   timeout: 300
   max_retries: 3
   embed_batch_size: 2
@@ -55,7 +54,7 @@ vector_store:
   type: "qdrant"
   host: "qdrant"
   port: 6333
-  collection_name: "support_docs"
+  collection_name: "support_docs_qwen3_8b"
   token: null
 
 doc_store:
@@ -101,6 +100,7 @@ ingestion:
     end_date: null
     limit: null
     exclude_summaries: []
+    exclude_keys_file: "/app/data/test/eval_ticket_keys.txt"
   debug:
     dump_processed_tickets: false
     dump_path: "data/debug/jira_processed_tickets.txt"
