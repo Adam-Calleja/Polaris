@@ -245,6 +245,28 @@ def _dump_processed_tickets(processed_tickets: list[Any], dump_path: Path) -> No
             f.write(getattr(t, "text", ""))
             f.write(sep)
 
+def _append_failed_chunk_log(
+    log_path: Path,
+    chunk: Any,
+    exc: Exception,
+    *,
+    retries: int,
+) -> None:
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    chunk_id = getattr(chunk, "id", None)
+    parent_id = getattr(chunk, "parent_id", None)
+    text = getattr(chunk, "text", "") or ""
+    text_len = len(text)
+    metadata = getattr(chunk, "metadata", {}) or {}
+    turn_range = metadata.get("turn_range")
+    chunk_type = metadata.get("chunk_type")
+    with log_path.open("a", encoding="utf-8") as f:
+        f.write(
+            f"chunk_id={chunk_id}\tparent_id={parent_id}\tchunk_type={chunk_type}\t"
+            f"turn_range={turn_range}\ttext_len={text_len}\tretries={retries}\t"
+            f"error={type(exc).__name__}: {exc}\n"
+        )
+
 def _insert_vector_batch_with_retries(
     storage_context: Any,
     batch: list[Any],
@@ -253,12 +275,13 @@ def _insert_vector_batch_with_retries(
     total_chunks: int,
     retries: int,
     retry_delay: float,
-) -> None:
+    failed_chunks_log_path: Path,
+) -> int:
     attempt = 0
     while True:
         try:
             storage_context.vector_store.insert_chunks(batch, batch_size=0)
-            return
+            return 0
         except Exception as exc:
             attempt += 1
             if attempt <= retries:
@@ -276,25 +299,39 @@ def _insert_vector_batch_with_retries(
                     f"Batch {batch_start_idx + 1}-{batch_start_idx + len(batch)}/{total_chunks} failed after "
                     f"{retries} retries. Splitting into {split} and {len(batch) - split} chunks."
                 )
-                _insert_vector_batch_with_retries(
+                left_skipped = _insert_vector_batch_with_retries(
                     storage_context,
                     batch[:split],
                     batch_start_idx=batch_start_idx,
                     total_chunks=total_chunks,
                     retries=retries,
                     retry_delay=retry_delay,
+                    failed_chunks_log_path=failed_chunks_log_path,
                 )
-                _insert_vector_batch_with_retries(
+                right_skipped = _insert_vector_batch_with_retries(
                     storage_context,
                     batch[split:],
                     batch_start_idx=batch_start_idx + split,
                     total_chunks=total_chunks,
                     retries=retries,
                     retry_delay=retry_delay,
+                    failed_chunks_log_path=failed_chunks_log_path,
                 )
-                return
+                return left_skipped + right_skipped
 
-            raise
+            # Single-chunk failure after all retries: skip and log.
+            chunk = batch[0]
+            _append_failed_chunk_log(
+                failed_chunks_log_path,
+                chunk,
+                exc,
+                retries=retries,
+            )
+            print(
+                f"Skipping chunk {batch_start_idx + 1}/{total_chunks} after {retries} retries "
+                f"({type(exc).__name__}: {exc}). Logged to {failed_chunks_log_path}"
+            )
+            return 1
 
 
 def main() -> None:
@@ -364,19 +401,24 @@ def main() -> None:
     vector_batch_size = max(1, int(args.vector_batch_size))
     vector_batch_retries = max(0, int(args.vector_batch_retries))
     vector_batch_retry_delay = max(0.0, float(args.vector_batch_retry_delay))
+    failed_chunks_log_path = Path(persist_dir) / "failed_vector_chunks.log"
     total_chunks = len(chunks)
+    skipped_chunks = 0
     print(f"Embedding/indexing {total_chunks} chunks (batch size: {vector_batch_size})...")
     for start in range(0, total_chunks, vector_batch_size):
         batch = chunks[start:start + vector_batch_size]
-        _insert_vector_batch_with_retries(
+        skipped_chunks += _insert_vector_batch_with_retries(
             storage_context,
             batch,
             batch_start_idx=start,
             total_chunks=total_chunks,
             retries=vector_batch_retries,
             retry_delay=vector_batch_retry_delay,
+            failed_chunks_log_path=failed_chunks_log_path,
         )
         print(f"Inserted {min(start + vector_batch_size, total_chunks)}/{total_chunks} chunks")
+    if skipped_chunks:
+        print(f"Skipped {skipped_chunks} chunk(s). See: {failed_chunks_log_path}")
 
     print("Adding chunks to document store...")
     add_chunks_to_docstore(storage=storage_context, chunks=chunks)
