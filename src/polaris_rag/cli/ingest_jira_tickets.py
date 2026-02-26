@@ -90,6 +90,13 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Maximum number of tickets to fetch (optional)",
     )
+    parser.add_argument(
+        "--qdrant-collection-name",
+        required=False,
+        type=str,
+        default=None,
+        help="Override vector_store.collection_name from config (optional).",
+    )
 
     # Optional debug dump of processed ticket text.
     parser.add_argument(
@@ -179,6 +186,12 @@ def main() -> None:
     args = parse_args()
 
     cfg = GlobalConfig.load(args.config_file)
+    if args.qdrant_collection_name:
+        vector_store_cfg = cfg.raw.get("vector_store")
+        if not isinstance(vector_store_cfg, dict):
+            vector_store_cfg = {}
+            cfg.raw["vector_store"] = vector_store_cfg
+        vector_store_cfg["collection_name"] = args.qdrant_collection_name
 
     # Build runtime objects (vector store, docstore, token counter, etc.).
     container = build_container(cfg)
@@ -232,5 +245,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
 
