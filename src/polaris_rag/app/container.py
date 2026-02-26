@@ -490,6 +490,15 @@ class PolarisContainer:
 
         from polaris_rag.retrieval.retriever_factory import create
 
+        if kind == "multi_collection":
+            return create(
+                kind=kind,
+                source_retrievers=self.source_retrievers,
+                source_settings=self.retriever_source_settings,
+                final_top_k=section.get("final_top_k"),
+                rerank=section.get("rerank"),
+            )
+
         if kind == "hybrid":
             return create(
                 kind=kind,

@@ -74,7 +74,8 @@ storage_context:
 retriever:
   # NOTE: "hybrid" (BM25 + vector) requires local documents to be loaded so BM25 can build an index.
   # If the corpus is empty, BM25 indexing will fail. Use vector-only retrieval by default.
-  type: "vector"
+  type: "multi_collection"
+  source_type: "vector"
   top_k: 5
   score_threshold: 0.0
   filters: {}
