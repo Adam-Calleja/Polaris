@@ -7,7 +7,7 @@ services:
       - POLARIS_CONFIG=/app/config/config.yaml
       - POLARIS_LLM_API_KEY=${POLARIS_LLM_API_KEY}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
-      - EMBED_API_BASE=http://embed:8081/v1
+      - EMBED_API_BASE=http://embed:80/v1
       # If you want to override API bases for LLM/embeddings inside Docker:
       # - LLM_API_BASE=http://llm:8080/v1
       # - EMBED_API_BASE=http://embed:8080/v1
@@ -19,8 +19,10 @@ services:
       # Persist dir for your StorageContext (highly recommended)
       - ./persist:/app/persist
     depends_on:
-      - qdrant
-      - embed
+      qdrant:
+        condition: service_started
+      embed:
+        condition: service_healthy
 
   qdrant:
     image: qdrant/qdrant:v1.14.1
@@ -30,29 +32,28 @@ services:
       - ./qdrant_data:/qdrant/storage
 
   embed:
-    build:
-      context: .
-      dockerfile: Dockerfile.embed
-    image: rag_project-embed
-    restart: unless-stopped
+    image: ghcr.io/huggingface/text-embeddings-inference:hpu-latest
+    runtime: habana
+    ipc: host
+    cap_add:
+      - SYS_NICE
     environment:
-      - MODEL_ID=Qwen/Qwen3-Embedding-0.6B
-      - TRUST_REMOTE_CODE=1
-      - NORMALIZE_EMBEDDINGS=1
-      - MAX_LENGTH=512
-      - TORCH_NUM_THREADS=4
-      - USE_MODEL_ENCODE=0
-      - EMBED_MAX_BATCH_SIZE=8
-      - DISABLE_MKLDNN=1
-      - TOKENIZERS_PARALLELISM=false
-      - HF_HOME=/data/hf
-      - TRANSFORMERS_CACHE=/data/hf
-      - HF_TOKEN
-      - HUGGINGFACE_HUB_TOKEN
+      - HABANA_VISIBLE_DEVICES=7
+      - HF_TOKEN=${HF_TOKEN}
     volumes:
-      - ./hf_cache:/data/hf
+      - /mnt/data/ac2650/test:/data
     ports:
-      - "8081:8081"
+      - "8081:80"
+    command: >
+      --model-id Qwen/Qwen3-Embedding-8B
+      --dtype bfloat16
+      --pooling last-token
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:80/health >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 120s
 
   streamlit:
     build:
