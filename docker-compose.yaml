@@ -7,6 +7,7 @@ services:
       - POLARIS_CONFIG=/app/config/config.yaml
       - POLARIS_LLM_API_KEY=${POLARIS_LLM_API_KEY}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - JIRA_API_TOKEN=${JIRA_API_TOKEN}
       - EMBED_API_BASE=http://embed:8081/v1
       # If you want to override API bases for LLM/embeddings inside Docker:
       # - LLM_API_BASE=http://llm:8080/v1
