@@ -206,8 +206,9 @@ def create_jira_jql_query(
     """Build a JQL string for resolved issues within a created-date window.
 
     The generated query always filters by the given project and `status = Resolved`,
-    applies inclusive lower/upper bounds on the `created` field when `start_date`
-    and/or `end_date` are provided, and orders results by most recent creation time.
+    applies an inclusive lower bound and an exclusive upper bound on the
+    `created` field when `start_date` and/or `end_date` are provided, and orders
+    results by most recent creation time.
 
     Parameters
     ----------
@@ -215,7 +216,7 @@ def create_jira_jql_query(
         Inclusive lower bound for the `created` field in ISO date format
         ``YYYY-MM-DD``. If empty or ``None``, no lower bound is applied.
     end_date : str
-        Inclusive upper bound for the `created` field in ISO date format
+        Exclusive upper bound for the `created` field in ISO date format
         ``YYYY-MM-DD``. If empty or ``None``, no upper bound is applied.
     keywords : list[str] | None, optional
         Optional list of keywords to filter issue summaries. If provided,
@@ -234,7 +235,7 @@ def create_jira_jql_query(
     -------
     str
         A JQL string of the form:
-        ``project = '<project_key>' AND status = Resolved [AND created >= 'YYYY-MM-DD'] [AND created <= 'YYYY-MM-DD'] ORDER BY created DESC``.
+        ``project = '<project_key>' AND status = Resolved [AND created >= 'YYYY-MM-DD'] [AND created < 'YYYY-MM-DD'] ORDER BY created DESC``.
 
     Raises
     ------
@@ -245,7 +246,7 @@ def create_jira_jql_query(
     Examples
     --------
     >>> create_jira_jql_query("2025-01-01", "2025-01-31", project_key="SUP")
-    "project = 'SUP' AND status = Resolved AND created >= '2025-01-01' AND created <= '2025-01-31' ORDER BY created DESC"
+    "project = 'SUP' AND status = Resolved AND created >= '2025-01-01' AND created < '2025-01-31' ORDER BY created DESC"
     """
     
     jql_query = (
@@ -283,7 +284,7 @@ def create_jira_jql_query(
                 raise ValueError(f"Invalid date format: {end_date}")
             
             formatted_date = parsed_date.strftime("%Y-%m-%d")
-            jql_query += f"AND created <= '{formatted_date}' "
+            jql_query += f"AND created < '{formatted_date}' "
         except ValueError as e:
             raise ValueError(f"Invalid end_date provided: {end_date}") from e
         
@@ -330,7 +331,7 @@ def load_support_tickets(
         Inclusive lower bound for the issue creation date in ISO format
         (``YYYY-MM-DD``). If empty or ``None``, no lower bound is applied.
     end_date : str
-        Inclusive upper bound for the issue creation date in ISO format
+        Exclusive upper bound for the issue creation date in ISO format
         (``YYYY-MM-DD``). If empty or ``None``, no upper bound is applied.
     cfg : GlobalConfig
         Loaded configuration containing Jira API credentials.
