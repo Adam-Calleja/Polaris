@@ -139,16 +139,93 @@ class GlobalConfig:
         return self.raw["embedder"]
 
     @cached_property
+    def vector_stores(self) -> dict[str, dict]:
+        """Return multi-store vector configuration with legacy fallback.
+
+        Returns
+        -------
+        dict[str, dict]
+            Mapping of source name to vector-store config.
+
+        Notes
+        -----
+        Precedence:
+        1. If ``vector_stores`` is defined, return it (validated).
+        2. Otherwise, map legacy ``vector_store`` to ``{"default": ...}``.
+        3. If neither exists, return ``{}``.
+
+        Raises
+        ------
+        TypeError
+            If ``vector_stores`` is not a mapping, contains invalid source names,
+            or any source config is not a mapping.
+        """
+        stores = self.raw.get("vector_stores")
+
+        if stores is not None:
+            if not isinstance(stores, dict):
+                raise TypeError("'vector_stores' must be a mapping of source_name -> config.")
+
+            normalised: dict[str, dict] = {}
+            for source_name, source_cfg in stores.items():
+                if not isinstance(source_name, str) or not source_name.strip():
+                    raise TypeError("Each 'vector_stores' key must be a non-empty string.")
+                if not isinstance(source_cfg, dict):
+                    raise TypeError(
+                        f"'vector_stores.{source_name}' must be a mapping, got {type(source_cfg)}."
+                    )
+                normalised[source_name] = source_cfg
+
+            if normalised:
+                return normalised
+
+        legacy = self.raw.get("vector_store", {})
+        if legacy is None:
+            return {}
+
+        if not isinstance(legacy, dict):
+            raise TypeError("'vector_store' must be a mapping when provided.")
+
+        if not legacy:
+            return {}
+
+        return {"default": legacy}
+
+    @cached_property
     def vector_store(self) -> dict:
-        """Return the vector store configuration section.
+        """Return a single vector-store config for legacy callers.
 
         Returns
         -------
         dict
-            The ``vector_store`` section of the configuration, or an empty dict if
-            not present.
+            The selected vector-store config.
+
+        Notes
+        -----
+        Selection order:
+        1. Explicit legacy ``vector_store`` (if set)
+        2. ``vector_stores.docs`` (if present)
+        3. ``vector_stores.default`` (if present)
+        4. First entry in ``vector_stores``
+        5. ``{}`` if no vector-store config exists
+
+        This keeps old code paths working while the project migrates to
+        multi-collection retrieval.
         """
-        return self.raw.get('vector_store', {})
+        legacy = self.raw.get("vector_store")
+        if legacy is not None:
+            if not isinstance(legacy, dict):
+                raise TypeError("'vector_store' must be a mapping when provided.")
+            return legacy
+
+        stores = self.vector_stores
+        if not stores:
+            return {}
+        if "docs" in stores:
+            return stores["docs"]
+        if "default" in stores:
+            return stores["default"]
+        return next(iter(stores.values()))
 
     @cached_property
     def doc_store(self) -> dict:
