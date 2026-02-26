@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -75,7 +76,7 @@ def parse_args() -> argparse.Namespace:
         required=False,
         type=str,
         default=None,
-        help="End date for fetching Jira tickets (YYYY-MM-DD)",
+        help="End date for fetching Jira tickets (YYYY-MM-DD). Defaults to today when unset.",
     )
 
     # Prefer config.ingestion.jira.limit (if present); allow override.
@@ -159,9 +160,10 @@ def _resolve_persist_dir(cfg: GlobalConfig, cli_value: str | None) -> str:
 
 def _resolve_dates(cfg: GlobalConfig, start_cli: str | None, end_cli: str | None) -> tuple[str, str]:
     jira_cfg = _get_jira_ingestion_cfg(cfg)
+    today = datetime.now().strftime("%Y-%m-%d")
 
     start = start_cli or jira_cfg.get("start_date") or "2024-01-01"
-    end = end_cli or jira_cfg.get("end_date") or "2025-01-01"
+    end = end_cli or jira_cfg.get("end_date") or today
     return str(start), str(end)
 
 
