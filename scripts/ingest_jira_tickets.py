@@ -103,6 +103,15 @@ def parse_args() -> argparse.Namespace:
         help="Override vector_store.collection_name from config (optional).",
     )
 
+    parser.add_argument(
+        "--vector-batch-size",
+        "-b",
+        required=False,
+        type=int,
+        default=16,
+        help="Batch size for vector-store inserts (default: 16).",
+    )
+
     # Optional debug dump of processed ticket text.
     parser.add_argument(
         "--dump-processed",
@@ -249,6 +258,8 @@ def main() -> None:
 
     # Runtime storage context (NOT the config section).
     storage_context = container.storage_context
+    if storage_context is None:
+        raise RuntimeError("Storage context is not available; cannot persist Jira ingestion.")
 
     print("Loading Jira tickets...")
     tickets = load_support_tickets(
@@ -285,7 +296,13 @@ def main() -> None:
     chunks = get_chunks_from_jira_tickets(tickets=processed_tickets, token_counter=container.token_counter)
 
     print("Adding chunks to vector store...")
-    storage_context.vector_store.insert_chunks(chunks, batch_size=1)
+    vector_batch_size = max(1, int(args.vector_batch_size))
+    total_chunks = len(chunks)
+    print(f"Embedding/indexing {total_chunks} chunks (batch size: {vector_batch_size})...")
+    for start in range(0, total_chunks, vector_batch_size):
+        batch = chunks[start:start + vector_batch_size]
+        storage_context.vector_store.insert_chunks(batch, batch_size=0)
+        print(f"Inserted {min(start + vector_batch_size, total_chunks)}/{total_chunks} chunks")
 
     print("Adding chunks to document store...")
     add_chunks_to_docstore(storage=storage_context, chunks=chunks)
