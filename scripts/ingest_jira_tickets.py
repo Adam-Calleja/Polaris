@@ -13,12 +13,9 @@ Design goals
 from __future__ import annotations
 
 import argparse
-import os
 import sys
 from pathlib import Path
 from typing import Any, Mapping
-
-import os
 
 # Make `src/polaris_rag` importable when running from a repo checkout.
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -89,6 +86,14 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=None,
         help="Maximum number of tickets to fetch (optional)",
+    )
+
+    parser.add_argument(
+        "--exclude-keys-file",
+        required=False,
+        type=str,
+        default=None,
+        help="Path to newline-delimited Jira keys to exclude (optional).",
     )
 
     # Optional debug dump of processed ticket text.
@@ -166,6 +171,42 @@ def _resolve_unwanted_summaries(cfg: GlobalConfig) -> list[str]:
     ]
 
 
+def _read_exclude_keys_file(path: Path) -> list[str]:
+    if not path.exists():
+        return []
+
+    keys: list[str] = []
+    with path.open("r", encoding="utf-8") as f:
+        for line in f:
+            candidate = line.strip()
+            if not candidate or candidate.startswith("#"):
+                continue
+            keys.append(candidate.upper())
+    return list(dict.fromkeys(keys))
+
+
+def _resolve_exclude_keys(cfg: GlobalConfig, cli_value: str | None) -> list[str]:
+    jira_cfg = _get_jira_ingestion_cfg(cfg)
+    cfg_inline_keys = jira_cfg.get("exclude_keys")
+    cfg_file = jira_cfg.get("exclude_keys_file")
+    default_eval_file = REPO_ROOT / "data" / "test" / "eval_ticket_keys.txt"
+
+    keys: list[str] = []
+    if isinstance(cfg_inline_keys, list):
+        keys.extend([k.upper() for k in cfg_inline_keys if isinstance(k, str) and k.strip()])
+
+    exclude_file = cli_value or cfg_file
+    if exclude_file:
+        candidate = Path(exclude_file)
+        if not candidate.is_absolute():
+            candidate = REPO_ROOT / candidate
+        keys.extend(_read_exclude_keys_file(candidate))
+    elif default_eval_file.exists():
+        keys.extend(_read_exclude_keys_file(default_eval_file))
+
+    return list(dict.fromkeys(keys))
+
+
 def _dump_processed_tickets(processed_tickets: list[Any], dump_path: Path) -> None:
     dump_path.parent.mkdir(parents=True, exist_ok=True)
     sep = "\n\n" + ("-" * 10) + "\n\n"
@@ -188,6 +229,7 @@ def main() -> None:
     start_date, end_date = _resolve_dates(cfg, args.start_date, args.end_date)
     limit = _resolve_limit(cfg, args.limit)
     unwanted_summaries = _resolve_unwanted_summaries(cfg)
+    exclude_keys = _resolve_exclude_keys(cfg, args.exclude_keys_file)
 
     # Where to write debug dumps (optional).
     dump_path = Path(args.dump_path) if args.dump_path else (REPO_ROOT / "data" / "debug" / "jira_processed_tickets.txt")
@@ -196,9 +238,20 @@ def main() -> None:
     storage_context = container.storage_context
 
     print("Loading Jira tickets...")
-    tickets = load_support_tickets(start_date=start_date, end_date=end_date, limit=limit, cfg=cfg)
+    tickets = load_support_tickets(
+        start_date=start_date,
+        end_date=end_date,
+        limit=limit,
+        cfg=cfg,
+        exclude_keys=exclude_keys,
+    )
 
     print(f"Fetched {len(tickets)} tickets from Jira.")
+
+    # Defensive client-side filter for robustness against case mismatches.
+    if exclude_keys:
+        excluded_key_set = set(exclude_keys)
+        tickets = [t for t in tickets if str(t.get("key", "")).upper() not in excluded_key_set]
 
     # Filter tickets by summary substrings.
     if unwanted_summaries:
@@ -232,5 +285,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
 
