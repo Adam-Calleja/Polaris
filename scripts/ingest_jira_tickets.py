@@ -236,11 +236,13 @@ def main() -> None:
 
     cfg = GlobalConfig.load(args.config_file)
     if args.qdrant_collection_name:
-        vector_store_cfg = cfg.raw.get("vector_store")
-        if not isinstance(vector_store_cfg, dict):
-            vector_store_cfg = {}
-            cfg.raw["vector_store"] = vector_store_cfg
-        vector_store_cfg["collection_name"] = args.qdrant_collection_name
+        vector_stores = cfg.raw.get("vector_stores")
+        if not isinstance(vector_stores, dict):
+            raise TypeError("'vector_stores' config must be a mapping.")
+        tickets_store = vector_stores.get("tickets")
+        if not isinstance(tickets_store, dict):
+            raise KeyError("Missing 'vector_stores.tickets' config; cannot override tickets collection name.")
+        tickets_store["collection_name"] = args.qdrant_collection_name
 
     # Build runtime objects (vector store, docstore, token counter, etc.).
     container = build_container(cfg)

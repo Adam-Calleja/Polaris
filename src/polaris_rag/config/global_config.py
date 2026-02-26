@@ -140,92 +140,64 @@ class GlobalConfig:
 
     @cached_property
     def vector_stores(self) -> dict[str, dict]:
-        """Return multi-store vector configuration with legacy fallback.
+        """Return multi-store vector configuration.
 
         Returns
         -------
         dict[str, dict]
             Mapping of source name to vector-store config.
 
-        Notes
-        -----
-        Precedence:
-        1. If ``vector_stores`` is defined, return it (validated).
-        2. Otherwise, map legacy ``vector_store`` to ``{"default": ...}``.
-        3. If neither exists, return ``{}``.
-
         Raises
         ------
+        KeyError
+            If ``vector_stores`` is missing from configuration.
         TypeError
             If ``vector_stores`` is not a mapping, contains invalid source names,
             or any source config is not a mapping.
+        ValueError
+            If ``vector_stores`` is empty.
         """
         stores = self.raw.get("vector_stores")
+        if stores is None:
+            raise KeyError("Missing 'vector_stores' in configuration.")
+        if not isinstance(stores, dict):
+            raise TypeError("'vector_stores' must be a mapping of source_name -> config.")
+        if not stores:
+            raise ValueError("'vector_stores' must define at least one source.")
 
-        if stores is not None:
-            if not isinstance(stores, dict):
-                raise TypeError("'vector_stores' must be a mapping of source_name -> config.")
+        normalised: dict[str, dict] = {}
+        for source_name, source_cfg in stores.items():
+            if not isinstance(source_name, str) or not source_name.strip():
+                raise TypeError("Each 'vector_stores' key must be a non-empty string.")
+            if not isinstance(source_cfg, dict):
+                raise TypeError(
+                    f"'vector_stores.{source_name}' must be a mapping, got {type(source_cfg)}."
+                )
+            normalised[source_name] = source_cfg
 
-            normalised: dict[str, dict] = {}
-            for source_name, source_cfg in stores.items():
-                if not isinstance(source_name, str) or not source_name.strip():
-                    raise TypeError("Each 'vector_stores' key must be a non-empty string.")
-                if not isinstance(source_cfg, dict):
-                    raise TypeError(
-                        f"'vector_stores.{source_name}' must be a mapping, got {type(source_cfg)}."
-                    )
-                normalised[source_name] = source_cfg
-
-            if normalised:
-                return normalised
-
-        legacy = self.raw.get("vector_store", {})
-        if legacy is None:
-            return {}
-
-        if not isinstance(legacy, dict):
-            raise TypeError("'vector_store' must be a mapping when provided.")
-
-        if not legacy:
-            return {}
-
-        return {"default": legacy}
+        return normalised
 
     @cached_property
     def vector_store(self) -> dict:
-        """Return a single vector-store config for legacy callers.
+        """Return the primary docs vector-store configuration.
 
         Returns
         -------
         dict
-            The selected vector-store config.
+            The ``vector_stores.docs`` configuration.
 
-        Notes
-        -----
-        Selection order:
-        1. Explicit legacy ``vector_store`` (if set)
-        2. ``vector_stores.docs`` (if present)
-        3. ``vector_stores.default`` (if present)
-        4. First entry in ``vector_stores``
-        5. ``{}`` if no vector-store config exists
-
-        This keeps old code paths working while the project migrates to
-        multi-collection retrieval.
+        Raises
+        ------
+        KeyError
+            If ``vector_stores.docs`` is not present.
         """
-        legacy = self.raw.get("vector_store")
-        if legacy is not None:
-            if not isinstance(legacy, dict):
-                raise TypeError("'vector_store' must be a mapping when provided.")
-            return legacy
-
         stores = self.vector_stores
-        if not stores:
-            return {}
-        if "docs" in stores:
-            return stores["docs"]
-        if "default" in stores:
-            return stores["default"]
-        return next(iter(stores.values()))
+        if "docs" not in stores:
+            raise KeyError(
+                "Missing 'vector_stores.docs' in configuration. "
+                "Configure a 'docs' source or migrate callers to use 'vector_stores' directly."
+            )
+        return stores["docs"]
 
     @cached_property
     def doc_store(self) -> dict:

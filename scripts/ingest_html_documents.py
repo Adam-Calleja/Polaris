@@ -108,19 +108,15 @@ def _override_qdrant_collection_name(cfg: GlobalConfig, cli_value: str | None) -
     if not cli_value:
         return
 
-    vector_store = cfg.raw.get("vector_store")
-    if vector_store is None:
-        cfg.raw["vector_store"] = {
-            "type": "qdrant",
-            "collection_name": cli_value,
-        }
-        return
+    vector_stores = cfg.raw.get("vector_stores")
+    if not isinstance(vector_stores, dict):
+        raise TypeError("'vector_stores' config must be a mapping.")
 
-    if isinstance(vector_store, dict):
-        vector_store["collection_name"] = cli_value
-        return
+    docs_store = vector_stores.get("docs")
+    if not isinstance(docs_store, dict):
+        raise KeyError("Missing 'vector_stores.docs' config; cannot override docs collection name.")
 
-    raise TypeError("'vector_store' config must be a mapping to override collection_name.")
+    docs_store["collection_name"] = cli_value
 
 
 def main() -> None:
