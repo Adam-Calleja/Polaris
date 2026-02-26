@@ -86,7 +86,7 @@ def parse_args() -> argparse.Namespace:
         required=False,
         type=int,
         default=None,
-        help="Maximum number of tickets to fetch (optional)",
+        help="Maximum number of tickets to fetch (optional; defaults to no limit).",
     )
 
     parser.add_argument(
@@ -172,7 +172,7 @@ def _resolve_limit(cfg: GlobalConfig, limit_cli: int | None) -> int | None:
         return limit_cli
     jira_cfg = _get_jira_ingestion_cfg(cfg)
     lim = jira_cfg.get("limit")
-    return int(lim) if lim is not None else 50
+    return int(lim) if lim is not None else None
 
 
 def _resolve_unwanted_summaries(cfg: GlobalConfig) -> list[str]:
