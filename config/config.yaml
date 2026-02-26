@@ -46,8 +46,9 @@ embedder:
   model_name: "Qwen/Qwen3-Embedding-8B"
   api_key: ""
   timeout: 300
-  max_retries: 3
-  embed_batch_size: 2
+  max_retries: 1
+  embed_batch_size: 1
+  num_workers: 1
   model_kwargs: {}
 
 vector_store:
