@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Mapping
@@ -111,6 +112,20 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=16,
         help="Batch size for vector-store inserts (default: 16).",
+    )
+    parser.add_argument(
+        "--vector-batch-retries",
+        required=False,
+        type=int,
+        default=5,
+        help="Retries per vector batch before splitting into smaller batches (default: 5).",
+    )
+    parser.add_argument(
+        "--vector-batch-retry-delay",
+        required=False,
+        type=float,
+        default=5.0,
+        help="Base retry delay in seconds for failed vector batches (default: 5.0).",
     )
 
     # Optional debug dump of processed ticket text.
@@ -230,6 +245,57 @@ def _dump_processed_tickets(processed_tickets: list[Any], dump_path: Path) -> No
             f.write(getattr(t, "text", ""))
             f.write(sep)
 
+def _insert_vector_batch_with_retries(
+    storage_context: Any,
+    batch: list[Any],
+    *,
+    batch_start_idx: int,
+    total_chunks: int,
+    retries: int,
+    retry_delay: float,
+) -> None:
+    attempt = 0
+    while True:
+        try:
+            storage_context.vector_store.insert_chunks(batch, batch_size=0)
+            return
+        except Exception as exc:
+            attempt += 1
+            if attempt <= retries:
+                wait_seconds = max(0.0, retry_delay) * attempt
+                print(
+                    f"Batch {batch_start_idx + 1}-{batch_start_idx + len(batch)}/{total_chunks} failed "
+                    f"({type(exc).__name__}: {exc}). Retry {attempt}/{retries} in {wait_seconds:.1f}s..."
+                )
+                time.sleep(wait_seconds)
+                continue
+
+            if len(batch) > 1:
+                split = len(batch) // 2
+                print(
+                    f"Batch {batch_start_idx + 1}-{batch_start_idx + len(batch)}/{total_chunks} failed after "
+                    f"{retries} retries. Splitting into {split} and {len(batch) - split} chunks."
+                )
+                _insert_vector_batch_with_retries(
+                    storage_context,
+                    batch[:split],
+                    batch_start_idx=batch_start_idx,
+                    total_chunks=total_chunks,
+                    retries=retries,
+                    retry_delay=retry_delay,
+                )
+                _insert_vector_batch_with_retries(
+                    storage_context,
+                    batch[split:],
+                    batch_start_idx=batch_start_idx + split,
+                    total_chunks=total_chunks,
+                    retries=retries,
+                    retry_delay=retry_delay,
+                )
+                return
+
+            raise
+
 
 def main() -> None:
     args = parse_args()
@@ -296,11 +362,20 @@ def main() -> None:
 
     print("Adding chunks to vector store...")
     vector_batch_size = max(1, int(args.vector_batch_size))
+    vector_batch_retries = max(0, int(args.vector_batch_retries))
+    vector_batch_retry_delay = max(0.0, float(args.vector_batch_retry_delay))
     total_chunks = len(chunks)
     print(f"Embedding/indexing {total_chunks} chunks (batch size: {vector_batch_size})...")
     for start in range(0, total_chunks, vector_batch_size):
         batch = chunks[start:start + vector_batch_size]
-        storage_context.vector_store.insert_chunks(batch, batch_size=0)
+        _insert_vector_batch_with_retries(
+            storage_context,
+            batch,
+            batch_start_idx=start,
+            total_chunks=total_chunks,
+            retries=vector_batch_retries,
+            retry_delay=vector_batch_retry_delay,
+        )
         print(f"Inserted {min(start + vector_batch_size, total_chunks)}/{total_chunks} chunks")
 
     print("Adding chunks to document store...")
