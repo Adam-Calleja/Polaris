@@ -45,8 +45,8 @@ embedder:
   api_base: "${EMBED_API_BASE}"
   model_name: "Qwen/Qwen3-Embedding-8B"
   api_key: ""
-  timeout: 300
-  max_retries: 1
+  timeout: 45
+  max_retries: 0
   embed_batch_size: 1
   num_workers: 1
   model_kwargs: {}
