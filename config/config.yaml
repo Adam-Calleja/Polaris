@@ -52,11 +52,29 @@ embedder:
   model_kwargs: {}
 
 vector_store:
+  # Backward-compatible single-store config used by the current runtime.
+  # Keep this pointing at docs until multi-collection wiring is completed.
   type: "qdrant"
   host: "qdrant"
   port: 6333
   collection_name: "support_docs"
   token: null
+
+# Future-ready multi-collection config.
+# New sources can be added here without changing code structure.
+vector_stores:
+  docs:
+    type: "qdrant"
+    host: "qdrant"
+    port: 6333
+    collection_name: "support_docs"
+    token: null
+  tickets:
+    type: "qdrant"
+    host: "qdrant"
+    port: 6333
+    collection_name: "support_tickets"
+    token: null
 
 doc_store:
   type: "simple"
@@ -67,10 +85,26 @@ storage_context:
 retriever:
   # NOTE: "hybrid" (BM25 + vector) requires local documents to be loaded so BM25 can build an index.
   # If the corpus is empty, BM25 indexing will fail. Use vector-only retrieval by default.
+  # Keep type="vector" until multi-collection retriever wiring is implemented.
   type: "vector"
   top_k: 5
   score_threshold: 0.0
   filters: {}
+  # Future multi-collection settings (added now for config stability).
+  # These are no-op until the retriever/container support them.
+  final_top_k: 8
+  rerank:
+    type: "rrf"
+    rrf_k: 60
+  sources:
+    - name: "docs"
+      top_k: 5
+      weight: 1.0
+      filters: {}
+    - name: "tickets"
+      top_k: 5
+      weight: 1.0
+      filters: {}
 
 document_loader:
   conditions:
