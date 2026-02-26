@@ -19,6 +19,7 @@ services:
       - ./config:/app/config:ro
       # Persist dir for your StorageContext (highly recommended)
       - ./persist:/app/persist
+      - ./data:/app/data:ro
     depends_on:
       qdrant:
         condition: service_started
