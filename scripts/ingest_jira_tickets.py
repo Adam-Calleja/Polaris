@@ -30,7 +30,11 @@ from polaris_rag.retrieval.document_loader import load_support_tickets
 from polaris_rag.retrieval.document_preprocessor import preprocess_jira_tickets
 from polaris_rag.retrieval.text_splitter import get_chunks_from_jira_tickets
 from polaris_rag.app.container import build_container
-from polaris_rag.retrieval.document_store_factory import add_chunks_to_docstore, persist_storage
+from polaris_rag.retrieval.document_store_factory import (
+    add_chunks_to_docstore,
+    build_storage_context,
+    persist_storage,
+)
 
 
 def _as_mapping(obj: Any) -> Mapping[str, Any]:
@@ -102,7 +106,15 @@ def parse_args() -> argparse.Namespace:
         required=False,
         type=str,
         default=None,
-        help="Override vector_store.collection_name from config (optional).",
+        help="Override selected source collection name from config (optional).",
+    )
+
+    parser.add_argument(
+        "--source",
+        required=False,
+        type=str,
+        default="tickets",
+        help="Named source in config.vector_stores to ingest into (default: tickets).",
     )
 
     parser.add_argument(
@@ -334,16 +346,38 @@ def _insert_vector_batch_with_retries(
             return 1
 
 
+def _override_qdrant_collection_name(cfg: GlobalConfig, source: str, cli_value: str | None) -> None:
+    if not cli_value:
+        return
+
+    vector_stores = cfg.raw.get("vector_stores")
+    if not isinstance(vector_stores, dict):
+        raise TypeError("'vector_stores' config must be a mapping.")
+
+    selected_store = vector_stores.get(source)
+    if not isinstance(selected_store, dict):
+        raise KeyError(f"Missing 'vector_stores.{source}' config; cannot override collection name.")
+
+    selected_store["collection_name"] = cli_value
+
+
+def _build_source_storage_context(container, source: str):
+    stores = container.vector_stores
+    if source not in stores:
+        raise KeyError(f"Unknown source {source!r}. Available sources: {sorted(stores.keys())}")
+
+    return build_storage_context(
+        vector_store=stores[source],
+        docstore=container.doc_store,
+        persist_dir=None,
+    )
+
+
 def main() -> None:
     args = parse_args()
 
     cfg = GlobalConfig.load(args.config_file)
-    if args.qdrant_collection_name:
-        vector_store_cfg = cfg.raw.get("vector_store")
-        if not isinstance(vector_store_cfg, dict):
-            vector_store_cfg = {}
-            cfg.raw["vector_store"] = vector_store_cfg
-        vector_store_cfg["collection_name"] = args.qdrant_collection_name
+    _override_qdrant_collection_name(cfg, args.source, args.qdrant_collection_name)
 
     # Build runtime objects (vector store, docstore, token counter, etc.).
     container = build_container(cfg)
@@ -358,10 +392,7 @@ def main() -> None:
     # Where to write debug dumps (optional).
     dump_path = Path(args.dump_path) if args.dump_path else (REPO_ROOT / "data" / "debug" / "jira_processed_tickets.txt")
 
-    # Runtime storage context (NOT the config section).
-    storage_context = container.storage_context
-    if storage_context is None:
-        raise RuntimeError("Storage context is not available; cannot persist Jira ingestion.")
+    storage_context = _build_source_storage_context(container, args.source)
 
     print("Loading Jira tickets...")
     tickets = load_support_tickets(

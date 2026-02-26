@@ -272,6 +272,39 @@ class PolarisContainer:
             return create_vector_store(section)
 
     @cached_property
+    def vector_stores(self) -> dict[str, Any]:
+        """Return vector store instances keyed by source name.
+
+        Returns
+        -------
+        dict[str, Any]
+            Mapping of source name to configured vector-store instance.
+        """
+        sections = _as_mapping(self.config.vector_stores)
+
+        stores: dict[str, Any] = {}
+        try:
+            from polaris_rag.retrieval.vector_store import QdrantIndexStore
+
+            for source_name, source_cfg in sections.items():
+                stores[str(source_name)] = QdrantIndexStore.from_config_dict(
+                    dict(_as_mapping(source_cfg)),
+                    llm=self.generator_llm,
+                    embedder=self.embedder,
+                )
+        except ImportError:
+            from polaris_rag.retrieval.vector_store import create_vector_store
+
+            for source_name, source_cfg in sections.items():
+                stores[str(source_name)] = create_vector_store(
+                    dict(_as_mapping(source_cfg)),
+                    llm=self.generator_llm,
+                    embedder=self.embedder,
+                )
+
+        return stores
+
+    @cached_property
     def doc_store(self) -> Any:
         """Return the document/index store.
 
@@ -286,6 +319,120 @@ class PolarisContainer:
         from polaris_rag.retrieval.document_store_factory import create_docstore
 
         return create_docstore(kind)
+
+    @cached_property
+    def retriever_source_settings(self) -> dict[str, dict[str, Any]]:
+        """Return validated per-source retriever settings.
+
+        Returns
+        -------
+        dict[str, dict[str, Any]]
+            Mapping keyed by source name with ``top_k``, ``filters`` and ``weight``.
+
+        Raises
+        ------
+        KeyError
+            If ``retriever.sources`` is missing.
+        TypeError
+            If ``retriever.sources`` is not a list or source names are invalid.
+        ValueError
+            If ``retriever.sources`` is empty.
+        """
+        section = _as_mapping(self.config.retriever)
+        raw_sources = section.get("sources")
+        if raw_sources is None:
+            raise KeyError("Missing 'retriever.sources' in configuration.")
+        if not isinstance(raw_sources, list):
+            raise TypeError("'retriever.sources' must be a list of mappings.")
+        if not raw_sources:
+            raise ValueError("'retriever.sources' must define at least one source.")
+
+        default_top_k = section.get("top_k")
+        default_filters = section.get("filters")
+        settings: dict[str, dict[str, Any]] = {}
+
+        for idx, item in enumerate(raw_sources):
+            item_map = _as_mapping(item)
+            source_name = item_map.get("name")
+            if not isinstance(source_name, str) or not source_name.strip():
+                raise TypeError(f"'retriever.sources[{idx}].name' must be a non-empty string.")
+
+            settings[source_name] = {
+                "top_k": item_map.get("top_k", default_top_k),
+                "filters": item_map.get("filters", default_filters),
+                "weight": item_map.get("weight", 1.0),
+            }
+
+        return settings
+
+    @cached_property
+    def source_storage_contexts(self) -> dict[str, Any]:
+        """Return source-scoped storage contexts for retrieval.
+
+        Returns
+        -------
+        dict[str, Any]
+            Mapping from source name to storage context.
+        """
+        from polaris_rag.retrieval.document_store_factory import build_storage_context
+
+        stores = self.vector_stores
+        source_settings = self.retriever_source_settings
+        contexts: dict[str, Any] = {}
+
+        for source_name in source_settings.keys():
+            if source_name not in stores:
+                available = sorted(stores.keys())
+                raise ValueError(
+                    f"Retriever source {source_name!r} is not configured in vector_stores. "
+                    f"Available: {available}"
+                )
+
+            contexts[source_name] = build_storage_context(
+                vector_store=stores[source_name],
+                docstore=self.doc_store,
+                persist_dir=None,
+            )
+
+        return contexts
+
+    @cached_property
+    def source_retrievers(self) -> dict[str, Any]:
+        """Return retriever instances keyed by configured source name.
+
+        Returns
+        -------
+        dict[str, Any]
+            Mapping from source name to retriever instance.
+        """
+        section = _as_mapping(self.config.retriever)
+        source_kind = (
+            section.get("source_type")
+            or section.get("type")
+            or "vector"
+        )
+        if source_kind not in {"vector", "hybrid"}:
+            source_kind = "vector"
+
+        from polaris_rag.retrieval.retriever_factory import create
+
+        source_settings = self.retriever_source_settings
+        contexts = self.source_storage_contexts
+        retrievers: dict[str, Any] = {}
+
+        for source_name, cfg in source_settings.items():
+            create_kwargs: dict[str, Any] = {
+                "kind": source_kind,
+                "storage_context": contexts[source_name],
+                "top_k": cfg.get("top_k"),
+                "filters": cfg.get("filters"),
+            }
+            if source_kind == "hybrid":
+                create_kwargs["llm"] = self.llamaindex_llm
+
+            retrievers[source_name] = create(**create_kwargs)
+
+        return retrievers
 
     @cached_property
     def storage_context(self) -> Any:
@@ -342,6 +489,15 @@ class PolarisContainer:
         kind = section.get("type")
 
         from polaris_rag.retrieval.retriever_factory import create
+
+        if kind == "multi_collection":
+            return create(
+                kind=kind,
+                source_retrievers=self.source_retrievers,
+                source_settings=self.retriever_source_settings,
+                final_top_k=section.get("final_top_k"),
+                rerank=section.get("rerank"),
+            )
 
         if kind == "hybrid":
             return create(

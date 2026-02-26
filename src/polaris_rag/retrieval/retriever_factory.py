@@ -19,8 +19,11 @@ from typing import Callable, Dict, Optional
 from llama_index.core.vector_stores.types import MetadataFilters
 from llama_index.core import StorageContext
 
-from polaris_rag.retrieval.vector_store import QdrantIndexStore
-from polaris_rag.retrieval.retriever import VectorIndexRetriever, HybridRetriever
+from polaris_rag.retrieval.retriever import (
+    HybridRetriever,
+    MultiCollectionRetriever,
+    VectorIndexRetriever,
+)
 from polaris_rag.retrieval.types import Retriever
 
 _BUILDERS: Dict[str, Callable[..., Retriever]] = {}
@@ -62,8 +65,8 @@ def register(name: str):
 def create(
     *,
     kind: str,
-    storage_context: StorageContext,
-    top_k: int = 5,
+    storage_context: Optional[StorageContext] = None,
+    top_k: Optional[int] = None,
     filters: Optional[MetadataFilters] = None,
     **kwargs,
 ) -> Retriever:
@@ -73,13 +76,14 @@ def create(
     ----------
     kind : str
         Registered retriever kind to instantiate (e.g., ``"vector"``,
-        ``"hybrid"``).
-    storage_context : StorageContext
-        Storage context providing access to vector and document stores.
-    top_k : int, optional
-        Number of top results to retrieve. Defaults to ``5``.
+        ``"hybrid"``, ``"multi_collection"``).
+    storage_context : StorageContext or None, optional
+        Storage context providing access to vector and document stores. Required
+        for retriever kinds that depend on a single store context.
+    top_k : int or None, optional
+        Number of top results to retrieve. Forwarded when provided.
     filters : MetadataFilters or None, optional
-        Optional metadata filters applied during retrieval.
+        Optional metadata filters applied during retrieval. Forwarded when provided.
     **kwargs : Any
         Additional keyword arguments forwarded to the retriever builder.
 
@@ -95,7 +99,16 @@ def create(
     """
     if kind not in _BUILDERS:
         raise ValueError(f"Unknown retriever kind: {kind}. Available: {list(_BUILDERS)}")
-    return _BUILDERS[kind](storage_context=storage_context, top_k=top_k, filters=filters, **kwargs)
+
+    call_kwargs = dict(kwargs)
+    if storage_context is not None:
+        call_kwargs["storage_context"] = storage_context
+    if top_k is not None:
+        call_kwargs["top_k"] = top_k
+    if filters is not None:
+        call_kwargs["filters"] = filters
+
+    return _BUILDERS[kind](**call_kwargs)
 
 @register("vector")
 def _build_vector(**kw) -> Retriever:
@@ -118,3 +131,15 @@ def _build_hybrid(**kw) -> Retriever:
         Hybrid retriever instance combining vector and keyword search.
     """
     return HybridRetriever(**kw)
+
+
+@register("multi_collection")
+def _build_multi_collection(**kw) -> Retriever:
+    """Build a multi-collection retriever.
+
+    Returns
+    -------
+    Retriever
+        Retriever that merges and reranks candidates from multiple sources.
+    """
+    return MultiCollectionRetriever(**kw)

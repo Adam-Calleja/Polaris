@@ -51,6 +51,7 @@ def _normalise_context_items(raw_context: Any) -> list[dict[str, Any]]:
                     "doc_id": "<unknown-doc-id>",
                     "text": str(item),
                     "score": None,
+                    "source": None,
                 }
             )
             continue
@@ -70,6 +71,7 @@ def _normalise_context_items(raw_context: Any) -> list[dict[str, Any]]:
                 "doc_id": str(item.get("doc_id") or item.get("id") or item.get("node_id") or "<unknown-doc-id>"),
                 "text": str(item.get("text") or item.get("content") or ""),
                 "score": score,
+                "source": (str(item.get("source")) if item.get("source") is not None else None),
             }
         )
 
@@ -85,9 +87,12 @@ def _render_retrieved_context(context_items: list[dict[str, Any]]) -> None:
             rank = item.get("rank", "?")
             doc_id = item.get("doc_id", "<unknown-doc-id>")
             score = item.get("score")
+            source = item.get("source")
             header = f"[{rank}] {doc_id}"
             if isinstance(score, float):
                 header += f" (score: {score:.4f})"
+            if isinstance(source, str) and source:
+                header += f" [source: {source}]"
 
             st.markdown(f"**{header}**")
             text = item.get("text", "")

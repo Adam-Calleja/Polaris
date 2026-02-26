@@ -21,7 +21,11 @@ from polaris_rag.app.container import build_container
 from polaris_rag.config import GlobalConfig
 from polaris_rag.retrieval.document_loader import get_internal_links, load_website_docs
 from polaris_rag.retrieval.document_preprocessor import preprocess_html_documents
-from polaris_rag.retrieval.document_store_factory import add_chunks_to_docstore, persist_storage
+from polaris_rag.retrieval.document_store_factory import (
+    add_chunks_to_docstore,
+    build_storage_context,
+    persist_storage,
+)
 from polaris_rag.retrieval.text_splitter import get_chunks_from_documents
 
 
@@ -66,7 +70,15 @@ def parse_args() -> argparse.Namespace:
         required=False,
         type=str,
         default=None,
-        help="Override Qdrant collection name from config (optional).",
+        help="Override selected source collection name from config (optional).",
+    )
+
+    parser.add_argument(
+        "--source",
+        required=False,
+        type=str,
+        default="docs",
+        help="Named source in config.vector_stores to ingest into (default: docs).",
     )
 
     parser.add_argument(
@@ -104,30 +116,40 @@ def _resolve_persist_dir(cfg: GlobalConfig, cli_value: str | None) -> str:
     return str(REPO_ROOT / "data" / "storage" / "local")
 
 
-def _override_qdrant_collection_name(cfg: GlobalConfig, cli_value: str | None) -> None:
+def _override_qdrant_collection_name(cfg: GlobalConfig, source: str, cli_value: str | None) -> None:
     if not cli_value:
         return
 
-    vector_store = cfg.raw.get("vector_store")
-    if vector_store is None:
-        cfg.raw["vector_store"] = {
-            "type": "qdrant",
-            "collection_name": cli_value,
-        }
-        return
+    vector_stores = cfg.raw.get("vector_stores")
+    if not isinstance(vector_stores, dict):
+        raise TypeError("'vector_stores' config must be a mapping.")
 
-    if isinstance(vector_store, dict):
-        vector_store["collection_name"] = cli_value
-        return
+    selected_store = vector_stores.get(source)
+    if not isinstance(selected_store, dict):
+        raise KeyError(f"Missing 'vector_stores.{source}' config; cannot override collection name.")
 
-    raise TypeError("'vector_store' config must be a mapping to override collection_name.")
+    selected_store["collection_name"] = cli_value
+
+
+def _build_source_storage_context(container, source: str):
+    stores = container.vector_stores
+    if source not in stores:
+        raise KeyError(
+            f"Unknown source {source!r}. Available sources: {sorted(stores.keys())}"
+        )
+
+    return build_storage_context(
+        vector_store=stores[source],
+        docstore=container.doc_store,
+        persist_dir=None,
+    )
 
 
 def main() -> None:
     args = parse_args()
 
     cfg = GlobalConfig.load(args.config_file)
-    _override_qdrant_collection_name(cfg, args.qdrant_collection_name)
+    _override_qdrant_collection_name(cfg, args.source, args.qdrant_collection_name)
     container = build_container(cfg)
 
     persist_dir = _resolve_persist_dir(cfg, args.persist_dir)
@@ -153,7 +175,7 @@ def main() -> None:
         link_classes=link_classes,
     )
 
-    storage_context = container.storage_context
+    storage_context = _build_source_storage_context(container, args.source)
     if storage_context is None:
         raise RuntimeError("Storage context is not available; cannot persist HTML ingestion.")
 

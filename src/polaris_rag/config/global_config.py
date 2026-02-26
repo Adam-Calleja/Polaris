@@ -139,16 +139,65 @@ class GlobalConfig:
         return self.raw["embedder"]
 
     @cached_property
+    def vector_stores(self) -> dict[str, dict]:
+        """Return multi-store vector configuration.
+
+        Returns
+        -------
+        dict[str, dict]
+            Mapping of source name to vector-store config.
+
+        Raises
+        ------
+        KeyError
+            If ``vector_stores`` is missing from configuration.
+        TypeError
+            If ``vector_stores`` is not a mapping, contains invalid source names,
+            or any source config is not a mapping.
+        ValueError
+            If ``vector_stores`` is empty.
+        """
+        stores = self.raw.get("vector_stores")
+        if stores is None:
+            raise KeyError("Missing 'vector_stores' in configuration.")
+        if not isinstance(stores, dict):
+            raise TypeError("'vector_stores' must be a mapping of source_name -> config.")
+        if not stores:
+            raise ValueError("'vector_stores' must define at least one source.")
+
+        normalised: dict[str, dict] = {}
+        for source_name, source_cfg in stores.items():
+            if not isinstance(source_name, str) or not source_name.strip():
+                raise TypeError("Each 'vector_stores' key must be a non-empty string.")
+            if not isinstance(source_cfg, dict):
+                raise TypeError(
+                    f"'vector_stores.{source_name}' must be a mapping, got {type(source_cfg)}."
+                )
+            normalised[source_name] = source_cfg
+
+        return normalised
+
+    @cached_property
     def vector_store(self) -> dict:
-        """Return the vector store configuration section.
+        """Return the primary docs vector-store configuration.
 
         Returns
         -------
         dict
-            The ``vector_store`` section of the configuration, or an empty dict if
-            not present.
+            The ``vector_stores.docs`` configuration.
+
+        Raises
+        ------
+        KeyError
+            If ``vector_stores.docs`` is not present.
         """
-        return self.raw.get('vector_store', {})
+        stores = self.vector_stores
+        if "docs" not in stores:
+            raise KeyError(
+                "Missing 'vector_stores.docs' in configuration. "
+                "Configure a 'docs' source or migrate callers to use 'vector_stores' directly."
+            )
+        return stores["docs"]
 
     @cached_property
     def doc_store(self) -> dict:

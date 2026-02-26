@@ -67,6 +67,7 @@ Jira tickets:
 ```bash
 python scripts/ingest_jira_tickets.py \
   -c config/config.yaml \
+  --source tickets \
   -s 2024-01-01 \
   -e 2025-01-01
 ```
@@ -75,6 +76,7 @@ HTML documentation:
 ```bash
 python scripts/ingest_html_documents.py \
   -c config/config.yaml \
+  --source docs \
   -p https://docs.example.org \
   --ingest-internal-links
 ```
@@ -83,7 +85,7 @@ python scripts/ingest_html_documents.py \
 Configuration lives in `config/config.yaml`. Key sections include:
 - `generator_llm` and `evaluator_llm` for model selection and parameters.
 - `embedder` for embeddings endpoint configuration.
-- `vector_store` and `storage_context` for persistence.
+- `vector_stores` and `storage_context` for per-source persistence.
 - `prompts` and `prompt_name` for prompt templates.
 
 Environment variables used by the stack:

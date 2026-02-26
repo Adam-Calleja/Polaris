@@ -21,6 +21,7 @@ class RetrievedContextChunk(BaseModel):
     doc_id: str
     text: str
     score: float | None = None
+    source: str | None = None
 
 
 class QueryResponse(BaseModel):
@@ -55,6 +56,20 @@ def _serialize_context(source_nodes: list[Any]) -> list[RetrievedContextChunk]:
         node = getattr(source, "node", source)
         score_raw = getattr(source, "score", None)
         score = float(score_raw) if isinstance(score_raw, (int, float)) else None
+        source_name: str | None = None
+
+        metadata = getattr(node, "metadata", None)
+        if isinstance(metadata, dict):
+            source_raw = metadata.get("retrieval_source")
+            if isinstance(source_raw, str) and source_raw:
+                source_name = source_raw
+            elif isinstance(metadata.get("retrieval_sources"), list):
+                # Fallback when only list provenance exists.
+                sources = [s for s in metadata.get("retrieval_sources", []) if isinstance(s, str) and s]
+                if len(sources) == 1:
+                    source_name = sources[0]
+                elif len(sources) > 1:
+                    source_name = "multi"
 
         chunks.append(
             RetrievedContextChunk(
@@ -62,6 +77,7 @@ def _serialize_context(source_nodes: list[Any]) -> list[RetrievedContextChunk]:
                 doc_id=_extract_doc_id(node),
                 text=_extract_text(node),
                 score=score,
+                source=source_name,
             )
         )
     return chunks
