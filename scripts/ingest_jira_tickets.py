@@ -76,7 +76,7 @@ def parse_args() -> argparse.Namespace:
         required=False,
         type=str,
         default=None,
-        help="End date for fetching Jira tickets (YYYY-MM-DD). Defaults to today when unset.",
+        help="End date for fetching Jira tickets (YYYY-MM-DD, exclusive upper bound). Defaults to today when unset.",
     )
 
     # Prefer config.ingestion.jira.limit (if present); allow override.
