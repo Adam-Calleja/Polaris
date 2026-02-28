@@ -19,7 +19,6 @@ from typing import Callable, Dict, Optional
 from llama_index.core.vector_stores.types import MetadataFilters
 from llama_index.core import StorageContext
 
-from polaris_rag.retrieval.vector_store import QdrantIndexStore
 from polaris_rag.retrieval.retriever import VectorIndexRetriever, HybridRetriever
 from polaris_rag.retrieval.types import Retriever
 
