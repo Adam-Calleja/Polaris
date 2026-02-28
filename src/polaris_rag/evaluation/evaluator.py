@@ -16,7 +16,7 @@ from llama_index.llms.huggingface import HuggingFaceLLM
 from os import environ
 import torch
 import pandas as pd
-from typing import Optional, Dict, List
+from typing import Optional
 from ragas.metrics import Metric as RagasMetric
 from ragas.llms import LangchainLLMWrapper
 from ragas.embeddings import LangchainEmbeddingsWrapper

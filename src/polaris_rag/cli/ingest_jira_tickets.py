@@ -13,12 +13,9 @@ Design goals
 from __future__ import annotations
 
 import argparse
-import os
 import sys
 from pathlib import Path
 from typing import Any, Mapping
-
-import os
 
 # Make `src/polaris_rag` importable when running from a repo checkout.
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -245,4 +242,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

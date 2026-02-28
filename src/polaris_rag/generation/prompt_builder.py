@@ -14,7 +14,7 @@ PromptTemplate
 PromptBuilder
     Registry and factory for prompt templates.
 """
-from typing import Optional, List, Dict, Any, Iterable, Union
+from typing import Optional, List, Dict, Any, Union
 from pathlib import Path
 import json
 from jinja2 import Template
