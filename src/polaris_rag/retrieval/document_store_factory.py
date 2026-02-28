@@ -22,7 +22,7 @@ add_chunks_to_docstore
 """
 
 from __future__ import annotations
-from typing import Optional, Any, Dict, Iterable, List
+from typing import Optional, Any, Iterable
 
 from llama_index.core.storage.docstore import (
     BaseDocumentStore,
