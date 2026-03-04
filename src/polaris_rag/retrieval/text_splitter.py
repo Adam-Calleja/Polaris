@@ -31,17 +31,12 @@ get_chunks_from_jira_tickets
     Chunk multiple Jira tickets using a provided :class:`~polaris_rag.common.tokenisation.TokenCounter`.
 """
 
-from typing import TYPE_CHECKING, Any, List, Optional, Sequence, Union
+from typing import Any, List, Optional
 
 from llama_index.core.bridge.pydantic import Field
-from llama_index.core.callbacks.base import CallbackManager
-from llama_index.core.node_parser.interface import NodeParser
 from llama_index.core.node_parser import HTMLNodeParser
-from llama_index.core.node_parser.node_utils import build_nodes_from_splits
 from llama_index.core.schema import BaseNode, MetadataMode, TextNode, NodeRelationship, RelatedNodeInfo
 from llama_index.core.schema import Document as LlamaIndexDocument
-from llama_index.core.utils import get_tqdm_iterable
-from pydantic import field_validator
 from uuid import uuid4
 import re
 from dataclasses import dataclass
@@ -278,7 +273,7 @@ class HTMLHeirarchicalSplitter(HTMLNodeParser):
         str
             Extracted and cleaned text from the element.
         """
-        from bs4 import NavigableString, Tag, PageElement
+        from bs4 import NavigableString, Tag
 
         compiled_unwanted_chars = re.compile(self.unwanted_chars_pattern)
 

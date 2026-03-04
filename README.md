@@ -101,6 +101,18 @@ Evaluation utilities live in `src/polaris_rag/evaluation`. There are notebooks f
 - `create_evaluation_dataset.ipynb`
 - `support_ticket_analysis.ipynb`
 
+You can also run the modern RAGAS evaluation pipeline from CLI:
+
+```bash
+polaris-eval -c config/config.yaml
+```
+
+Key outputs are written under `evaluation.output_dir` (or `--output-dir`):
+- `scores.csv`
+- `scores.parquet`
+- `summary.json`
+- `run_manifest.json`
+
 ## Project Structure
 - `src/polaris_rag`: Core pipeline, retrieval, generation, and evaluation code.
 - `embed_server`: Embedding service used by the `OpenAILike` embedder.

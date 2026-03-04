@@ -20,6 +20,7 @@ Functions
 create_vector_store
     Create a vector store implementation from a configuration mapping.
 """
+import asyncio
 from typing import Optional
 from qdrant_client import QdrantClient, AsyncQdrantClient
 from os import environ
@@ -279,22 +280,7 @@ class QdrantIndexStore(BaseVectorStore):
         -------
         None
         """
-        nodes = []
-
-        for chunk in chunks:
-            text = chunk.text
-            document_type = chunk.document_type
-            id = chunk.id
-            parent_id = chunk.parent_id
-            metadata = chunk.metadata
-            
-            if parent_id:
-                metadata.update({'parent_id': parent_id})
-            
-            metadata.update({'document_type': document_type})
-
-            node = TextNode(text=text, id_=id, metadata=metadata)
-            nodes.append(node)
+        nodes = self._build_nodes(chunks)
 
         self._index = VectorStoreIndex(
             nodes,
@@ -308,6 +294,8 @@ class QdrantIndexStore(BaseVectorStore):
         self,
         chunks: list[DocumentChunk],
         batch_size: int,
+        *,
+        use_async: bool = False,
     ) -> None:
         """Insert document chunks into an existing vector index.
 
@@ -318,35 +306,76 @@ class QdrantIndexStore(BaseVectorStore):
         batch_size : int
             Batch size for insertion. If ``batch_size`` is not a positive integer,
             all chunks are inserted in a single call.
+        use_async : bool, optional
+            If ``True``, use async insertion to allow concurrent embedding
+            requests when the configured embedder supports it.
 
         Returns
         -------
         None
         """
 
-        nodes = []
+        if use_async:
+            try:
+                asyncio.get_running_loop()
+            except RuntimeError:
+                asyncio.run(self.ainsert_chunks(chunks, batch_size=batch_size))
+                return
+            raise RuntimeError(
+                "insert_chunks(use_async=True) cannot run inside an active event loop; "
+                "use `await ainsert_chunks(...)` instead."
+            )
 
-        for chunk in chunks:
-            text = chunk.text
-            document_type = chunk.document_type
-            id = chunk.id
-            parent_id = chunk.parent_id
-            metadata = chunk.metadata
-            
-            if parent_id:
-                metadata.update({'parent_id': parent_id})
-            
-            metadata.update({'document_type': document_type})
+        nodes = self._build_nodes(chunks)
+        self._insert_nodes_sync(nodes=nodes, batch_size=batch_size)
 
-            node = TextNode(text=text, id_=id, metadata=metadata)
-            nodes.append(node)
-        
+    async def ainsert_chunks(
+        self,
+        chunks: list[DocumentChunk],
+        batch_size: int,
+    ) -> None:
+        """Asynchronously insert document chunks into the vector index."""
+        nodes = self._build_nodes(chunks)
+
+        if not batch_size or batch_size <= 0 or not isinstance(batch_size, int):
+            await self._index.ainsert_nodes(nodes)
+        else:
+            for start in range(0, len(nodes), batch_size):
+                batch = nodes[start:start + batch_size]
+                await self._index.ainsert_nodes(batch)
+
+    def _insert_nodes_sync(
+        self,
+        *,
+        nodes: list[TextNode],
+        batch_size: int,
+    ) -> None:
         if not batch_size or batch_size <= 0 or not isinstance(batch_size, int):
             self._index.insert_nodes(nodes)
         else:
             for start in range(0, len(nodes), batch_size):
                 batch = nodes[start:start + batch_size]
                 self._index.insert_nodes(batch)
+
+    def _build_nodes(self, chunks: list[DocumentChunk]) -> list[TextNode]:
+        nodes: list[TextNode] = []
+
+        for chunk in chunks:
+            text = chunk.text
+            document_type = chunk.document_type
+            id = chunk.id
+            parent_id = chunk.parent_id
+            metadata = dict(chunk.metadata or {})
+
+            if parent_id:
+                metadata.update({'parent_id': parent_id})
+
+            metadata.update({'document_type': document_type})
+
+            node = TextNode(text=text, id_=id, metadata=metadata)
+            nodes.append(node)
+
+        return nodes
 
     def query(
             self, 

@@ -2,7 +2,6 @@ from types import SimpleNamespace
 
 import pytest
 
-import polaris_rag.retrieval.text_splitter as text_splitter
 from polaris_rag.retrieval.text_splitter import get_chunks_from_jira_ticket
 
 

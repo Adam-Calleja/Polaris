@@ -62,7 +62,9 @@ tokenizers = [
   "transformers>=4.36",
 ]
 eval = [
-  "ragas>=0.1",
+  "ragas>=0.4.3,<0.5",
+  "openai>=1.0",
+  "pyarrow>=15",
 ]
 
 api = [
@@ -75,6 +77,7 @@ api = [
 
 [project.scripts]
 polaris-ingest-jira = "polaris_rag.cli.ingest_jira_tickets:main"
+polaris-eval = "polaris_rag.cli.evaluate_rag:main"
 
 [tool.setuptools]
 package-dir = { "" = "src" }

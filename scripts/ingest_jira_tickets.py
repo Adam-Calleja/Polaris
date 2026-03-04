@@ -126,18 +126,14 @@ def parse_args() -> argparse.Namespace:
         help="Batch size for vector-store inserts (default: 16).",
     )
     parser.add_argument(
-        "--vector-batch-retries",
+        "--embedding-workers",
         required=False,
         type=int,
-        default=5,
-        help="Retries per vector batch before splitting into smaller batches (default: 5).",
-    )
-    parser.add_argument(
-        "--vector-batch-retry-delay",
-        required=False,
-        type=float,
-        default=5.0,
-        help="Base retry delay in seconds for failed vector batches (default: 5.0).",
+        default=None,
+        help=(
+            "Enable concurrent embedding requests by setting embedder.num_workers. "
+            "Values > 1 use async insertion with parallel embedding batches."
+        ),
     )
 
     # Optional debug dump of processed ticket text.
@@ -247,6 +243,20 @@ def _resolve_exclude_keys(cfg: GlobalConfig, cli_value: str | None) -> list[str]
         keys.extend(_read_exclude_keys_file(candidate))
 
     return list(dict.fromkeys(keys))
+
+
+def _resolve_embedding_workers(cfg: GlobalConfig, cli_value: int | None) -> int | None:
+    if cli_value is not None:
+        return int(cli_value)
+
+    embedder_cfg = _as_mapping(getattr(cfg, "embedder", None))
+    workers = embedder_cfg.get("num_workers")
+    if workers is None:
+        return None
+    try:
+        return int(workers)
+    except (TypeError, ValueError):
+        return None
 
 
 def _dump_processed_tickets(processed_tickets: list[Any], dump_path: Path) -> None:
@@ -377,7 +387,21 @@ def main() -> None:
     args = parse_args()
 
     cfg = GlobalConfig.load(args.config_file)
-    _override_qdrant_collection_name(cfg, args.source, args.qdrant_collection_name)
+    if args.embedding_workers is not None:
+        if args.embedding_workers < 1:
+            raise ValueError("--embedding-workers must be >= 1 when provided.")
+        embedder_cfg = cfg.raw.get("embedder")
+        if not isinstance(embedder_cfg, dict):
+            embedder_cfg = {}
+            cfg.raw["embedder"] = embedder_cfg
+        embedder_cfg["num_workers"] = int(args.embedding_workers)
+
+    if args.qdrant_collection_name:
+        vector_store_cfg = cfg.raw.get("vector_store")
+        if not isinstance(vector_store_cfg, dict):
+            vector_store_cfg = {}
+            cfg.raw["vector_store"] = vector_store_cfg
+        vector_store_cfg["collection_name"] = args.qdrant_collection_name
 
     # Build runtime objects (vector store, docstore, token counter, etc.).
     container = build_container(cfg)
@@ -429,27 +453,23 @@ def main() -> None:
     chunks = get_chunks_from_jira_tickets(tickets=processed_tickets, token_counter=container.token_counter)
 
     print("Adding chunks to vector store...")
+    embedding_workers = _resolve_embedding_workers(cfg, args.embedding_workers)
+    use_async_embeddings = embedding_workers is not None and embedding_workers > 1
     vector_batch_size = max(1, int(args.vector_batch_size))
     vector_batch_retries = max(0, int(args.vector_batch_retries))
     vector_batch_retry_delay = max(0.0, float(args.vector_batch_retry_delay))
     failed_chunks_log_path = Path(persist_dir) / "failed_vector_chunks.log"
     total_chunks = len(chunks)
-    skipped_chunks = 0
-    print(f"Embedding/indexing {total_chunks} chunks (batch size: {vector_batch_size})...")
-    for start in range(0, total_chunks, vector_batch_size):
-        batch = chunks[start:start + vector_batch_size]
-        skipped_chunks += _insert_vector_batch_with_retries(
-            storage_context,
-            batch,
-            batch_start_idx=start,
-            total_chunks=total_chunks,
-            retries=vector_batch_retries,
-            retry_delay=vector_batch_retry_delay,
-            failed_chunks_log_path=failed_chunks_log_path,
-        )
-        print(f"Inserted {min(start + vector_batch_size, total_chunks)}/{total_chunks} chunks")
-    if skipped_chunks:
-        print(f"Skipped {skipped_chunks} chunk(s). See: {failed_chunks_log_path}")
+    mode = "async/concurrent" if use_async_embeddings else "sync/sequential"
+    print(
+        f"Embedding/indexing {total_chunks} chunks "
+        f"(insert mode: {mode}, workers: {embedding_workers or 1}, batch size: {vector_batch_size})..."
+    )
+    storage_context.vector_store.insert_chunks(
+        chunks,
+        batch_size=vector_batch_size,
+        use_async=use_async_embeddings,
+    )
 
     print("Adding chunks to document store...")
     add_chunks_to_docstore(storage=storage_context, chunks=chunks)
