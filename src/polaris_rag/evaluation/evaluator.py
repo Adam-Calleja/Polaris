@@ -1,185 +1,772 @@
+"""polaris_rag.evaluation.evaluator
+
+Modern evaluation runner for Polaris on top of RAGAS 0.4 metrics collections.
+
+This module intentionally avoids deprecated ``ragas.metrics`` legacy evaluation
+surfaces and executes modern collection metrics directly with controlled
+concurrency.
 """
-evaluator
 
-Evaluation orchestration for ragas metrics.
+from __future__ import annotations
 
-This module provides classes to run a suite of Metric instances
-over model outputs, collect per‐example scores, and generate summary reports.
+import asyncio
+from dataclasses import asdict, dataclass
+import json
+import logging
+import math
+from pathlib import Path
+import time
+from typing import Any, Iterable, Mapping
 
-Classes
--------
-Evaluator
-    Runs a suite of ragas metrics on RAG examples and aggregates results. 
-"""
-from ragas import EvaluationDataset, evaluate, RunConfig
-from llama_index.llms.huggingface import HuggingFaceLLM
-from os import environ
-import torch
 import pandas as pd
-from typing import Optional
-from ragas.metrics import Metric as RagasMetric
-from ragas.llms import LangchainLLMWrapper
-from ragas.embeddings import LangchainEmbeddingsWrapper
+from openai import AsyncOpenAI
+from ragas import EvaluationDataset, RunConfig
+from ragas.cache import DiskCacheBackend
+from ragas.embeddings.base import embedding_factory
+from ragas.executor import Executor
+from ragas.llms import llm_factory
 
-from polaris_rag.evaluation.metrics import Metric
-from polaris_rag.generation.llm_interface import BaseLLM
-from polaris_rag.retrieval.embedder import BaseEmbedder, OpenAILikeEmbedder
+from polaris_rag.evaluation.metrics import (
+    DEFAULT_METRIC_ORDER,
+    METRIC_REGISTRY,
+    MetricSpec,
+    instantiate_metrics,
+    resolve_metric_specs,
+)
 
-class Evaluator():
+logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class AdaptiveConcurrencySettings:
+    """Settings for adaptive max-worker tuning."""
+
+    enabled: bool = True
+    worker_candidates: tuple[int, ...] = (2, 4, 8, 12, 16)
+    worker_cap: int = 16
+    warmup_fraction: float = 0.15
+    warmup_min_samples: int = 4
+    warmup_max_samples: int = 16
+    failure_threshold: float = 0.02
+
+
+@dataclass(frozen=True)
+class ConcurrencyTrial:
+    """Measured result of a single max-worker candidate."""
+
+    workers: int
+    duration_seconds: float
+    failure_rate: float
+    throughput: float
+    failures: int
+    total_scores: int
+
+
+@dataclass
+class EvaluationRunResult:
+    """Structured result for one evaluation run."""
+
+    scores_df: pd.DataFrame
+    selected_metrics: list[str]
+    skipped_metrics: list[tuple[str, str]]
+    selected_max_workers: int
+    run_config: RunConfig
+    batch_size: int
+    tuning_trials: list[ConcurrencyTrial]
+    duration_seconds: float
+    failure_rate: float
+
+    def summary_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable summary."""
+
+        return {
+            "rows": int(len(self.scores_df)),
+            "selected_metrics": list(self.selected_metrics),
+            "skipped_metrics": [
+                {"metric": name, "reason": reason}
+                for name, reason in self.skipped_metrics
+            ],
+            "selected_max_workers": int(self.selected_max_workers),
+            "batch_size": int(self.batch_size),
+            "run_config": {
+                "timeout": int(self.run_config.timeout),
+                "max_retries": int(self.run_config.max_retries),
+                "max_wait": int(self.run_config.max_wait),
+                "max_workers": int(self.run_config.max_workers),
+                "log_tenacity": bool(self.run_config.log_tenacity),
+                "seed": int(self.run_config.seed),
+            },
+            "duration_seconds": float(self.duration_seconds),
+            "failure_rate": float(self.failure_rate),
+            "tuning_trials": [asdict(t) for t in self.tuning_trials],
+        }
+
+
+def _as_mapping(obj: Any) -> Mapping[str, Any]:
+    if isinstance(obj, Mapping):
+        return obj
+    if hasattr(obj, "__dict__"):
+        return dict(vars(obj))
+    return {}
+
+
+def _as_bool(value: Any, default: bool) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"1", "true", "yes", "y", "on"}:
+            return True
+        if normalized in {"0", "false", "no", "n", "off"}:
+            return False
+    return bool(value)
+
+
+def _coerce_int(value: Any, default: int) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _coerce_float(value: Any, default: float) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _select_best_trial(
+    trials: list[ConcurrencyTrial],
+    *,
+    failure_threshold: float,
+) -> int:
+    """Pick worker count from measured trials.
+
+    Priority:
+    1) Highest throughput among trials within failure threshold.
+    2) If none valid, lowest failure-rate trial (ties -> faster throughput).
     """
-    Runs a suite of ragas metrics on RAG examples and aggregates results. 
 
-    Methods
-    -------
-    register_metric
-        Add or replace a metric by name. 
-    list_metrics
-        List all registered metric names. 
-    evaluate
-        Evaluate a set of samples across all registered metrics.
-    """
+    valid = [t for t in trials if t.failure_rate <= failure_threshold]
+    if valid:
+        return max(valid, key=lambda t: t.throughput).workers
+
+    if not trials:
+        return 1
+
+    return min(trials, key=lambda t: (t.failure_rate, -t.throughput)).workers
+
+
+async def _score_metric(metric: Any, kwargs: dict[str, Any]) -> Any:
+    """Score one metric call and return raw numeric/string value."""
+
+    result = await metric.ascore(**kwargs)
+    return result.value if hasattr(result, "value") else result
+
+
+def _rows_from_executor_results(
+    *,
+    rows: list[dict[str, Any]],
+    metric_names: list[str],
+    results: list[Any],
+) -> list[dict[str, Any]]:
+    """Reconstruct row-wise metric outputs from flat executor results."""
+
+    scored_rows: list[dict[str, Any]] = []
+    n_metrics = len(metric_names)
+
+    for i, row in enumerate(rows):
+        out: dict[str, Any] = {
+            "user_input": row.get("user_input"),
+            "reference": row.get("reference"),
+            "response": row.get("response"),
+        }
+
+        offset = i * n_metrics
+        for j, metric_name in enumerate(metric_names):
+            index = offset + j
+            value = results[index] if index < len(results) else float("nan")
+            if hasattr(value, "value"):
+                value = value.value
+            out[metric_name] = value
+
+        scored_rows.append(out)
+
+    return scored_rows
+
+
+def executor_results_to_dataframe(
+    *,
+    rows: list[dict[str, Any]],
+    metric_names: list[str],
+    results: list[Any],
+) -> pd.DataFrame:
+    """Convert raw executor results into a score dataframe."""
+
+    return pd.DataFrame(
+        _rows_from_executor_results(
+            rows=rows,
+            metric_names=metric_names,
+            results=results,
+        )
+    )
+
+
+class Evaluator:
+    """RAGAS metrics-collections evaluator with adaptive concurrency."""
 
     def __init__(
-            self,
-            *,
-            metrics: list[Metric],
-            llm: BaseLLM,
-            embedder: BaseEmbedder,
-            token: Optional[str] = None,
-        ):
-        """
-        Initialise the evaluator with a list of Metric instances. 
+        self,
+        *,
+        llm_model: str,
+        llm_api_base: str,
+        llm_api_key: str | None,
+        llm_kwargs: Mapping[str, Any] | None,
+        embedding_model: str,
+        embedding_api_base: str,
+        embedding_api_key: str | None,
+        embedding_kwargs: Mapping[str, Any] | None,
+        requested_metrics: Iterable[str] | None = None,
+        auto_gate_metrics: bool = True,
+        run_config: RunConfig | None = None,
+        batch_size: int | None = None,
+        adaptive_concurrency: AdaptiveConcurrencySettings | None = None,
+        raise_exceptions: bool = False,
+        use_cache: bool = False,
+        cache_dir: str = ".cache/ragas_eval",
+    ):
+        self.requested_metrics = list(requested_metrics) if requested_metrics is not None else None
+        self.auto_gate_metrics = auto_gate_metrics
+        self.raise_exceptions = raise_exceptions
 
-        Parameters
-        ----------
-        metrics : list[Metric]
-            Instances of Metric subclasses to apply.
-        llm : BaseLLM
-            The large language model to use. 
-        embedder : BaseEmbedder,
-            The embedding model to use for the metrics. 
-        token : str
-            HuggingFace API token to authenticate and run the LLM.
-        """
-
-        self.metrics = {m.name(): m.get_metric() for m in metrics}
-        self.ragas_metrics = {m.get_metric().name: m.get_metric() for m in metrics}
-        self.registered_metrics = {}
-
-        if token:
-            environ["HF_TOKEN"] = token
-
-        self.llm = llm or HuggingFaceLLM(
-            model_name="meta-llama/Llama-2-7b-chat-hf",
-            tokenizer_name="meta-llama/Llama-2-7b-chat-hf",
-            device_map="auto",
-            model_kwargs={
-                "torch_dtype": torch.float16,
-            },
-            max_new_tokens=512,
-            generate_kwargs={"temperature": 0.2, "top_p": 0.9},
+        self.run_config = run_config or RunConfig(
+            timeout=120,
+            max_retries=4,
+            max_wait=30,
+            max_workers=4,
+            log_tenacity=True,
+            seed=42,
         )
 
-        self.embedder = embedder or OpenAILikeEmbedder(
-            model_name="Qwen/Qwen3-Embedding-8B",
-            api_base="http://localhost:8081/v1",
-            callback_manager=None,
+        self.batch_size = batch_size
+        self.adaptive_concurrency = adaptive_concurrency or AdaptiveConcurrencySettings()
+
+        self.cache = DiskCacheBackend(cache_dir=cache_dir) if use_cache else None
+
+        self.llm = self._build_llm(
+            model=llm_model,
+            api_base=llm_api_base,
+            api_key=llm_api_key,
+            llm_kwargs=llm_kwargs or {},
+        )
+        self.embeddings = self._build_embeddings(
+            model=embedding_model,
+            api_base=embedding_api_base,
+            api_key=embedding_api_key,
+            embedding_kwargs=embedding_kwargs or {},
         )
 
-    def register_metric(
-            self,
-            metric_name: str
-        ) -> None:
-        """
-        Add or replace a metric selection by name.
+    def register_metric(self, metric_name: str) -> None:
+        """Add a metric to the active requested metric list."""
 
-        Parameters
-        ----------
-        metric_name : str
-            The name of a metric available in `self.metrics` to activate for evaluation.
-        """
-        if metric_name not in self.metrics and metric_name not in self.ragas_metrics:
-            raise KeyError(f"Metric '{metric_name}' is not available. The available metrics are: {sorted(self.metrics.keys())} or {sorted(self.ragas_metrics.keys())}")
-        if metric_name in self.metrics:
-            self.registered_metrics[metric_name] = self.metrics[metric_name]
-        else:
-            self.registered_metrics[metric_name] = self.ragas_metrics[metric_name]
+        if metric_name not in METRIC_REGISTRY:
+            available = ", ".join(sorted(METRIC_REGISTRY.keys()))
+            raise KeyError(f"Unknown metric '{metric_name}'. Available metrics: {available}")
+
+        if self.requested_metrics is None:
+            self.requested_metrics = []
+        if metric_name not in self.requested_metrics:
+            self.requested_metrics.append(metric_name)
 
     def clear_registered_metrics(self) -> None:
-        """Clear the active/registered metric selection (revert to all metrics)."""
-        self.registered_metrics.clear()
+        """Reset metric selection to the default metric order."""
 
-    def list_metric_names(self) -> list[str]:
-        """
-        List active metric names if any have been registered; otherwise list all available metrics.
+        self.requested_metrics = None
 
-        Returns
-        -------
-        list[str]
-            Sorted list of metric names.
-        """
-        if self.registered_metrics:
-            return sorted(self.registered_metrics.keys())
-        return sorted(self.metrics.keys())
-    
-    def list_metrics(self) -> list[RagasMetric]:
-        """
-        Return the ragas metric instances that will be used for evaluation.
-        If any metrics have been registered via `register_metric`, only those are returned;
-        otherwise, all available metrics are returned.
+    def list_metric_names(self, dataset_columns: set[str] | None = None) -> list[str]:
+        """List requested/default metric names, optionally after auto-gating."""
 
-        Returns
-        -------
-        list[RagasMetric]
-            The active ragas metric instances.
-        """
-        source = self.registered_metrics if self.registered_metrics else self.metrics
-        return [source[name] for name in sorted(source.keys())]
-    
-    def evaluate(
-            self,
-            dataset: EvaluationDataset,
-            run_config: RunConfig = RunConfig(timeout=120,max_retries=3,max_wait=60,max_workers=1),
-        ) -> pd.DataFrame:
-        """
-        Run the full evaluation loop on a dataset and return the results as a DataFrame.
+        names = list(self.requested_metrics) if self.requested_metrics is not None else list(DEFAULT_METRIC_ORDER)
+        if dataset_columns is None:
+            return names
 
-        Parameters
-        ----------
-        dataset : EvaluationDataset
-            Dataset wrapper providing inputs, references, and any metadata
-            needed for evaluation.
-        run_config : RunConfig
-            Configuration parameters for the evaluation run, e.g.
-            timeout, max_retries, max_wait, etc.
-
-        Returns
-        -------
-        pd.DataFrame
-            A pandas DataFrame where each row corresponds to one example from
-            `dataset` and each column is either a metric score or other
-            evaluation metadata (e.g. example ID, LLM latency, etc.).
-
-        Raises
-        ------
-        Exception
-            Propagates any errors from the underlying evaluation call
-            (because `raise_exceptions=True`).
-        """
-
-        evaluator_llm = LangchainLLMWrapper(self.llm)
-        embedder = LangchainEmbeddingsWrapper(self.embedder)
-        callbacks = []
-
-        score = evaluate(
-            dataset=dataset,
-            metrics=self.list_metrics(),
-            llm=evaluator_llm,
-            embeddings=embedder,
-            raise_exceptions=False,
-            callbacks=callbacks,
-            run_config=run_config,
-            show_progress=True,
+        specs, _ = resolve_metric_specs(
+            dataset_columns=dataset_columns,
+            requested_metrics=names,
+            auto_gate=self.auto_gate_metrics,
         )
-        
-        return score.to_pandas()
+        return [spec.name for spec in specs]
+
+    @classmethod
+    def from_global_config(
+        cls,
+        cfg: Any,
+        *,
+        requested_metrics: Iterable[str] | None = None,
+    ) -> "Evaluator":
+        """Build an evaluator from ``GlobalConfig``."""
+
+        raw = _as_mapping(getattr(cfg, "raw", cfg))
+        eval_cfg = _as_mapping(raw.get("evaluation", {}))
+
+        llm_cfg = _as_mapping(raw.get("evaluator_llm", {}))
+        embed_cfg = _as_mapping(raw.get("embedder", {}))
+
+        run_cfg = _as_mapping(eval_cfg.get("run", {}))
+        cache_cfg = _as_mapping(eval_cfg.get("cache", {}))
+        tune_cfg = _as_mapping(eval_cfg.get("adaptive_concurrency", {}))
+        metric_cfg = _as_mapping(eval_cfg.get("metrics", {}))
+
+        req_metrics = list(requested_metrics) if requested_metrics is not None else metric_cfg.get("requested")
+        if isinstance(req_metrics, str):
+            req_metrics = [m.strip() for m in req_metrics.split(",") if m.strip()]
+
+        run_config = RunConfig(
+            timeout=_coerce_int(run_cfg.get("timeout"), 120),
+            max_retries=_coerce_int(run_cfg.get("max_retries"), 4),
+            max_wait=_coerce_int(run_cfg.get("max_wait"), 30),
+            max_workers=_coerce_int(run_cfg.get("max_workers"), 4),
+            log_tenacity=_as_bool(run_cfg.get("log_tenacity"), True),
+            seed=_coerce_int(run_cfg.get("seed"), 42),
+        )
+
+        adaptive = AdaptiveConcurrencySettings(
+            enabled=_as_bool(tune_cfg.get("enabled"), True),
+            worker_candidates=tuple(int(x) for x in tune_cfg.get("worker_candidates", [2, 4, 8, 12, 16])),
+            worker_cap=_coerce_int(tune_cfg.get("worker_cap"), 16),
+            warmup_fraction=_coerce_float(tune_cfg.get("warmup_fraction"), 0.15),
+            warmup_min_samples=_coerce_int(tune_cfg.get("warmup_min_samples"), 4),
+            warmup_max_samples=_coerce_int(tune_cfg.get("warmup_max_samples"), 16),
+            failure_threshold=_coerce_float(tune_cfg.get("failure_threshold"), 0.02),
+        )
+
+        return cls(
+            llm_model=str(llm_cfg.get("model_name", "gpt-4o-mini")),
+            llm_api_base=str(llm_cfg.get("api_base", "https://api.openai.com/v1")),
+            llm_api_key=llm_cfg.get("api_key"),
+            llm_kwargs=_as_mapping(llm_cfg.get("model_kwargs", {})),
+            embedding_model=str(embed_cfg.get("model_name", "text-embedding-3-small")),
+            embedding_api_base=str(embed_cfg.get("api_base", "https://api.openai.com/v1")),
+            embedding_api_key=embed_cfg.get("api_key"),
+            embedding_kwargs=_as_mapping(embed_cfg.get("model_kwargs", {})),
+            requested_metrics=req_metrics,
+            auto_gate_metrics=_as_bool(metric_cfg.get("auto_gate"), True),
+            run_config=run_config,
+            batch_size=_coerce_int(run_cfg.get("batch_size"), 0) or None,
+            adaptive_concurrency=adaptive,
+            raise_exceptions=_as_bool(run_cfg.get("raise_exceptions"), False),
+            use_cache=_as_bool(cache_cfg.get("enabled"), False),
+            cache_dir=str(cache_cfg.get("dir", ".cache/ragas_eval")),
+        )
+
+    def _build_llm(
+        self,
+        *,
+        model: str,
+        api_base: str,
+        api_key: str | None,
+        llm_kwargs: Mapping[str, Any],
+    ) -> Any:
+        kwargs = dict(llm_kwargs)
+        # Remove legacy stop-hack settings that hurt structured output paths.
+        kwargs.pop("stop", None)
+        kwargs.pop("stop_list", None)
+
+        client = AsyncOpenAI(
+            base_url=api_base,
+            api_key=api_key or "fake",
+            timeout=float(self.run_config.timeout),
+            max_retries=max(0, int(self.run_config.max_retries)),
+        )
+
+        llm = llm_factory(
+            model=model,
+            provider="openai",
+            client=client,
+            adapter="auto",
+            cache=self.cache,
+            **kwargs,
+        )
+
+        if hasattr(llm, "set_run_config"):
+            llm.set_run_config(self.run_config)
+
+        return llm
+
+    def _build_embeddings(
+        self,
+        *,
+        model: str,
+        api_base: str,
+        api_key: str | None,
+        embedding_kwargs: Mapping[str, Any],
+    ) -> Any:
+        kwargs = dict(embedding_kwargs)
+
+        client = AsyncOpenAI(
+            base_url=api_base,
+            api_key=api_key or "fake",
+            timeout=float(self.run_config.timeout),
+            max_retries=max(0, int(self.run_config.max_retries)),
+        )
+
+        embeddings = embedding_factory(
+            provider="openai",
+            model=model,
+            client=client,
+            interface="modern",
+            cache=self.cache,
+            **kwargs,
+        )
+
+        if hasattr(embeddings, "set_run_config"):
+            embeddings.set_run_config(self.run_config)
+
+        return embeddings
+
+    def _resolve_runtime_metrics(
+        self,
+        *,
+        dataset: EvaluationDataset,
+    ) -> tuple[list[tuple[MetricSpec, Any]], list[tuple[str, str]]]:
+        columns = set(dataset.features())
+        specs, skipped = resolve_metric_specs(
+            dataset_columns=columns,
+            requested_metrics=self.requested_metrics,
+            auto_gate=self.auto_gate_metrics,
+        )
+        instances = instantiate_metrics(specs, llm=self.llm, embeddings=self.embeddings)
+        return list(zip(specs, instances)), skipped
+
+    def _clone_run_config(self, *, max_workers: int) -> RunConfig:
+        return RunConfig(
+            timeout=int(self.run_config.timeout),
+            max_retries=int(self.run_config.max_retries),
+            max_wait=int(self.run_config.max_wait),
+            max_workers=int(max_workers),
+            exception_types=self.run_config.exception_types,
+            log_tenacity=bool(self.run_config.log_tenacity),
+            seed=int(self.run_config.seed),
+        )
+
+    @staticmethod
+    def _batch_size_for_workers(workers: int, explicit: int | None) -> int:
+        if explicit is not None:
+            return int(explicit)
+        return min(64, max(8, workers * 2))
+
+    async def _score_dataset_async(
+        self,
+        *,
+        dataset: EvaluationDataset,
+        metrics: list[tuple[MetricSpec, Any]],
+        run_config: RunConfig,
+        batch_size: int,
+        show_progress: bool,
+    ) -> pd.DataFrame:
+        executor, rows, metric_names = self._create_executor(
+            dataset=dataset,
+            metrics=metrics,
+            run_config=run_config,
+            batch_size=batch_size,
+            show_progress=show_progress,
+        )
+        results = await executor.aresults()
+        scored_rows = _rows_from_executor_results(
+            rows=rows,
+            metric_names=metric_names,
+            results=results,
+        )
+        return pd.DataFrame(scored_rows)
+
+    def _create_executor(
+        self,
+        *,
+        dataset: EvaluationDataset,
+        metrics: list[tuple[MetricSpec, Any]],
+        run_config: RunConfig,
+        batch_size: int,
+        show_progress: bool,
+    ) -> tuple[Executor, list[dict[str, Any]], list[str]]:
+        """Create and populate a RAGAS executor for all metric jobs."""
+
+        executor = Executor(
+            desc="Evaluating",
+            show_progress=show_progress,
+            keep_progress_bar=True,
+            raise_exceptions=self.raise_exceptions,
+            run_config=run_config,
+            batch_size=batch_size,
+        )
+
+        metric_names = [spec.name for spec, _ in metrics]
+        rows = dataset.to_list()
+        for row in rows:
+            for spec, metric in metrics:
+                kwargs = {col: row.get(col) for col in spec.required_columns}
+                executor.submit(_score_metric, metric, kwargs)
+
+        return executor, rows, metric_names
+
+    def _score_dataset(
+        self,
+        *,
+        dataset: EvaluationDataset,
+        metrics: list[tuple[MetricSpec, Any]],
+        run_config: RunConfig,
+        batch_size: int,
+        show_progress: bool,
+    ) -> pd.DataFrame:
+        return asyncio.run(
+            self._score_dataset_async(
+                dataset=dataset,
+                metrics=metrics,
+                run_config=run_config,
+                batch_size=batch_size,
+                show_progress=show_progress,
+            )
+        )
+
+    def _tune_max_workers(
+        self,
+        *,
+        dataset: EvaluationDataset,
+        metrics: list[tuple[MetricSpec, Any]],
+    ) -> tuple[int, list[ConcurrencyTrial]]:
+        settings = self.adaptive_concurrency
+
+        if not settings.enabled:
+            return int(self.run_config.max_workers), []
+
+        if len(dataset) <= 1:
+            return max(1, int(self.run_config.max_workers)), []
+
+        warmup_size = int(math.ceil(len(dataset) * settings.warmup_fraction))
+        warmup_size = max(settings.warmup_min_samples, warmup_size)
+        warmup_size = min(settings.warmup_max_samples, warmup_size, len(dataset))
+
+        warmup_dataset = dataset[:warmup_size]
+
+        candidates = sorted(
+            {
+                max(1, int(w))
+                for w in settings.worker_candidates
+                if int(w) <= int(settings.worker_cap)
+            }
+        )
+        if not candidates:
+            candidates = [max(1, int(self.run_config.max_workers))]
+
+        trials: list[ConcurrencyTrial] = []
+
+        logger.info(
+            "Running adaptive concurrency tuning on %s rows with candidates=%s",
+            warmup_size,
+            candidates,
+        )
+
+        for workers in candidates:
+            batch_size = self._batch_size_for_workers(workers, self.batch_size)
+            rc = self._clone_run_config(max_workers=workers)
+
+            start = time.perf_counter()
+            df = self._score_dataset(
+                dataset=warmup_dataset,
+                metrics=metrics,
+                run_config=rc,
+                batch_size=batch_size,
+                show_progress=False,
+            )
+            duration = max(1e-9, time.perf_counter() - start)
+
+            metric_columns = [spec.name for spec, _ in metrics]
+            total_scores = len(df) * len(metric_columns)
+            failures = int(df[metric_columns].isna().sum().sum()) if total_scores else 0
+            failure_rate = (failures / total_scores) if total_scores else 0.0
+            throughput = ((total_scores - failures) / duration) if duration > 0 else 0.0
+
+            trials.append(
+                ConcurrencyTrial(
+                    workers=workers,
+                    duration_seconds=duration,
+                    failure_rate=failure_rate,
+                    throughput=throughput,
+                    failures=failures,
+                    total_scores=total_scores,
+                )
+            )
+
+        selected = _select_best_trial(trials, failure_threshold=settings.failure_threshold)
+        return selected, trials
+
+    def evaluate(
+        self,
+        *,
+        dataset: EvaluationDataset,
+        source_rows: list[dict[str, Any]] | None = None,
+        tune_concurrency: bool = True,
+        show_progress: bool = True,
+    ) -> EvaluationRunResult:
+        """Run evaluation and return scores plus execution metadata."""
+
+        runtime_metrics, skipped_metrics = self._resolve_runtime_metrics(dataset=dataset)
+
+        selected_workers = int(self.run_config.max_workers)
+        tuning_trials: list[ConcurrencyTrial] = []
+
+        if tune_concurrency:
+            selected_workers, tuning_trials = self._tune_max_workers(
+                dataset=dataset,
+                metrics=runtime_metrics,
+            )
+
+        run_config = self._clone_run_config(max_workers=selected_workers)
+
+        # Propagate selected run config to model wrappers.
+        if hasattr(self.llm, "set_run_config"):
+            self.llm.set_run_config(run_config)
+        if hasattr(self.embeddings, "set_run_config"):
+            self.embeddings.set_run_config(run_config)
+
+        batch_size = self._batch_size_for_workers(selected_workers, self.batch_size)
+
+        start = time.perf_counter()
+        scores_df = self._score_dataset(
+            dataset=dataset,
+            metrics=runtime_metrics,
+            run_config=run_config,
+            batch_size=batch_size,
+            show_progress=show_progress,
+        )
+        duration = time.perf_counter() - start
+
+        if source_rows is not None and len(source_rows) == len(scores_df):
+            ids = [str(row.get("id", f"row-{i}")) for i, row in enumerate(source_rows)]
+            metas = [row.get("metadata", {}) for row in source_rows]
+            scores_df.insert(0, "id", ids)
+            scores_df["metadata"] = metas
+
+        metric_names = [spec.name for spec, _ in runtime_metrics]
+        total = len(scores_df) * len(metric_names)
+        failures = int(scores_df[metric_names].isna().sum().sum()) if total else 0
+        failure_rate = (failures / total) if total else 0.0
+
+        return EvaluationRunResult(
+            scores_df=scores_df,
+            selected_metrics=metric_names,
+            skipped_metrics=skipped_metrics,
+            selected_max_workers=selected_workers,
+            run_config=run_config,
+            batch_size=batch_size,
+            tuning_trials=tuning_trials,
+            duration_seconds=duration,
+            failure_rate=failure_rate,
+        )
+
+    def build_executor(
+        self,
+        *,
+        dataset: EvaluationDataset,
+        tune_concurrency: bool = True,
+        show_progress: bool = True,
+    ) -> tuple[Executor, dict[str, Any]]:
+        """Build an executor for cancellable metric execution.
+
+        The caller can run ``executor.results()`` and call ``executor.cancel()``
+        from another thread/context to request cancellation.
+        """
+
+        runtime_metrics, skipped_metrics = self._resolve_runtime_metrics(dataset=dataset)
+
+        selected_workers = int(self.run_config.max_workers)
+        tuning_trials: list[ConcurrencyTrial] = []
+        if tune_concurrency:
+            selected_workers, tuning_trials = self._tune_max_workers(
+                dataset=dataset,
+                metrics=runtime_metrics,
+            )
+
+        run_config = self._clone_run_config(max_workers=selected_workers)
+        batch_size = self._batch_size_for_workers(selected_workers, self.batch_size)
+
+        executor, rows, metric_names = self._create_executor(
+            dataset=dataset,
+            metrics=runtime_metrics,
+            run_config=run_config,
+            batch_size=batch_size,
+            show_progress=show_progress,
+        )
+
+        metadata = {
+            "rows": rows,
+            "metric_names": metric_names,
+            "skipped_metrics": skipped_metrics,
+            "selected_max_workers": selected_workers,
+            "run_config": run_config,
+            "batch_size": batch_size,
+            "tuning_trials": tuning_trials,
+        }
+        return executor, metadata
+
+
+def write_outputs(
+    *,
+    result: EvaluationRunResult,
+    output_dir: str | Path,
+    extra_manifest: Mapping[str, Any] | None = None,
+) -> dict[str, Path]:
+    """Persist standard output artifacts for an evaluation run."""
+
+    out_dir = Path(output_dir).expanduser().resolve()
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    scores_csv = out_dir / "scores.csv"
+    scores_parquet = out_dir / "scores.parquet"
+    summary_json = out_dir / "summary.json"
+    manifest_json = out_dir / "run_manifest.json"
+
+    result.scores_df.to_csv(scores_csv, index=False)
+
+    try:
+        result.scores_df.to_parquet(scores_parquet, index=False)
+        parquet_written = True
+    except Exception as exc:
+        parquet_written = False
+        logger.warning("Unable to write parquet output: %s", exc)
+
+    summary_payload = result.summary_dict()
+    summary_json.write_text(json.dumps(summary_payload, indent=2), encoding="utf-8")
+
+    manifest_payload = {
+        "summary": summary_payload,
+        "artifacts": {
+            "scores_csv": str(scores_csv),
+            "scores_parquet": str(scores_parquet) if parquet_written else None,
+            "summary_json": str(summary_json),
+        },
+        "extra": dict(extra_manifest or {}),
+    }
+    manifest_json.write_text(json.dumps(manifest_payload, indent=2), encoding="utf-8")
+
+    artifacts = {
+        "scores_csv": scores_csv,
+        "summary_json": summary_json,
+        "manifest_json": manifest_json,
+    }
+    if parquet_written:
+        artifacts["scores_parquet"] = scores_parquet
+
+    return artifacts
+
+
+__all__ = [
+    "AdaptiveConcurrencySettings",
+    "ConcurrencyTrial",
+    "EvaluationRunResult",
+    "Evaluator",
+    "executor_results_to_dataframe",
+    "write_outputs",
+]
