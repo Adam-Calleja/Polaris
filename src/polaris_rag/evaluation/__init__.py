@@ -7,12 +7,15 @@ from typing import Any
 
 _EXPORTS: dict[str, tuple[str, str]] = {
     "AdaptiveConcurrencySettings": ("polaris_rag.evaluation.evaluator", "AdaptiveConcurrencySettings"),
+    "ApiRequester": ("polaris_rag.evaluation.evaluation_dataset", "ApiRequester"),
     "ConcurrencyTrial": ("polaris_rag.evaluation.evaluator", "ConcurrencyTrial"),
     "DEFAULT_METRIC_ORDER": ("polaris_rag.evaluation.metrics", "DEFAULT_METRIC_ORDER"),
     "EvaluationRunResult": ("polaris_rag.evaluation.evaluator", "EvaluationRunResult"),
     "Evaluator": ("polaris_rag.evaluation.evaluator", "Evaluator"),
     "METRIC_REGISTRY": ("polaris_rag.evaluation.metrics", "METRIC_REGISTRY"),
     "MetricSpec": ("polaris_rag.evaluation.metrics", "MetricSpec"),
+    "PrepProgressCallback": ("polaris_rag.evaluation.evaluation_dataset", "PrepProgressCallback"),
+    "PrepProgressEvent": ("polaris_rag.evaluation.evaluation_dataset", "PrepProgressEvent"),
     "build_prepared_rows": ("polaris_rag.evaluation.evaluation_dataset", "build_prepared_rows"),
     "build_prepared_rows_from_api": ("polaris_rag.evaluation.evaluation_dataset", "build_prepared_rows_from_api"),
     "executor_results_to_dataframe": ("polaris_rag.evaluation.evaluator", "executor_results_to_dataframe"),
@@ -44,12 +47,15 @@ def __dir__() -> list[str]:
 
 __all__ = [
     "AdaptiveConcurrencySettings",
+    "ApiRequester",
     "ConcurrencyTrial",
     "DEFAULT_METRIC_ORDER",
     "EvaluationRunResult",
     "Evaluator",
     "METRIC_REGISTRY",
     "MetricSpec",
+    "PrepProgressCallback",
+    "PrepProgressEvent",
     "build_prepared_rows",
     "build_prepared_rows_from_api",
     "executor_results_to_dataframe",
