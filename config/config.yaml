@@ -15,15 +15,10 @@
 #   model_kwargs: {}
 
 generator_llm:
-  # type: "openai_like"
-  type: "openai_chat"
-  # model_name: "llama-cam"
-  model_name: "gemini-2.5-flash"
-  # api_base: "http://localhost:8080/v1"
-  # api_base: "https://llm.hpc.cam.ac.uk/v1"
-  # api_key: "${POLARIS_LLM_API_KEY}"
-  api_base: "https://generativelanguage.googleapis.com/v1beta/openai/"
-  api_key: "${GEMINI_API_KEY}"
+  type: "openai_like"
+  model_name: "llama-cam"
+  api_base: "https://llm.hpc.cam.ac.uk/v1"
+  api_key: "${POLARIS_LLM_API_KEY}"
   model_kwargs:
     max_tokens: 4000
     temperature: 0.8
@@ -32,17 +27,16 @@ generator_llm:
 
 evaluator_llm:
   type: "OpenAILike"
-  model_name: "Qwen/Qwen2.5-72B-Instruct"
+  model_name: "Qwen/Qwen2.5-72B-Instruct" 
   api_base: "http://localhost:8080/v1"
   model_kwargs:
-    max_tokens: 1024
     temperature: 0
-    top_p: 0.9
-    stop: ["</ANS>"]
+    top_p: 1.0
+    max_tokens: 1024
 
 embedder:
   type: "OpenAILike"
-  api_base: "${EMBED_API_BASE}"
+  api_base: "http://127.0.0.1:8081/v1"
   model_name: "Qwen/Qwen3-Embedding-8B"
   api_key: ""
   timeout: 45
@@ -54,13 +48,13 @@ embedder:
 vector_stores:
   docs:
     type: "qdrant"
-    host: "qdrant"
+    host: "127.0.0.1"
     port: 6333
     collection_name: "support_docs_qwen3_8b"
     token: null
   tickets:
     type: "qdrant"
-    host: "qdrant"
+    host: "127.0.0.1"
     port: 6333
     collection_name: "support_tickets_qwen3_8b"
     token: null
