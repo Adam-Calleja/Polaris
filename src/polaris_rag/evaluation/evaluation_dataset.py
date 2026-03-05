@@ -15,11 +15,33 @@ Preparation executes the Polaris RAG pipeline to generate:
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import dataclass
 import json
 from pathlib import Path
-from typing import Any, Iterable
+import time
+from typing import TYPE_CHECKING, Any, Callable, Iterable, Mapping
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
-from ragas import EvaluationDataset
+if TYPE_CHECKING:
+    from ragas import EvaluationDataset
+
+
+@dataclass(frozen=True)
+class PrepProgressEvent:
+    """Progress snapshot emitted while preparing rows."""
+
+    completed: int
+    total: int
+    successes: int
+    failures: int
+    elapsed_seconds: float
+    mode: str
+    last_error: str | None = None
+
+
+PrepProgressCallback = Callable[[PrepProgressEvent], None]
+ApiRequester = Callable[[str, str, float, Mapping[str, str] | None], dict[str, Any]]
 
 
 def _extract_doc_id(node: Any) -> str:
@@ -189,6 +211,161 @@ def _prepare_one(
         return index, row
 
 
+def _post_query_api(
+    api_url: str,
+    query: str,
+    timeout_seconds: float,
+    headers: Mapping[str, str] | None = None,
+) -> dict[str, Any]:
+    request_headers = {"Content-Type": "application/json"}
+    if headers:
+        request_headers.update({str(k): str(v) for k, v in headers.items()})
+
+    payload = json.dumps({"query": query}).encode("utf-8")
+    request = Request(api_url, data=payload, headers=request_headers, method="POST")
+
+    try:
+        with urlopen(request, timeout=timeout_seconds) as response:
+            body = response.read().decode("utf-8")
+    except HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"query API HTTP {exc.code}: {detail}") from exc
+    except URLError as exc:
+        raise RuntimeError(f"query API connection error: {exc}") from exc
+
+    try:
+        parsed = json.loads(body)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(f"query API returned invalid JSON: {exc}") from exc
+
+    if not isinstance(parsed, dict):
+        raise RuntimeError(f"query API returned non-object response: {type(parsed)!r}")
+
+    return parsed
+
+
+def _extract_api_context_chunks(value: Any) -> tuple[list[str], list[str]]:
+    if not isinstance(value, list):
+        return [], []
+
+    texts: list[str] = []
+    ids: list[str] = []
+    for idx, chunk in enumerate(value, start=1):
+        if isinstance(chunk, Mapping):
+            text = str(chunk.get("text", "") or "")
+            doc_id = str(chunk.get("doc_id", f"context-{idx}") or f"context-{idx}")
+        else:
+            text = str(chunk or "")
+            doc_id = f"context-{idx}"
+        texts.append(text)
+        ids.append(doc_id)
+
+    return texts, ids
+
+
+def _prepare_one_via_api(
+    index: int,
+    example: dict[str, Any],
+    *,
+    api_url: str,
+    query_field: str,
+    reference_field: str,
+    id_field: str,
+    raise_exceptions: bool,
+    timeout_seconds: float,
+    headers: Mapping[str, str] | None,
+    requester: ApiRequester,
+) -> tuple[int, dict[str, Any]]:
+    query = str(example.get(query_field, "") or "").strip()
+    reference = str(example.get(reference_field, "") or "").strip()
+    sample_id = str(example.get(id_field, f"row-{index}"))
+
+    if not query:
+        if raise_exceptions:
+            raise ValueError(f"Missing query for example index={index} id={sample_id}")
+        return index, {
+            "id": sample_id,
+            "user_input": "",
+            "reference": reference,
+            "response": "",
+            "retrieved_contexts": [],
+            "retrieved_context_ids": [],
+            "metadata": {"source_error": "missing query"},
+        }
+
+    try:
+        result = requester(api_url, query, timeout_seconds, headers)
+        response = str(result.get("answer", result.get("response", "")) or "")
+        retrieved_contexts, retrieved_context_ids = _extract_api_context_chunks(
+            result.get("context", [])
+        )
+
+        row = {
+            "id": sample_id,
+            "user_input": query,
+            "reference": reference,
+            "response": response,
+            "retrieved_contexts": retrieved_contexts,
+            "retrieved_context_ids": retrieved_context_ids,
+            "metadata": example.get("metadata", {}),
+        }
+        return index, row
+
+    except Exception as exc:
+        if raise_exceptions:
+            raise
+
+        row = {
+            "id": sample_id,
+            "user_input": query,
+            "reference": reference,
+            "response": "",
+            "retrieved_contexts": [],
+            "retrieved_context_ids": [],
+            "metadata": {
+                "source_error": f"{type(exc).__name__}: {exc}",
+                "original_metadata": example.get("metadata", {}),
+            },
+        }
+        return index, row
+
+
+def _error_text_from_exception(exc: Exception) -> str:
+    return f"{type(exc).__name__}: {exc}"
+
+
+def _row_has_source_error(row: dict[str, Any]) -> bool:
+    metadata = row.get("metadata")
+    return isinstance(metadata, Mapping) and bool(metadata.get("source_error"))
+
+
+def _emit_progress(
+    *,
+    callback: PrepProgressCallback | None,
+    mode: str,
+    completed: int,
+    total: int,
+    successes: int,
+    failures: int,
+    started_at: float,
+    last_error: str | None = None,
+) -> None:
+    if callback is None:
+        return
+
+    callback(
+        PrepProgressEvent(
+            completed=completed,
+            total=total,
+            successes=successes,
+            failures=failures,
+            elapsed_seconds=max(0.0, time.perf_counter() - started_at),
+            mode=mode,
+            last_error=last_error,
+        )
+    )
+
+
 def build_prepared_rows(
     *,
     raw_examples: list[dict[str, Any]],
@@ -199,6 +376,7 @@ def build_prepared_rows(
     generation_workers: int = 1,
     llm_generate_overrides: dict[str, Any] | None = None,
     raise_exceptions: bool = False,
+    progress_callback: PrepProgressCallback | None = None,
 ) -> list[dict[str, Any]]:
     """Convert raw examples into rows compatible with ``EvaluationDataset``.
 
@@ -213,12 +391,47 @@ def build_prepared_rows(
     """
 
     workers = max(1, int(generation_workers))
+    total = len(raw_examples)
+    completed = 0
+    successes = 0
+    failures = 0
+    started_at = time.perf_counter()
     indexed_rows: list[tuple[int, dict[str, Any]]] = []
+
+    def _record_progress(row: dict[str, Any], *, last_error: str | None = None) -> None:
+        nonlocal completed, successes, failures
+        completed += 1
+        if _row_has_source_error(row) or last_error:
+            failures += 1
+        else:
+            successes += 1
+        _emit_progress(
+            callback=progress_callback,
+            mode="pipeline",
+            completed=completed,
+            total=total,
+            successes=successes,
+            failures=failures,
+            started_at=started_at,
+            last_error=last_error,
+        )
+
+    if total == 0:
+        _emit_progress(
+            callback=progress_callback,
+            mode="pipeline",
+            completed=0,
+            total=0,
+            successes=0,
+            failures=0,
+            started_at=started_at,
+        )
+        return []
 
     if workers == 1:
         for i, example in enumerate(raw_examples):
-            indexed_rows.append(
-                _prepare_one(
+            try:
+                row = _prepare_one(
                     i,
                     example,
                     pipeline=pipeline,
@@ -228,7 +441,11 @@ def build_prepared_rows(
                     llm_generate_overrides=llm_generate_overrides,
                     raise_exceptions=raise_exceptions,
                 )
-            )
+            except Exception as exc:
+                _record_progress({}, last_error=_error_text_from_exception(exc))
+                raise
+            indexed_rows.append(row)
+            _record_progress(row[1])
     else:
         with ThreadPoolExecutor(max_workers=workers) as pool:
             futures = [
@@ -246,20 +463,138 @@ def build_prepared_rows(
                 for i, example in enumerate(raw_examples)
             ]
             for future in as_completed(futures):
-                indexed_rows.append(future.result())
+                try:
+                    row = future.result()
+                except Exception as exc:
+                    _record_progress({}, last_error=_error_text_from_exception(exc))
+                    raise
+                indexed_rows.append(row)
+                _record_progress(row[1])
 
     indexed_rows.sort(key=lambda x: x[0])
     return [row for _, row in indexed_rows]
 
 
-def to_evaluation_dataset(rows: list[dict[str, Any]]) -> EvaluationDataset:
+def build_prepared_rows_from_api(
+    *,
+    raw_examples: list[dict[str, Any]],
+    api_url: str,
+    query_field: str = "query",
+    reference_field: str = "expected_answer",
+    id_field: str = "id",
+    generation_workers: int = 1,
+    raise_exceptions: bool = False,
+    timeout_seconds: float = 120.0,
+    headers: Mapping[str, str] | None = None,
+    requester: ApiRequester | None = None,
+    progress_callback: PrepProgressCallback | None = None,
+) -> list[dict[str, Any]]:
+    """Convert raw examples into prepared rows by calling Polaris query API."""
+
+    workers = max(1, int(generation_workers))
+    total = len(raw_examples)
+    completed = 0
+    successes = 0
+    failures = 0
+    started_at = time.perf_counter()
+    indexed_rows: list[tuple[int, dict[str, Any]]] = []
+    effective_requester = requester or _post_query_api
+
+    def _record_progress(row: dict[str, Any], *, last_error: str | None = None) -> None:
+        nonlocal completed, successes, failures
+        completed += 1
+        if _row_has_source_error(row) or last_error:
+            failures += 1
+        else:
+            successes += 1
+        _emit_progress(
+            callback=progress_callback,
+            mode="api",
+            completed=completed,
+            total=total,
+            successes=successes,
+            failures=failures,
+            started_at=started_at,
+            last_error=last_error,
+        )
+
+    if total == 0:
+        _emit_progress(
+            callback=progress_callback,
+            mode="api",
+            completed=0,
+            total=0,
+            successes=0,
+            failures=0,
+            started_at=started_at,
+        )
+        return []
+
+    if workers == 1:
+        for i, example in enumerate(raw_examples):
+            try:
+                row = _prepare_one_via_api(
+                    i,
+                    example,
+                    api_url=api_url,
+                    query_field=query_field,
+                    reference_field=reference_field,
+                    id_field=id_field,
+                    raise_exceptions=raise_exceptions,
+                    timeout_seconds=float(timeout_seconds),
+                    headers=headers,
+                    requester=effective_requester,
+                )
+            except Exception as exc:
+                _record_progress({}, last_error=_error_text_from_exception(exc))
+                raise
+            indexed_rows.append(row)
+            _record_progress(row[1])
+    else:
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            futures = [
+                pool.submit(
+                    _prepare_one_via_api,
+                    i,
+                    example,
+                    api_url=api_url,
+                    query_field=query_field,
+                    reference_field=reference_field,
+                    id_field=id_field,
+                    raise_exceptions=raise_exceptions,
+                    timeout_seconds=float(timeout_seconds),
+                    headers=headers,
+                    requester=effective_requester,
+                )
+                for i, example in enumerate(raw_examples)
+            ]
+            for future in as_completed(futures):
+                try:
+                    row = future.result()
+                except Exception as exc:
+                    _record_progress({}, last_error=_error_text_from_exception(exc))
+                    raise
+                indexed_rows.append(row)
+                _record_progress(row[1])
+
+    indexed_rows.sort(key=lambda x: x[0])
+    return [row for _, row in indexed_rows]
+
+
+def to_evaluation_dataset(rows: list[dict[str, Any]]) -> "EvaluationDataset":
     """Create a RAGAS ``EvaluationDataset`` from prepared rows."""
+
+    from ragas import EvaluationDataset
 
     return EvaluationDataset.from_list(rows)
 
 
 __all__ = [
+    "ApiRequester",
+    "PrepProgressCallback",
+    "PrepProgressEvent",
     "build_prepared_rows",
+    "build_prepared_rows_from_api",
     "load_prepared_rows",
     "load_raw_examples",
     "persist_prepared_rows",

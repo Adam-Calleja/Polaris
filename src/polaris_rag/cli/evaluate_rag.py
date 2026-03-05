@@ -3,20 +3,23 @@
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 from datetime import datetime
 from pathlib import Path
+import sys
+import time
 from typing import Any, Iterable, Mapping
 
 from polaris_rag.app.container import build_container
 from polaris_rag.config import GlobalConfig
 from polaris_rag.evaluation.evaluation_dataset import (
+    PrepProgressEvent,
     build_prepared_rows,
     load_prepared_rows,
     load_raw_examples,
     persist_prepared_rows,
     to_evaluation_dataset,
 )
-from polaris_rag.evaluation.evaluator import Evaluator, write_outputs
 
 
 def _as_mapping(obj: Any) -> Mapping[str, Any]:
@@ -52,6 +55,97 @@ def _parse_metrics(value: str | None) -> list[str] | None:
     if not value:
         return None
     return [x.strip() for x in value.split(",") if x.strip()]
+
+
+class _PrepProgressRenderer:
+    """Render dataset-preparation progress as a single-line live bar."""
+
+    def __init__(self, *, width: int = 24):
+        self.width = max(8, int(width))
+        self._active = False
+        self._last_len = 0
+
+    def update(self, event: PrepProgressEvent) -> None:
+        total = event.total if event.total > 0 else 1
+        fraction = event.completed / total
+        pct = int(round(fraction * 100.0))
+        filled = int(self.width * fraction)
+        bar = "#" * filled + "-" * (self.width - filled)
+        rate = (event.completed / event.elapsed_seconds) if event.elapsed_seconds > 0 else 0.0
+        line = (
+            f"[prep:{event.mode}] [{bar}] {pct:3d}% "
+            f"{event.completed}/{event.total} errors={event.failures} "
+            f"elapsed={event.elapsed_seconds:5.1f}s rate={rate:5.2f}/s"
+        )
+        self._active = True
+        self._last_len = len(line)
+        print(f"\r{line}", end="", file=sys.stderr, flush=True)
+
+    def finish(self) -> None:
+        if self._active:
+            print(file=sys.stderr, flush=True)
+            self._active = False
+            self._last_len = 0
+
+
+def _source_error(row: Mapping[str, Any]) -> str | None:
+    metadata = row.get("metadata")
+    if not isinstance(metadata, Mapping):
+        return None
+    value = metadata.get("source_error")
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
+def _error_class(source_error: str) -> str:
+    head = source_error.split(":", 1)[0].strip()
+    return head or "UnknownError"
+
+
+def _prep_stats(rows: list[dict[str, Any]], elapsed_seconds: float) -> dict[str, Any]:
+    total = len(rows)
+    failures = 0
+    error_classes: Counter[str] = Counter()
+    for row in rows:
+        err = _source_error(row)
+        if err:
+            failures += 1
+            error_classes[_error_class(err)] += 1
+
+    successes = total - failures
+    rate = (total / elapsed_seconds) if elapsed_seconds > 0 else 0.0
+    return {
+        "prep_total_rows": total,
+        "prep_success_rows": successes,
+        "prep_failed_rows": failures,
+        "prep_elapsed_seconds": elapsed_seconds,
+        "prep_rate_rows_per_second": rate,
+        "prep_error_classes": dict(error_classes),
+    }
+
+
+def _print_prep_summary(stats: Mapping[str, Any]) -> None:
+    total = int(stats.get("prep_total_rows", 0))
+    success = int(stats.get("prep_success_rows", 0))
+    failed = int(stats.get("prep_failed_rows", 0))
+    elapsed = float(stats.get("prep_elapsed_seconds", 0.0))
+    rate = float(stats.get("prep_rate_rows_per_second", 0.0))
+    print(
+        f"Prepared {total} rows (success={success}, failed={failed}, elapsed={elapsed:.1f}s, rate={rate:.2f} rows/s).",
+        file=sys.stderr,
+    )
+    if failed <= 0:
+        return
+
+    classes = stats.get("prep_error_classes", {})
+    if not isinstance(classes, Mapping) or not classes:
+        return
+
+    top = sorted(classes.items(), key=lambda item: int(item[1]), reverse=True)[:5]
+    summary = ", ".join(f"{name}={count}" for name, count in top)
+    print(f"Prep failures by error type: {summary}", file=sys.stderr)
 
 
 def parse_args() -> argparse.Namespace:
@@ -125,6 +219,7 @@ def _resolve_prepared_rows(
     cfg: GlobalConfig,
     args: argparse.Namespace,
     eval_cfg: Mapping[str, Any],
+    show_progress: bool,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     dataset_cfg = _as_mapping(eval_cfg.get("dataset", {}))
     generation_cfg = _as_mapping(eval_cfg.get("generation", {}))
@@ -160,22 +255,36 @@ def _resolve_prepared_rows(
 
     if reuse_prepared and prepared_path and prepared_path.exists():
         rows = load_prepared_rows(prepared_path)
+        manifest.update(_prep_stats(rows, elapsed_seconds=0.0))
         manifest["prepared_source"] = "existing"
         return rows, manifest
 
     raw_examples = load_raw_examples(dataset_path)
     container = build_container(cfg)
+    prep_renderer = _PrepProgressRenderer() if show_progress else None
+    prep_started_at = time.perf_counter()
 
-    rows = build_prepared_rows(
-        raw_examples=raw_examples,
-        pipeline=container.pipeline,
-        query_field=query_field,
-        reference_field=reference_field,
-        id_field=id_field,
-        generation_workers=max(1, generation_workers),
-        llm_generate_overrides=_as_mapping(generation_cfg.get("llm_generate", {})),
-        raise_exceptions=_as_bool(generation_cfg.get("raise_exceptions"), False),
-    )
+    try:
+        rows = build_prepared_rows(
+            raw_examples=raw_examples,
+            pipeline=container.pipeline,
+            query_field=query_field,
+            reference_field=reference_field,
+            id_field=id_field,
+            generation_workers=max(1, generation_workers),
+            llm_generate_overrides=_as_mapping(generation_cfg.get("llm_generate", {})),
+            raise_exceptions=_as_bool(generation_cfg.get("raise_exceptions"), False),
+            progress_callback=prep_renderer.update if prep_renderer else None,
+        )
+    finally:
+        if prep_renderer:
+            prep_renderer.finish()
+
+    prep_elapsed = max(0.0, time.perf_counter() - prep_started_at)
+    prep_stats = _prep_stats(rows, elapsed_seconds=prep_elapsed)
+    manifest.update(prep_stats)
+    if show_progress:
+        _print_prep_summary(prep_stats)
 
     if prepared_path:
         persisted = persist_prepared_rows(rows, prepared_path)
@@ -187,6 +296,8 @@ def _resolve_prepared_rows(
 
 def main() -> None:
     args = parse_args()
+    show_progress = not args.no_progress
+    from polaris_rag.evaluation.evaluator import Evaluator, write_outputs
 
     cfg = GlobalConfig.load(args.config_file)
     eval_cfg = _as_mapping(_as_mapping(cfg.raw).get("evaluation", {}))
@@ -195,6 +306,7 @@ def main() -> None:
         cfg=cfg,
         args=args,
         eval_cfg=eval_cfg,
+        show_progress=show_progress,
     )
 
     dataset = to_evaluation_dataset(prepared_rows)
@@ -206,7 +318,6 @@ def main() -> None:
     )
 
     tune_concurrency = not args.no_tune_concurrency
-    show_progress = not args.no_progress
 
     result = evaluator.evaluate(
         dataset=dataset,
