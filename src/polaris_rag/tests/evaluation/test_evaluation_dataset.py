@@ -2,6 +2,7 @@ import json
 
 from polaris_rag.evaluation.evaluation_dataset import (
     build_prepared_rows,
+    build_prepared_rows_from_api,
     load_raw_examples,
 )
 
@@ -55,3 +56,59 @@ def test_build_prepared_rows_maps_query_and_expected_answer() -> None:
     assert [row["response"] for row in rows] == ["resp::Q1", "resp::Q2"]
     assert rows[0]["retrieved_contexts"] == ["ctx-1", "ctx-2"]
     assert rows[0]["retrieved_context_ids"] == ["doc-1", "doc-2"]
+
+
+def test_build_prepared_rows_from_api_maps_answer_and_context() -> None:
+    raw_examples = [
+        {"id": "ex-1", "query": "Q1", "expected_answer": "A1"},
+        {"id": "ex-2", "query": "Q2", "expected_answer": "A2"},
+    ]
+
+    def requester(api_url: str, query: str, timeout: float, headers):  # noqa: ANN001, ANN202
+        assert api_url == "http://127.0.0.1:8000/v1/query"
+        assert timeout == 30.0
+        assert headers == {"X-Test": "1"}
+        return {
+            "answer": f"ans::{query}",
+            "context": [
+                {"doc_id": "doc-1", "text": "ctx-1"},
+                {"doc_id": "doc-2", "text": "ctx-2"},
+            ],
+        }
+
+    rows = build_prepared_rows_from_api(
+        raw_examples=raw_examples,
+        api_url="http://127.0.0.1:8000/v1/query",
+        generation_workers=2,
+        timeout_seconds=30.0,
+        headers={"X-Test": "1"},
+        requester=requester,
+    )
+
+    assert [row["id"] for row in rows] == ["ex-1", "ex-2"]
+    assert [row["user_input"] for row in rows] == ["Q1", "Q2"]
+    assert [row["reference"] for row in rows] == ["A1", "A2"]
+    assert [row["response"] for row in rows] == ["ans::Q1", "ans::Q2"]
+    assert rows[0]["retrieved_contexts"] == ["ctx-1", "ctx-2"]
+    assert rows[0]["retrieved_context_ids"] == ["doc-1", "doc-2"]
+
+
+def test_build_prepared_rows_from_api_fail_soft_captures_source_error() -> None:
+    raw_examples = [{"id": "ex-1", "query": "Q1", "expected_answer": "A1"}]
+
+    def failing_requester(api_url: str, query: str, timeout: float, headers):  # noqa: ANN001, ANN202
+        raise RuntimeError("boom")
+
+    rows = build_prepared_rows_from_api(
+        raw_examples=raw_examples,
+        api_url="http://127.0.0.1:8000/v1/query",
+        raise_exceptions=False,
+        requester=failing_requester,
+    )
+
+    assert len(rows) == 1
+    assert rows[0]["response"] == ""
+    assert rows[0]["retrieved_contexts"] == []
+    assert rows[0]["retrieved_context_ids"] == []
+    assert "source_error" in rows[0]["metadata"]
+    assert "boom" in rows[0]["metadata"]["source_error"]
