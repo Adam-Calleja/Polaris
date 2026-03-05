@@ -117,6 +117,10 @@ evaluation:
     id_field: "id"
 
   generation:
+    mode: "pipeline"  # "pipeline" (in-process) or "api" (/v1/query endpoint)
+    api_url: "http://127.0.0.1:8000/v1/query"
+    api_timeout: 120
+    api_headers: {}
     workers: 1
     raise_exceptions: false
     llm_generate: {}
