@@ -105,6 +105,22 @@ You can also run the modern RAGAS evaluation pipeline from CLI:
 polaris-eval -c config/config.yaml
 ```
 
+By default, evaluation row preparation uses the in-process pipeline. To prepare
+rows using the production-like API path, set:
+
+```yaml
+evaluation:
+  generation:
+    mode: "api"
+    api_url: "http://127.0.0.1:8000/v1/query"
+```
+
+You can also override this at runtime:
+
+```bash
+polaris-eval -c config/config.yaml --generation-mode api --query-api-url http://127.0.0.1:8000/v1/query
+```
+
 Key outputs are written under `evaluation.output_dir` (or `--output-dir`):
 - `scores.csv`
 - `scores.parquet`
