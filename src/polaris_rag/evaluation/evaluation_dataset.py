@@ -15,17 +15,33 @@ Preparation executes the Polaris RAG pipeline to generate:
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import dataclass
 import json
 from pathlib import Path
+import time
 from typing import TYPE_CHECKING, Any, Callable, Iterable, Mapping
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-
-ApiRequester = Callable[[str, str, float, Mapping[str, str] | None], dict[str, Any]]
-
 if TYPE_CHECKING:
     from ragas import EvaluationDataset
+
+
+@dataclass(frozen=True)
+class PrepProgressEvent:
+    """Progress snapshot emitted while preparing rows."""
+
+    completed: int
+    total: int
+    successes: int
+    failures: int
+    elapsed_seconds: float
+    mode: str
+    last_error: str | None = None
+
+
+PrepProgressCallback = Callable[[PrepProgressEvent], None]
+ApiRequester = Callable[[str, str, float, Mapping[str, str] | None], dict[str, Any]]
 
 
 def _extract_doc_id(node: Any) -> str:
@@ -314,6 +330,42 @@ def _prepare_one_via_api(
         return index, row
 
 
+def _error_text_from_exception(exc: Exception) -> str:
+    return f"{type(exc).__name__}: {exc}"
+
+
+def _row_has_source_error(row: dict[str, Any]) -> bool:
+    metadata = row.get("metadata")
+    return isinstance(metadata, Mapping) and bool(metadata.get("source_error"))
+
+
+def _emit_progress(
+    *,
+    callback: PrepProgressCallback | None,
+    mode: str,
+    completed: int,
+    total: int,
+    successes: int,
+    failures: int,
+    started_at: float,
+    last_error: str | None = None,
+) -> None:
+    if callback is None:
+        return
+
+    callback(
+        PrepProgressEvent(
+            completed=completed,
+            total=total,
+            successes=successes,
+            failures=failures,
+            elapsed_seconds=max(0.0, time.perf_counter() - started_at),
+            mode=mode,
+            last_error=last_error,
+        )
+    )
+
+
 def build_prepared_rows(
     *,
     raw_examples: list[dict[str, Any]],
@@ -324,6 +376,7 @@ def build_prepared_rows(
     generation_workers: int = 1,
     llm_generate_overrides: dict[str, Any] | None = None,
     raise_exceptions: bool = False,
+    progress_callback: PrepProgressCallback | None = None,
 ) -> list[dict[str, Any]]:
     """Convert raw examples into rows compatible with ``EvaluationDataset``.
 
@@ -338,12 +391,47 @@ def build_prepared_rows(
     """
 
     workers = max(1, int(generation_workers))
+    total = len(raw_examples)
+    completed = 0
+    successes = 0
+    failures = 0
+    started_at = time.perf_counter()
     indexed_rows: list[tuple[int, dict[str, Any]]] = []
+
+    def _record_progress(row: dict[str, Any], *, last_error: str | None = None) -> None:
+        nonlocal completed, successes, failures
+        completed += 1
+        if _row_has_source_error(row) or last_error:
+            failures += 1
+        else:
+            successes += 1
+        _emit_progress(
+            callback=progress_callback,
+            mode="pipeline",
+            completed=completed,
+            total=total,
+            successes=successes,
+            failures=failures,
+            started_at=started_at,
+            last_error=last_error,
+        )
+
+    if total == 0:
+        _emit_progress(
+            callback=progress_callback,
+            mode="pipeline",
+            completed=0,
+            total=0,
+            successes=0,
+            failures=0,
+            started_at=started_at,
+        )
+        return []
 
     if workers == 1:
         for i, example in enumerate(raw_examples):
-            indexed_rows.append(
-                _prepare_one(
+            try:
+                row = _prepare_one(
                     i,
                     example,
                     pipeline=pipeline,
@@ -353,7 +441,11 @@ def build_prepared_rows(
                     llm_generate_overrides=llm_generate_overrides,
                     raise_exceptions=raise_exceptions,
                 )
-            )
+            except Exception as exc:
+                _record_progress({}, last_error=_error_text_from_exception(exc))
+                raise
+            indexed_rows.append(row)
+            _record_progress(row[1])
     else:
         with ThreadPoolExecutor(max_workers=workers) as pool:
             futures = [
@@ -371,7 +463,13 @@ def build_prepared_rows(
                 for i, example in enumerate(raw_examples)
             ]
             for future in as_completed(futures):
-                indexed_rows.append(future.result())
+                try:
+                    row = future.result()
+                except Exception as exc:
+                    _record_progress({}, last_error=_error_text_from_exception(exc))
+                    raise
+                indexed_rows.append(row)
+                _record_progress(row[1])
 
     indexed_rows.sort(key=lambda x: x[0])
     return [row for _, row in indexed_rows]
@@ -389,17 +487,53 @@ def build_prepared_rows_from_api(
     timeout_seconds: float = 120.0,
     headers: Mapping[str, str] | None = None,
     requester: ApiRequester | None = None,
+    progress_callback: PrepProgressCallback | None = None,
 ) -> list[dict[str, Any]]:
     """Convert raw examples into prepared rows by calling Polaris query API."""
 
     workers = max(1, int(generation_workers))
+    total = len(raw_examples)
+    completed = 0
+    successes = 0
+    failures = 0
+    started_at = time.perf_counter()
     indexed_rows: list[tuple[int, dict[str, Any]]] = []
     effective_requester = requester or _post_query_api
 
+    def _record_progress(row: dict[str, Any], *, last_error: str | None = None) -> None:
+        nonlocal completed, successes, failures
+        completed += 1
+        if _row_has_source_error(row) or last_error:
+            failures += 1
+        else:
+            successes += 1
+        _emit_progress(
+            callback=progress_callback,
+            mode="api",
+            completed=completed,
+            total=total,
+            successes=successes,
+            failures=failures,
+            started_at=started_at,
+            last_error=last_error,
+        )
+
+    if total == 0:
+        _emit_progress(
+            callback=progress_callback,
+            mode="api",
+            completed=0,
+            total=0,
+            successes=0,
+            failures=0,
+            started_at=started_at,
+        )
+        return []
+
     if workers == 1:
         for i, example in enumerate(raw_examples):
-            indexed_rows.append(
-                _prepare_one_via_api(
+            try:
+                row = _prepare_one_via_api(
                     i,
                     example,
                     api_url=api_url,
@@ -411,7 +545,11 @@ def build_prepared_rows_from_api(
                     headers=headers,
                     requester=effective_requester,
                 )
-            )
+            except Exception as exc:
+                _record_progress({}, last_error=_error_text_from_exception(exc))
+                raise
+            indexed_rows.append(row)
+            _record_progress(row[1])
     else:
         with ThreadPoolExecutor(max_workers=workers) as pool:
             futures = [
@@ -431,7 +569,13 @@ def build_prepared_rows_from_api(
                 for i, example in enumerate(raw_examples)
             ]
             for future in as_completed(futures):
-                indexed_rows.append(future.result())
+                try:
+                    row = future.result()
+                except Exception as exc:
+                    _record_progress({}, last_error=_error_text_from_exception(exc))
+                    raise
+                indexed_rows.append(row)
+                _record_progress(row[1])
 
     indexed_rows.sort(key=lambda x: x[0])
     return [row for _, row in indexed_rows]
@@ -446,6 +590,9 @@ def to_evaluation_dataset(rows: list[dict[str, Any]]) -> "EvaluationDataset":
 
 
 __all__ = [
+    "ApiRequester",
+    "PrepProgressCallback",
+    "PrepProgressEvent",
     "build_prepared_rows",
     "build_prepared_rows_from_api",
     "load_prepared_rows",
