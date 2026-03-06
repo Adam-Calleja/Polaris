@@ -296,7 +296,22 @@ def _start_run(
     }
     filtered = _filter_supported_kwargs(start_run, kwargs)
 
-    with start_run(**filtered) as run:
+    try:
+        with start_run(**filtered) as run:
+            yield run
+        return
+    except Exception as exc:
+        message = str(exc).lower()
+        if not log_system_metrics or "psutil" not in message:
+            raise
+
+    logger.warning(
+        "MLflow system metrics requested but psutil is unavailable. "
+        "Retrying run start with system metrics disabled."
+    )
+    fallback_kwargs = dict(filtered)
+    fallback_kwargs["log_system_metrics"] = False
+    with start_run(**fallback_kwargs) as run:
         yield run
 
 
