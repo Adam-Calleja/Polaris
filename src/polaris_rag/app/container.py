@@ -126,10 +126,36 @@ class PolarisContainer:
         Any
             A :class:`polaris_rag.generation.prompt_builder.PromptBuilder` instance.
         """
+        from polaris_rag.generation.mlflow_prompt_registry import (
+            load_prompt_template_from_registry,
+            resolve_prompt_registry_config,
+        )
         from polaris_rag.generation.prompt_builder import PromptBuilder
+        from polaris_rag.observability.mlflow_tracking import load_mlflow_runtime_config
+
+        builder = PromptBuilder()
+        raw = _as_mapping(getattr(self.config, "raw", {}))
+
+        prompt_registry_cfg = resolve_prompt_registry_config(raw)
+        if prompt_registry_cfg.enabled:
+            registry_name = prompt_registry_cfg.name or str(raw.get("prompt_name", "")).strip()
+            if not registry_name:
+                raise ValueError(
+                    "MLflow prompt registry is enabled but no prompt name was configured. "
+                    "Set mlflow.prompt_registry.name or prompt_name in config."
+                )
+
+            tracking_cfg = load_mlflow_runtime_config(self.config)
+            prompt_data = load_prompt_template_from_registry(
+                tracking_uri=tracking_cfg.tracking_uri,
+                prompt_name=registry_name,
+                alias=prompt_registry_cfg.alias,
+                local_prompt_name=registry_name,
+            )
+            builder.register_from_dict(prompt_data)
+            return builder
 
         prompts = getattr(self.config, "prompts", None)
-        builder = PromptBuilder()
 
         if prompts is None:
             return builder
@@ -174,6 +200,28 @@ class PolarisContainer:
             If no ``prompt_name`` is configured, or if the configured prompt
             name is not registered.
         """
+        from polaris_rag.generation.mlflow_prompt_registry import resolve_prompt_registry_config
+
+        raw = _as_mapping(getattr(self.config, "raw", {}))
+        prompt_registry_cfg = resolve_prompt_registry_config(raw)
+
+        if prompt_registry_cfg.enabled:
+            resolved_name = prompt_registry_cfg.name or str(raw.get("prompt_name", "")).strip()
+            if not resolved_name:
+                raise ValueError(
+                    "MLflow prompt registry is enabled but no prompt name was configured. "
+                    "Set mlflow.prompt_registry.name or prompt_name in config."
+                )
+
+            if not self.prompt_builder.has_prompt(resolved_name):
+                available = ", ".join(self.prompt_builder.list_prompts())
+                raise ValueError(
+                    f"Registry prompt {resolved_name!r} was not loaded into prompt builder. "
+                    f"Available: [{available}]"
+                )
+
+            return resolved_name
+
         prompt_name = getattr(self.config, "prompt_name", None)
         if prompt_name is None:
             raise ValueError("No prompt_name configured in config; cannot proceed.")

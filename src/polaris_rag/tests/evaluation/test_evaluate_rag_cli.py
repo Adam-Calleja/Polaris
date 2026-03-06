@@ -164,3 +164,62 @@ def test_resolve_prepared_rows_passes_retry_policy(monkeypatch, tmp_path) -> Non
     assert policy is not None
     assert policy.max_attempts == 3
     assert manifest["generation_retries"]["max_attempts"] == 3
+
+
+def test_resolve_prepared_rows_merges_extra_api_headers(monkeypatch, tmp_path) -> None:
+    dataset_path = tmp_path / "dataset.jsonl"
+    dataset_path.write_text('{"id":"1","query":"Q1","expected_answer":"A1"}\n', encoding="utf-8")
+    seen_headers: list[object] = []
+
+    def _capture_build_prepared_rows_from_api(**kwargs):  # noqa: ANN003
+        seen_headers.append(kwargs.get("headers"))
+        return [
+            {
+                "id": "row-1",
+                "user_input": "Q1",
+                "reference": "A1",
+                "response": "R1",
+                "retrieved_contexts": ["ctx-1"],
+                "retrieved_context_ids": ["doc-1"],
+                "metadata": {},
+            }
+        ]
+
+    monkeypatch.setattr(
+        evaluate_rag,
+        "build_prepared_rows_from_api",
+        _capture_build_prepared_rows_from_api,
+    )
+
+    args = Namespace(
+        dataset_path=str(dataset_path),
+        prepared_path=None,
+        reuse_prepared=False,
+        generation_workers=1,
+        generation_max_attempts=None,
+        generation_retry_initial_backoff=None,
+        generation_retry_max_backoff=None,
+        generation_retry_jitter=None,
+        generation_retry_on_empty_response=None,
+        generation_mode="api",
+        query_api_url="http://127.0.0.1:8000/v1/query",
+        query_api_timeout=30.0,
+    )
+
+    _, manifest = evaluate_rag._resolve_prepared_rows(
+        cfg=object(),  # type: ignore[arg-type]
+        args=args,
+        eval_cfg={
+            "dataset": {},
+            "generation": {"workers": 1, "api_headers": {"X-Base": "1"}},
+        },
+        show_progress=False,
+        extra_api_headers={"X-Polaris-MLflow-Run-ID": "run-123"},
+    )
+
+    assert seen_headers
+    assert seen_headers[-1] == {
+        "X-Base": "1",
+        "X-Polaris-MLflow-Run-ID": "run-123",
+    }
+    assert "query_api_header_keys" in manifest

@@ -5,6 +5,8 @@ from __future__ import annotations
 import argparse
 from collections import Counter
 from datetime import datetime
+import json
+import math
 from pathlib import Path
 import sys
 import time
@@ -21,6 +23,11 @@ from polaris_rag.evaluation.evaluation_dataset import (
     load_raw_examples,
     persist_prepared_rows,
     to_evaluation_dataset,
+)
+from polaris_rag.observability.mlflow_tracking import (
+    EvaluationTrackingContext,
+    build_environment_snapshot,
+    load_mlflow_runtime_config,
 )
 
 
@@ -254,6 +261,25 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Disable progress bars",
     )
+    parser.add_argument(
+        "--mlflow",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help=(
+            "Enable or disable MLflow tracking for this evaluation run. "
+            "Overrides mlflow.enabled from config."
+        ),
+    )
+    parser.add_argument(
+        "--mlflow-experiment",
+        default=None,
+        help="Override MLflow experiment name for this run.",
+    )
+    parser.add_argument(
+        "--mlflow-run-name",
+        default=None,
+        help="Optional MLflow run name for the parent evaluation run.",
+    )
 
     return parser.parse_args()
 
@@ -316,6 +342,7 @@ def _resolve_prepared_rows(
     args: argparse.Namespace,
     eval_cfg: Mapping[str, Any],
     show_progress: bool,
+    extra_api_headers: Mapping[str, str] | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     dataset_cfg = _as_mapping(eval_cfg.get("dataset", {}))
     generation_cfg = _as_mapping(eval_cfg.get("generation", {}))
@@ -388,6 +415,12 @@ def _resolve_prepared_rows(
                 if getattr(args, "query_api_timeout", None) is not None
                 else _as_float(generation_cfg.get("api_timeout"), 120.0)
             )
+            api_headers = {
+                str(k): str(v)
+                for k, v in _as_mapping(generation_cfg.get("api_headers", {})).items()
+            }
+            if extra_api_headers:
+                api_headers.update({str(k): str(v) for k, v in extra_api_headers.items()})
 
             rows = build_prepared_rows_from_api(
                 raw_examples=raw_examples,
@@ -398,12 +431,13 @@ def _resolve_prepared_rows(
                 generation_workers=max(1, generation_workers),
                 raise_exceptions=raise_exceptions,
                 timeout_seconds=timeout_seconds,
-                headers=_as_mapping(generation_cfg.get("api_headers", {})),
+                headers=api_headers,
                 retry_policy=retry_policy,
                 progress_callback=prep_renderer.update if prep_renderer else None,
             )
             manifest["query_api_url"] = api_url
             manifest["query_api_timeout"] = timeout_seconds
+            manifest["query_api_header_keys"] = sorted(api_headers.keys())
         else:
             container = build_container(cfg)
             rows = build_prepared_rows(
@@ -436,6 +470,76 @@ def _resolve_prepared_rows(
     return rows, manifest
 
 
+def _collect_quality_metric_aggregates(result: Any) -> dict[str, float]:
+    metrics: dict[str, float] = {}
+
+    scores_df = getattr(result, "scores_df", None)
+    selected_metrics = list(getattr(result, "selected_metrics", []))
+    if scores_df is None or not selected_metrics:
+        return metrics
+
+    for metric_name in selected_metrics:
+        if metric_name not in scores_df.columns:
+            continue
+
+        numeric_values: list[float] = []
+        for value in scores_df[metric_name].tolist():
+            if isinstance(value, bool):
+                numeric_values.append(float(int(value)))
+                continue
+            if isinstance(value, (int, float)):
+                casted = float(value)
+                if math.isfinite(casted):
+                    numeric_values.append(casted)
+
+        if not numeric_values:
+            continue
+
+        mean_value = sum(numeric_values) / len(numeric_values)
+        variance = sum((x - mean_value) ** 2 for x in numeric_values) / len(numeric_values)
+
+        metrics[f"quality.mean.{metric_name}"] = float(mean_value)
+        metrics[f"quality.std.{metric_name}"] = float(math.sqrt(variance))
+        metrics[f"quality.min.{metric_name}"] = float(min(numeric_values))
+        metrics[f"quality.max.{metric_name}"] = float(max(numeric_values))
+
+    return metrics
+
+
+def _collect_system_metrics(
+    *,
+    result: Any,
+    dataset_manifest: Mapping[str, Any],
+    tune_concurrency: bool,
+) -> dict[str, float]:
+    metrics: dict[str, float] = {
+        "system.eval.duration_seconds": float(getattr(result, "duration_seconds", 0.0)),
+        "system.eval.failure_rate": float(getattr(result, "failure_rate", 0.0)),
+        "system.eval.rows": float(len(getattr(result, "scores_df", []))),
+        "system.eval.selected_max_workers": float(getattr(result, "selected_max_workers", 0)),
+        "system.eval.batch_size": float(getattr(result, "batch_size", 0)),
+        "system.eval.skipped_metrics_count": float(len(getattr(result, "skipped_metrics", []))),
+        "system.eval.tuning_trial_count": float(len(getattr(result, "tuning_trials", []))),
+        "system.eval.tune_concurrency_enabled": 1.0 if tune_concurrency else 0.0,
+    }
+
+    prep_metric_keys = (
+        "prep_total_rows",
+        "prep_success_rows",
+        "prep_failed_rows",
+        "prep_elapsed_seconds",
+        "prep_rate_rows_per_second",
+    )
+    for key in prep_metric_keys:
+        value = dataset_manifest.get(key)
+        if isinstance(value, bool):
+            metrics[f"system.prep.{key}"] = float(int(value))
+        elif isinstance(value, (int, float)):
+            metrics[f"system.prep.{key}"] = float(value)
+
+    return metrics
+
+
 def main() -> None:
     args = parse_args()
     show_progress = not args.no_progress
@@ -443,42 +547,116 @@ def main() -> None:
 
     cfg = GlobalConfig.load(args.config_file)
     eval_cfg = _as_mapping(_as_mapping(cfg.raw).get("evaluation", {}))
+    output_dir = _resolve_output_dir(eval_cfg, args.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
 
-    prepared_rows, dataset_manifest = _resolve_prepared_rows(
-        cfg=cfg,
-        args=args,
-        eval_cfg=eval_cfg,
-        show_progress=show_progress,
+    tracking_cfg = load_mlflow_runtime_config(cfg)
+    tracking = EvaluationTrackingContext(
+        tracking_cfg,
+        enabled_override=getattr(args, "mlflow", None),
+        experiment_override=getattr(args, "mlflow_experiment", None),
     )
 
-    dataset = to_evaluation_dataset(prepared_rows)
-
+    config_file = Path(args.config_file).expanduser().resolve()
     requested_metrics = _parse_metrics(args.metrics)
-    evaluator = Evaluator.from_global_config(
-        cfg,
-        requested_metrics=requested_metrics,
-    )
-
     tune_concurrency = not args.no_tune_concurrency
 
-    result = evaluator.evaluate(
-        dataset=dataset,
-        source_rows=prepared_rows,
-        tune_concurrency=tune_concurrency,
-        show_progress=show_progress,
-    )
-
-    output_dir = _resolve_output_dir(eval_cfg, args.output_dir)
-
-    artifacts = write_outputs(
-        result=result,
-        output_dir=output_dir,
-        extra_manifest={
-            "config_file": str(Path(args.config_file).expanduser().resolve()),
-            "dataset": dataset_manifest,
-            "tune_concurrency": tune_concurrency,
+    with tracking.open(
+        run_name=getattr(args, "mlflow_run_name", None),
+        extra_tags={
+            "entrypoint": "polaris-eval",
+            "config_file": str(config_file),
         },
-    )
+        strict=True,
+    ):
+        tracking.log_flat_params(_as_mapping(cfg.raw), prefix="config")
+        tracking.log_params(
+            {
+                "input.config_file": str(config_file),
+                "input.output_dir": str(output_dir),
+                "runtime.show_progress": str(show_progress),
+                "runtime.tune_concurrency": str(tune_concurrency),
+            }
+        )
+        tracking.log_artifact(config_file, artifact_path="inputs")
+
+        with tracking.stage("dataset_preparation"):
+            prepared_rows, dataset_manifest = _resolve_prepared_rows(
+                cfg=cfg,
+                args=args,
+                eval_cfg=eval_cfg,
+                show_progress=show_progress,
+                extra_api_headers=tracking.trace_headers(),
+            )
+            tracking.log_flat_params(dataset_manifest, prefix="dataset")
+            tracking.log_metrics(
+                {
+                    "system.prep.prep_total_rows": dataset_manifest.get("prep_total_rows", 0),
+                    "system.prep.prep_success_rows": dataset_manifest.get("prep_success_rows", 0),
+                    "system.prep.prep_failed_rows": dataset_manifest.get("prep_failed_rows", 0),
+                    "system.prep.prep_elapsed_seconds": dataset_manifest.get("prep_elapsed_seconds", 0.0),
+                    "system.prep.prep_rate_rows_per_second": dataset_manifest.get("prep_rate_rows_per_second", 0.0),
+                }
+            )
+            tracking.log_json_artifact(
+                dataset_manifest,
+                output_path=output_dir / "dataset_manifest.json",
+                artifact_path="dataset",
+            )
+
+        dataset = to_evaluation_dataset(prepared_rows)
+        evaluator = Evaluator.from_global_config(
+            cfg,
+            requested_metrics=requested_metrics,
+        )
+
+        with tracking.stage("ragas_evaluation"):
+            result = evaluator.evaluate(
+                dataset=dataset,
+                source_rows=prepared_rows,
+                tune_concurrency=tune_concurrency,
+                show_progress=show_progress,
+            )
+            tracking.log_metrics(
+                _collect_system_metrics(
+                    result=result,
+                    dataset_manifest=dataset_manifest,
+                    tune_concurrency=tune_concurrency,
+                )
+            )
+            tracking.log_metrics(_collect_quality_metric_aggregates(result))
+
+        artifacts = write_outputs(
+            result=result,
+            output_dir=output_dir,
+            extra_manifest={
+                "config_file": str(config_file),
+                "dataset": dataset_manifest,
+                "tune_concurrency": tune_concurrency,
+                "mlflow_parent_run_id": tracking.run_id,
+            },
+        )
+
+        for artifact_path in artifacts.values():
+            tracking.log_artifact(artifact_path, artifact_path="outputs")
+
+        prepared_rows_path = output_dir / "prepared_rows.json"
+        prepared_rows_path.write_text(
+            json.dumps(prepared_rows, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        tracking.log_artifact(prepared_rows_path, artifact_path="outputs")
+
+        tracking.log_json_artifact(
+            build_environment_snapshot(),
+            output_path=output_dir / "env_snapshot.json",
+            artifact_path="outputs",
+        )
+        tracking.log_json_artifact(
+            _as_mapping(cfg.raw),
+            output_path=output_dir / "config_snapshot.json",
+            artifact_path="inputs",
+        )
 
     print("Evaluation complete.")
     print(f"Rows: {len(result.scores_df)}")

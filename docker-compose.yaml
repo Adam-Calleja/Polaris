@@ -1,4 +1,14 @@
 services:
+  mlflow:
+    build:
+      context: .
+      dockerfile: Dockerfile.mlflow
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./mlflow_backend:/mlflow/backend
+      - ./mlflow_artifacts:/mlflow/artifacts
+
   rag-api:
     build:
       context: .
@@ -9,6 +19,7 @@ services:
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - JIRA_API_TOKEN=${JIRA_API_TOKEN}
       - EMBED_API_BASE=http://embed:8081/v1
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
       # If you want to override API bases for LLM/embeddings inside Docker:
       # - LLM_API_BASE=http://llm:8080/v1
       # - EMBED_API_BASE=http://embed:8080/v1
@@ -22,6 +33,7 @@ services:
     depends_on:
       - qdrant
       - embed
+      - mlflow
 
   qdrant:
     image: qdrant/qdrant:v1.14.1
@@ -54,6 +66,24 @@ services:
       - ./hf_cache:/data/hf
     ports:
       - "8081:8081"
+
+  eval:
+    build:
+      context: .
+      dockerfile: Dockerfile.eval
+    environment:
+      - POLARIS_CONFIG=/app/config/config.yaml
+      - POLARIS_LLM_API_KEY=${POLARIS_LLM_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - EMBED_API_BASE=http://embed:8081/v1
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+    volumes:
+      - ./config:/app/config:ro
+      - ./data:/app/data
+    depends_on:
+      - rag-api
+      - embed
+      - mlflow
 
   streamlit:
     build:

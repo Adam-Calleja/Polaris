@@ -4,6 +4,8 @@ models/
 qdrant_data/
 qdrant_storage/
 persist/
+mlflow_backend/
+mlflow_artifacts/
 __pycache__/
 *.pt
 *.bin

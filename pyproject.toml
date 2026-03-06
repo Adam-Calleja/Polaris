@@ -67,6 +67,10 @@ eval = [
   "pyarrow>=15",
 ]
 
+tracking = [
+  "mlflow>=3.6,<4",
+]
+
 api = [
   "fastapi>=0.110",
   "uvicorn[standard]>=0.27",
@@ -78,6 +82,7 @@ api = [
 [project.scripts]
 polaris-ingest-jira = "polaris_rag.cli.ingest_jira_tickets:main"
 polaris-eval = "polaris_rag.cli.evaluate_rag:main"
+polaris-register-prompts-mlflow = "polaris_rag.cli.register_prompts_mlflow:main"
 
 [tool.setuptools]
 package-dir = { "" = "src" }
