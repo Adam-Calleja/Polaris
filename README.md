@@ -115,12 +115,29 @@ evaluation:
   generation:
     mode: "api"
     api_url: "http://127.0.0.1:8000/v1/query"
+    retries:
+      max_attempts: 1
+      initial_backoff_seconds: 1.0
+      max_backoff_seconds: 8.0
+      jitter_seconds: 0.25
+      retry_on_empty_response: true
 ```
 
 You can also override this at runtime:
 
 ```bash
 polaris-eval -c config/config.yaml --generation-mode api --query-api-url http://127.0.0.1:8000/v1/query
+```
+
+To enable retries during dataset preparation from CLI:
+
+```bash
+polaris-eval -c config/config.yaml \
+  --generation-max-attempts 3 \
+  --generation-retry-initial-backoff 1.0 \
+  --generation-retry-max-backoff 8.0 \
+  --generation-retry-jitter 0.25 \
+  --generation-retry-on-empty-response
 ```
 
 Key outputs are written under `evaluation.output_dir` (or `--output-dir`):

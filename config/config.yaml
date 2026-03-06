@@ -138,6 +138,12 @@ evaluation:
     api_timeout: 120
     api_headers: {}
     workers: 1
+    retries:
+      max_attempts: 1
+      initial_backoff_seconds: 1.0
+      max_backoff_seconds: 8.0
+      jitter_seconds: 0.25
+      retry_on_empty_response: true
     raise_exceptions: false
     llm_generate: {}
 
