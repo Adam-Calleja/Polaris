@@ -14,6 +14,7 @@ from polaris_rag.app.container import build_container
 from polaris_rag.config import GlobalConfig
 from polaris_rag.evaluation.evaluation_dataset import (
     PrepProgressEvent,
+    PrepRetryPolicy,
     build_prepared_rows,
     build_prepared_rows_from_api,
     load_prepared_rows,
@@ -184,6 +185,39 @@ def parse_args() -> argparse.Namespace:
         help="Override response-generation worker count while preparing dataset",
     )
     parser.add_argument(
+        "--generation-max-attempts",
+        type=int,
+        default=None,
+        help="Maximum retry attempts per row during generation (1 disables retries)",
+    )
+    parser.add_argument(
+        "--generation-retry-initial-backoff",
+        type=float,
+        default=None,
+        help="Initial backoff delay (seconds) before generation retries",
+    )
+    parser.add_argument(
+        "--generation-retry-max-backoff",
+        type=float,
+        default=None,
+        help="Maximum backoff delay (seconds) for generation retries",
+    )
+    parser.add_argument(
+        "--generation-retry-jitter",
+        type=float,
+        default=None,
+        help="Random jitter (seconds) added to generation retry delays",
+    )
+    parser.add_argument(
+        "--generation-retry-on-empty-response",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help=(
+            "Retry generation when response is empty. "
+            "Use --no-generation-retry-on-empty-response to disable."
+        ),
+    )
+    parser.add_argument(
         "--generation-mode",
         choices=("pipeline", "api"),
         default=None,
@@ -236,6 +270,46 @@ def _resolve_output_dir(eval_cfg: Mapping[str, Any], cli_value: str | None) -> P
     return (Path("data") / "eval_runs" / stamp).resolve()
 
 
+def _resolve_generation_retry_policy(
+    generation_cfg: Mapping[str, Any], args: argparse.Namespace
+) -> PrepRetryPolicy:
+    retry_cfg = _as_mapping(generation_cfg.get("retries", {}))
+
+    max_attempts = (
+        int(getattr(args, "generation_max_attempts"))
+        if getattr(args, "generation_max_attempts", None) is not None
+        else _as_int(retry_cfg.get("max_attempts"), 1)
+    )
+    initial_backoff_seconds = (
+        float(getattr(args, "generation_retry_initial_backoff"))
+        if getattr(args, "generation_retry_initial_backoff", None) is not None
+        else _as_float(retry_cfg.get("initial_backoff_seconds"), 1.0)
+    )
+    max_backoff_seconds = (
+        float(getattr(args, "generation_retry_max_backoff"))
+        if getattr(args, "generation_retry_max_backoff", None) is not None
+        else _as_float(retry_cfg.get("max_backoff_seconds"), 8.0)
+    )
+    jitter_seconds = (
+        float(getattr(args, "generation_retry_jitter"))
+        if getattr(args, "generation_retry_jitter", None) is not None
+        else _as_float(retry_cfg.get("jitter_seconds"), 0.25)
+    )
+    retry_on_empty_response = (
+        bool(getattr(args, "generation_retry_on_empty_response"))
+        if getattr(args, "generation_retry_on_empty_response", None) is not None
+        else _as_bool(retry_cfg.get("retry_on_empty_response"), True)
+    )
+
+    return PrepRetryPolicy(
+        max_attempts=max_attempts,
+        initial_backoff_seconds=initial_backoff_seconds,
+        max_backoff_seconds=max_backoff_seconds,
+        jitter_seconds=jitter_seconds,
+        retry_on_empty_response=retry_on_empty_response,
+    ).normalized()
+
+
 def _resolve_prepared_rows(
     *,
     cfg: GlobalConfig,
@@ -258,6 +332,7 @@ def _resolve_prepared_rows(
     query_field = str(dataset_cfg.get("query_field", "query"))
     reference_field = str(dataset_cfg.get("reference_field", "expected_answer"))
     id_field = str(dataset_cfg.get("id_field", "id"))
+    retry_policy = _resolve_generation_retry_policy(generation_cfg, args)
 
     generation_workers = (
         int(args.generation_workers)
@@ -278,6 +353,13 @@ def _resolve_prepared_rows(
         "id_field": id_field,
         "generation_workers": generation_workers,
         "generation_mode": generation_mode,
+        "generation_retries": {
+            "max_attempts": int(retry_policy.max_attempts),
+            "initial_backoff_seconds": float(retry_policy.initial_backoff_seconds),
+            "max_backoff_seconds": float(retry_policy.max_backoff_seconds),
+            "jitter_seconds": float(retry_policy.jitter_seconds),
+            "retry_on_empty_response": bool(retry_policy.retry_on_empty_response),
+        },
     }
 
     if reuse_prepared and prepared_path and prepared_path.exists():
@@ -317,6 +399,7 @@ def _resolve_prepared_rows(
                 raise_exceptions=raise_exceptions,
                 timeout_seconds=timeout_seconds,
                 headers=_as_mapping(generation_cfg.get("api_headers", {})),
+                retry_policy=retry_policy,
                 progress_callback=prep_renderer.update if prep_renderer else None,
             )
             manifest["query_api_url"] = api_url
@@ -332,6 +415,7 @@ def _resolve_prepared_rows(
                 generation_workers=max(1, generation_workers),
                 llm_generate_overrides=_as_mapping(generation_cfg.get("llm_generate", {})),
                 raise_exceptions=raise_exceptions,
+                retry_policy=retry_policy,
                 progress_callback=prep_renderer.update if prep_renderer else None,
             )
     finally:

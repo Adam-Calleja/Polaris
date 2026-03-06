@@ -18,6 +18,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 import json
 from pathlib import Path
+import random
 import time
 from typing import TYPE_CHECKING, Any, Callable, Iterable, Mapping
 from urllib.error import HTTPError, URLError
@@ -42,6 +43,81 @@ class PrepProgressEvent:
 
 PrepProgressCallback = Callable[[PrepProgressEvent], None]
 ApiRequester = Callable[[str, str, float, Mapping[str, str] | None], dict[str, Any]]
+
+
+@dataclass(frozen=True)
+class PrepRetryPolicy:
+    """Retry policy for per-row generation during dataset preparation."""
+
+    max_attempts: int = 1
+    initial_backoff_seconds: float = 1.0
+    max_backoff_seconds: float = 8.0
+    jitter_seconds: float = 0.25
+    retry_on_empty_response: bool = True
+
+    @classmethod
+    def from_value(cls, value: "PrepRetryPolicy | Mapping[str, Any] | None") -> "PrepRetryPolicy":
+        if isinstance(value, PrepRetryPolicy):
+            return cls(
+                max_attempts=value.max_attempts,
+                initial_backoff_seconds=value.initial_backoff_seconds,
+                max_backoff_seconds=value.max_backoff_seconds,
+                jitter_seconds=value.jitter_seconds,
+                retry_on_empty_response=value.retry_on_empty_response,
+            ).normalized()
+
+        if isinstance(value, Mapping):
+            return cls(
+                max_attempts=_to_int(value.get("max_attempts"), 1),
+                initial_backoff_seconds=_to_float(value.get("initial_backoff_seconds"), 1.0),
+                max_backoff_seconds=_to_float(value.get("max_backoff_seconds"), 8.0),
+                jitter_seconds=_to_float(value.get("jitter_seconds"), 0.25),
+                retry_on_empty_response=_to_bool(value.get("retry_on_empty_response"), True),
+            ).normalized()
+
+        return cls().normalized()
+
+    def normalized(self) -> "PrepRetryPolicy":
+        initial_backoff = max(0.0, float(self.initial_backoff_seconds))
+        max_backoff = max(0.0, float(self.max_backoff_seconds))
+        if max_backoff < initial_backoff:
+            max_backoff = initial_backoff
+
+        return PrepRetryPolicy(
+            max_attempts=max(1, int(self.max_attempts)),
+            initial_backoff_seconds=initial_backoff,
+            max_backoff_seconds=max_backoff,
+            jitter_seconds=max(0.0, float(self.jitter_seconds)),
+            retry_on_empty_response=bool(self.retry_on_empty_response),
+        )
+
+
+def _to_int(value: Any, default: int) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _to_float(value: Any, default: float) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _to_bool(value: Any, default: bool) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"1", "true", "yes", "y", "on"}:
+            return True
+        if normalized in {"0", "false", "no", "n", "off"}:
+            return False
+    return bool(value)
 
 
 def _extract_doc_id(node: Any) -> str:
@@ -339,6 +415,195 @@ def _row_has_source_error(row: dict[str, Any]) -> bool:
     return isinstance(metadata, Mapping) and bool(metadata.get("source_error"))
 
 
+def _source_error_text(row: dict[str, Any]) -> str | None:
+    metadata = row.get("metadata")
+    if not isinstance(metadata, Mapping):
+        return None
+    value = metadata.get("source_error")
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
+def _is_missing_query_source_error(source_error: str | None) -> bool:
+    return (source_error or "").strip().lower() == "missing query"
+
+
+def _is_missing_query_exception(exc: Exception) -> bool:
+    return isinstance(exc, ValueError) and str(exc).startswith("Missing query for example ")
+
+
+def _row_has_empty_response(row: dict[str, Any]) -> bool:
+    response = row.get("response")
+    return str(response or "").strip() == ""
+
+
+def _compute_retry_delay_seconds(policy: PrepRetryPolicy, attempt_number: int) -> float:
+    # Exponential backoff where attempt_number is 1-indexed.
+    expo = policy.initial_backoff_seconds * (2 ** max(0, attempt_number - 1))
+    base_delay = min(policy.max_backoff_seconds, expo)
+    jitter = random.uniform(0.0, policy.jitter_seconds) if policy.jitter_seconds > 0 else 0.0
+    return max(0.0, base_delay + jitter)
+
+
+def _sleep_before_retry(policy: PrepRetryPolicy, attempt_number: int) -> None:
+    delay_seconds = _compute_retry_delay_seconds(policy, attempt_number=attempt_number)
+    if delay_seconds > 0:
+        time.sleep(delay_seconds)
+
+
+def _fail_soft_empty_response_row(
+    *,
+    row: dict[str, Any],
+    message: str,
+    original_metadata: Any,
+) -> dict[str, Any]:
+    return {
+        "id": str(row.get("id", "") or ""),
+        "user_input": str(row.get("user_input", "") or ""),
+        "reference": str(row.get("reference", "") or ""),
+        "response": "",
+        "retrieved_contexts": list(row.get("retrieved_contexts", []) or []),
+        "retrieved_context_ids": list(row.get("retrieved_context_ids", []) or []),
+        "metadata": {
+            "source_error": message,
+            "original_metadata": original_metadata if original_metadata is not None else {},
+        },
+    }
+
+
+def _prepare_one_with_retries(
+    index: int,
+    example: dict[str, Any],
+    *,
+    pipeline: Any,
+    query_field: str,
+    reference_field: str,
+    id_field: str,
+    llm_generate_overrides: dict[str, Any] | None,
+    raise_exceptions: bool,
+    retry_policy: PrepRetryPolicy,
+) -> tuple[int, dict[str, Any]]:
+    policy = PrepRetryPolicy.from_value(retry_policy)
+    sample_id = str(example.get(id_field, f"row-{index}"))
+
+    for attempt in range(1, policy.max_attempts + 1):
+        try:
+            row_index, row = _prepare_one(
+                index,
+                example,
+                pipeline=pipeline,
+                query_field=query_field,
+                reference_field=reference_field,
+                id_field=id_field,
+                llm_generate_overrides=llm_generate_overrides,
+                raise_exceptions=raise_exceptions,
+            )
+        except Exception as exc:
+            if attempt >= policy.max_attempts:
+                raise
+            # Missing query is deterministic and should never be retried.
+            if _is_missing_query_exception(exc):
+                raise
+            _sleep_before_retry(policy, attempt_number=attempt)
+            continue
+
+        source_error = _source_error_text(row)
+        if source_error:
+            if _is_missing_query_source_error(source_error) or attempt >= policy.max_attempts:
+                return row_index, row
+            _sleep_before_retry(policy, attempt_number=attempt)
+            continue
+
+        if policy.retry_on_empty_response and _row_has_empty_response(row):
+            error_message = (
+                f"ValueError: response is empty after {attempt} attempt(s) "
+                f"for example index={index} id={sample_id}"
+            )
+            if attempt >= policy.max_attempts:
+                if raise_exceptions:
+                    raise ValueError(error_message)
+                return row_index, _fail_soft_empty_response_row(
+                    row=row,
+                    message=error_message,
+                    original_metadata=example.get("metadata", {}),
+                )
+            _sleep_before_retry(policy, attempt_number=attempt)
+            continue
+
+        return row_index, row
+
+    # Defensive fallback; loop always returns/raises.
+    raise RuntimeError("unreachable retry state in _prepare_one_with_retries")
+
+
+def _prepare_one_via_api_with_retries(
+    index: int,
+    example: dict[str, Any],
+    *,
+    api_url: str,
+    query_field: str,
+    reference_field: str,
+    id_field: str,
+    raise_exceptions: bool,
+    timeout_seconds: float,
+    headers: Mapping[str, str] | None,
+    requester: ApiRequester,
+    retry_policy: PrepRetryPolicy,
+) -> tuple[int, dict[str, Any]]:
+    policy = PrepRetryPolicy.from_value(retry_policy)
+    sample_id = str(example.get(id_field, f"row-{index}"))
+
+    for attempt in range(1, policy.max_attempts + 1):
+        try:
+            row_index, row = _prepare_one_via_api(
+                index,
+                example,
+                api_url=api_url,
+                query_field=query_field,
+                reference_field=reference_field,
+                id_field=id_field,
+                raise_exceptions=raise_exceptions,
+                timeout_seconds=timeout_seconds,
+                headers=headers,
+                requester=requester,
+            )
+        except Exception as exc:
+            if _is_missing_query_exception(exc) or attempt >= policy.max_attempts:
+                raise
+            _sleep_before_retry(policy, attempt_number=attempt)
+            continue
+
+        source_error = _source_error_text(row)
+        if source_error:
+            if _is_missing_query_source_error(source_error) or attempt >= policy.max_attempts:
+                return row_index, row
+            _sleep_before_retry(policy, attempt_number=attempt)
+            continue
+
+        if policy.retry_on_empty_response and _row_has_empty_response(row):
+            error_message = (
+                f"ValueError: response is empty after {attempt} attempt(s) "
+                f"for example index={index} id={sample_id}"
+            )
+            if attempt >= policy.max_attempts:
+                if raise_exceptions:
+                    raise ValueError(error_message)
+                return row_index, _fail_soft_empty_response_row(
+                    row=row,
+                    message=error_message,
+                    original_metadata=example.get("metadata", {}),
+                )
+            _sleep_before_retry(policy, attempt_number=attempt)
+            continue
+
+        return row_index, row
+
+    # Defensive fallback; loop always returns/raises.
+    raise RuntimeError("unreachable retry state in _prepare_one_via_api_with_retries")
+
+
 def _emit_progress(
     *,
     callback: PrepProgressCallback | None,
@@ -376,6 +641,7 @@ def build_prepared_rows(
     generation_workers: int = 1,
     llm_generate_overrides: dict[str, Any] | None = None,
     raise_exceptions: bool = False,
+    retry_policy: PrepRetryPolicy | Mapping[str, Any] | None = None,
     progress_callback: PrepProgressCallback | None = None,
 ) -> list[dict[str, Any]]:
     """Convert raw examples into rows compatible with ``EvaluationDataset``.
@@ -391,6 +657,7 @@ def build_prepared_rows(
     """
 
     workers = max(1, int(generation_workers))
+    effective_retry_policy = PrepRetryPolicy.from_value(retry_policy)
     total = len(raw_examples)
     completed = 0
     successes = 0
@@ -431,7 +698,7 @@ def build_prepared_rows(
     if workers == 1:
         for i, example in enumerate(raw_examples):
             try:
-                row = _prepare_one(
+                row = _prepare_one_with_retries(
                     i,
                     example,
                     pipeline=pipeline,
@@ -440,6 +707,7 @@ def build_prepared_rows(
                     id_field=id_field,
                     llm_generate_overrides=llm_generate_overrides,
                     raise_exceptions=raise_exceptions,
+                    retry_policy=effective_retry_policy,
                 )
             except Exception as exc:
                 _record_progress({}, last_error=_error_text_from_exception(exc))
@@ -450,7 +718,7 @@ def build_prepared_rows(
         with ThreadPoolExecutor(max_workers=workers) as pool:
             futures = [
                 pool.submit(
-                    _prepare_one,
+                    _prepare_one_with_retries,
                     i,
                     example,
                     pipeline=pipeline,
@@ -459,6 +727,7 @@ def build_prepared_rows(
                     id_field=id_field,
                     llm_generate_overrides=llm_generate_overrides,
                     raise_exceptions=raise_exceptions,
+                    retry_policy=effective_retry_policy,
                 )
                 for i, example in enumerate(raw_examples)
             ]
@@ -487,11 +756,13 @@ def build_prepared_rows_from_api(
     timeout_seconds: float = 120.0,
     headers: Mapping[str, str] | None = None,
     requester: ApiRequester | None = None,
+    retry_policy: PrepRetryPolicy | Mapping[str, Any] | None = None,
     progress_callback: PrepProgressCallback | None = None,
 ) -> list[dict[str, Any]]:
     """Convert raw examples into prepared rows by calling Polaris query API."""
 
     workers = max(1, int(generation_workers))
+    effective_retry_policy = PrepRetryPolicy.from_value(retry_policy)
     total = len(raw_examples)
     completed = 0
     successes = 0
@@ -533,7 +804,7 @@ def build_prepared_rows_from_api(
     if workers == 1:
         for i, example in enumerate(raw_examples):
             try:
-                row = _prepare_one_via_api(
+                row = _prepare_one_via_api_with_retries(
                     i,
                     example,
                     api_url=api_url,
@@ -544,6 +815,7 @@ def build_prepared_rows_from_api(
                     timeout_seconds=float(timeout_seconds),
                     headers=headers,
                     requester=effective_requester,
+                    retry_policy=effective_retry_policy,
                 )
             except Exception as exc:
                 _record_progress({}, last_error=_error_text_from_exception(exc))
@@ -554,7 +826,7 @@ def build_prepared_rows_from_api(
         with ThreadPoolExecutor(max_workers=workers) as pool:
             futures = [
                 pool.submit(
-                    _prepare_one_via_api,
+                    _prepare_one_via_api_with_retries,
                     i,
                     example,
                     api_url=api_url,
@@ -565,6 +837,7 @@ def build_prepared_rows_from_api(
                     timeout_seconds=float(timeout_seconds),
                     headers=headers,
                     requester=effective_requester,
+                    retry_policy=effective_retry_policy,
                 )
                 for i, example in enumerate(raw_examples)
             ]
@@ -593,6 +866,7 @@ __all__ = [
     "ApiRequester",
     "PrepProgressCallback",
     "PrepProgressEvent",
+    "PrepRetryPolicy",
     "build_prepared_rows",
     "build_prepared_rows_from_api",
     "load_prepared_rows",

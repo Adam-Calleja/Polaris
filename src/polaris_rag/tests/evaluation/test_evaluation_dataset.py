@@ -261,3 +261,160 @@ def test_build_prepared_rows_from_api_fail_soft_counts_failures() -> None:
     assert events[-1].failures == 1
     failing = [row for row in rows if row["id"] == "ex-2"][0]
     assert "source_error" in failing["metadata"]
+
+
+def test_build_prepared_rows_retries_fail_soft_then_succeeds() -> None:
+    raw_examples = [{"id": "ex-1", "query": "Q1", "expected_answer": "A1"}]
+    calls = {"count": 0}
+
+    class _RetryingPipeline:
+        def run(self, query: str, **kwargs):  # noqa: ANN001
+            calls["count"] += 1
+            if calls["count"] < 3:
+                raise RuntimeError("transient")
+            return {
+                "response": "final-response",
+                "source_nodes": [_Source(_Node("doc-1", "ctx-1"))],
+            }
+
+    rows = build_prepared_rows(
+        raw_examples=raw_examples,
+        pipeline=_RetryingPipeline(),
+        generation_workers=1,
+        raise_exceptions=False,
+        retry_policy={
+            "max_attempts": 3,
+            "initial_backoff_seconds": 0.0,
+            "max_backoff_seconds": 0.0,
+            "jitter_seconds": 0.0,
+            "retry_on_empty_response": True,
+        },
+    )
+
+    assert calls["count"] == 3
+    assert rows[0]["response"] == "final-response"
+    assert "source_error" not in rows[0]["metadata"]
+
+
+def test_build_prepared_rows_from_api_retries_fail_soft_then_succeeds() -> None:
+    raw_examples = [{"id": "ex-1", "query": "Q1", "expected_answer": "A1"}]
+    calls = {"count": 0}
+
+    def requester(api_url: str, query: str, timeout_seconds: float, headers):  # noqa: ANN001, ANN202
+        calls["count"] += 1
+        if calls["count"] < 3:
+            raise RuntimeError("transient-api")
+        return {
+            "answer": "final-answer",
+            "context": [{"doc_id": "doc-1", "text": "ctx-1"}],
+        }
+
+    rows = build_prepared_rows_from_api(
+        raw_examples=raw_examples,
+        api_url="http://unused.local/v1/query",
+        generation_workers=1,
+        raise_exceptions=False,
+        requester=requester,
+        retry_policy={
+            "max_attempts": 3,
+            "initial_backoff_seconds": 0.0,
+            "max_backoff_seconds": 0.0,
+            "jitter_seconds": 0.0,
+            "retry_on_empty_response": True,
+        },
+    )
+
+    assert calls["count"] == 3
+    assert rows[0]["response"] == "final-answer"
+    assert "source_error" not in rows[0]["metadata"]
+
+
+def test_build_prepared_rows_retries_on_empty_response_then_succeeds() -> None:
+    raw_examples = [{"id": "ex-1", "query": "Q1", "expected_answer": "A1"}]
+    calls = {"count": 0}
+
+    class _EmptyThenSuccessPipeline:
+        def run(self, query: str, **kwargs):  # noqa: ANN001
+            calls["count"] += 1
+            if calls["count"] == 1:
+                return {
+                    "response": "",
+                    "source_nodes": [_Source(_Node("doc-1", "ctx-1"))],
+                }
+            return {
+                "response": "non-empty",
+                "source_nodes": [_Source(_Node("doc-1", "ctx-1"))],
+            }
+
+    rows = build_prepared_rows(
+        raw_examples=raw_examples,
+        pipeline=_EmptyThenSuccessPipeline(),
+        generation_workers=1,
+        retry_policy={
+            "max_attempts": 2,
+            "initial_backoff_seconds": 0.0,
+            "max_backoff_seconds": 0.0,
+            "jitter_seconds": 0.0,
+            "retry_on_empty_response": True,
+        },
+    )
+
+    assert calls["count"] == 2
+    assert rows[0]["response"] == "non-empty"
+    assert "source_error" not in rows[0]["metadata"]
+
+
+def test_build_prepared_rows_exhausted_empty_response_sets_source_error() -> None:
+    raw_examples = [{"id": "ex-1", "query": "Q1", "expected_answer": "A1"}]
+
+    class _AlwaysEmptyPipeline:
+        def run(self, query: str, **kwargs):  # noqa: ANN001
+            return {
+                "response": "",
+                "source_nodes": [_Source(_Node("doc-1", "ctx-1"))],
+            }
+
+    rows = build_prepared_rows(
+        raw_examples=raw_examples,
+        pipeline=_AlwaysEmptyPipeline(),
+        generation_workers=1,
+        raise_exceptions=False,
+        retry_policy={
+            "max_attempts": 2,
+            "initial_backoff_seconds": 0.0,
+            "max_backoff_seconds": 0.0,
+            "jitter_seconds": 0.0,
+            "retry_on_empty_response": True,
+        },
+    )
+
+    assert rows[0]["response"] == ""
+    assert "source_error" in rows[0]["metadata"]
+    assert "response is empty after 2 attempt(s)" in rows[0]["metadata"]["source_error"]
+
+
+def test_build_prepared_rows_fail_fast_retries_then_raises() -> None:
+    raw_examples = [{"id": "ex-1", "query": "Q1", "expected_answer": "A1"}]
+    calls = {"count": 0}
+
+    class _AlwaysFailPipeline:
+        def run(self, query: str, **kwargs):  # noqa: ANN001
+            calls["count"] += 1
+            raise RuntimeError("always-fail")
+
+    with pytest.raises(RuntimeError, match="always-fail"):
+        build_prepared_rows(
+            raw_examples=raw_examples,
+            pipeline=_AlwaysFailPipeline(),
+            generation_workers=1,
+            raise_exceptions=True,
+            retry_policy={
+                "max_attempts": 3,
+                "initial_backoff_seconds": 0.0,
+                "max_backoff_seconds": 0.0,
+                "jitter_seconds": 0.0,
+                "retry_on_empty_response": True,
+            },
+        )
+
+    assert calls["count"] == 3

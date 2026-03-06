@@ -103,3 +103,64 @@ def test_resolve_prepared_rows_passes_progress_callback_when_enabled(
     assert seen_callbacks
     assert seen_callbacks[-1] is not None
 
+
+def test_resolve_generation_retry_policy_prefers_cli_overrides() -> None:
+    args = Namespace(
+        generation_max_attempts=4,
+        generation_retry_initial_backoff=0.5,
+        generation_retry_max_backoff=3.0,
+        generation_retry_jitter=0.1,
+        generation_retry_on_empty_response=False,
+    )
+
+    policy = evaluate_rag._resolve_generation_retry_policy(
+        {"retries": {"max_attempts": 2, "retry_on_empty_response": True}},
+        args,
+    )
+
+    assert policy.max_attempts == 4
+    assert policy.initial_backoff_seconds == 0.5
+    assert policy.max_backoff_seconds == 3.0
+    assert policy.jitter_seconds == 0.1
+    assert policy.retry_on_empty_response is False
+
+
+def test_resolve_prepared_rows_passes_retry_policy(monkeypatch, tmp_path) -> None:
+    dataset_path = tmp_path / "dataset.jsonl"
+    dataset_path.write_text('{"id":"1","query":"Q1","expected_answer":"A1"}\n', encoding="utf-8")
+    seen_retry_policies: list[object] = []
+
+    def _capture_build_prepared_rows(**kwargs):  # noqa: ANN003
+        seen_retry_policies.append(kwargs.get("retry_policy"))
+        return _fake_build_prepared_rows(**kwargs)
+
+    monkeypatch.setattr(evaluate_rag, "build_container", lambda cfg: _DummyContainer(pipeline=object()))
+    monkeypatch.setattr(evaluate_rag, "build_prepared_rows", _capture_build_prepared_rows)
+
+    args = Namespace(
+        dataset_path=str(dataset_path),
+        prepared_path=None,
+        reuse_prepared=False,
+        generation_workers=1,
+        generation_max_attempts=3,
+        generation_retry_initial_backoff=0.0,
+        generation_retry_max_backoff=0.0,
+        generation_retry_jitter=0.0,
+        generation_retry_on_empty_response=True,
+        generation_mode=None,
+        query_api_url=None,
+        query_api_timeout=None,
+    )
+
+    _, manifest = evaluate_rag._resolve_prepared_rows(
+        cfg=object(),  # type: ignore[arg-type]
+        args=args,
+        eval_cfg={"dataset": {}, "generation": {"workers": 1}},
+        show_progress=False,
+    )
+
+    assert seen_retry_policies
+    policy = seen_retry_policies[-1]
+    assert policy is not None
+    assert policy.max_attempts == 3
+    assert manifest["generation_retries"]["max_attempts"] == 3
