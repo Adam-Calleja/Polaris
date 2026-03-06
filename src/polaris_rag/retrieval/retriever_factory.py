@@ -22,6 +22,11 @@ from llama_index.core import StorageContext
 from polaris_rag.retrieval.retriever import VectorIndexRetriever, HybridRetriever
 from polaris_rag.retrieval.types import Retriever
 
+try:
+    from polaris_rag.retrieval.retriever import MultiCollectionRetriever
+except ImportError:  # Backward compatibility: older branches may not define this class.
+    MultiCollectionRetriever = None  # type: ignore[assignment]
+
 _BUILDERS: Dict[str, Callable[..., Retriever]] = {}
 
 def register(name: str):
@@ -129,13 +134,14 @@ def _build_hybrid(**kw) -> Retriever:
     return HybridRetriever(**kw)
 
 
-@register("multi_collection")
-def _build_multi_collection(**kw) -> Retriever:
-    """Build a multi-collection retriever.
+if MultiCollectionRetriever is not None:
+    @register("multi_collection")
+    def _build_multi_collection(**kw) -> Retriever:
+        """Build a multi-collection retriever.
 
-    Returns
-    -------
-    Retriever
-        Retriever that merges and reranks candidates from multiple sources.
-    """
-    return MultiCollectionRetriever(**kw)
+        Returns
+        -------
+        Retriever
+            Retriever that merges and reranks candidates from multiple sources.
+        """
+        return MultiCollectionRetriever(**kw)
