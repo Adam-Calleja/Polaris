@@ -36,11 +36,11 @@ evaluator_llm:
 
 embedder:
   type: "OpenAILike"
-  api_base: "http://127.0.0.1:8081/v1"
+  api_base: "${EMBED_API_BASE}"
   model_name: "Qwen/Qwen3-Embedding-8B"
   api_key: ""
-  timeout: 45
-  max_retries: 0
+  timeout: 300
+  max_retries: 3
   embed_batch_size: 1
   num_workers: 1
   model_kwargs: {}
@@ -48,13 +48,13 @@ embedder:
 vector_stores:
   docs:
     type: "qdrant"
-    host: "127.0.0.1"
+    host: "qdrant"
     port: 6333
     collection_name: "support_docs_qwen3_8b"
     token: null
   tickets:
     type: "qdrant"
-    host: "127.0.0.1"
+    host: "qdrant"
     port: 6333
     collection_name: "support_tickets_qwen3_8b"
     token: null
@@ -133,7 +133,7 @@ evaluation:
     id_field: "id"
 
   generation:
-    mode: "pipeline"  # "pipeline" (in-process) or "api" (/v1/query endpoint)
+    mode: "api"  # "pipeline" (in-process) or "api" (/v1/query endpoint)
     api_url: "http://127.0.0.1:8000/v1/query"
     api_timeout: 120
     api_headers: {}
@@ -158,8 +158,8 @@ evaluation:
     timeout: 120
     max_retries: 4
     max_wait: 30
-    max_workers: 4
-    batch_size: null
+    max_workers: 1
+    batch_size: 1
     log_tenacity: true
     seed: 42
     raise_exceptions: false
