@@ -73,7 +73,34 @@ def test_load_prompt_template_from_registry_uses_prompt_alias_uri(monkeypatch) -
     )
 
     assert fake_mlflow.tracking_uri_calls == ["http://mlflow:5000"]
-    assert fake_mlflow.genai.load_prompt_calls == ["prompts:/hpc_prompt/prod"]
+    assert fake_mlflow.genai.load_prompt_calls == ["prompts:/hpc_prompt@prod"]
+    assert loaded["name"] == "hpc_runtime_prompt"
+    assert "{{ question }}" in loaded["user"]
+
+
+def test_load_prompt_template_from_registry_falls_back_to_legacy_alias_uri(monkeypatch) -> None:
+    class _FallbackGenAI(_FakeGenAI):
+        def load_prompt(self, name_or_uri: str):
+            self.load_prompt_calls.append(name_or_uri)
+            if name_or_uri.endswith("@prod"):
+                raise ValueError("Unsupported alias URI format")
+            return _FakePrompt(template="Answer:\n{{ question }}")
+
+    fake_mlflow = _FakeMLflow()
+    fake_mlflow.genai = _FallbackGenAI()
+    monkeypatch.setattr(mlflow_prompt_registry, "_import_mlflow", lambda: fake_mlflow)
+
+    loaded = mlflow_prompt_registry.load_prompt_template_from_registry(
+        tracking_uri="http://mlflow:5000",
+        prompt_name="hpc_prompt",
+        alias="prod",
+        local_prompt_name="hpc_runtime_prompt",
+    )
+
+    assert fake_mlflow.genai.load_prompt_calls == [
+        "prompts:/hpc_prompt@prod",
+        "prompts:/hpc_prompt/prod",
+    ]
     assert loaded["name"] == "hpc_runtime_prompt"
     assert "{{ question }}" in loaded["user"]
 
@@ -128,7 +155,7 @@ def test_load_prompt_template_from_registry_fails_fast_on_missing_alias(monkeypa
     fake_mlflow.genai = _MissingAliasGenAI()
     monkeypatch.setattr(mlflow_prompt_registry, "_import_mlflow", lambda: fake_mlflow)
 
-    with pytest.raises(RuntimeError, match="alias not found"):
+    with pytest.raises(RuntimeError, match="Failed to load prompt"):
         mlflow_prompt_registry.load_prompt_template_from_registry(
             tracking_uri="http://mlflow:5000",
             prompt_name="hpc_prompt",

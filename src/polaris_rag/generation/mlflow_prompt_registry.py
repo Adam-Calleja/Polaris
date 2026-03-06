@@ -106,6 +106,36 @@ def _template_to_text(template: Any) -> str:
     return str(template)
 
 
+def _load_prompt_by_alias(
+    *,
+    load_prompt: Any,
+    prompt_name: str,
+    alias: str,
+) -> tuple[Any, str]:
+    """Load a prompt by alias with URI-format fallbacks.
+
+    Prefer the MLflow alias form ``prompts:/name@alias`` and fall back to the
+    legacy ``prompts:/name/alias`` format for compatibility.
+    """
+    alias_clean = str(alias).strip()
+    prompt_uris = [
+        f"prompts:/{prompt_name}@{alias_clean}",
+        f"prompts:/{prompt_name}/{alias_clean}",
+    ]
+
+    last_error: Exception | None = None
+    for prompt_uri in prompt_uris:
+        try:
+            return load_prompt(prompt_uri), prompt_uri
+        except Exception as exc:
+            last_error = exc
+
+    raise RuntimeError(
+        f"Failed to load prompt '{prompt_name}' with alias '{alias_clean}'. "
+        f"Tried URIs: {prompt_uris}"
+    ) from last_error
+
+
 def load_prompt_template_from_registry(
     *,
     tracking_uri: str | None,
@@ -133,13 +163,16 @@ def load_prompt_template_from_registry(
     if load_prompt is None:
         raise RuntimeError("Installed MLflow build does not expose mlflow.genai.load_prompt().")
 
-    prompt_uri = f"prompts:/{prompt_name}/{alias}"
-    prompt_obj = load_prompt(prompt_uri)
+    prompt_obj, resolved_prompt_uri = _load_prompt_by_alias(
+        load_prompt=load_prompt,
+        prompt_name=prompt_name,
+        alias=alias,
+    )
     template = getattr(prompt_obj, "template", prompt_obj)
     template_text = _template_to_text(template)
 
     if not template_text.strip():
-        raise ValueError(f"Prompt registry entry '{prompt_uri}' returned an empty template.")
+        raise ValueError(f"Prompt registry entry '{resolved_prompt_uri}' returned an empty template.")
 
     return {
         "name": local_prompt_name or prompt_name,
