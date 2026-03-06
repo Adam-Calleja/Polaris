@@ -134,7 +134,7 @@ evaluation:
 
   generation:
     mode: "api"  # "pipeline" (in-process) or "api" (/v1/query endpoint)
-    api_url: "http://127.0.0.1:8000/v1/query"
+    api_url: "http://rag-api:8000/v1/query"
     api_timeout: 120
     api_headers: {}
     workers: 1
@@ -182,3 +182,18 @@ evaluation:
   cache:
     enabled: false
     dir: ".cache/ragas_eval"
+
+mlflow:
+  enabled: true
+  tracking_uri: "${MLFLOW_TRACKING_URI}"
+  experiment_name: "polaris-rag-evals"
+  tags:
+    project: "polaris-rag"
+    owner: "ac2650"
+  tracing:
+    enabled: true
+    destination_experiment: "polaris-rag-traces"
+  prompt_registry:
+    enabled: true
+    name: "hpc_rag_assistant_ticket_refs"
+    alias: "prod"

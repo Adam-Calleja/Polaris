@@ -1,0 +1,23 @@
+FROM python:3.12-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    gcc \
+    g++ \
+    make \
+  && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY pyproject.toml ./
+COPY README.md ./
+COPY src/ ./src/
+COPY config/ /app/config/
+COPY scripts/ /app/scripts/
+
+RUN pip install --no-cache-dir -U pip \
+ && pip install --no-cache-dir ".[api,ingestion,eval,tracking]"
+
+ENV POLARIS_CONFIG=/app/config/config.yaml
+
+CMD ["polaris-eval", "-c", "/app/config/config.yaml", "--generation-mode", "api", "--query-api-url", "http://rag-api:8000/v1/query"]

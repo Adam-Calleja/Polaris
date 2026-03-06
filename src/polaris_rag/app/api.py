@@ -1,13 +1,20 @@
 # polaris_rag/app/api.py
 from __future__ import annotations
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel, Field
 from polaris_rag.config import GlobalConfig
 from polaris_rag.app.container import build_container
 import logging
 import traceback
 from typing import Any
+from polaris_rag.observability.mlflow_tracking import (
+    TRACE_PARENT_RUN_HEADER,
+    configure_mlflow_runtime,
+    load_mlflow_runtime_config,
+    set_span_outputs,
+    start_span,
+)
 
 app = FastAPI(title="Polaris RAG API", version="0.1.0")
 logger = logging.getLogger("polaris_rag.api")
@@ -88,6 +95,8 @@ def startup():
     import os
     cfg_path = os.environ.get("POLARIS_CONFIG", "/app/config/config.yaml")
     cfg = GlobalConfig.load(cfg_path)
+    runtime_tracking_cfg = load_mlflow_runtime_config(cfg)
+    configure_mlflow_runtime(runtime_tracking_cfg, strict=True)
     app.state.container = build_container(cfg)
 
 @app.get("/health")
@@ -95,13 +104,33 @@ def health():
     return {"status": "ok"}
 
 @app.post("/v1/query", response_model=QueryResponse)
-def query(req: QueryRequest):
+def query(req: QueryRequest, request: Request):
+    parent_run_id = request.headers.get(TRACE_PARENT_RUN_HEADER)
+    trace_tags = {"mlflow.parent_run_id": str(parent_run_id)} if parent_run_id else None
+    trace_span = None
+
     try:
-        result = app.state.container.pipeline.run(req.query)
-        answer = str(result.get("response", ""))
-        context = _serialize_context(result.get("source_nodes", []))
-        return QueryResponse(answer=answer, context=context)
+        with start_span(
+            "api.v1.query",
+            inputs={"query": req.query},
+            attributes={"http.route": "/v1/query"},
+            tags=trace_tags,
+        ) as trace_span:
+            result = app.state.container.pipeline.run(req.query)
+            answer = str(result.get("response", ""))
+            context = _serialize_context(result.get("source_nodes", []))
+            context_payload = [
+                c.model_dump() if hasattr(c, "model_dump") else c.dict()
+                for c in context
+            ]
+            set_span_outputs(trace_span, {"answer": answer, "context": context_payload})
+            return QueryResponse(answer=answer, context=context)
     except Exception as e:
+        if trace_span is not None:
+            set_span_outputs(
+                trace_span,
+                {"error": f"{type(e).__name__}: {e}"},
+            )
         # Log full traceback to container logs for debugging
         logger.exception("Error while handling /v1/query")
 

@@ -30,7 +30,7 @@ COPY scripts/ /app/scripts/
 
 # Install your package (and runtime deps)
 RUN pip install --no-cache-dir -U pip \
- && pip install --no-cache-dir ".[api,ingestion]"
+ && pip install --no-cache-dir ".[api,ingestion,tracking]"
 
 # Expose API port
 EXPOSE 8000
