@@ -24,6 +24,8 @@ generator_llm:
   # api_key: "${POLARIS_LLM_API_KEY}"
   api_base: "https://generativelanguage.googleapis.com/v1beta/openai/"
   api_key: "${GEMINI_API_KEY}"
+  request_timeout: 90
+  max_retries: 1
   model_kwargs:
     max_tokens: 384
     temperature: 0.8

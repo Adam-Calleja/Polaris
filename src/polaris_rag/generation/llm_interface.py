@@ -68,6 +68,57 @@ def _sanitize_openai_kwargs(
 
     return sanitized
 
+
+def _coerce_transport_kwarg(key: str, value: Any) -> Any:
+    """Coerce common OpenAI transport kwargs to stable scalar types."""
+    if value is None:
+        return None
+    if key in {"timeout", "request_timeout"}:
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return value
+    if key == "max_retries":
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return value
+    return value
+
+
+def _merge_supported_transport_kwargs(
+    client_ctor: Any,
+    *,
+    config: Mapping[str, Any],
+    model_kwargs: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    """Merge transport-level config into model kwargs when the client supports it."""
+    merged = dict(model_kwargs or {})
+
+    try:
+        sig = inspect.signature(client_ctor)
+    except (TypeError, ValueError):
+        supported_names: set[str] = set()
+        supports_var_kwargs = True
+    else:
+        supported_names = set(sig.parameters.keys())
+        supports_var_kwargs = any(
+            param.kind == inspect.Parameter.VAR_KEYWORD
+            for param in sig.parameters.values()
+        )
+
+    for key in ("timeout", "request_timeout", "max_retries"):
+        if key in merged:
+            continue
+        raw_value = config.get(key)
+        if raw_value is None:
+            continue
+        if key not in supported_names and not supports_var_kwargs:
+            continue
+        merged[key] = _coerce_transport_kwarg(key, raw_value)
+
+    return merged
+
 class _SimpleGeneration:
     """Minimal generation object compatible with LangChain result structures.
 
@@ -361,7 +412,11 @@ class OpenAILikeLLM(BaseLLM):
         """
         model_name = config.get('model_name')
         api_base = config.get('api_base')
-        model_kwargs = config.get('model_kwargs', {})
+        model_kwargs = _merge_supported_transport_kwargs(
+            OpenAI,
+            config=config,
+            model_kwargs=config.get('model_kwargs', {}),
+        )
         api_key = config.get('api_key', None)
         return cls(
             model_name=model_name,
@@ -620,7 +675,11 @@ class OpenAIChatLikeLLM(BaseLLM):
         """Create an OpenAI-compatible chat LLM from a mapping."""
         model_name = config.get('model_name')
         api_base = config.get('api_base')
-        model_kwargs = config.get('model_kwargs', {})
+        model_kwargs = _merge_supported_transport_kwargs(
+            ChatOpenAI,
+            config=config,
+            model_kwargs=config.get('model_kwargs', {}),
+        )
         api_key = config.get('api_key', None)
         return cls(
             model_name=model_name,
