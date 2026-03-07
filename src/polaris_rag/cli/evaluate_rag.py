@@ -4,13 +4,16 @@ from __future__ import annotations
 
 import argparse
 from collections import Counter
+from contextlib import contextmanager
 from datetime import datetime
 import json
+import logging
 import math
 from pathlib import Path
 import sys
+import threading
 import time
-from typing import Any, Iterable, Mapping
+from typing import Any, Iterator, Mapping
 
 from polaris_rag.app.container import build_container
 from polaris_rag.config import GlobalConfig
@@ -30,6 +33,8 @@ from polaris_rag.observability.mlflow_tracking import (
     build_environment_snapshot,
     load_mlflow_runtime_config,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def _as_mapping(obj: Any) -> Mapping[str, Any]:
@@ -77,11 +82,22 @@ def _parse_metrics(value: str | None) -> list[str] | None:
 class _PrepProgressRenderer:
     """Render dataset-preparation progress as a single-line live bar."""
 
-    def __init__(self, *, width: int = 24):
+    def __init__(
+        self,
+        *,
+        width: int = 24,
+        interactive: bool = True,
+        log_interval_seconds: float = 30.0,
+    ):
         self.width = max(8, int(width))
+        self.interactive = bool(interactive)
+        self.log_interval_seconds = max(1.0, float(log_interval_seconds))
         self._active = False
+        self._last_logged_elapsed = -1.0
+        self._last_event: PrepProgressEvent | None = None
 
     def update(self, event: PrepProgressEvent) -> None:
+        self._last_event = event
         total = event.total if event.total > 0 else 1
         fraction = event.completed / total
         pct = int(round(fraction * 100.0))
@@ -93,13 +109,75 @@ class _PrepProgressRenderer:
             f"{event.completed}/{event.total} errors={event.failures} "
             f"elapsed={event.elapsed_seconds:5.1f}s rate={rate:5.2f}/s"
         )
-        self._active = True
-        print(f"\r{line}", end="", file=sys.stderr, flush=True)
+        if self.interactive:
+            self._active = True
+            print(f"\r{line}", end="", file=sys.stderr, flush=True)
+            return
+
+        should_log = (
+            event.completed >= event.total
+            or self._last_logged_elapsed < 0
+            or (event.elapsed_seconds - self._last_logged_elapsed) >= self.log_interval_seconds
+        )
+        if should_log:
+            self._last_logged_elapsed = event.elapsed_seconds
+            logger.info("%s", line)
 
     def finish(self) -> None:
-        if self._active:
+        if self.interactive and self._active:
             print(file=sys.stderr, flush=True)
             self._active = False
+            return
+
+        if not self.interactive and self._last_event is not None:
+            event = self._last_event
+            if event.completed < event.total and event.elapsed_seconds > self._last_logged_elapsed:
+                self._last_logged_elapsed = event.elapsed_seconds
+                self.update(event)
+
+
+def _configure_logging(level_name: str = "INFO") -> None:
+    level = getattr(logging, str(level_name).upper(), logging.INFO)
+    package_logger = logging.getLogger("polaris_rag")
+    package_logger.setLevel(level)
+
+    root_logger = logging.getLogger()
+    if not root_logger.handlers:
+        logging.basicConfig(
+            level=level,
+            format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+        )
+
+
+@contextmanager
+def _phase_heartbeat(label: str, *, interval_seconds: float = 60.0) -> Iterator[None]:
+    stop_event = threading.Event()
+    started_at = time.perf_counter()
+
+    def _worker() -> None:
+        while not stop_event.wait(interval_seconds):
+            elapsed = max(0.0, time.perf_counter() - started_at)
+            logger.info("%s still running (elapsed=%.1fs).", label, elapsed)
+
+    worker = threading.Thread(
+        target=_worker,
+        name=f"polaris-heartbeat-{label}",
+        daemon=True,
+    )
+    logger.info("%s started.", label)
+    worker.start()
+    try:
+        yield
+    except Exception:
+        elapsed = max(0.0, time.perf_counter() - started_at)
+        logger.exception("%s failed after %.1fs.", label, elapsed)
+        raise
+    else:
+        elapsed = max(0.0, time.perf_counter() - started_at)
+        logger.info("%s finished in %.1fs.", label, elapsed)
+    finally:
+        stop_event.set()
+        worker.join(timeout=max(0.1, interval_seconds))
 
 
 def _source_error(row: Mapping[str, Any]) -> str | None:
@@ -423,7 +501,11 @@ def _resolve_prepared_rows(
     raw_examples = load_raw_examples(dataset_path)
     raise_exceptions = _as_bool(generation_cfg.get("raise_exceptions"), False)
 
-    prep_renderer = _PrepProgressRenderer() if show_progress else None
+    prep_renderer = (
+        _PrepProgressRenderer(interactive=bool(show_progress and sys.stderr.isatty()))
+        if show_progress
+        else None
+    )
     prep_started_at = time.perf_counter()
 
     try:
@@ -568,14 +650,19 @@ def _collect_system_metrics(
 
 
 def main() -> None:
+    _configure_logging()
     args = parse_args()
     show_progress = not args.no_progress
+    interactive_progress = show_progress and sys.stderr.isatty()
     from polaris_rag.evaluation.evaluator import Evaluator, write_outputs
 
     cfg = GlobalConfig.load(args.config_file)
     eval_cfg = _as_mapping(_as_mapping(cfg.raw).get("evaluation", {}))
     output_dir = _resolve_output_dir(eval_cfg, args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
+
+    if show_progress and not interactive_progress:
+        logger.info("Non-interactive stderr detected; using line logs instead of live progress bars.")
 
     tracking_cfg = load_mlflow_runtime_config(cfg)
     tracking = EvaluationTrackingContext(
@@ -602,20 +689,22 @@ def main() -> None:
                 "input.config_file": str(config_file),
                 "input.output_dir": str(output_dir),
                 "runtime.show_progress": str(show_progress),
+                "runtime.interactive_progress": str(interactive_progress),
                 "runtime.tune_concurrency": str(tune_concurrency),
             }
         )
         tracking.log_artifact(config_file, artifact_path="inputs")
 
         with tracking.stage("dataset_preparation") as dataset_stage:
-            prepared_rows, dataset_manifest = _resolve_prepared_rows(
-                cfg=cfg,
-                args=args,
-                eval_cfg=eval_cfg,
-                show_progress=show_progress,
-                extra_api_headers=tracking.trace_headers(),
-                stage_context=dataset_stage,
-            )
+            with _phase_heartbeat("Dataset preparation", interval_seconds=60.0):
+                prepared_rows, dataset_manifest = _resolve_prepared_rows(
+                    cfg=cfg,
+                    args=args,
+                    eval_cfg=eval_cfg,
+                    show_progress=show_progress,
+                    extra_api_headers=tracking.trace_headers(),
+                    stage_context=dataset_stage,
+                )
             tracking.log_flat_params(dataset_manifest, prefix="dataset")
             tracking.log_metrics(
                 {
@@ -645,15 +734,16 @@ def main() -> None:
                 inputs={
                     "rows": len(prepared_rows),
                     "tune_concurrency": tune_concurrency,
-                    "show_progress": show_progress,
+                    "show_progress": interactive_progress,
                 },
             ) as eval_trace:
-                result = evaluator.evaluate(
-                    dataset=dataset,
-                    source_rows=prepared_rows,
-                    tune_concurrency=tune_concurrency,
-                    show_progress=show_progress,
-                )
+                with _phase_heartbeat("RAGAS evaluation", interval_seconds=60.0):
+                    result = evaluator.evaluate(
+                        dataset=dataset,
+                        source_rows=prepared_rows,
+                        tune_concurrency=tune_concurrency,
+                        show_progress=interactive_progress,
+                    )
                 eval_trace.set_outputs(
                     {
                         "rows": len(getattr(result, "scores_df", [])),
