@@ -19,6 +19,8 @@ generator_llm:
   model_name: "llama-cam"
   api_base: "https://llm.hpc.cam.ac.uk/v1"
   api_key: "${POLARIS_LLM_API_KEY}"
+  request_timeout: 90
+  max_retries: 1
   model_kwargs:
     max_tokens: 4000
     temperature: 0.8

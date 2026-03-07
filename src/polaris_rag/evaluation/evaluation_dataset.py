@@ -301,7 +301,10 @@ def _prepare_one(
             "retrieved_contexts": [],
             "retrieved_context_ids": [],
             "metadata": {
-                "source_error": f"{type(exc).__name__}: {exc}",
+                "source_error": (
+                    f"{type(exc).__name__}: {exc} "
+                    f"(example index={index} id={sample_id})"
+                ),
                 "original_metadata": example.get("metadata", {}),
             },
         }
@@ -420,7 +423,10 @@ def _prepare_one_via_api(
             "retrieved_contexts": [],
             "retrieved_context_ids": [],
             "metadata": {
-                "source_error": f"{type(exc).__name__}: {exc}",
+                "source_error": (
+                    f"{type(exc).__name__}: {exc} "
+                    f"(example index={index} id={sample_id})"
+                ),
                 "original_metadata": example.get("metadata", {}),
             },
         }
@@ -817,7 +823,7 @@ def build_prepared_rows(
                 _record_progress({}, last_error=_error_text_from_exception(exc))
                 raise
             indexed_rows.append(row)
-            _record_progress(row[1])
+            _record_progress(row[1], last_error=_source_error_text(row[1]))
     else:
         with ThreadPoolExecutor(max_workers=workers) as pool:
             futures = [
@@ -843,7 +849,7 @@ def build_prepared_rows(
                     _record_progress({}, last_error=_error_text_from_exception(exc))
                     raise
                 indexed_rows.append(row)
-                _record_progress(row[1])
+                _record_progress(row[1], last_error=_source_error_text(row[1]))
 
     indexed_rows.sort(key=lambda x: x[0])
     return [row for _, row in indexed_rows]
@@ -928,7 +934,7 @@ def build_prepared_rows_from_api(
                 _record_progress({}, last_error=_error_text_from_exception(exc))
                 raise
             indexed_rows.append(row)
-            _record_progress(row[1])
+            _record_progress(row[1], last_error=_source_error_text(row[1]))
     else:
         with ThreadPoolExecutor(max_workers=workers) as pool:
             futures = [
@@ -956,7 +962,7 @@ def build_prepared_rows_from_api(
                     _record_progress({}, last_error=_error_text_from_exception(exc))
                     raise
                 indexed_rows.append(row)
-                _record_progress(row[1])
+                _record_progress(row[1], last_error=_source_error_text(row[1]))
 
     indexed_rows.sort(key=lambda x: x[0])
     return [row for _, row in indexed_rows]

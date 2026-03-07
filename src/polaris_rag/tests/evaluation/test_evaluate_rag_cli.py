@@ -1,6 +1,7 @@
 from argparse import Namespace
 from contextlib import contextmanager
 from dataclasses import dataclass
+import logging
 
 from polaris_rag.cli import evaluate_rag
 from polaris_rag.evaluation.evaluation_dataset import PrepProgressEvent
@@ -372,3 +373,25 @@ def test_resolve_prepared_rows_uses_parent_only_trace_factory_for_pipeline_mode(
 
     assert seen_trace_factories[-1] is not None
     assert stage_context.open_calls[-1]["include_child_trace"] is False
+
+
+def test_prep_progress_renderer_logs_compact_last_error(caplog) -> None:
+    renderer = evaluate_rag._PrepProgressRenderer(
+        interactive=False,
+        log_interval_seconds=1.0,
+    )
+
+    event = PrepProgressEvent(
+        completed=1,
+        total=2,
+        successes=0,
+        failures=1,
+        elapsed_seconds=1.0,
+        mode="api",
+        last_error="TimeoutError: query API timed out after waiting far too long for the downstream generator",
+    )
+
+    with caplog.at_level(logging.INFO):
+        renderer.update(event)
+
+    assert "last_error=TimeoutError: query API timed out" in caplog.text

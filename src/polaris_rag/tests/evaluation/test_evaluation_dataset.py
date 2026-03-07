@@ -259,8 +259,12 @@ def test_build_prepared_rows_from_api_fail_soft_counts_failures() -> None:
     assert events[-1].completed == 2
     assert events[-1].successes == 1
     assert events[-1].failures == 1
+    assert events[-1].last_error is not None
+    assert "simulated api failure" in events[-1].last_error
+    assert "id=ex-2" in events[-1].last_error
     failing = [row for row in rows if row["id"] == "ex-2"][0]
     assert "source_error" in failing["metadata"]
+    assert "id=ex-2" in failing["metadata"]["source_error"]
 
 
 def test_build_prepared_rows_retries_fail_soft_then_succeeds() -> None:

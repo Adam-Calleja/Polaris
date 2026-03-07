@@ -79,6 +79,15 @@ def _parse_metrics(value: str | None) -> list[str] | None:
     return [x.strip() for x in value.split(",") if x.strip()]
 
 
+def _compact_error_text(value: str | None, *, limit: int = 120) -> str | None:
+    if value is None:
+        return None
+    compact = " ".join(str(value).split())
+    if len(compact) <= limit:
+        return compact
+    return compact[: max(0, limit - 3)] + "..."
+
+
 class _PrepProgressRenderer:
     """Render dataset-preparation progress as a single-line live bar."""
 
@@ -109,6 +118,9 @@ class _PrepProgressRenderer:
             f"{event.completed}/{event.total} errors={event.failures} "
             f"elapsed={event.elapsed_seconds:5.1f}s rate={rate:5.2f}/s"
         )
+        compact_error = _compact_error_text(event.last_error)
+        if compact_error:
+            line += f" last_error={compact_error}"
         if self.interactive:
             self._active = True
             print(f"\r{line}", end="", file=sys.stderr, flush=True)
