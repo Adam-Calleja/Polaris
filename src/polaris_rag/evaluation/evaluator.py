@@ -599,8 +599,18 @@ class Evaluator:
                     total_scores=total_scores,
                 )
             )
+            logger.info(
+                "Tuning trial workers=%s duration=%.1fs throughput=%.2f failure_rate=%.4f failures=%s/%s",
+                workers,
+                duration,
+                throughput,
+                failure_rate,
+                failures,
+                total_scores,
+            )
 
         selected = _select_best_trial(trials, failure_threshold=settings.failure_threshold)
+        logger.info("Selected max_workers=%s after tuning.", selected)
         return selected, trials
 
     def evaluate(
@@ -614,6 +624,12 @@ class Evaluator:
         """Run evaluation and return scores plus execution metadata."""
 
         runtime_metrics, skipped_metrics = self._resolve_runtime_metrics(dataset=dataset)
+        logger.info(
+            "Resolved evaluation runtime: rows=%s selected_metrics=%s skipped_metrics=%s",
+            len(dataset),
+            [spec.name for spec, _ in runtime_metrics],
+            len(skipped_metrics),
+        )
 
         selected_workers = int(self.run_config.max_workers)
         tuning_trials: list[ConcurrencyTrial] = []
@@ -649,6 +665,14 @@ class Evaluator:
             self.embeddings.set_run_config(run_config)
 
         batch_size = self._batch_size_for_workers(selected_workers, self.batch_size)
+        logger.info(
+            "Starting score pass: rows=%s metrics=%s max_workers=%s batch_size=%s show_progress=%s",
+            len(dataset),
+            [spec.name for spec, _ in runtime_metrics],
+            run_config.max_workers,
+            batch_size,
+            show_progress,
+        )
 
         with start_span(
             "polaris.ragas_evaluation.score_dataset",
@@ -676,6 +700,11 @@ class Evaluator:
                     "duration_seconds": duration,
                 },
             )
+        logger.info(
+            "Completed score pass in %.1fs for %s rows.",
+            duration,
+            len(scores_df),
+        )
 
         if source_rows is not None and len(source_rows) == len(scores_df):
             ids = [str(row.get("id", f"row-{i}")) for i, row in enumerate(source_rows)]
@@ -687,6 +716,13 @@ class Evaluator:
         total = len(scores_df) * len(metric_names)
         failures = int(scores_df[metric_names].isna().sum().sum()) if total else 0
         failure_rate = (failures / total) if total else 0.0
+        logger.info(
+            "Evaluation aggregation complete: rows=%s failure_rate=%.4f failures=%s/%s",
+            len(scores_df),
+            failure_rate,
+            failures,
+            total,
+        )
 
         with start_span(
             "polaris.ragas_evaluation.aggregate_results",
