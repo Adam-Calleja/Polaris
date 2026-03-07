@@ -27,8 +27,8 @@ generator_llm:
 
 evaluator_llm:
   type: "OpenAILike"
-  model_name: "Qwen/Qwen2.5-72B-Instruct" 
-  api_base: "http://localhost:8080/v1"
+  model_name: "mistralai/Mixtral-8x22B-Instruct-v0.1" 
+  api_base: "http://vllm:8080/v1"
   model_kwargs:
     temperature: 0
     top_p: 1.0
