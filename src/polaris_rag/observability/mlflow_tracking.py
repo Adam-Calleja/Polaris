@@ -17,6 +17,8 @@ from typing import Any, Iterator, Mapping
 logger = logging.getLogger(__name__)
 
 TRACE_PARENT_RUN_HEADER = "X-Polaris-MLflow-Run-ID"
+TRACE_CHILD_RUN_HEADER = "X-Polaris-MLflow-Child-Run-ID"
+TRACE_STAGE_HEADER = "X-Polaris-MLflow-Stage"
 
 _TRACING_ENABLED = False
 
@@ -64,6 +66,118 @@ class _NoopSpan:
 
     def set_attribute(self, *_args: Any, **_kwargs: Any) -> None:
         return None
+
+    def end(self, *_args: Any, **_kwargs: Any) -> None:
+        return None
+
+
+class _SpanGroup:
+    """Fan-out span helper for mirrored tracing."""
+
+    def __init__(self, spans: list[Any]):
+        self._spans = [span for span in spans if span is not None]
+
+    def set_inputs(self, inputs: Any) -> None:
+        for span in self._spans:
+            set_span_inputs(span, inputs)
+
+    def set_outputs(self, outputs: Any) -> None:
+        for span in self._spans:
+            set_span_outputs(span, outputs)
+
+    def set_attributes(self, attributes: Mapping[str, Any]) -> None:
+        for span in self._spans:
+            set_span_attributes(span, attributes)
+
+    def set_attribute(self, key: str, value: Any) -> None:
+        for span in self._spans:
+            set_span_attributes(span, {key: value})
+
+
+@dataclass(frozen=True)
+class EvaluationStageContext:
+    """Tracing and correlation helpers for one evaluation stage."""
+
+    name: str
+    parent_run_id: str | None
+    child_run_id: str | None
+    stage_root_span: Any | None = None
+    aggregate_stage_span: Any | None = None
+
+    def correlation_headers(self) -> dict[str, str]:
+        headers: dict[str, str] = {}
+        if self.parent_run_id:
+            headers[TRACE_PARENT_RUN_HEADER] = self.parent_run_id
+        if self.child_run_id:
+            headers[TRACE_CHILD_RUN_HEADER] = self.child_run_id
+        headers[TRACE_STAGE_HEADER] = self.name
+        return headers
+
+    @contextlib.contextmanager
+    def open_active_mirrored_span(
+        self,
+        name: str,
+        *,
+        attributes: Mapping[str, Any] | None = None,
+        inputs: Any | None = None,
+        outputs: Any | None = None,
+    ) -> Iterator[_SpanGroup]:
+        """Open a child span in the active child trace and mirror it to the parent trace."""
+
+        with contextlib.ExitStack() as stack:
+            child_span = stack.enter_context(
+                start_span(
+                    name,
+                    attributes=attributes,
+                    inputs=inputs,
+                    outputs=outputs,
+                )
+            )
+            aggregate_span = stack.enter_context(
+                start_detached_span(
+                    name,
+                    parent_span=self.aggregate_stage_span,
+                    attributes=attributes,
+                    inputs=inputs,
+                    outputs=outputs,
+                )
+            )
+            yield _SpanGroup([child_span, aggregate_span])
+
+    @contextlib.contextmanager
+    def open_detached_mirrored_span(
+        self,
+        name: str,
+        *,
+        attributes: Mapping[str, Any] | None = None,
+        inputs: Any | None = None,
+        outputs: Any | None = None,
+        include_child_trace: bool = True,
+    ) -> Iterator[_SpanGroup]:
+        """Open mirrored detached spans for worker-thread or cross-cutting events."""
+
+        with contextlib.ExitStack() as stack:
+            child_span = None
+            if include_child_trace:
+                child_span = stack.enter_context(
+                    start_detached_span(
+                        name,
+                        parent_span=self.stage_root_span,
+                        attributes=attributes,
+                        inputs=inputs,
+                        outputs=outputs,
+                    )
+                )
+            aggregate_span = stack.enter_context(
+                start_detached_span(
+                    name,
+                    parent_span=self.aggregate_stage_span,
+                    attributes=attributes,
+                    inputs=inputs,
+                    outputs=outputs,
+                )
+            )
+            yield _SpanGroup([child_span, aggregate_span])
 
 
 def _as_mapping(obj: Any) -> Mapping[str, Any]:
@@ -544,6 +658,106 @@ def set_span_outputs(span: Any, outputs: Any) -> None:
             logger.debug("set_outputs failed on span", exc_info=True)
 
 
+def _trace_identifier(span: Any) -> str | None:
+    for attr in ("request_id", "trace_id"):
+        value = getattr(span, attr, None)
+        if value:
+            return str(value)
+    return None
+
+
+def _associate_trace_with_run(mlflow: Any, span: Any, run_id: str | None) -> None:
+    trace_id = _trace_identifier(span)
+    if not trace_id or not run_id:
+        return
+
+    internal_associator = getattr(mlflow, "_associate_trace_with_run", None)
+    if callable(internal_associator):
+        try:
+            internal_associator(trace_id, run_id)
+            return
+        except Exception:
+            logger.debug("Internal trace/run association hook failed", exc_info=True)
+
+    try:
+        from mlflow.tracing.constant import TraceMetadataKey  # type: ignore
+        from mlflow.tracing.trace_manager import InMemoryTraceManager  # type: ignore
+
+        manager = InMemoryTraceManager.get_instance()
+        setter = getattr(manager, "set_trace_metadata", None)
+        if callable(setter):
+            setter(trace_id, TraceMetadataKey.SOURCE_RUN, run_id)
+    except Exception:
+        logger.debug("Unable to associate detached trace with run", exc_info=True)
+
+
+@contextlib.contextmanager
+def start_detached_span(
+    name: str,
+    *,
+    parent_span: Any | None = None,
+    attributes: Mapping[str, Any] | None = None,
+    inputs: Any | None = None,
+    outputs: Any | None = None,
+    tags: Mapping[str, str] | None = None,
+    run_id: str | None = None,
+) -> Iterator[Any]:
+    """Start a span without attaching it to the active tracing context."""
+
+    if not _TRACING_ENABLED:
+        yield _NoopSpan()
+        return
+
+    mlflow = _import_mlflow()
+    if mlflow is None:
+        yield _NoopSpan()
+        return
+
+    start_span_no_context = getattr(mlflow, "start_span_no_context", None)
+    if start_span_no_context is None:
+        if parent_span is None:
+            with start_span(
+                name,
+                attributes=attributes,
+                inputs=inputs,
+                outputs=outputs,
+                tags=tags,
+            ) as span:
+                yield span
+            return
+        yield _NoopSpan()
+        return
+
+    kwargs = {
+        "name": name,
+        "parent_span": parent_span,
+        "tags": dict(tags or {}),
+    }
+    filtered = _filter_supported_kwargs(start_span_no_context, kwargs)
+    try:
+        span = start_span_no_context(**filtered)
+    except TypeError:
+        span = start_span_no_context(name, parent_span=parent_span)
+
+    try:
+        if parent_span is None and run_id:
+            _associate_trace_with_run(mlflow, span, run_id)
+        if attributes:
+            set_span_attributes(span, attributes)
+        if inputs is not None:
+            set_span_inputs(span, inputs)
+        if outputs is not None:
+            set_span_outputs(span, outputs)
+        yield span
+    finally:
+        end = getattr(span, "end", None)
+        if callable(end):
+            try:
+                end()
+            except Exception:
+                logger.debug("Unable to end detached span", exc_info=True)
+
+
 class EvaluationTrackingContext:
     """Context manager wrapper for MLflow evaluation tracking."""
 
@@ -554,14 +768,24 @@ class EvaluationTrackingContext:
         enabled_override: bool | None = None,
         experiment_override: str | None = None,
     ) -> None:
-        self.runtime_config = apply_mlflow_overrides(
+        updated_config = apply_mlflow_overrides(
             runtime_config,
             enabled=enabled_override,
             experiment_name=experiment_override,
         )
+        if updated_config.tracing.enabled:
+            updated_config = replace(
+                updated_config,
+                tracing=replace(
+                    updated_config.tracing,
+                    destination_experiment=updated_config.experiment_name,
+                ),
+            )
+        self.runtime_config = updated_config
         self._mlflow: Any | None = None
         self._run_id: str | None = None
         self._active = False
+        self._aggregate_root_span: Any | None = None
 
     @property
     def enabled(self) -> bool:
@@ -608,26 +832,46 @@ class EvaluationTrackingContext:
         ) as run:
             self._active = True
             self._run_id = str(getattr(getattr(run, "info", None), "run_id", "") or "")
-            try:
-                yield self
-            finally:
-                self._active = False
-                self._run_id = None
-                self._mlflow = None
+            trace_tags = {
+                "polaris.source": "evaluation",
+                "polaris.parent_run_id": self._run_id,
+            }
+            if extra_tags:
+                trace_tags.update({f"run.tag.{k}": str(v) for k, v in extra_tags.items()})
+            with start_detached_span(
+                "polaris.eval.run",
+                attributes={"component": "evaluation"},
+                inputs={"run_name": run_name},
+                tags=trace_tags,
+                run_id=self._run_id,
+            ) as aggregate_root_span:
+                self._aggregate_root_span = aggregate_root_span
+                try:
+                    yield self
+                finally:
+                    self._aggregate_root_span = None
+                    self._active = False
+                    self._run_id = None
+                    self._mlflow = None
 
     @contextlib.contextmanager
-    def stage(self, name: str, *, tags: Mapping[str, str] | None = None) -> Iterator[None]:
+    def stage(
+        self,
+        name: str,
+        *,
+        tags: Mapping[str, str] | None = None,
+    ) -> Iterator[EvaluationStageContext]:
         if not self._active or self._mlflow is None:
-            yield
+            yield EvaluationStageContext(
+                name=name,
+                parent_run_id=self._run_id,
+                child_run_id=None,
+            )
             return
 
         stage_tags = {"stage": name}
         if tags:
             stage_tags.update({str(k): str(v) for k, v in tags.items()})
-
-        trace_tags = dict(stage_tags)
-        if self._run_id:
-            trace_tags["mlflow.parent_run_id"] = self._run_id
 
         with _start_run(
             self._mlflow,
@@ -635,9 +879,37 @@ class EvaluationTrackingContext:
             tags=stage_tags,
             nested=True,
             log_system_metrics=False,
-        ):
-            with start_span(f"polaris.{name}", tags=trace_tags, attributes={"stage": name}):
-                yield
+        ) as run:
+            child_run_id = str(getattr(getattr(run, "info", None), "run_id", "") or "")
+            trace_tags = {
+                "polaris.source": "evaluation",
+                "polaris.parent_run_id": str(self._run_id or ""),
+                "polaris.child_run_id": child_run_id,
+                "polaris.stage": name,
+            }
+            if self._run_id:
+                trace_tags["mlflow.parent_run_id"] = self._run_id
+
+            with start_span(
+                f"polaris.{name}",
+                tags=trace_tags,
+                attributes={"stage": name, "polaris.child_run_id": child_run_id},
+            ) as stage_root_span:
+                with start_detached_span(
+                    f"polaris.{name}",
+                    parent_span=self._aggregate_root_span,
+                    attributes={
+                        "stage": name,
+                        "polaris.child_run_id": child_run_id,
+                    },
+                ) as aggregate_stage_span:
+                    yield EvaluationStageContext(
+                        name=name,
+                        parent_run_id=self._run_id,
+                        child_run_id=child_run_id,
+                        stage_root_span=stage_root_span,
+                        aggregate_stage_span=aggregate_stage_span,
+                    )
 
     def log_params(self, params: Mapping[str, Any]) -> None:
         if not self._active or self._mlflow is None or not params:
@@ -740,7 +1012,10 @@ class EvaluationTrackingContext:
 
 __all__ = [
     "TRACE_PARENT_RUN_HEADER",
+    "TRACE_CHILD_RUN_HEADER",
+    "TRACE_STAGE_HEADER",
     "EvaluationTrackingContext",
+    "EvaluationStageContext",
     "MLflowRuntimeConfig",
     "PromptRegistryRuntimeConfig",
     "TraceRuntimeConfig",
@@ -750,6 +1025,7 @@ __all__ = [
     "flatten_for_logging",
     "load_mlflow_runtime_config",
     "set_span_attributes",
+    "start_detached_span",
     "set_span_inputs",
     "set_span_outputs",
     "start_span",

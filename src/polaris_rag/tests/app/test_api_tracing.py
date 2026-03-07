@@ -59,6 +59,48 @@ def test_query_adds_trace_tag_from_mlflow_header(monkeypatch) -> None:
     response = api.query(api.QueryRequest(query="hello"), request)
 
     assert response.answer == "resp::hello"
-    assert captured["tags"] == {"mlflow.parent_run_id": "run-123"}
+    assert captured["tags"] == {
+        "polaris.source": "api",
+        "polaris.eval_request": "true",
+        "mlflow.parent_run_id": "run-123",
+        "polaris.parent_run_id": "run-123",
+    }
     assert captured["outputs"] is not None
     assert captured["outputs"]["answer"] == "resp::hello"
+
+
+def test_query_adds_child_run_and_stage_tags(monkeypatch) -> None:
+    captured = {"tags": None}
+
+    @contextmanager
+    def _fake_start_span(name: str, **kwargs):  # noqa: ANN001
+        captured["tags"] = kwargs.get("tags")
+        yield _Span(name)
+
+    monkeypatch.setattr(api, "start_span", _fake_start_span)
+
+    api.app.state.container = _FakeContainer()
+
+    request = Request(
+        {
+            "type": "http",
+            "method": "POST",
+            "path": "/v1/query",
+            "headers": [
+                (api.TRACE_PARENT_RUN_HEADER.lower().encode("utf-8"), b"run-parent"),
+                (api.TRACE_CHILD_RUN_HEADER.lower().encode("utf-8"), b"run-child"),
+                (api.TRACE_STAGE_HEADER.lower().encode("utf-8"), b"dataset_preparation"),
+            ],
+        }
+    )
+
+    api.query(api.QueryRequest(query="hello"), request)
+
+    assert captured["tags"] == {
+        "polaris.source": "api",
+        "polaris.eval_request": "true",
+        "mlflow.parent_run_id": "run-parent",
+        "polaris.parent_run_id": "run-parent",
+        "polaris.child_run_id": "run-child",
+        "polaris.stage": "dataset_preparation",
+    }
