@@ -9,7 +9,9 @@ import logging
 import traceback
 from typing import Any
 from polaris_rag.observability.mlflow_tracking import (
+    TRACE_CHILD_RUN_HEADER,
     TRACE_PARENT_RUN_HEADER,
+    TRACE_STAGE_HEADER,
     configure_mlflow_runtime,
     load_mlflow_runtime_config,
     set_span_outputs,
@@ -90,7 +92,20 @@ def health():
 @app.post("/v1/query", response_model=QueryResponse)
 def query(req: QueryRequest, request: Request):
     parent_run_id = request.headers.get(TRACE_PARENT_RUN_HEADER)
-    trace_tags = {"mlflow.parent_run_id": str(parent_run_id)} if parent_run_id else None
+    child_run_id = request.headers.get(TRACE_CHILD_RUN_HEADER)
+    stage_name = request.headers.get(TRACE_STAGE_HEADER)
+    is_eval_request = any([parent_run_id, child_run_id, stage_name])
+    trace_tags = {
+        "polaris.source": "api",
+        "polaris.eval_request": "true" if is_eval_request else "false",
+    }
+    if parent_run_id:
+        trace_tags["mlflow.parent_run_id"] = str(parent_run_id)
+        trace_tags["polaris.parent_run_id"] = str(parent_run_id)
+    if child_run_id:
+        trace_tags["polaris.child_run_id"] = str(child_run_id)
+    if stage_name:
+        trace_tags["polaris.stage"] = str(stage_name)
     trace_span = None
 
     try:

@@ -26,6 +26,7 @@ from polaris_rag.evaluation.evaluation_dataset import (
 )
 from polaris_rag.observability.mlflow_tracking import (
     EvaluationTrackingContext,
+    EvaluationStageContext,
     build_environment_snapshot,
     load_mlflow_runtime_config,
 )
@@ -343,6 +344,7 @@ def _resolve_prepared_rows(
     eval_cfg: Mapping[str, Any],
     show_progress: bool,
     extra_api_headers: Mapping[str, str] | None = None,
+    stage_context: EvaluationStageContext | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     dataset_cfg = _as_mapping(eval_cfg.get("dataset", {}))
     generation_cfg = _as_mapping(eval_cfg.get("generation", {}))
@@ -389,6 +391,29 @@ def _resolve_prepared_rows(
         },
     }
 
+    request_trace_factory = None
+    effective_extra_api_headers = dict(extra_api_headers or {})
+    if stage_context is not None:
+        effective_extra_api_headers.update(stage_context.correlation_headers())
+        if generation_mode == "api":
+            request_trace_factory = (
+                lambda name, inputs, attributes=None: stage_context.open_detached_mirrored_span(
+                    name,
+                    inputs=inputs,
+                    attributes=attributes,
+                    include_child_trace=True,
+                )
+            )
+        else:
+            request_trace_factory = (
+                lambda name, inputs, attributes=None: stage_context.open_detached_mirrored_span(
+                    name,
+                    inputs=inputs,
+                    attributes=attributes,
+                    include_child_trace=False,
+                )
+            )
+
     if reuse_prepared and prepared_path and prepared_path.exists():
         rows = load_prepared_rows(prepared_path)
         manifest.update(_prep_stats(rows, elapsed_seconds=0.0))
@@ -419,8 +444,8 @@ def _resolve_prepared_rows(
                 str(k): str(v)
                 for k, v in _as_mapping(generation_cfg.get("api_headers", {})).items()
             }
-            if extra_api_headers:
-                api_headers.update({str(k): str(v) for k, v in extra_api_headers.items()})
+            if effective_extra_api_headers:
+                api_headers.update({str(k): str(v) for k, v in effective_extra_api_headers.items()})
 
             rows = build_prepared_rows_from_api(
                 raw_examples=raw_examples,
@@ -434,6 +459,7 @@ def _resolve_prepared_rows(
                 headers=api_headers,
                 retry_policy=retry_policy,
                 progress_callback=prep_renderer.update if prep_renderer else None,
+                trace_factory=request_trace_factory,
             )
             manifest["query_api_url"] = api_url
             manifest["query_api_timeout"] = timeout_seconds
@@ -451,6 +477,7 @@ def _resolve_prepared_rows(
                 raise_exceptions=raise_exceptions,
                 retry_policy=retry_policy,
                 progress_callback=prep_renderer.update if prep_renderer else None,
+                trace_factory=request_trace_factory,
             )
     finally:
         if prep_renderer:
@@ -580,13 +607,14 @@ def main() -> None:
         )
         tracking.log_artifact(config_file, artifact_path="inputs")
 
-        with tracking.stage("dataset_preparation"):
+        with tracking.stage("dataset_preparation") as dataset_stage:
             prepared_rows, dataset_manifest = _resolve_prepared_rows(
                 cfg=cfg,
                 args=args,
                 eval_cfg=eval_cfg,
                 show_progress=show_progress,
                 extra_api_headers=tracking.trace_headers(),
+                stage_context=dataset_stage,
             )
             tracking.log_flat_params(dataset_manifest, prefix="dataset")
             tracking.log_metrics(
@@ -610,13 +638,30 @@ def main() -> None:
             requested_metrics=requested_metrics,
         )
 
-        with tracking.stage("ragas_evaluation"):
-            result = evaluator.evaluate(
-                dataset=dataset,
-                source_rows=prepared_rows,
-                tune_concurrency=tune_concurrency,
-                show_progress=show_progress,
-            )
+        with tracking.stage("ragas_evaluation") as evaluation_stage:
+            with evaluation_stage.open_active_mirrored_span(
+                "polaris.ragas_evaluation.execute",
+                attributes={"stage": "ragas_evaluation"},
+                inputs={
+                    "rows": len(prepared_rows),
+                    "tune_concurrency": tune_concurrency,
+                    "show_progress": show_progress,
+                },
+            ) as eval_trace:
+                result = evaluator.evaluate(
+                    dataset=dataset,
+                    source_rows=prepared_rows,
+                    tune_concurrency=tune_concurrency,
+                    show_progress=show_progress,
+                )
+                eval_trace.set_outputs(
+                    {
+                        "rows": len(getattr(result, "scores_df", [])),
+                        "selected_metrics": list(getattr(result, "selected_metrics", [])),
+                        "selected_max_workers": int(getattr(result, "selected_max_workers", 0)),
+                        "failure_rate": float(getattr(result, "failure_rate", 0.0)),
+                    }
+                )
             tracking.log_metrics(
                 _collect_system_metrics(
                     result=result,

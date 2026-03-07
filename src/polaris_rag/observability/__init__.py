@@ -1,8 +1,11 @@
 """Observability helpers for Polaris."""
 
 from .mlflow_tracking import (
+    TRACE_CHILD_RUN_HEADER,
     TRACE_PARENT_RUN_HEADER,
+    TRACE_STAGE_HEADER,
     EvaluationTrackingContext,
+    EvaluationStageContext,
     MLflowRuntimeConfig,
     PromptRegistryRuntimeConfig,
     TraceRuntimeConfig,
@@ -12,6 +15,7 @@ from .mlflow_tracking import (
     flatten_for_logging,
     load_mlflow_runtime_config,
     set_span_attributes,
+    start_detached_span,
     set_span_inputs,
     set_span_outputs,
     start_span,
@@ -19,8 +23,11 @@ from .mlflow_tracking import (
 )
 
 __all__ = [
+    "TRACE_CHILD_RUN_HEADER",
     "TRACE_PARENT_RUN_HEADER",
+    "TRACE_STAGE_HEADER",
     "EvaluationTrackingContext",
+    "EvaluationStageContext",
     "MLflowRuntimeConfig",
     "PromptRegistryRuntimeConfig",
     "TraceRuntimeConfig",
@@ -30,6 +37,7 @@ __all__ = [
     "flatten_for_logging",
     "load_mlflow_runtime_config",
     "set_span_attributes",
+    "start_detached_span",
     "set_span_inputs",
     "set_span_outputs",
     "start_span",

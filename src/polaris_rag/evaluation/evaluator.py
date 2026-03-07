@@ -33,6 +33,7 @@ from polaris_rag.evaluation.metrics import (
     instantiate_metrics,
     resolve_metric_specs,
 )
+from polaris_rag.observability.mlflow_tracking import set_span_outputs, start_span
 
 logger = logging.getLogger(__name__)
 
@@ -618,10 +619,26 @@ class Evaluator:
         tuning_trials: list[ConcurrencyTrial] = []
 
         if tune_concurrency:
-            selected_workers, tuning_trials = self._tune_max_workers(
-                dataset=dataset,
-                metrics=runtime_metrics,
-            )
+            with start_span(
+                "polaris.ragas_evaluation.tune_concurrency",
+                inputs={
+                    "dataset_rows": len(dataset),
+                    "requested_metrics": [spec.name for spec, _ in runtime_metrics],
+                },
+                attributes={"tune_concurrency": True},
+            ) as tuning_span:
+                selected_workers, tuning_trials = self._tune_max_workers(
+                    dataset=dataset,
+                    metrics=runtime_metrics,
+                )
+                set_span_outputs(
+                    tuning_span,
+                    {
+                        "selected_workers": selected_workers,
+                        "trial_count": len(tuning_trials),
+                        "trials": [asdict(t) for t in tuning_trials],
+                    },
+                )
 
         run_config = self._clone_run_config(max_workers=selected_workers)
 
@@ -633,15 +650,32 @@ class Evaluator:
 
         batch_size = self._batch_size_for_workers(selected_workers, self.batch_size)
 
-        start = time.perf_counter()
-        scores_df = self._score_dataset(
-            dataset=dataset,
-            metrics=runtime_metrics,
-            run_config=run_config,
-            batch_size=batch_size,
-            show_progress=show_progress,
-        )
-        duration = time.perf_counter() - start
+        with start_span(
+            "polaris.ragas_evaluation.score_dataset",
+            inputs={
+                "dataset_rows": len(dataset),
+                "metrics": [spec.name for spec, _ in runtime_metrics],
+                "batch_size": batch_size,
+                "max_workers": run_config.max_workers,
+            },
+            attributes={"show_progress": show_progress},
+        ) as score_span:
+            start = time.perf_counter()
+            scores_df = self._score_dataset(
+                dataset=dataset,
+                metrics=runtime_metrics,
+                run_config=run_config,
+                batch_size=batch_size,
+                show_progress=show_progress,
+            )
+            duration = time.perf_counter() - start
+            set_span_outputs(
+                score_span,
+                {
+                    "rows": len(scores_df),
+                    "duration_seconds": duration,
+                },
+            )
 
         if source_rows is not None and len(source_rows) == len(scores_df):
             ids = [str(row.get("id", f"row-{i}")) for i, row in enumerate(source_rows)]
@@ -654,17 +688,37 @@ class Evaluator:
         failures = int(scores_df[metric_names].isna().sum().sum()) if total else 0
         failure_rate = (failures / total) if total else 0.0
 
-        return EvaluationRunResult(
-            scores_df=scores_df,
-            selected_metrics=metric_names,
-            skipped_metrics=skipped_metrics,
-            selected_max_workers=selected_workers,
-            run_config=run_config,
-            batch_size=batch_size,
-            tuning_trials=tuning_trials,
-            duration_seconds=duration,
-            failure_rate=failure_rate,
-        )
+        with start_span(
+            "polaris.ragas_evaluation.aggregate_results",
+            inputs={
+                "rows": len(scores_df),
+                "metrics": metric_names,
+            },
+        ) as aggregate_span:
+            result = EvaluationRunResult(
+                scores_df=scores_df,
+                selected_metrics=metric_names,
+                skipped_metrics=skipped_metrics,
+                selected_max_workers=selected_workers,
+                run_config=run_config,
+                batch_size=batch_size,
+                tuning_trials=tuning_trials,
+                duration_seconds=duration,
+                failure_rate=failure_rate,
+            )
+            set_span_outputs(
+                aggregate_span,
+                {
+                    "selected_max_workers": selected_workers,
+                    "failure_rate": failure_rate,
+                    "skipped_metrics": [
+                        {"metric": metric, "reason": reason}
+                        for metric, reason in skipped_metrics
+                    ],
+                },
+            )
+
+        return result
 
     def build_executor(
         self,

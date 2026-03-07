@@ -15,12 +15,13 @@ Preparation executes the Polaris RAG pipeline to generate:
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import contextlib
 from dataclasses import dataclass
 import json
 from pathlib import Path
 import random
 import time
-from typing import TYPE_CHECKING, Any, Callable, Iterable, Mapping
+from typing import TYPE_CHECKING, Any, Callable, Iterable, Iterator, Mapping, Protocol
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -43,6 +44,26 @@ class PrepProgressEvent:
 
 PrepProgressCallback = Callable[[PrepProgressEvent], None]
 ApiRequester = Callable[[str, str, float, Mapping[str, str] | None], dict[str, Any]]
+
+
+class PrepTraceRecorder(Protocol):
+    def set_outputs(self, outputs: Any) -> None: ...
+
+    def set_attributes(self, attributes: Mapping[str, Any]) -> None: ...
+
+
+PrepAttemptTraceFactory = Callable[
+    [str, Mapping[str, Any], Mapping[str, Any] | None],
+    contextlib.AbstractContextManager[PrepTraceRecorder],
+]
+
+
+class _NoopTraceRecorder:
+    def set_outputs(self, outputs: Any) -> None:
+        return None
+
+    def set_attributes(self, attributes: Mapping[str, Any]) -> None:
+        return None
 
 
 @dataclass(frozen=True)
@@ -410,6 +431,38 @@ def _error_text_from_exception(exc: Exception) -> str:
     return f"{type(exc).__name__}: {exc}"
 
 
+def _row_trace_outputs(row: Mapping[str, Any]) -> dict[str, Any]:
+    metadata = row.get("metadata")
+    source_error = None
+    if isinstance(metadata, Mapping):
+        value = metadata.get("source_error")
+        if value is not None:
+            source_error = str(value)
+
+    return {
+        "response": str(row.get("response", "") or ""),
+        "retrieved_context_ids": list(row.get("retrieved_context_ids", []) or []),
+        "retrieved_contexts": list(row.get("retrieved_contexts", []) or []),
+        "source_error": source_error,
+    }
+
+
+@contextlib.contextmanager
+def _open_attempt_trace(
+    trace_factory: PrepAttemptTraceFactory | None,
+    *,
+    name: str,
+    inputs: Mapping[str, Any],
+    attributes: Mapping[str, Any] | None = None,
+) -> Iterator[PrepTraceRecorder]:
+    if trace_factory is None:
+        yield _NoopTraceRecorder()
+        return
+
+    with trace_factory(name, inputs, attributes) as recorder:
+        yield recorder
+
+
 def _row_has_source_error(row: dict[str, Any]) -> bool:
     metadata = row.get("metadata")
     return isinstance(metadata, Mapping) and bool(metadata.get("source_error"))
@@ -484,55 +537,78 @@ def _prepare_one_with_retries(
     llm_generate_overrides: dict[str, Any] | None,
     raise_exceptions: bool,
     retry_policy: PrepRetryPolicy,
+    trace_factory: PrepAttemptTraceFactory | None = None,
 ) -> tuple[int, dict[str, Any]]:
     policy = PrepRetryPolicy.from_value(retry_policy)
     sample_id = str(example.get(id_field, f"row-{index}"))
+    query = str(example.get(query_field, "") or "").strip()
 
     for attempt in range(1, policy.max_attempts + 1):
-        try:
-            row_index, row = _prepare_one(
-                index,
-                example,
-                pipeline=pipeline,
-                query_field=query_field,
-                reference_field=reference_field,
-                id_field=id_field,
-                llm_generate_overrides=llm_generate_overrides,
-                raise_exceptions=raise_exceptions,
-            )
-        except Exception as exc:
-            if attempt >= policy.max_attempts:
-                raise
-            # Missing query is deterministic and should never be retried.
-            if _is_missing_query_exception(exc):
-                raise
-            _sleep_before_retry(policy, attempt_number=attempt)
-            continue
-
-        source_error = _source_error_text(row)
-        if source_error:
-            if _is_missing_query_source_error(source_error) or attempt >= policy.max_attempts:
-                return row_index, row
-            _sleep_before_retry(policy, attempt_number=attempt)
-            continue
-
-        if policy.retry_on_empty_response and _row_has_empty_response(row):
-            error_message = (
-                f"ValueError: response is empty after {attempt} attempt(s) "
-                f"for example index={index} id={sample_id}"
-            )
-            if attempt >= policy.max_attempts:
-                if raise_exceptions:
-                    raise ValueError(error_message)
-                return row_index, _fail_soft_empty_response_row(
-                    row=row,
-                    message=error_message,
-                    original_metadata=example.get("metadata", {}),
+        with _open_attempt_trace(
+            trace_factory,
+            name="polaris.dataset_preparation.pipeline_request",
+            inputs={
+                "sample_id": sample_id,
+                "query": query,
+                "attempt": attempt,
+            },
+            attributes={
+                "stage": "dataset_preparation",
+                "mode": "pipeline",
+                "sample_id": sample_id,
+                "attempt": attempt,
+            },
+        ) as trace_recorder:
+            try:
+                row_index, row = _prepare_one(
+                    index,
+                    example,
+                    pipeline=pipeline,
+                    query_field=query_field,
+                    reference_field=reference_field,
+                    id_field=id_field,
+                    llm_generate_overrides=llm_generate_overrides,
+                    raise_exceptions=raise_exceptions,
                 )
-            _sleep_before_retry(policy, attempt_number=attempt)
-            continue
+            except Exception as exc:
+                trace_recorder.set_outputs({"error": _error_text_from_exception(exc)})
+                trace_recorder.set_attributes({"status": "error"})
+                if attempt >= policy.max_attempts:
+                    raise
+                # Missing query is deterministic and should never be retried.
+                if _is_missing_query_exception(exc):
+                    raise
+                _sleep_before_retry(policy, attempt_number=attempt)
+                continue
 
-        return row_index, row
+            source_error = _source_error_text(row)
+            trace_recorder.set_outputs(_row_trace_outputs(row))
+            if source_error:
+                trace_recorder.set_attributes({"status": "source_error"})
+                if _is_missing_query_source_error(source_error) or attempt >= policy.max_attempts:
+                    return row_index, row
+                _sleep_before_retry(policy, attempt_number=attempt)
+                continue
+
+            if policy.retry_on_empty_response and _row_has_empty_response(row):
+                error_message = (
+                    f"ValueError: response is empty after {attempt} attempt(s) "
+                    f"for example index={index} id={sample_id}"
+                )
+                trace_recorder.set_attributes({"status": "empty_response"})
+                if attempt >= policy.max_attempts:
+                    if raise_exceptions:
+                        raise ValueError(error_message)
+                    return row_index, _fail_soft_empty_response_row(
+                        row=row,
+                        message=error_message,
+                        original_metadata=example.get("metadata", {}),
+                    )
+                _sleep_before_retry(policy, attempt_number=attempt)
+                continue
+
+            trace_recorder.set_attributes({"status": "success"})
+            return row_index, row
 
     # Defensive fallback; loop always returns/raises.
     raise RuntimeError("unreachable retry state in _prepare_one_with_retries")
@@ -551,54 +627,80 @@ def _prepare_one_via_api_with_retries(
     headers: Mapping[str, str] | None,
     requester: ApiRequester,
     retry_policy: PrepRetryPolicy,
+    trace_factory: PrepAttemptTraceFactory | None = None,
 ) -> tuple[int, dict[str, Any]]:
     policy = PrepRetryPolicy.from_value(retry_policy)
     sample_id = str(example.get(id_field, f"row-{index}"))
+    query = str(example.get(query_field, "") or "").strip()
 
     for attempt in range(1, policy.max_attempts + 1):
-        try:
-            row_index, row = _prepare_one_via_api(
-                index,
-                example,
-                api_url=api_url,
-                query_field=query_field,
-                reference_field=reference_field,
-                id_field=id_field,
-                raise_exceptions=raise_exceptions,
-                timeout_seconds=timeout_seconds,
-                headers=headers,
-                requester=requester,
-            )
-        except Exception as exc:
-            if _is_missing_query_exception(exc) or attempt >= policy.max_attempts:
-                raise
-            _sleep_before_retry(policy, attempt_number=attempt)
-            continue
-
-        source_error = _source_error_text(row)
-        if source_error:
-            if _is_missing_query_source_error(source_error) or attempt >= policy.max_attempts:
-                return row_index, row
-            _sleep_before_retry(policy, attempt_number=attempt)
-            continue
-
-        if policy.retry_on_empty_response and _row_has_empty_response(row):
-            error_message = (
-                f"ValueError: response is empty after {attempt} attempt(s) "
-                f"for example index={index} id={sample_id}"
-            )
-            if attempt >= policy.max_attempts:
-                if raise_exceptions:
-                    raise ValueError(error_message)
-                return row_index, _fail_soft_empty_response_row(
-                    row=row,
-                    message=error_message,
-                    original_metadata=example.get("metadata", {}),
+        with _open_attempt_trace(
+            trace_factory,
+            name="polaris.dataset_preparation.api_request",
+            inputs={
+                "sample_id": sample_id,
+                "query": query,
+                "attempt": attempt,
+                "api_url": api_url,
+            },
+            attributes={
+                "stage": "dataset_preparation",
+                "mode": "api",
+                "sample_id": sample_id,
+                "attempt": attempt,
+                "api_url": api_url,
+                "timeout_seconds": float(timeout_seconds),
+            },
+        ) as trace_recorder:
+            try:
+                row_index, row = _prepare_one_via_api(
+                    index,
+                    example,
+                    api_url=api_url,
+                    query_field=query_field,
+                    reference_field=reference_field,
+                    id_field=id_field,
+                    raise_exceptions=raise_exceptions,
+                    timeout_seconds=timeout_seconds,
+                    headers=headers,
+                    requester=requester,
                 )
-            _sleep_before_retry(policy, attempt_number=attempt)
-            continue
+            except Exception as exc:
+                trace_recorder.set_outputs({"error": _error_text_from_exception(exc)})
+                trace_recorder.set_attributes({"status": "error"})
+                if _is_missing_query_exception(exc) or attempt >= policy.max_attempts:
+                    raise
+                _sleep_before_retry(policy, attempt_number=attempt)
+                continue
 
-        return row_index, row
+            source_error = _source_error_text(row)
+            trace_recorder.set_outputs(_row_trace_outputs(row))
+            if source_error:
+                trace_recorder.set_attributes({"status": "source_error"})
+                if _is_missing_query_source_error(source_error) or attempt >= policy.max_attempts:
+                    return row_index, row
+                _sleep_before_retry(policy, attempt_number=attempt)
+                continue
+
+            if policy.retry_on_empty_response and _row_has_empty_response(row):
+                error_message = (
+                    f"ValueError: response is empty after {attempt} attempt(s) "
+                    f"for example index={index} id={sample_id}"
+                )
+                trace_recorder.set_attributes({"status": "empty_response"})
+                if attempt >= policy.max_attempts:
+                    if raise_exceptions:
+                        raise ValueError(error_message)
+                    return row_index, _fail_soft_empty_response_row(
+                        row=row,
+                        message=error_message,
+                        original_metadata=example.get("metadata", {}),
+                    )
+                _sleep_before_retry(policy, attempt_number=attempt)
+                continue
+
+            trace_recorder.set_attributes({"status": "success"})
+            return row_index, row
 
     # Defensive fallback; loop always returns/raises.
     raise RuntimeError("unreachable retry state in _prepare_one_via_api_with_retries")
@@ -643,6 +745,7 @@ def build_prepared_rows(
     raise_exceptions: bool = False,
     retry_policy: PrepRetryPolicy | Mapping[str, Any] | None = None,
     progress_callback: PrepProgressCallback | None = None,
+    trace_factory: PrepAttemptTraceFactory | None = None,
 ) -> list[dict[str, Any]]:
     """Convert raw examples into rows compatible with ``EvaluationDataset``.
 
@@ -708,6 +811,7 @@ def build_prepared_rows(
                     llm_generate_overrides=llm_generate_overrides,
                     raise_exceptions=raise_exceptions,
                     retry_policy=effective_retry_policy,
+                    trace_factory=trace_factory,
                 )
             except Exception as exc:
                 _record_progress({}, last_error=_error_text_from_exception(exc))
@@ -728,6 +832,7 @@ def build_prepared_rows(
                     llm_generate_overrides=llm_generate_overrides,
                     raise_exceptions=raise_exceptions,
                     retry_policy=effective_retry_policy,
+                    trace_factory=trace_factory,
                 )
                 for i, example in enumerate(raw_examples)
             ]
@@ -758,6 +863,7 @@ def build_prepared_rows_from_api(
     requester: ApiRequester | None = None,
     retry_policy: PrepRetryPolicy | Mapping[str, Any] | None = None,
     progress_callback: PrepProgressCallback | None = None,
+    trace_factory: PrepAttemptTraceFactory | None = None,
 ) -> list[dict[str, Any]]:
     """Convert raw examples into prepared rows by calling Polaris query API."""
 
@@ -816,6 +922,7 @@ def build_prepared_rows_from_api(
                     headers=headers,
                     requester=effective_requester,
                     retry_policy=effective_retry_policy,
+                    trace_factory=trace_factory,
                 )
             except Exception as exc:
                 _record_progress({}, last_error=_error_text_from_exception(exc))
@@ -838,6 +945,7 @@ def build_prepared_rows_from_api(
                     headers=headers,
                     requester=effective_requester,
                     retry_policy=effective_retry_policy,
+                    trace_factory=trace_factory,
                 )
                 for i, example in enumerate(raw_examples)
             ]
