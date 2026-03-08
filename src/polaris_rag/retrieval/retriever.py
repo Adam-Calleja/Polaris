@@ -14,10 +14,13 @@ VectorIndexRetriever
 HybridRetriever
     Hybrid retriever combining vector similarity and BM25 keyword search
     using query fusion.
+MultiCollectionRetriever
+    Retrieves from multiple source retrievers and reranks the merged set.
 """
 
 from queue import Queue
 import threading
+import time
 
 from llama_index.retrievers.bm25 import BM25Retriever
 from llama_index.core.retrievers import QueryFusionRetriever
@@ -25,10 +28,11 @@ from llama_index.core.vector_stores.types import MetadataFilters
 from llama_index.core.schema import NodeWithScore
 from llama_index.core import StorageContext
 
-from typing import Optional
-from polaris_rag.common.request_budget import RetrievalTimeoutError
+from typing import Any, Mapping, Optional
+from polaris_rag.common.request_budget import RetrievalTimeoutError, is_timeout_exception
 from polaris_rag.generation.llm_interface import BaseLLM
 from polaris_rag.retrieval.embedder import BaseEmbedder
+from polaris_rag.retrieval.reranker import MergedCandidate, create_reranker
 from polaris_rag.retrieval.vector_store import QdrantIndexStore
 
 class VectorIndexRetriever:
@@ -233,3 +237,188 @@ class HybridRetriever:
         if not succeeded:
             raise payload  # type: ignore[misc]
         return payload  # type: ignore[return-value]
+
+
+class MultiCollectionRetriever:
+    """Retrieve from multiple source retrievers and rerank merged candidates.
+
+    Parameters
+    ----------
+    source_retrievers : Mapping[str, Any]
+        Mapping from source name to retriever instance. Each retriever must
+        implement ``retrieve(query: str, *, timeout_seconds: float | None = None)``.
+    source_settings : Mapping[str, Mapping[str, Any]] or None, optional
+        Optional per-source settings map. Currently reads ``weight`` for RRF.
+    final_top_k : int, optional
+        Number of nodes to return after reranking. Defaults to ``10``.
+    rerank : Mapping[str, Any] or None, optional
+        Reranker configuration. Supported:
+        - ``{"type": "rrf", "rrf_k": 60}`` (default)
+
+    Notes
+    -----
+    - Candidate deduplication is performed by node id.
+    - Source provenance is stamped into node metadata:
+      - ``retrieval_source``
+      - ``retrieval_sources``
+      - ``retrieval_source_ranks``
+    - When ``timeout_seconds`` is provided, the timeout is treated as a shared
+      budget across all source retrievers rather than a fresh timeout per source.
+    """
+
+    def __init__(
+            self,
+            *,
+            source_retrievers: Mapping[str, Any],
+            source_settings: Mapping[str, Mapping[str, Any]] | None = None,
+            final_top_k: int = 10,
+            rerank: Mapping[str, Any] | None = None,
+        ):
+        if not source_retrievers:
+            raise ValueError("'source_retrievers' must define at least one source retriever.")
+
+        self.source_retrievers = dict(source_retrievers)
+        self.source_settings = {
+            str(k): dict(v or {})
+            for k, v in (source_settings or {}).items()
+        }
+        self.final_top_k = max(1, int(final_top_k))
+        self._reranker = create_reranker(
+            config=rerank,
+            source_settings=self.source_settings,
+        )
+
+    def retrieve(
+            self,
+            query: str,
+            *,
+            timeout_seconds: float | None = None,
+            **kwargs,
+        ) -> list[NodeWithScore]:
+        """Retrieve and rerank nodes for a query."""
+        candidates = self._collect_candidates(
+            query,
+            timeout_seconds=timeout_seconds,
+            **kwargs,
+        )
+        if not candidates:
+            return []
+
+        for candidate in candidates:
+            self._stamp_source_metadata(
+                node=candidate.node,
+                source_ranks=candidate.source_ranks,
+            )
+
+        reranked = self._reranker.rerank(candidates)
+        return reranked[: self.final_top_k]
+
+    def _collect_candidates(
+            self,
+            query: str,
+            *,
+            timeout_seconds: float | None = None,
+            **kwargs,
+        ) -> list[MergedCandidate]:
+        """Collect and deduplicate candidates returned by each source retriever."""
+        merged: dict[str, MergedCandidate] = {}
+        deadline = None
+        if timeout_seconds is not None:
+            deadline = time.monotonic() + max(0.0, float(timeout_seconds))
+
+        for source_name, retriever in self.source_retrievers.items():
+            remaining_timeout = self._remaining_timeout(deadline, source_name)
+            try:
+                source_results = retriever.retrieve(
+                    query,
+                    timeout_seconds=remaining_timeout,
+                    **kwargs,
+                )
+            except Exception as exc:
+                if is_timeout_exception(exc):
+                    timeout_value = remaining_timeout if remaining_timeout is not None else float(timeout_seconds or 0.0)
+                    raise RetrievalTimeoutError(
+                        f"multi-collection source {source_name!r} timed out after {max(timeout_value, 0.0):.3f}s"
+                    ) from exc
+                raise
+
+            for rank, item in enumerate(source_results, start=1):
+                node_with_score = self._coerce_node_with_score(item)
+                node = node_with_score.node
+                node_id = self._node_id(node)
+                raw_score = self._to_float_or_none(node_with_score.score)
+
+                entry = merged.setdefault(
+                    node_id,
+                    MergedCandidate(
+                        node=node,
+                        best_score=raw_score,
+                        source_ranks={},
+                    ),
+                )
+
+                if entry.best_score is None or (
+                    raw_score is not None and raw_score > entry.best_score
+                ):
+                    entry.best_score = raw_score
+                    entry.node = node
+
+                prev_rank = entry.source_ranks.get(source_name)
+                if prev_rank is None or rank < prev_rank:
+                    entry.source_ranks[source_name] = rank
+
+        return list(merged.values())
+
+    @staticmethod
+    def _remaining_timeout(deadline: float | None, source_name: str) -> float | None:
+        if deadline is None:
+            return None
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise RetrievalTimeoutError(
+                f"multi-collection retrieval timed out before querying source {source_name!r}"
+            )
+        return remaining
+
+    @staticmethod
+    def _to_float_or_none(value: Any) -> float | None:
+        if value is None:
+            return None
+        try:
+            return float(value)
+        except Exception:
+            return None
+
+    @staticmethod
+    def _coerce_node_with_score(item: Any) -> NodeWithScore:
+        """Coerce retrieval output item into NodeWithScore."""
+        if isinstance(item, NodeWithScore):
+            return item
+
+        node = getattr(item, "node", item)
+        score = getattr(item, "score", None)
+        score_val = MultiCollectionRetriever._to_float_or_none(score)
+        return NodeWithScore(node=node, score=score_val)
+
+    @staticmethod
+    def _node_id(node: Any) -> str:
+        """Extract a stable identifier for a node for deduplication."""
+        for attr in ("id_", "node_id", "id"):
+            value = getattr(node, attr, None)
+            if isinstance(value, str) and value:
+                return value
+        return f"<anon-node:{id(node)}>"
+
+    @staticmethod
+    def _stamp_source_metadata(node: Any, source_ranks: Mapping[str, int]) -> None:
+        """Annotate node metadata with retrieval provenance."""
+        metadata = getattr(node, "metadata", None)
+        if not isinstance(metadata, dict):
+            return
+
+        sorted_sources = sorted(source_ranks.keys())
+        metadata["retrieval_sources"] = sorted_sources
+        metadata["retrieval_source_ranks"] = dict(source_ranks)
+        metadata["retrieval_source"] = (
+            sorted_sources[0] if len(sorted_sources) == 1 else "multi"
+        )
