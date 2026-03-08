@@ -329,8 +329,8 @@ class PolarisContainer:
             Mapping of source name to configured vector-store instance.
         """
         sections = _as_mapping(self.config.vector_stores)
-
         stores: dict[str, Any] = {}
+
         try:
             from polaris_rag.retrieval.vector_store import QdrantIndexStore
 
@@ -453,12 +453,10 @@ class PolarisContainer:
         dict[str, Any]
             Mapping from source name to retriever instance.
         """
-        section = _as_mapping(self.config.retriever)
-        source_kind = (
-            section.get("source_type")
-            or section.get("type")
-            or "vector"
-        )
+
+                section = _as_mapping(self.config.retriever)
+        source_kind = section.get("source_type") or "vector"
+        source_kind = str(source_kind).strip().lower().replace("-", "_")
         if source_kind not in {"vector", "hybrid"}:
             source_kind = "vector"
 
@@ -466,6 +464,7 @@ class PolarisContainer:
 
         source_settings = self.retriever_source_settings
         contexts = self.source_storage_contexts
+        stores = self.vector_stores
         retrievers: dict[str, Any] = {}
 
         for source_name, cfg in source_settings.items():
@@ -474,6 +473,8 @@ class PolarisContainer:
                 "storage_context": contexts[source_name],
                 "top_k": cfg.get("top_k"),
                 "filters": cfg.get("filters"),
+                "vector_store": stores[source_name],
+                "embedder": self.embedder,
             }
             if source_kind == "hybrid":
                 create_kwargs["llm"] = self.llamaindex_llm
