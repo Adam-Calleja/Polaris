@@ -27,13 +27,15 @@ class Retriever(Protocol):
     retrieve
         Retrieve nodes relevant to a query.
     """
-    def retrieve(self, query: str) -> List[NodeWithScore]:
+    def retrieve(self, query: str, *, timeout_seconds: float | None = None, **kwargs) -> List[NodeWithScore]:
         """Retrieve nodes for a query.
 
         Parameters
         ----------
         query : str
             Natural-language query string.
+        timeout_seconds : float or None, optional
+            Per-request retrieval timeout when supported by the implementation.
 
         Returns
         -------

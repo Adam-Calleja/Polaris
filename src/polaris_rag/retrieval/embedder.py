@@ -23,11 +23,16 @@ create_embedder
 """
 
 from abc import ABC, abstractmethod
+import httpx
 from langchain_core.callbacks import BaseCallbackHandler
 from llama_index.core.base.embeddings.base import BaseEmbedding as LlamaIndexBaseEmbedding
 from typing import Any, Dict, Mapping, Optional
 import yaml
 import asyncio
+from openai import OpenAI as OpenAIClient
+from openai import APITimeoutError as OpenAIAPITimeoutError
+
+from polaris_rag.common.request_budget import RetrievalTimeoutError
 
 
 def _as_bool(value: Any, default: bool) -> bool:
@@ -121,7 +126,7 @@ class BaseEmbedder(ABC):
         """
         pass
 
-    def embed_query(self, query: str) -> list[float]:
+    def embed_query(self, query: str, timeout_seconds: float | None = None) -> list[float]:
         """Embed a single query string.
 
         This method attempts to call common embedding method names on the
@@ -132,6 +137,8 @@ class BaseEmbedder(ABC):
         ----------
         query : str
             Query string to embed.
+        timeout_seconds : float or None, optional
+            Per-request timeout for the embedding call when supported.
 
         Returns
         -------
@@ -368,12 +375,18 @@ class OpenAILikeEmbedder(BaseEmbedder):
         """
         from llama_index.embeddings.openai_like import OpenAILikeEmbedding
 
+        self.model_name = model_name
+        self.api_base = api_base
+        self.api_key = api_key or "fake"
+        self.additional_kwargs = dict(model_kwargs or {})
+        self.default_timeout_seconds = float(timeout)
+        self.default_max_retries = int(max_retries)
         self.embedder = OpenAILikeEmbedding(
             model_name=model_name,
             api_base=api_base,
             callback_manager=callback_manager,
-            additional_kwargs=model_kwargs or {},
-            api_key=api_key,
+            additional_kwargs=self.additional_kwargs,
+            api_key=self.api_key,
             timeout=timeout,
             max_retries=max_retries,
             embed_batch_size=embed_batch_size,
@@ -390,6 +403,41 @@ class OpenAILikeEmbedder(BaseEmbedder):
             Wrapped LlamaIndex embedding instance.
         """
         return self.embedder
+
+    def embed_query(self, query: str, timeout_seconds: float | None = None) -> list[float]:
+        effective_timeout = timeout_seconds if timeout_seconds is not None else self.default_timeout_seconds
+        if effective_timeout is None:
+            return super().embed_query(query)
+
+        client = OpenAIClient(
+            api_key=self.api_key,
+            base_url=self.api_base,
+            timeout=float(effective_timeout),
+            max_retries=max(0, int(self.default_max_retries)),
+        )
+        request_kwargs: dict[str, Any] = {}
+        if self.additional_kwargs:
+            request_kwargs["extra_body"] = dict(self.additional_kwargs)
+
+        try:
+            response = client.embeddings.create(
+                model=self.model_name,
+                input=query,
+                timeout=float(effective_timeout),
+                **request_kwargs,
+            )
+        except (OpenAIAPITimeoutError, httpx.TimeoutException, TimeoutError) as exc:
+            raise RetrievalTimeoutError(
+                f"query embedding timed out after {float(effective_timeout):.3f}s"
+            ) from exc
+
+        data = getattr(response, "data", None) or []
+        if not data:
+            return []
+        embedding = getattr(data[0], "embedding", None)
+        if isinstance(embedding, list):
+            return [float(x) for x in embedding]
+        return list(embedding or [])
 
     @classmethod
     def from_config(

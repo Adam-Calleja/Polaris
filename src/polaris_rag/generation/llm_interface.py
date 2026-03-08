@@ -32,10 +32,15 @@ from typing import Any
 from typing import Mapping, Optional
 import warnings
 import yaml
+import httpx
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_openai import OpenAI, ChatOpenAI
 from langchain_core.language_models.llms import LLM as LangChainBaseLLM
 from langchain_community.llms import HuggingFaceTextGenInference
+from openai import AsyncOpenAI, OpenAI as OpenAIClient
+from openai import APITimeoutError as OpenAIAPITimeoutError
+
+from polaris_rag.common.request_budget import GenerationTimeoutError
 
 
 def _is_gemini_openai_compat(api_base: str | None) -> bool:
@@ -85,6 +90,62 @@ def _coerce_transport_kwarg(key: str, value: Any) -> Any:
         except (TypeError, ValueError):
             return value
     return value
+
+
+def _coerce_timeout_seconds(value: Any) -> float | None:
+    if value is None:
+        return None
+    try:
+        timeout = float(value)
+    except (TypeError, ValueError):
+        return None
+    return timeout if timeout > 0 else None
+
+
+def _coerce_retry_count(value: Any) -> int | None:
+    if value is None:
+        return None
+    try:
+        retries = int(value)
+    except (TypeError, ValueError):
+        return None
+    return max(0, retries)
+
+
+def _strip_runtime_only_kwargs(kwargs: dict[str, Any]) -> dict[str, Any]:
+    sanitized = dict(kwargs)
+    for key in ("callbacks", "callback_manager", "request_timeout", "timeout", "max_retries"):
+        sanitized.pop(key, None)
+    return sanitized
+
+
+def _chat_completion_to_text(response: Any) -> str:
+    choices = getattr(response, "choices", None) or []
+    if not choices:
+        return ""
+    message = getattr(choices[0], "message", None)
+    content = getattr(message, "content", None)
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts: list[str] = []
+        for item in content:
+            if isinstance(item, str):
+                parts.append(item)
+                continue
+            text = getattr(item, "text", None)
+            if isinstance(text, str):
+                parts.append(text)
+        return "".join(parts)
+    return str(content or "")
+
+
+def _completion_to_text(response: Any) -> str:
+    choices = getattr(response, "choices", None) or []
+    if not choices:
+        return ""
+    text = getattr(choices[0], "text", None)
+    return text if isinstance(text, str) else str(text or "")
 
 
 def _merge_supported_transport_kwargs(
@@ -267,6 +328,8 @@ class BaseLLM(ABC):
     def generate(
             self, 
             prompt: str, 
+            *,
+            timeout_seconds: float | None = None,
             **kwargs
         ) -> Any:
         """Generate text for a single prompt.
@@ -275,6 +338,9 @@ class BaseLLM(ABC):
         ----------
         prompt : str
             Prompt text to send to the model.
+        timeout_seconds : float or None, optional
+            Per-request transport timeout applied to the provider call when
+            supported. ``None`` uses the implementation default.
         **kwargs
             Additional keyword arguments forwarded to the underlying model.
 
@@ -322,9 +388,20 @@ class OpenAILikeLLM(BaseLLM):
         Stop sequences may be supplied at call time via ``stop`` or ``stop_list``.
         If none are provided, a conservative default of ``["User:"]`` is used.
         """
+        self.model_name = model_name
         self.api_base = api_base
+        self.api_key = api_key or "fake"
         model_kwargs = _sanitize_openai_kwargs(api_base, model_kwargs, context="model init")
         self.model_kwargs = dict(model_kwargs)
+        self.request_defaults = {
+            str(k): v
+            for k, v in self.model_kwargs.items()
+            if k not in {"timeout", "request_timeout", "max_retries", "stop_list"}
+        }
+        self.default_timeout_seconds = _coerce_timeout_seconds(
+            self.model_kwargs.get("timeout", self.model_kwargs.get("request_timeout"))
+        )
+        self.default_max_retries = _coerce_retry_count(self.model_kwargs.get("max_retries"))
         self.default_stop_list = model_kwargs.pop("stop_list", None)
         self.stop_list = self.default_stop_list
 
@@ -342,10 +419,29 @@ class OpenAILikeLLM(BaseLLM):
         self.llm = OpenAI(
             model_name=model_name,
             openai_api_base=api_base,
-            openai_api_key=api_key,
+            openai_api_key=self.api_key,
             top_p=top_p or 1,
             **model_kwargs,
         )
+
+    def _client_timeout_seconds(self, timeout_seconds: float | None, run_kwargs: dict[str, Any]) -> float | None:
+        per_call_timeout = _coerce_timeout_seconds(
+            run_kwargs.pop("timeout", run_kwargs.pop("request_timeout", None))
+        )
+        return _coerce_timeout_seconds(timeout_seconds) or per_call_timeout or self.default_timeout_seconds
+
+    def _build_openai_client(self, *, timeout_seconds: float | None = None) -> OpenAIClient:
+        client_kwargs: dict[str, Any] = {
+            "api_key": self.api_key,
+            "base_url": self.api_base,
+        }
+        if timeout_seconds is not None:
+            client_kwargs["timeout"] = timeout_seconds
+        elif self.default_timeout_seconds is not None:
+            client_kwargs["timeout"] = self.default_timeout_seconds
+        if self.default_max_retries is not None:
+            client_kwargs["max_retries"] = self.default_max_retries
+        return OpenAIClient(**client_kwargs)
 
     def get_stop_list(self) -> list[str] | None:
         """Return the configured default stop sequences.
@@ -440,6 +536,8 @@ class OpenAILikeLLM(BaseLLM):
     def generate(
             self, 
             prompt: str, 
+            *,
+            timeout_seconds: float | None = None,
             **kwargs
         ) -> Any:
         """Generate text for a single prompt.
@@ -465,14 +563,31 @@ class OpenAILikeLLM(BaseLLM):
         if not isinstance(prompt, str):
             prompt = prompt.to_string() if hasattr(prompt, "to_string") else str(prompt)
 
-        run_kwargs = _sanitize_openai_kwargs(self.api_base, kwargs, context="generation")
+        run_kwargs = _sanitize_openai_kwargs(
+            self.api_base,
+            {**self.request_defaults, **kwargs},
+            context="generation",
+        )
+        client_timeout_seconds = self._client_timeout_seconds(timeout_seconds, run_kwargs)
+        run_kwargs = _strip_runtime_only_kwargs(run_kwargs)
 
         explicit_stop = run_kwargs.pop("stop", None)
         alt_stop_list = run_kwargs.pop("stop_list", None)
         final_stop = explicit_stop or alt_stop_list or self.default_stop_list or ["User:"]
 
-        response = self.llm.generate([prompt], stop=final_stop, **run_kwargs)
-        return response.generations[0][0].text
+        client = self._build_openai_client(timeout_seconds=client_timeout_seconds)
+        try:
+            response = client.completions.create(
+                model=self.model_name,
+                prompt=prompt,
+                stop=final_stop,
+                timeout=client_timeout_seconds,
+                **run_kwargs,
+            )
+        except (OpenAIAPITimeoutError, httpx.TimeoutException, TimeoutError) as exc:
+            timeout_desc = f" after {client_timeout_seconds:.3f}s" if client_timeout_seconds is not None else ""
+            raise GenerationTimeoutError(f"generation request timed out{timeout_desc}") from exc
+        return _completion_to_text(response)
 
     def generate_prompt(
             self, 
@@ -523,23 +638,43 @@ class OpenAILikeLLM(BaseLLM):
         generation is executed in a thread pool via ``run_in_executor``.
         """
 
-        run_kwargs = dict(self.run_config) if hasattr(self, 'run_config') else {}
+        run_kwargs = dict(self.request_defaults)
+        if hasattr(self, "run_config"):
+            run_kwargs.update(dict(self.run_config))
 
         if not isinstance(prompt, str):
             prompt = prompt.to_string() if hasattr(prompt, "to_string") else str(prompt)
 
         run_kwargs.update(kwargs)
         run_kwargs = _sanitize_openai_kwargs(self.api_base, run_kwargs, context="generation")
+        client_timeout_seconds = self._client_timeout_seconds(None, run_kwargs)
+        run_kwargs = _strip_runtime_only_kwargs(run_kwargs)
+        explicit_stop = run_kwargs.pop("stop", None)
+        alt_stop_list = run_kwargs.pop("stop_list", None)
+        final_stop = explicit_stop or alt_stop_list or self.default_stop_list or ["User:"]
 
-        if hasattr(self.llm, 'acomplete'):
-            return await self.llm.acomplete(prompt, **run_kwargs)
-        else:
-            import asyncio
-            loop = asyncio.get_event_loop()
-            return await loop.run_in_executor(
-                None,
-                lambda: self.llm.generate([prompt], **run_kwargs).generations[0][0].text
+        client_kwargs: dict[str, Any] = {
+            "api_key": self.api_key,
+            "base_url": self.api_base,
+        }
+        if client_timeout_seconds is not None:
+            client_kwargs["timeout"] = client_timeout_seconds
+        if self.default_max_retries is not None:
+            client_kwargs["max_retries"] = self.default_max_retries
+
+        client = AsyncOpenAI(**client_kwargs)
+        try:
+            response = await client.completions.create(
+                model=self.model_name,
+                prompt=prompt,
+                stop=final_stop,
+                timeout=client_timeout_seconds,
+                **run_kwargs,
             )
+        except (OpenAIAPITimeoutError, httpx.TimeoutException, TimeoutError) as exc:
+            timeout_desc = f" after {client_timeout_seconds:.3f}s" if client_timeout_seconds is not None else ""
+            raise GenerationTimeoutError(f"generation request timed out{timeout_desc}") from exc
+        return _completion_to_text(response)
 
     async def agenerate_prompt(
             self, 
@@ -609,9 +744,20 @@ class OpenAIChatLikeLLM(BaseLLM):
         """
         import inspect
 
+        self.model_name = model_name
         self.api_base = api_base
+        self.api_key = api_key or "fake"
         model_kwargs = _sanitize_openai_kwargs(api_base, model_kwargs, context="model init")
         self.model_kwargs = dict(model_kwargs)
+        self.request_defaults = {
+            str(k): v
+            for k, v in self.model_kwargs.items()
+            if k not in {"timeout", "request_timeout", "max_retries", "stop_list"}
+        }
+        self.default_timeout_seconds = _coerce_timeout_seconds(
+            self.model_kwargs.get("timeout", self.model_kwargs.get("request_timeout"))
+        )
+        self.default_max_retries = _coerce_retry_count(self.model_kwargs.get("max_retries"))
         self.default_stop_list = model_kwargs.pop("stop_list", None)
         self.stop_list = self.default_stop_list
 
@@ -643,14 +789,33 @@ class OpenAIChatLikeLLM(BaseLLM):
 
         if api_key is not None:
             if "openai_api_key" in sig.parameters:
-                init_kwargs["openai_api_key"] = api_key
+                init_kwargs["openai_api_key"] = self.api_key
             else:
-                init_kwargs["api_key"] = api_key
+                init_kwargs["api_key"] = self.api_key
 
         if top_p is not None:
             init_kwargs["top_p"] = top_p
 
         self.llm = ChatOpenAI(**init_kwargs)
+
+    def _client_timeout_seconds(self, timeout_seconds: float | None, run_kwargs: dict[str, Any]) -> float | None:
+        per_call_timeout = _coerce_timeout_seconds(
+            run_kwargs.pop("timeout", run_kwargs.pop("request_timeout", None))
+        )
+        return _coerce_timeout_seconds(timeout_seconds) or per_call_timeout or self.default_timeout_seconds
+
+    def _build_openai_client(self, *, timeout_seconds: float | None = None) -> OpenAIClient:
+        client_kwargs: dict[str, Any] = {
+            "api_key": self.api_key,
+            "base_url": self.api_base,
+        }
+        if timeout_seconds is not None:
+            client_kwargs["timeout"] = timeout_seconds
+        elif self.default_timeout_seconds is not None:
+            client_kwargs["timeout"] = self.default_timeout_seconds
+        if self.default_max_retries is not None:
+            client_kwargs["max_retries"] = self.default_max_retries
+        return OpenAIClient(**client_kwargs)
 
     def get_stop_list(self) -> list[str] | None:
         """Return the configured default stop sequences."""
@@ -694,19 +859,42 @@ class OpenAIChatLikeLLM(BaseLLM):
         """Return the underlying LangChain chat model object."""
         return self.llm
 
-    def generate(self, prompt: str, **kwargs) -> Any:
+    def generate(
+        self,
+        prompt: str,
+        *,
+        timeout_seconds: float | None = None,
+        **kwargs,
+    ) -> Any:
         """Generate text for a single prompt."""
         if not isinstance(prompt, str):
             prompt = prompt.to_string() if hasattr(prompt, "to_string") else str(prompt)
 
-        run_kwargs = _sanitize_openai_kwargs(self.api_base, kwargs, context="generation")
+        run_kwargs = _sanitize_openai_kwargs(
+            self.api_base,
+            {**self.request_defaults, **kwargs},
+            context="generation",
+        )
+        client_timeout_seconds = self._client_timeout_seconds(timeout_seconds, run_kwargs)
+        run_kwargs = _strip_runtime_only_kwargs(run_kwargs)
 
         explicit_stop = run_kwargs.pop("stop", None)
         alt_stop_list = run_kwargs.pop("stop_list", None)
         final_stop = explicit_stop or alt_stop_list or self.default_stop_list or ["User:"]
 
-        response = self.llm.invoke(prompt, stop=final_stop, **run_kwargs)
-        return response.content if hasattr(response, "content") else response
+        client = self._build_openai_client(timeout_seconds=client_timeout_seconds)
+        try:
+            response = client.chat.completions.create(
+                model=self.model_name,
+                messages=[{"role": "user", "content": prompt}],
+                stop=final_stop,
+                timeout=client_timeout_seconds,
+                **run_kwargs,
+            )
+        except (OpenAIAPITimeoutError, httpx.TimeoutException, TimeoutError) as exc:
+            timeout_desc = f" after {client_timeout_seconds:.3f}s" if client_timeout_seconds is not None else ""
+            raise GenerationTimeoutError(f"generation request timed out{timeout_desc}") from exc
+        return _chat_completion_to_text(response)
 
     def generate_prompt(self, prompt: str, **kwargs) -> Any:
         """Alias for ``generate`` kept for compatibility."""
@@ -714,7 +902,9 @@ class OpenAIChatLikeLLM(BaseLLM):
 
     async def acomplete(self, prompt: str, **kwargs) -> Any:
         """Asynchronously generate text for a single prompt."""
-        run_kwargs = dict(self.run_config) if hasattr(self, 'run_config') else {}
+        run_kwargs = dict(self.request_defaults)
+        if hasattr(self, "run_config"):
+            run_kwargs.update(dict(self.run_config))
 
         if not isinstance(prompt, str):
             prompt = prompt.to_string() if hasattr(prompt, "to_string") else str(prompt)
@@ -725,17 +915,31 @@ class OpenAIChatLikeLLM(BaseLLM):
 
         run_kwargs.update(kwargs)
         run_kwargs = _sanitize_openai_kwargs(self.api_base, run_kwargs, context="generation")
+        client_timeout_seconds = self._client_timeout_seconds(None, run_kwargs)
+        run_kwargs = _strip_runtime_only_kwargs(run_kwargs)
 
-        if hasattr(self.llm, 'ainvoke'):
-            response = await self.llm.ainvoke(prompt, stop=final_stop, **run_kwargs)
-            return response.content if hasattr(response, "content") else response
-        else:
-            import asyncio
-            loop = asyncio.get_event_loop()
-            return await loop.run_in_executor(
-                None,
-                lambda: self.generate(prompt, stop=final_stop, **run_kwargs)
+        client_kwargs: dict[str, Any] = {
+            "api_key": self.api_key,
+            "base_url": self.api_base,
+        }
+        if client_timeout_seconds is not None:
+            client_kwargs["timeout"] = client_timeout_seconds
+        if self.default_max_retries is not None:
+            client_kwargs["max_retries"] = self.default_max_retries
+
+        client = AsyncOpenAI(**client_kwargs)
+        try:
+            response = await client.chat.completions.create(
+                model=self.model_name,
+                messages=[{"role": "user", "content": prompt}],
+                stop=final_stop,
+                timeout=client_timeout_seconds,
+                **run_kwargs,
             )
+        except (OpenAIAPITimeoutError, httpx.TimeoutException, TimeoutError) as exc:
+            timeout_desc = f" after {client_timeout_seconds:.3f}s" if client_timeout_seconds is not None else ""
+            raise GenerationTimeoutError(f"generation request timed out{timeout_desc}") from exc
+        return _chat_completion_to_text(response)
 
     async def agenerate_prompt(self, prompts: list[str], **kwargs) -> list[Any]:
         """Asynchronously generate text for a batch of prompts."""
@@ -896,7 +1100,13 @@ class HuggingFaceTGI(BaseLLM):
         """
         return self.llm
 
-    def generate(self, prompt: str, **kwargs) -> Any:
+    def generate(
+        self,
+        prompt: str,
+        *,
+        timeout_seconds: float | None = None,
+        **kwargs,
+    ) -> Any:
         """
         Generate text for a single prompt synchronously.
 
@@ -918,6 +1128,8 @@ class HuggingFaceTGI(BaseLLM):
         """
         if not isinstance(prompt, str):
             prompt = prompt.to_string() if hasattr(prompt, "to_string") else str(prompt)
+        if timeout_seconds is not None:
+            kwargs.setdefault("timeout", timeout_seconds)
         response = self.llm.generate([prompt], **kwargs)
         return response.generations[0][0].text
 

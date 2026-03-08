@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 
+from polaris_rag.common.request_budget import RequestBudget
 from polaris_rag.pipelines.rag_pipeline import RAGPipeline
 
 
@@ -88,3 +89,28 @@ def test_pipeline_emits_expected_trace_spans(monkeypatch) -> None:
         "rag.pipeline.prompt_render",
         "rag.pipeline.generate",
     ]
+
+
+def test_pipeline_propagates_budget_to_retrieval_and_generation() -> None:
+    retriever = _FakeRetriever()
+    prompt_builder = _FakePromptBuilder()
+    llm = _FakeLLM()
+
+    pipeline = RAGPipeline(
+        retriever=retriever,
+        prompt_builder=prompt_builder,
+        prompt_name="hpc_prompt",
+        llm=llm,
+    )
+
+    budget = RequestBudget.from_timeout_ms(
+        timeout_ms=110000,
+        policy="official",
+        retrieval_cap_ms=10000,
+        cleanup_reserve_ms=5000,
+    )
+
+    pipeline.run("How do I submit a job?", request_budget=budget)
+
+    assert retriever.calls[0]["kwargs"]["timeout_seconds"] == 10.0
+    assert llm.calls[0]["kwargs"]["timeout_seconds"] > 90.0

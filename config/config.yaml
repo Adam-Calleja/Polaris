@@ -136,9 +136,21 @@ evaluation:
 
   generation:
     mode: "api"  # "pipeline" (in-process) or "api" (/v1/query endpoint)
+    policy: "official"  # "official" for scored runs, "diagnostic" for failed-row replay
     api_url: "http://rag-api:8000/v1/query"
     api_timeout: 120
     api_headers: {}
+    deadlines:
+      official:
+        client_total_seconds: 120
+        server_total_seconds: 110
+        retrieval_cap_seconds: 10
+        cleanup_reserve_seconds: 5
+      diagnostic:
+        client_total_seconds: 180
+        server_total_seconds: 170
+        retrieval_cap_seconds: 15
+        cleanup_reserve_seconds: 5
     workers: 1
     retries:
       max_attempts: 1
@@ -161,6 +173,9 @@ evaluation:
       - "semantic_similarity"
       - "noise_sensitivity"
       - "summary_score"
+
+  validity:
+    max_infra_failure_rate: 0.01
 
   run:
     timeout: 120

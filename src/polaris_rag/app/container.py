@@ -554,6 +554,8 @@ class PolarisContainer:
                 top_k=section.get("top_k"),
                 filters=section.get("filters"),
                 llm=self.llamaindex_llm,
+                vector_store=self.vector_store,
+                embedder=self.embedder,
             )
         else:
             return create(
@@ -561,6 +563,8 @@ class PolarisContainer:
                 storage_context=self.storage_context,
                 top_k=section.get("top_k"),
                 filters=section.get("filters"),
+                vector_store=self.vector_store,
+                embedder=self.embedder,
             )
 
     @cached_property

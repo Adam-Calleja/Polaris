@@ -204,6 +204,158 @@ def test_resolve_prepared_rows_passes_retry_policy(monkeypatch, tmp_path) -> Non
     assert manifest["generation_retries"]["max_attempts"] == 3
 
 
+def test_resolve_prepared_rows_forces_official_api_retry_policy(monkeypatch, tmp_path) -> None:
+    dataset_path = tmp_path / "dataset.jsonl"
+    dataset_path.write_text('{"id":"1","query":"Q1","expected_answer":"A1"}\n', encoding="utf-8")
+    seen_retry_policies: list[object] = []
+
+    def _capture_build_prepared_rows_from_api(**kwargs):  # noqa: ANN003
+        seen_retry_policies.append(kwargs.get("retry_policy"))
+        return _fake_build_prepared_rows(**kwargs)
+
+    monkeypatch.setattr(
+        evaluate_rag,
+        "build_prepared_rows_from_api",
+        _capture_build_prepared_rows_from_api,
+    )
+
+    args = Namespace(
+        dataset_path=str(dataset_path),
+        prepared_path=None,
+        reuse_prepared=False,
+        generation_workers=1,
+        generation_max_attempts=4,
+        generation_retry_initial_backoff=0.0,
+        generation_retry_max_backoff=0.0,
+        generation_retry_jitter=0.0,
+        generation_retry_on_empty_response=True,
+        generation_mode="api",
+        query_api_url="http://127.0.0.1:8000/v1/query",
+        query_api_timeout=30.0,
+        evaluation_policy="official",
+        replay_failures_from=None,
+    )
+
+    _, manifest = evaluate_rag._resolve_prepared_rows(
+        cfg=object(),  # type: ignore[arg-type]
+        args=args,
+        eval_cfg={"dataset": {}, "generation": {"workers": 1, "mode": "api"}},
+        show_progress=False,
+    )
+
+    assert seen_retry_policies
+    policy = seen_retry_policies[-1]
+    assert policy.max_attempts == 1
+    assert policy.retry_on_empty_response is False
+    assert manifest["generation_retries"]["max_attempts"] == 1
+    assert manifest["generation_retries"]["retry_on_empty_response"] is False
+
+
+def test_resolve_prepared_rows_diagnostic_replays_only_failed_rows(monkeypatch, tmp_path) -> None:
+    dataset_path = tmp_path / "dataset.jsonl"
+    dataset_path.write_text('{"id":"1","query":"Q1","expected_answer":"A1"}\n', encoding="utf-8")
+    replay_path = tmp_path / "prepared_rows.json"
+    replay_path.write_text(
+        '[{"id":"ok-1","user_input":"ok","reference":"A1","response":"R1","retrieved_contexts":[],"retrieved_context_ids":[],"metadata":{}},'
+        '{"id":"bad-1","user_input":"bad","reference":"A2","response":"","retrieved_contexts":[],"retrieved_context_ids":[],"metadata":{"source_error":"TimeoutError: boom","original_metadata":{"ticket":"123"}}}]',
+        encoding="utf-8",
+    )
+    seen_raw_examples: list[object] = []
+
+    def _capture_build_prepared_rows_from_api(**kwargs):  # noqa: ANN003
+        seen_raw_examples.append(kwargs.get("raw_examples"))
+        return _fake_build_prepared_rows(**kwargs)
+
+    monkeypatch.setattr(
+        evaluate_rag,
+        "build_prepared_rows_from_api",
+        _capture_build_prepared_rows_from_api,
+    )
+
+    args = Namespace(
+        dataset_path=str(dataset_path),
+        prepared_path=None,
+        reuse_prepared=False,
+        generation_workers=1,
+        generation_max_attempts=None,
+        generation_retry_initial_backoff=None,
+        generation_retry_max_backoff=None,
+        generation_retry_jitter=None,
+        generation_retry_on_empty_response=None,
+        generation_mode="api",
+        query_api_url="http://127.0.0.1:8000/v1/query",
+        query_api_timeout=30.0,
+        evaluation_policy="diagnostic",
+        replay_failures_from=str(replay_path),
+    )
+
+    _, manifest = evaluate_rag._resolve_prepared_rows(
+        cfg=object(),  # type: ignore[arg-type]
+        args=args,
+        eval_cfg={"dataset": {}, "generation": {"workers": 1, "mode": "api"}},
+        show_progress=False,
+    )
+
+    assert seen_raw_examples
+    assert seen_raw_examples[-1] == [
+        {
+            "id": "bad-1",
+            "query": "bad",
+            "expected_answer": "A2",
+            "metadata": {"ticket": "123"},
+        }
+    ]
+    assert manifest["prepared_source"] == "diagnostic_replay"
+    assert manifest["replay_selected_rows"] == 1
+
+
+def test_resolve_prepared_rows_diagnostic_replay_does_not_require_dataset_path(monkeypatch, tmp_path) -> None:
+    replay_path = tmp_path / "prepared_rows.json"
+    replay_path.write_text(
+        '[{"id":"bad-1","user_input":"bad","reference":"A2","response":"","retrieved_contexts":[],"retrieved_context_ids":[],"metadata":{"source_error":"TimeoutError: boom"}}]',
+        encoding="utf-8",
+    )
+    seen_raw_examples: list[object] = []
+
+    def _capture_build_prepared_rows_from_api(**kwargs):  # noqa: ANN003
+        seen_raw_examples.append(kwargs.get("raw_examples"))
+        return _fake_build_prepared_rows(**kwargs)
+
+    monkeypatch.setattr(
+        evaluate_rag,
+        "build_prepared_rows_from_api",
+        _capture_build_prepared_rows_from_api,
+    )
+
+    args = Namespace(
+        dataset_path=None,
+        prepared_path=None,
+        reuse_prepared=False,
+        generation_workers=1,
+        generation_max_attempts=None,
+        generation_retry_initial_backoff=None,
+        generation_retry_max_backoff=None,
+        generation_retry_jitter=None,
+        generation_retry_on_empty_response=None,
+        generation_mode="api",
+        query_api_url="http://127.0.0.1:8000/v1/query",
+        query_api_timeout=30.0,
+        evaluation_policy="diagnostic",
+        replay_failures_from=str(replay_path),
+    )
+
+    _, manifest = evaluate_rag._resolve_prepared_rows(
+        cfg=object(),  # type: ignore[arg-type]
+        args=args,
+        eval_cfg={"dataset": {}, "generation": {"workers": 1, "mode": "api"}},
+        show_progress=False,
+    )
+
+    assert seen_raw_examples == [[{"id": "bad-1", "query": "bad", "expected_answer": "A2", "metadata": {}}]]
+    assert manifest["dataset_path"] is None
+    assert manifest["prepared_source"] == "diagnostic_replay"
+
+
 def test_resolve_prepared_rows_merges_extra_api_headers(monkeypatch, tmp_path) -> None:
     dataset_path = tmp_path / "dataset.jsonl"
     dataset_path.write_text('{"id":"1","query":"Q1","expected_answer":"A1"}\n', encoding="utf-8")
@@ -259,8 +411,12 @@ def test_resolve_prepared_rows_merges_extra_api_headers(monkeypatch, tmp_path) -
     assert seen_headers[-1] == {
         "X-Base": "1",
         "X-Polaris-MLflow-Run-ID": "run-123",
+        "X-Polaris-Timeout-Ms": "29999",
+        "X-Polaris-Eval-Policy": "official",
     }
     assert "query_api_header_keys" in manifest
+    assert manifest["query_api_timeout"] == 30.0
+    assert manifest["server_timeout_ms"] == 29999
 
 
 def test_resolve_prepared_rows_uses_stage_context_for_api_mode(monkeypatch, tmp_path) -> None:
@@ -326,6 +482,8 @@ def test_resolve_prepared_rows_uses_stage_context_for_api_mode(monkeypatch, tmp_
         "X-Polaris-MLflow-Run-ID": "run-parent",
         "X-Polaris-MLflow-Child-Run-ID": "run-child",
         "X-Polaris-MLflow-Stage": "dataset_preparation",
+        "X-Polaris-Timeout-Ms": "29999",
+        "X-Polaris-Eval-Policy": "official",
     }
     assert seen_trace_factories[-1] is not None
     assert stage_context.open_calls[-1]["include_child_trace"] is True

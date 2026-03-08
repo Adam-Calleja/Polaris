@@ -144,6 +144,7 @@ def test_build_prepared_rows_from_api_fail_soft_captures_source_error() -> None:
     assert rows[0]["retrieved_context_ids"] == []
     assert "source_error" in rows[0]["metadata"]
     assert "boom" in rows[0]["metadata"]["source_error"]
+    assert rows[0]["metadata"]["failure_class"] == "api_internal_error"
 
 
 def test_build_prepared_rows_emits_monotonic_progress_events() -> None:
@@ -265,6 +266,7 @@ def test_build_prepared_rows_from_api_fail_soft_counts_failures() -> None:
     failing = [row for row in rows if row["id"] == "ex-2"][0]
     assert "source_error" in failing["metadata"]
     assert "id=ex-2" in failing["metadata"]["source_error"]
+    assert failing["metadata"]["failure_class"] == "api_internal_error"
 
 
 def test_build_prepared_rows_retries_fail_soft_then_succeeds() -> None:
@@ -395,6 +397,40 @@ def test_build_prepared_rows_exhausted_empty_response_sets_source_error() -> Non
     assert rows[0]["response"] == ""
     assert "source_error" in rows[0]["metadata"]
     assert "response is empty after 2 attempt(s)" in rows[0]["metadata"]["source_error"]
+    assert rows[0]["metadata"]["failure_class"] == "empty_response"
+
+
+def test_build_prepared_rows_from_api_empty_response_without_retry_is_failure() -> None:
+    raw_examples = [{"id": "ex-1", "query": "Q1", "expected_answer": "A1"}]
+
+    def requester(api_url: str, query: str, timeout_seconds: float, headers):  # noqa: ANN001, ANN202
+        return {
+            "answer": "",
+            "context": [{"doc_id": "doc-1", "text": "ctx-1"}],
+        }
+
+    rows = build_prepared_rows_from_api(
+        raw_examples=raw_examples,
+        api_url="http://unused.local/v1/query",
+        generation_workers=1,
+        raise_exceptions=False,
+        requester=requester,
+        retry_policy={
+            "max_attempts": 1,
+            "initial_backoff_seconds": 0.0,
+            "max_backoff_seconds": 0.0,
+            "jitter_seconds": 0.0,
+            "retry_on_empty_response": False,
+        },
+        policy="official",
+        budget_ms=110000,
+    )
+
+    assert rows[0]["response"] == ""
+    assert rows[0]["metadata"]["failure_class"] == "empty_response"
+    assert rows[0]["metadata"]["response_status"] == "empty_response"
+    assert rows[0]["metadata"]["policy"] == "official"
+    assert rows[0]["metadata"]["budget_ms"] == 110000
 
 
 def test_build_prepared_rows_fail_fast_retries_then_raises() -> None:
