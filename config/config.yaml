@@ -173,7 +173,7 @@ evaluation:
     raise_exceptions: false
 
   adaptive_concurrency:
-    enabled: true
+    enabled: false
     worker_candidates: [2, 4, 8, 12, 16]
     worker_cap: 16
     warmup_fraction: 0.15
