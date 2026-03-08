@@ -21,6 +21,8 @@ create_vector_store
     Create a vector store implementation from a configuration mapping.
 """
 import asyncio
+import math
+import time
 from typing import Optional
 from qdrant_client import QdrantClient, AsyncQdrantClient
 from os import environ
@@ -28,10 +30,12 @@ import yaml
 from abc import ABC, abstractmethod
 from llama_index.vector_stores.qdrant import QdrantVectorStore
 from llama_index.core import VectorStoreIndex, StorageContext
-from llama_index.core.schema import TextNode
+from llama_index.core.schema import NodeWithScore, TextNode
 from llama_index.core.base.response.schema import Response
+from llama_index.core.vector_stores.types import MetadataFilter, MetadataFilters, VectorStoreQuery
 
 from polaris_rag.common.schemas import DocumentChunk
+from polaris_rag.common.request_budget import RetrievalTimeoutError, is_timeout_exception
 from polaris_rag.generation.llm_interface import BaseLLM
 from polaris_rag.retrieval.embedder import BaseEmbedder
 
@@ -376,6 +380,72 @@ class QdrantIndexStore(BaseVectorStore):
             nodes.append(node)
 
         return nodes
+
+    @staticmethod
+    def _coerce_metadata_filters(filters: MetadataFilters | dict | None) -> MetadataFilters | None:
+        if isinstance(filters, MetadataFilters):
+            return filters
+        if isinstance(filters, dict):
+            if not filters:
+                return None
+            return MetadataFilters(
+                filters=[MetadataFilter(key=str(key), value=value) for key, value in filters.items()]
+            )
+        return None
+
+    def query_nodes(
+        self,
+        query_text: str,
+        *,
+        top_k: int = 5,
+        filters: MetadataFilters | dict | None = None,
+        timeout_seconds: float | None = None,
+    ) -> list[NodeWithScore]:
+        """Run a vector retrieval query and return LlamaIndex ``NodeWithScore`` items."""
+
+        normalized_filters = self._coerce_metadata_filters(filters)
+        retrieval_started_at = time.perf_counter()
+        query_embedding = self.embedder.embed_query(query_text, timeout_seconds=timeout_seconds)
+        query_spec = VectorStoreQuery(
+            query_embedding=query_embedding,
+            similarity_top_k=max(1, int(top_k)),
+            filters=normalized_filters,
+        )
+        query_filter = self.vector_store._build_query_filter(query_spec)
+        qdrant_timeout = None
+        if timeout_seconds is not None:
+            embed_elapsed = max(0.0, time.perf_counter() - retrieval_started_at)
+            remaining_timeout = float(timeout_seconds) - embed_elapsed
+            if remaining_timeout <= 0.0:
+                raise RetrievalTimeoutError(
+                    f"retrieval budget exhausted before vector-store query started ({float(timeout_seconds):.3f}s)"
+                )
+            qdrant_timeout = max(1, int(math.ceil(remaining_timeout)))
+
+        try:
+            response = self.client.query_points(
+                collection_name=self.vector_store.collection_name,
+                query=query_embedding,
+                using=self.vector_store.dense_vector_name,
+                limit=max(1, int(top_k)),
+                query_filter=query_filter,
+                with_payload=True,
+                timeout=qdrant_timeout,
+            )
+        except Exception as exc:
+            if timeout_seconds is not None and is_timeout_exception(exc):
+                raise RetrievalTimeoutError(
+                    f"vector-store query timed out after {float(timeout_seconds):.3f}s"
+                ) from exc
+            raise
+
+        result = self.vector_store.parse_to_query_result(response.points)
+        scored_nodes: list[NodeWithScore] = []
+        similarities = list(result.similarities or [])
+        for idx, node in enumerate(result.nodes or []):
+            score = similarities[idx] if idx < len(similarities) else None
+            scored_nodes.append(NodeWithScore(node=node, score=score))
+        return scored_nodes
 
     def query(
             self, 

@@ -17,12 +17,20 @@ Post-processing hooks are not yet implemented; the pipeline currently
 returns raw model output alongside retrieved source nodes.
 """
 
+import time
 from typing import Any
 
+from polaris_rag.common.request_budget import (
+    GenerationTimeoutError,
+    RequestBudget,
+    RequestBudgetExceededError,
+    RetrievalTimeoutError,
+)
 from polaris_rag.retrieval.retriever import VectorIndexRetriever as Retriever
 from polaris_rag.generation.prompt_builder import PromptBuilder
 from polaris_rag.generation.llm_interface import BaseLLM
 from polaris_rag.observability.mlflow_tracking import (
+    set_span_attributes,
     set_span_outputs,
     start_span,
 )
@@ -112,6 +120,10 @@ class RAGPipeline:
             - ``"response"``: the raw model output
             - ``"source_nodes"``: retrieved document chunks
         """
+        request_budget = kwargs.pop("request_budget", None)
+        if request_budget is not None and not isinstance(request_budget, RequestBudget):
+            raise TypeError(f"request_budget must be a RequestBudget or None, got {type(request_budget)!r}")
+
         call_overrides = kwargs.pop("llm_generate", None) or {}
         retriever_kwargs = dict(kwargs)
 
@@ -120,16 +132,87 @@ class RAGPipeline:
             inputs={"query": query},
             attributes={"prompt_name": self.prompt_name},
         ) as pipeline_span:
+            if request_budget is not None:
+                set_span_attributes(pipeline_span, request_budget.to_attributes())
             with start_span(
                 "rag.pipeline.retrieve",
                 inputs={"query": query, "kwargs": retriever_kwargs},
             ) as retrieval_span:
-                retrieved_chunks = self.retriever.retrieve(query, **retriever_kwargs)
+                if request_budget is not None:
+                    set_span_attributes(retrieval_span, request_budget.to_attributes())
+                retrieval_started_at = time.perf_counter()
+                retrieval_timeout_seconds = None
+                if request_budget is not None:
+                    retrieval_timeout_seconds = request_budget.child_timeout_seconds(
+                        stage="retrieval",
+                        reserve_ms=request_budget.cleanup_reserve_ms,
+                    )
+                    retriever_kwargs.setdefault("timeout_seconds", retrieval_timeout_seconds)
+                try:
+                    retrieved_chunks = self.retriever.retrieve(query, **retriever_kwargs)
+                except RequestBudgetExceededError:
+                    set_span_attributes(
+                        retrieval_span,
+                        {
+                            "failure_class": "retrieval_timeout",
+                            "response_status": "timeout",
+                            "budget_remaining_ms": request_budget.remaining_ms() if request_budget is not None else None,
+                        },
+                    )
+                    set_span_outputs(
+                        retrieval_span,
+                        {
+                            "error": "RequestBudgetExceededError: retrieval cannot start because the request budget is exhausted",
+                        },
+                    )
+                    raise
+                except RetrievalTimeoutError:
+                    set_span_attributes(
+                        retrieval_span,
+                        {
+                            "failure_class": "retrieval_timeout",
+                            "response_status": "timeout",
+                            "budget_remaining_ms": request_budget.remaining_ms() if request_budget is not None else None,
+                        },
+                    )
+                    set_span_outputs(
+                        retrieval_span,
+                        {
+                            "error": "RetrievalTimeoutError: retrieval exceeded request deadline",
+                        },
+                    )
+                    raise
+                except TimeoutError as exc:
+                    set_span_attributes(
+                        retrieval_span,
+                        {
+                            "failure_class": "retrieval_timeout",
+                            "response_status": "timeout",
+                            "budget_remaining_ms": request_budget.remaining_ms() if request_budget is not None else None,
+                        },
+                    )
+                    set_span_outputs(
+                        retrieval_span,
+                        {
+                            "error": f"{type(exc).__name__}: {exc}",
+                        },
+                    )
+                    raise RetrievalTimeoutError("retrieval exceeded request deadline") from exc
+
+                retrieval_elapsed_ms = max(0, int(round((time.perf_counter() - retrieval_started_at) * 1000.0)))
+                set_span_attributes(
+                    retrieval_span,
+                    {
+                        "retrieval_elapsed_ms": retrieval_elapsed_ms,
+                        "response_status": "ok",
+                    },
+                )
                 set_span_outputs(
                     retrieval_span,
                     {
                         "retrieved_count": len(retrieved_chunks),
                         "retrieved_contexts": self._serialize_nodes(retrieved_chunks),
+                        "retrieval_elapsed_ms": retrieval_elapsed_ms,
                     },
                 )
 
@@ -149,8 +232,86 @@ class RAGPipeline:
                 "rag.pipeline.generate",
                 inputs={"prompt": prompt, "llm_generate": gen_kwargs},
             ) as generation_span:
-                raw_output = self.llm.generate(prompt, **gen_kwargs)
-                set_span_outputs(generation_span, {"response": raw_output})
+                if request_budget is not None:
+                    set_span_attributes(generation_span, request_budget.to_attributes())
+                generation_started_at = time.perf_counter()
+                generation_timeout_seconds = None
+                if request_budget is not None:
+                    generation_timeout_seconds = request_budget.child_timeout_seconds(
+                        stage="generation",
+                        reserve_ms=request_budget.cleanup_reserve_ms,
+                    )
+                    gen_kwargs["timeout_seconds"] = generation_timeout_seconds
+                try:
+                    raw_output = self.llm.generate(prompt, **gen_kwargs)
+                except RequestBudgetExceededError:
+                    set_span_attributes(
+                        generation_span,
+                        {
+                            "failure_class": "generation_timeout",
+                            "response_status": "timeout",
+                            "budget_remaining_ms": request_budget.remaining_ms() if request_budget is not None else None,
+                        },
+                    )
+                    set_span_outputs(
+                        generation_span,
+                        {
+                            "error": "RequestBudgetExceededError: generation cannot start because the request budget is exhausted",
+                        },
+                    )
+                    raise
+                except GenerationTimeoutError:
+                    set_span_attributes(
+                        generation_span,
+                        {
+                            "failure_class": "generation_timeout",
+                            "response_status": "timeout",
+                            "budget_remaining_ms": request_budget.remaining_ms() if request_budget is not None else None,
+                        },
+                    )
+                    set_span_outputs(
+                        generation_span,
+                        {
+                            "error": "GenerationTimeoutError: generation exceeded request deadline",
+                        },
+                    )
+                    raise
+                except TimeoutError as exc:
+                    set_span_attributes(
+                        generation_span,
+                        {
+                            "failure_class": "generation_timeout",
+                            "response_status": "timeout",
+                            "budget_remaining_ms": request_budget.remaining_ms() if request_budget is not None else None,
+                        },
+                    )
+                    set_span_outputs(
+                        generation_span,
+                        {
+                            "error": f"{type(exc).__name__}: {exc}",
+                        },
+                    )
+                    raise GenerationTimeoutError("generation exceeded request deadline") from exc
+
+                generation_elapsed_ms = max(
+                    0,
+                    int(round((time.perf_counter() - generation_started_at) * 1000.0)),
+                )
+                response_status = "ok" if str(raw_output or "").strip() else "empty_response"
+                set_span_attributes(
+                    generation_span,
+                    {
+                        "generation_elapsed_ms": generation_elapsed_ms,
+                        "response_status": response_status,
+                    },
+                )
+                set_span_outputs(
+                    generation_span,
+                    {
+                        "response": raw_output,
+                        "generation_elapsed_ms": generation_elapsed_ms,
+                    },
+                )
 
             set_span_outputs(
                 pipeline_span,
@@ -158,10 +319,32 @@ class RAGPipeline:
                     "prompt": prompt,
                     "response": raw_output,
                     "retrieved_contexts": self._serialize_nodes(retrieved_chunks),
+                    "timings": {
+                        "retrieval_elapsed_ms": retrieval_elapsed_ms,
+                        "generation_elapsed_ms": generation_elapsed_ms,
+                    },
+                },
+            )
+            set_span_attributes(
+                pipeline_span,
+                {
+                    "retrieval_elapsed_ms": retrieval_elapsed_ms,
+                    "generation_elapsed_ms": generation_elapsed_ms,
+                    "response_status": "ok" if str(raw_output or "").strip() else "empty_response",
+                    "budget_remaining_ms": request_budget.remaining_ms() if request_budget is not None else None,
                 },
             )
 
-        return {"prompt": prompt, "response": raw_output, "source_nodes": retrieved_chunks}
+        return {
+            "prompt": prompt,
+            "response": raw_output,
+            "source_nodes": retrieved_chunks,
+            "timings": {
+                "retrieval_elapsed_ms": retrieval_elapsed_ms,
+                "generation_elapsed_ms": generation_elapsed_ms,
+            },
+            "budget": request_budget.to_attributes() if request_budget is not None else {},
+        }
 
     def __call__(self, query: str, **kwargs) -> Any:
         """Execute the pipeline as a callable.

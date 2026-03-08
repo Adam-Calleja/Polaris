@@ -20,10 +20,25 @@ from dataclasses import dataclass
 import json
 from pathlib import Path
 import random
+import socket
 import time
 from typing import TYPE_CHECKING, Any, Callable, Iterable, Iterator, Mapping, Protocol
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
+
+from polaris_rag.common.request_budget import (
+    EVAL_POLICY_INTERACTIVE,
+    EmptyResponseError,
+    FAILURE_CLASS_API_INTERNAL_ERROR,
+    FAILURE_CLASS_INVALID_INPUT,
+    FAILURE_CLASS_TRANSPORT_ERROR,
+    FAILURE_STAGE_API,
+    FAILURE_STAGE_DATASET,
+    FAILURE_STAGE_GENERATION,
+    build_failure_detail,
+    is_timeout_exception,
+    normalize_evaluation_policy,
+)
 
 if TYPE_CHECKING:
     from ragas import EvaluationDataset
@@ -141,6 +156,119 @@ def _to_bool(value: Any, default: bool) -> bool:
     return bool(value)
 
 
+class QueryAPIError(RuntimeError):
+    def __init__(
+        self,
+        message: str,
+        *,
+        status_code: int | None = None,
+        detail: Mapping[str, Any] | None = None,
+    ) -> None:
+        super().__init__(message)
+        detail_map = dict(detail or {})
+        self.status_code = status_code
+        self.detail = detail_map
+        self.failure_class = str(
+            detail_map.get(
+                "failure_class",
+                FAILURE_CLASS_API_INTERNAL_ERROR if status_code and status_code >= 500 else FAILURE_CLASS_TRANSPORT_ERROR,
+            )
+        )
+        self.failure_stage = str(detail_map.get("failure_stage", FAILURE_STAGE_API))
+        self.response_status = str(
+            detail_map.get(
+                "response_status",
+                "timeout" if status_code == 504 else "error",
+            )
+        )
+
+
+def _as_metadata_dict(value: Any) -> dict[str, Any]:
+    if isinstance(value, Mapping):
+        return dict(value)
+    return {}
+
+
+def _build_row_metadata(
+    base_metadata: Any,
+    *,
+    source_error: str | None = None,
+    failure_class: str | None = None,
+    failure_stage: str | None = None,
+    http_status: int | None = None,
+    elapsed_ms: int | None = None,
+    policy: str | None = None,
+    budget_ms: int | None = None,
+    response_status: str | None = None,
+    original_metadata: Any | None = None,
+) -> dict[str, Any]:
+    metadata = _as_metadata_dict(base_metadata)
+    if source_error is not None:
+        metadata["source_error"] = source_error
+    if failure_class is not None:
+        metadata["failure_class"] = failure_class
+    if failure_stage is not None:
+        metadata["failure_stage"] = failure_stage
+    if http_status is not None:
+        metadata["http_status"] = int(http_status)
+    if elapsed_ms is not None:
+        metadata["elapsed_ms"] = max(0, int(elapsed_ms))
+    if policy is not None:
+        metadata["policy"] = normalize_evaluation_policy(policy, default=EVAL_POLICY_INTERACTIVE)
+    if budget_ms is not None:
+        metadata["budget_ms"] = max(0, int(budget_ms))
+    if response_status is not None:
+        metadata["response_status"] = str(response_status)
+    if original_metadata is not None:
+        metadata["original_metadata"] = _as_metadata_dict(original_metadata)
+    return metadata
+
+
+def _failure_metadata_from_exception(
+    exc: BaseException,
+    *,
+    original_metadata: Any,
+    elapsed_ms: int | None = None,
+    http_status: int | None = None,
+    policy: str | None = None,
+    budget_ms: int | None = None,
+    source_error: str | None = None,
+) -> dict[str, Any]:
+    detail = build_failure_detail(
+        exc,
+        elapsed_ms=elapsed_ms,
+        http_status=http_status,
+        response_status=getattr(exc, "response_status", None),
+    )
+    return _build_row_metadata(
+        {},
+        source_error=source_error or str(detail.get("error", f"{type(exc).__name__}: {exc}")),
+        failure_class=str(detail.get("failure_class")),
+        failure_stage=str(detail.get("failure_stage")),
+        http_status=int(detail["http_status"]) if detail.get("http_status") is not None else http_status,
+        elapsed_ms=int(detail["elapsed_ms"]) if detail.get("elapsed_ms") is not None else elapsed_ms,
+        policy=policy,
+        budget_ms=budget_ms,
+        response_status=str(detail.get("response_status", "error")),
+        original_metadata=original_metadata,
+    )
+
+
+def _parse_error_detail(body: str) -> dict[str, Any]:
+    text = str(body or "").strip()
+    if not text:
+        return {}
+    try:
+        parsed = json.loads(text)
+    except json.JSONDecodeError:
+        return {"error": text}
+    if isinstance(parsed, Mapping):
+        detail = parsed.get("detail", parsed)
+        if isinstance(detail, Mapping):
+            return dict(detail)
+    return {"error": text}
+
+
 def _extract_doc_id(node: Any) -> str:
     for attr in ("id_", "node_id", "id"):
         value = getattr(node, attr, None)
@@ -250,10 +378,13 @@ def _prepare_one(
     id_field: str,
     llm_generate_overrides: dict[str, Any] | None,
     raise_exceptions: bool,
+    policy: str | None = None,
+    budget_ms: int | None = None,
 ) -> tuple[int, dict[str, Any]]:
     query = str(example.get(query_field, "") or "").strip()
     reference = str(example.get(reference_field, "") or "").strip()
     sample_id = str(example.get(id_field, f"row-{index}"))
+    base_metadata = example.get("metadata", {})
 
     if not query:
         if raise_exceptions:
@@ -265,9 +396,18 @@ def _prepare_one(
             "response": "",
             "retrieved_contexts": [],
             "retrieved_context_ids": [],
-            "metadata": {"source_error": "missing query"},
+            "metadata": _build_row_metadata(
+                {},
+                source_error="missing query",
+                failure_class=FAILURE_CLASS_INVALID_INPUT,
+                failure_stage=FAILURE_STAGE_DATASET,
+                policy=policy,
+                budget_ms=budget_ms,
+                response_status="invalid_input",
+            ),
         }
 
+    started_at = time.perf_counter()
     try:
         run_kwargs: dict[str, Any] = {}
         if llm_generate_overrides:
@@ -277,6 +417,16 @@ def _prepare_one(
         response = str(result.get("response", "") or "")
         source_nodes = result.get("source_nodes", []) or []
         retrieved_contexts, retrieved_context_ids = _normalise_source_nodes(source_nodes)
+        timings = result.get("timings", {})
+        elapsed_ms = _to_int(
+            _as_metadata_dict(timings).get("retrieval_elapsed_ms"),
+            -1,
+        )
+        generation_elapsed_ms = _to_int(_as_metadata_dict(timings).get("generation_elapsed_ms"), -1)
+        if generation_elapsed_ms >= 0:
+            elapsed_ms = max(elapsed_ms, 0) + generation_elapsed_ms if elapsed_ms >= 0 else generation_elapsed_ms
+        if elapsed_ms < 0:
+            elapsed_ms = max(0, int(round((time.perf_counter() - started_at) * 1000.0)))
 
         row = {
             "id": sample_id,
@@ -285,13 +435,21 @@ def _prepare_one(
             "response": response,
             "retrieved_contexts": retrieved_contexts,
             "retrieved_context_ids": retrieved_context_ids,
-            "metadata": example.get("metadata", {}),
+            "metadata": _build_row_metadata(
+                base_metadata,
+                elapsed_ms=elapsed_ms,
+                policy=policy,
+                budget_ms=budget_ms,
+                response_status="ok" if response.strip() else "empty_response",
+            ),
         }
         return index, row
 
     except Exception as exc:
         if raise_exceptions:
             raise
+
+        elapsed_ms = max(0, int(round((time.perf_counter() - started_at) * 1000.0)))
 
         row = {
             "id": sample_id,
@@ -300,13 +458,14 @@ def _prepare_one(
             "response": "",
             "retrieved_contexts": [],
             "retrieved_context_ids": [],
-            "metadata": {
-                "source_error": (
-                    f"{type(exc).__name__}: {exc} "
-                    f"(example index={index} id={sample_id})"
-                ),
-                "original_metadata": example.get("metadata", {}),
-            },
+            "metadata": _failure_metadata_from_exception(
+                exc,
+                original_metadata=base_metadata,
+                elapsed_ms=elapsed_ms,
+                policy=policy,
+                budget_ms=budget_ms,
+                source_error=f"{type(exc).__name__}: {exc} (example index={index} id={sample_id})",
+            ),
         }
         return index, row
 
@@ -329,17 +488,56 @@ def _post_query_api(
             body = response.read().decode("utf-8")
     except HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="replace")
-        raise RuntimeError(f"query API HTTP {exc.code}: {detail}") from exc
+        detail_payload = _parse_error_detail(detail)
+        message = str(detail_payload.get("error", f"query API HTTP {exc.code}: {detail}"))
+        raise QueryAPIError(
+            message,
+            status_code=int(exc.code),
+            detail={
+                **detail_payload,
+                "http_status": int(exc.code),
+            },
+        ) from exc
+    except (TimeoutError, socket.timeout) as exc:
+        raise QueryAPIError(
+            f"query API transport timeout after {float(timeout_seconds):.3f}s",
+            detail={
+                "failure_class": FAILURE_CLASS_TRANSPORT_ERROR,
+                "failure_stage": FAILURE_STAGE_API,
+                "response_status": "client_timeout",
+            },
+        ) from exc
     except URLError as exc:
-        raise RuntimeError(f"query API connection error: {exc}") from exc
+        raise QueryAPIError(
+            f"query API connection error: {exc}",
+            detail={
+                "failure_class": FAILURE_CLASS_TRANSPORT_ERROR,
+                "failure_stage": FAILURE_STAGE_API,
+                "response_status": "connection_error",
+            },
+        ) from exc
 
     try:
         parsed = json.loads(body)
     except json.JSONDecodeError as exc:
-        raise RuntimeError(f"query API returned invalid JSON: {exc}") from exc
+        raise QueryAPIError(
+            f"query API returned invalid JSON: {exc}",
+            detail={
+                "failure_class": FAILURE_CLASS_API_INTERNAL_ERROR,
+                "failure_stage": FAILURE_STAGE_API,
+                "response_status": "invalid_json",
+            },
+        ) from exc
 
     if not isinstance(parsed, dict):
-        raise RuntimeError(f"query API returned non-object response: {type(parsed)!r}")
+        raise QueryAPIError(
+            f"query API returned non-object response: {type(parsed)!r}",
+            detail={
+                "failure_class": FAILURE_CLASS_API_INTERNAL_ERROR,
+                "failure_stage": FAILURE_STAGE_API,
+                "response_status": "invalid_json",
+            },
+        )
 
     return parsed
 
@@ -375,10 +573,13 @@ def _prepare_one_via_api(
     timeout_seconds: float,
     headers: Mapping[str, str] | None,
     requester: ApiRequester,
+    policy: str | None = None,
+    budget_ms: int | None = None,
 ) -> tuple[int, dict[str, Any]]:
     query = str(example.get(query_field, "") or "").strip()
     reference = str(example.get(reference_field, "") or "").strip()
     sample_id = str(example.get(id_field, f"row-{index}"))
+    base_metadata = example.get("metadata", {})
 
     if not query:
         if raise_exceptions:
@@ -390,15 +591,25 @@ def _prepare_one_via_api(
             "response": "",
             "retrieved_contexts": [],
             "retrieved_context_ids": [],
-            "metadata": {"source_error": "missing query"},
+            "metadata": _build_row_metadata(
+                {},
+                source_error="missing query",
+                failure_class=FAILURE_CLASS_INVALID_INPUT,
+                failure_stage=FAILURE_STAGE_DATASET,
+                policy=policy,
+                budget_ms=budget_ms,
+                response_status="invalid_input",
+            ),
         }
 
+    started_at = time.perf_counter()
     try:
         result = requester(api_url, query, timeout_seconds, headers)
         response = str(result.get("answer", result.get("response", "")) or "")
         retrieved_contexts, retrieved_context_ids = _extract_api_context_chunks(
             result.get("context", [])
         )
+        elapsed_ms = max(0, int(round((time.perf_counter() - started_at) * 1000.0)))
 
         row = {
             "id": sample_id,
@@ -407,13 +618,32 @@ def _prepare_one_via_api(
             "response": response,
             "retrieved_contexts": retrieved_contexts,
             "retrieved_context_ids": retrieved_context_ids,
-            "metadata": example.get("metadata", {}),
+            "metadata": _build_row_metadata(
+                base_metadata,
+                http_status=200,
+                elapsed_ms=elapsed_ms,
+                policy=policy,
+                budget_ms=budget_ms,
+                response_status="ok" if response.strip() else "empty_response",
+            ),
         }
         return index, row
 
     except Exception as exc:
         if raise_exceptions:
             raise
+
+        elapsed_ms = max(0, int(round((time.perf_counter() - started_at) * 1000.0)))
+        status_code = getattr(exc, "status_code", None)
+        metadata = _failure_metadata_from_exception(
+            exc,
+            original_metadata=base_metadata,
+            elapsed_ms=elapsed_ms,
+            http_status=status_code,
+            policy=policy,
+            budget_ms=budget_ms,
+            source_error=f"{type(exc).__name__}: {exc} (example index={index} id={sample_id})",
+        )
 
         row = {
             "id": sample_id,
@@ -422,13 +652,7 @@ def _prepare_one_via_api(
             "response": "",
             "retrieved_contexts": [],
             "retrieved_context_ids": [],
-            "metadata": {
-                "source_error": (
-                    f"{type(exc).__name__}: {exc} "
-                    f"(example index={index} id={sample_id})"
-                ),
-                "original_metadata": example.get("metadata", {}),
-            },
+            "metadata": metadata,
         }
         return index, row
 
@@ -440,16 +664,28 @@ def _error_text_from_exception(exc: Exception) -> str:
 def _row_trace_outputs(row: Mapping[str, Any]) -> dict[str, Any]:
     metadata = row.get("metadata")
     source_error = None
+    failure_class = None
+    failure_stage = None
+    response_status = None
     if isinstance(metadata, Mapping):
         value = metadata.get("source_error")
         if value is not None:
             source_error = str(value)
+        if metadata.get("failure_class") is not None:
+            failure_class = str(metadata.get("failure_class"))
+        if metadata.get("failure_stage") is not None:
+            failure_stage = str(metadata.get("failure_stage"))
+        if metadata.get("response_status") is not None:
+            response_status = str(metadata.get("response_status"))
 
     return {
         "response": str(row.get("response", "") or ""),
         "retrieved_context_ids": list(row.get("retrieved_context_ids", []) or []),
         "retrieved_contexts": list(row.get("retrieved_contexts", []) or []),
         "source_error": source_error,
+        "failure_class": failure_class,
+        "failure_stage": failure_stage,
+        "response_status": response_status,
     }
 
 
@@ -517,6 +753,8 @@ def _fail_soft_empty_response_row(
     row: dict[str, Any],
     message: str,
     original_metadata: Any,
+    policy: str | None = None,
+    budget_ms: int | None = None,
 ) -> dict[str, Any]:
     return {
         "id": str(row.get("id", "") or ""),
@@ -525,10 +763,18 @@ def _fail_soft_empty_response_row(
         "response": "",
         "retrieved_contexts": list(row.get("retrieved_contexts", []) or []),
         "retrieved_context_ids": list(row.get("retrieved_context_ids", []) or []),
-        "metadata": {
-            "source_error": message,
-            "original_metadata": original_metadata if original_metadata is not None else {},
-        },
+        "metadata": _build_row_metadata(
+            row.get("metadata", {}),
+            source_error=message,
+            failure_class="empty_response",
+            failure_stage=FAILURE_STAGE_GENERATION,
+            http_status=_to_int(_as_metadata_dict(row.get("metadata", {})).get("http_status"), 200),
+            elapsed_ms=_to_int(_as_metadata_dict(row.get("metadata", {})).get("elapsed_ms"), 0),
+            policy=policy,
+            budget_ms=budget_ms,
+            response_status="empty_response",
+            original_metadata=original_metadata,
+        ),
     }
 
 
@@ -544,6 +790,8 @@ def _prepare_one_with_retries(
     raise_exceptions: bool,
     retry_policy: PrepRetryPolicy,
     trace_factory: PrepAttemptTraceFactory | None = None,
+    evaluation_policy: str | None = None,
+    budget_ms: int | None = None,
 ) -> tuple[int, dict[str, Any]]:
     policy = PrepRetryPolicy.from_value(retry_policy)
     sample_id = str(example.get(id_field, f"row-{index}"))
@@ -575,10 +823,19 @@ def _prepare_one_with_retries(
                     id_field=id_field,
                     llm_generate_overrides=llm_generate_overrides,
                     raise_exceptions=raise_exceptions,
+                    policy=evaluation_policy,
+                    budget_ms=budget_ms,
                 )
             except Exception as exc:
                 trace_recorder.set_outputs({"error": _error_text_from_exception(exc)})
-                trace_recorder.set_attributes({"status": "error"})
+                trace_recorder.set_attributes(
+                    {
+                        "status": "error",
+                        "failure_class": getattr(exc, "failure_class", None),
+                        "failure_stage": getattr(exc, "failure_stage", None),
+                        "response_status": getattr(exc, "response_status", "error"),
+                    }
+                )
                 if attempt >= policy.max_attempts:
                     raise
                 # Missing query is deterministic and should never be retried.
@@ -590,25 +847,35 @@ def _prepare_one_with_retries(
             source_error = _source_error_text(row)
             trace_recorder.set_outputs(_row_trace_outputs(row))
             if source_error:
-                trace_recorder.set_attributes({"status": "source_error"})
+                trace_recorder.set_attributes(
+                    {
+                        "status": "source_error",
+                        "failure_class": _as_metadata_dict(row.get("metadata", {})).get("failure_class"),
+                        "failure_stage": _as_metadata_dict(row.get("metadata", {})).get("failure_stage"),
+                        "response_status": _as_metadata_dict(row.get("metadata", {})).get("response_status"),
+                    }
+                )
                 if _is_missing_query_source_error(source_error) or attempt >= policy.max_attempts:
                     return row_index, row
                 _sleep_before_retry(policy, attempt_number=attempt)
                 continue
 
-            if policy.retry_on_empty_response and _row_has_empty_response(row):
+            if _row_has_empty_response(row):
                 error_message = (
                     f"ValueError: response is empty after {attempt} attempt(s) "
                     f"for example index={index} id={sample_id}"
                 )
                 trace_recorder.set_attributes({"status": "empty_response"})
-                if attempt >= policy.max_attempts:
+                should_retry_empty = policy.retry_on_empty_response and attempt < policy.max_attempts
+                if not should_retry_empty:
                     if raise_exceptions:
-                        raise ValueError(error_message)
+                        raise EmptyResponseError(error_message)
                     return row_index, _fail_soft_empty_response_row(
                         row=row,
                         message=error_message,
                         original_metadata=example.get("metadata", {}),
+                        policy=evaluation_policy,
+                        budget_ms=budget_ms,
                     )
                 _sleep_before_retry(policy, attempt_number=attempt)
                 continue
@@ -634,6 +901,8 @@ def _prepare_one_via_api_with_retries(
     requester: ApiRequester,
     retry_policy: PrepRetryPolicy,
     trace_factory: PrepAttemptTraceFactory | None = None,
+    evaluation_policy: str | None = None,
+    budget_ms: int | None = None,
 ) -> tuple[int, dict[str, Any]]:
     policy = PrepRetryPolicy.from_value(retry_policy)
     sample_id = str(example.get(id_field, f"row-{index}"))
@@ -670,10 +939,19 @@ def _prepare_one_via_api_with_retries(
                     timeout_seconds=timeout_seconds,
                     headers=headers,
                     requester=requester,
+                    policy=evaluation_policy,
+                    budget_ms=budget_ms,
                 )
             except Exception as exc:
                 trace_recorder.set_outputs({"error": _error_text_from_exception(exc)})
-                trace_recorder.set_attributes({"status": "error"})
+                trace_recorder.set_attributes(
+                    {
+                        "status": "error",
+                        "failure_class": getattr(exc, "failure_class", None),
+                        "failure_stage": getattr(exc, "failure_stage", None),
+                        "response_status": getattr(exc, "response_status", "error"),
+                    }
+                )
                 if _is_missing_query_exception(exc) or attempt >= policy.max_attempts:
                     raise
                 _sleep_before_retry(policy, attempt_number=attempt)
@@ -682,25 +960,35 @@ def _prepare_one_via_api_with_retries(
             source_error = _source_error_text(row)
             trace_recorder.set_outputs(_row_trace_outputs(row))
             if source_error:
-                trace_recorder.set_attributes({"status": "source_error"})
+                trace_recorder.set_attributes(
+                    {
+                        "status": "source_error",
+                        "failure_class": _as_metadata_dict(row.get("metadata", {})).get("failure_class"),
+                        "failure_stage": _as_metadata_dict(row.get("metadata", {})).get("failure_stage"),
+                        "response_status": _as_metadata_dict(row.get("metadata", {})).get("response_status"),
+                    }
+                )
                 if _is_missing_query_source_error(source_error) or attempt >= policy.max_attempts:
                     return row_index, row
                 _sleep_before_retry(policy, attempt_number=attempt)
                 continue
 
-            if policy.retry_on_empty_response and _row_has_empty_response(row):
+            if _row_has_empty_response(row):
                 error_message = (
                     f"ValueError: response is empty after {attempt} attempt(s) "
                     f"for example index={index} id={sample_id}"
                 )
                 trace_recorder.set_attributes({"status": "empty_response"})
-                if attempt >= policy.max_attempts:
+                should_retry_empty = policy.retry_on_empty_response and attempt < policy.max_attempts
+                if not should_retry_empty:
                     if raise_exceptions:
-                        raise ValueError(error_message)
+                        raise EmptyResponseError(error_message)
                     return row_index, _fail_soft_empty_response_row(
                         row=row,
                         message=error_message,
                         original_metadata=example.get("metadata", {}),
+                        policy=evaluation_policy,
+                        budget_ms=budget_ms,
                     )
                 _sleep_before_retry(policy, attempt_number=attempt)
                 continue
@@ -752,6 +1040,8 @@ def build_prepared_rows(
     retry_policy: PrepRetryPolicy | Mapping[str, Any] | None = None,
     progress_callback: PrepProgressCallback | None = None,
     trace_factory: PrepAttemptTraceFactory | None = None,
+    policy: str | None = None,
+    budget_ms: int | None = None,
 ) -> list[dict[str, Any]]:
     """Convert raw examples into rows compatible with ``EvaluationDataset``.
 
@@ -818,6 +1108,8 @@ def build_prepared_rows(
                     raise_exceptions=raise_exceptions,
                     retry_policy=effective_retry_policy,
                     trace_factory=trace_factory,
+                    evaluation_policy=policy,
+                    budget_ms=budget_ms,
                 )
             except Exception as exc:
                 _record_progress({}, last_error=_error_text_from_exception(exc))
@@ -839,6 +1131,8 @@ def build_prepared_rows(
                     raise_exceptions=raise_exceptions,
                     retry_policy=effective_retry_policy,
                     trace_factory=trace_factory,
+                    evaluation_policy=policy,
+                    budget_ms=budget_ms,
                 )
                 for i, example in enumerate(raw_examples)
             ]
@@ -870,6 +1164,8 @@ def build_prepared_rows_from_api(
     retry_policy: PrepRetryPolicy | Mapping[str, Any] | None = None,
     progress_callback: PrepProgressCallback | None = None,
     trace_factory: PrepAttemptTraceFactory | None = None,
+    policy: str | None = None,
+    budget_ms: int | None = None,
 ) -> list[dict[str, Any]]:
     """Convert raw examples into prepared rows by calling Polaris query API."""
 
@@ -929,6 +1225,8 @@ def build_prepared_rows_from_api(
                     requester=effective_requester,
                     retry_policy=effective_retry_policy,
                     trace_factory=trace_factory,
+                    evaluation_policy=policy,
+                    budget_ms=budget_ms,
                 )
             except Exception as exc:
                 _record_progress({}, last_error=_error_text_from_exception(exc))
@@ -952,6 +1250,8 @@ def build_prepared_rows_from_api(
                     requester=effective_requester,
                     retry_policy=effective_retry_policy,
                     trace_factory=trace_factory,
+                    evaluation_policy=policy,
+                    budget_ms=budget_ms,
                 )
                 for i, example in enumerate(raw_examples)
             ]

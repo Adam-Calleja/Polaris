@@ -16,6 +16,9 @@ HybridRetriever
     using query fusion.
 """
 
+from queue import Queue
+import threading
+
 from llama_index.retrievers.bm25 import BM25Retriever
 from llama_index.core.retrievers import QueryFusionRetriever
 from llama_index.core.vector_stores.types import MetadataFilters
@@ -23,7 +26,10 @@ from llama_index.core.schema import NodeWithScore
 from llama_index.core import StorageContext
 
 from typing import Optional
+from polaris_rag.common.request_budget import RetrievalTimeoutError
 from polaris_rag.generation.llm_interface import BaseLLM
+from polaris_rag.retrieval.embedder import BaseEmbedder
+from polaris_rag.retrieval.vector_store import QdrantIndexStore
 
 class VectorIndexRetriever:
     """Vector-based retriever over a vector store index.
@@ -53,6 +59,8 @@ class VectorIndexRetriever:
             storage_context: StorageContext,
             filters: Optional[MetadataFilters] = None,
             top_k: Optional[int] = 5,
+            vector_store: QdrantIndexStore | None = None,
+            embedder: BaseEmbedder | None = None,
         ):
         """Initialise a VectorIndexRetriever.
 
@@ -65,17 +73,24 @@ class VectorIndexRetriever:
         top_k : int, optional
             Maximum number of results to return. Defaults to ``5``.
         """
-        vector_store = storage_context.vector_store
-        vector_index = vector_store._index
+        vector_store_impl = storage_context.vector_store
+        vector_index = vector_store_impl._index
 
         self._retriever = vector_index.as_retriever(
             similarity_top_k=top_k,
             filters=filters
         )
+        self._top_k = int(top_k or 5)
+        self._filters = filters
+        self._vector_store_wrapper = vector_store if hasattr(vector_store, "query_nodes") else None
+        self._embedder = embedder
 
     def retrieve(
             self, 
             query: str,
+            *,
+            timeout_seconds: float | None = None,
+            **kwargs,
         ) -> list[NodeWithScore]:
         """Retrieve nodes for a query.
 
@@ -89,6 +104,13 @@ class VectorIndexRetriever:
         list[NodeWithScore]
             Retrieved nodes with associated similarity scores.
         """
+        if self._vector_store_wrapper is not None:
+            return self._vector_store_wrapper.query_nodes(
+                query,
+                top_k=self._top_k,
+                filters=self._filters,
+                timeout_seconds=timeout_seconds,
+            )
         return self._retriever.retrieve(query)
     
 class HybridRetriever:
@@ -123,6 +145,8 @@ class HybridRetriever:
             filters: Optional[MetadataFilters] = None,
             top_k: Optional[int] = 5,
             llm: BaseLLM = None,
+            vector_store: QdrantIndexStore | None = None,
+            embedder: BaseEmbedder | None = None,
         ):
         """Initialise a HybridRetriever.
 
@@ -166,6 +190,9 @@ class HybridRetriever:
     def retrieve(
             self, 
             query: str,
+            *,
+            timeout_seconds: float | None = None,
+            **kwargs,
         ) -> list[NodeWithScore]:
         """Retrieve nodes for a query.
 
@@ -179,4 +206,30 @@ class HybridRetriever:
         list[NodeWithScore]
             Retrieved nodes with associated scores.
         """
-        return self._retriever.retrieve(query)
+        if timeout_seconds is None:
+            return self._retriever.retrieve(query)
+
+        result_queue: Queue[tuple[bool, object]] = Queue(maxsize=1)
+
+        def _worker() -> None:
+            try:
+                result_queue.put((True, self._retriever.retrieve(query)))
+            except Exception as exc:  # pragma: no cover - exercised via caller behavior
+                result_queue.put((False, exc))
+
+        worker = threading.Thread(
+            target=_worker,
+            name="polaris-hybrid-retrieval",
+            daemon=True,
+        )
+        worker.start()
+        worker.join(timeout=float(timeout_seconds))
+        if worker.is_alive():
+            raise RetrievalTimeoutError(
+                f"hybrid retrieval timed out after {float(timeout_seconds):.3f}s"
+            )
+
+        succeeded, payload = result_queue.get_nowait()
+        if not succeeded:
+            raise payload  # type: ignore[misc]
+        return payload  # type: ignore[return-value]

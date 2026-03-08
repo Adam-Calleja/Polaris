@@ -19,8 +19,9 @@ dependencies = [
   # --- Runtime (API/RAG) dependencies ---
   # LangChain
   "langchain-core>=0.1",
-  "langchain-openai>=0.1",
+  "langchain-openai>=0.1,<1",
   "langchain-community>=0.1",
+  "openai>=1,<2",
 
   # LlamaIndex core + integrations used at runtime
   "llama-index-core>=0.10",

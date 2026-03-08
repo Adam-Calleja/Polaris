@@ -1,19 +1,35 @@
 # polaris_rag/app/api.py
 from __future__ import annotations
 
+import time
 from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel, Field
 from polaris_rag.config import GlobalConfig
 from polaris_rag.app.container import build_container
 import logging
 import traceback
-from typing import Any
+from typing import Any, Mapping
+from polaris_rag.common.request_budget import (
+    EVAL_POLICY_INTERACTIVE,
+    FAILURE_CLASS_API_INTERNAL_ERROR,
+    FAILURE_STAGE_API,
+    GenerationTimeoutError,
+    POLARIS_EVAL_POLICY_HEADER,
+    POLARIS_TIMEOUT_HEADER,
+    RequestBudget,
+    RequestBudgetExceededError,
+    RetrievalTimeoutError,
+    build_failure_detail,
+    normalize_evaluation_policy,
+    resolve_evaluation_deadlines,
+)
 from polaris_rag.observability.mlflow_tracking import (
     TRACE_CHILD_RUN_HEADER,
     TRACE_PARENT_RUN_HEADER,
     TRACE_STAGE_HEADER,
     configure_mlflow_runtime,
     load_mlflow_runtime_config,
+    set_span_attributes,
     set_span_outputs,
     start_span,
 )
@@ -75,6 +91,40 @@ def _serialize_context(source_nodes: list[Any]) -> list[RetrievedContextChunk]:
         )
     return chunks
 
+
+def _as_mapping(value: Any) -> Mapping[str, Any]:
+    if isinstance(value, Mapping):
+        return value
+    if hasattr(value, "__dict__"):
+        return dict(vars(value))
+    return {}
+
+
+def _resolve_request_budget(request: Request) -> RequestBudget | None:
+    timeout_header = request.headers.get(POLARIS_TIMEOUT_HEADER)
+    if timeout_header is None:
+        return None
+
+    try:
+        requested_timeout_ms = int(timeout_header)
+    except (TypeError, ValueError):
+        logger.warning("Ignoring invalid %s header: %r", POLARIS_TIMEOUT_HEADER, timeout_header)
+        return None
+
+    policy = normalize_evaluation_policy(
+        request.headers.get(POLARIS_EVAL_POLICY_HEADER),
+        default=EVAL_POLICY_INTERACTIVE,
+    )
+    generation_cfg = _as_mapping(_as_mapping(app.state.container.config.raw).get("evaluation", {})).get("generation", {})
+    deadlines = resolve_evaluation_deadlines(generation_cfg, policy=policy)
+    effective_timeout_ms = min(max(1, requested_timeout_ms), deadlines.server_total_ms)
+    return RequestBudget.from_timeout_ms(
+        timeout_ms=effective_timeout_ms,
+        policy=policy,
+        retrieval_cap_ms=deadlines.retrieval_cap_ms,
+        cleanup_reserve_ms=deadlines.cleanup_reserve_ms,
+    )
+
 @app.on_event("startup")
 def startup():
     # Use env var so Docker can pass config location
@@ -106,7 +156,11 @@ def query(req: QueryRequest, request: Request):
         trace_tags["polaris.child_run_id"] = str(child_run_id)
     if stage_name:
         trace_tags["polaris.stage"] = str(stage_name)
+    request_budget = _resolve_request_budget(request)
+    policy = request_budget.policy if request_budget is not None else normalize_evaluation_policy(None, default=EVAL_POLICY_INTERACTIVE)
+    trace_tags["polaris.eval_policy"] = policy
     trace_span = None
+    request_started_at = time.perf_counter()
 
     try:
         with start_span(
@@ -115,30 +169,83 @@ def query(req: QueryRequest, request: Request):
             attributes={"http.route": "/v1/query"},
             tags=trace_tags,
         ) as trace_span:
-            result = app.state.container.pipeline.run(req.query)
+            if request_budget is not None:
+                set_span_attributes(trace_span, request_budget.to_attributes())
+            result = app.state.container.pipeline.run(req.query, request_budget=request_budget)
             answer = str(result.get("response", ""))
             context = _serialize_context(result.get("source_nodes", []))
+            timings = _as_mapping(result.get("timings", {}))
+            response_status = "ok" if answer.strip() else "empty_response"
             context_payload = [
                 c.model_dump() if hasattr(c, "model_dump") else c.dict()
                 for c in context
             ]
-            set_span_outputs(trace_span, {"answer": answer, "context": context_payload})
-            return QueryResponse(answer=answer, context=context)
-    except Exception as e:
-        if trace_span is not None:
+            set_span_attributes(
+                trace_span,
+                {
+                    "retrieval_elapsed_ms": timings.get("retrieval_elapsed_ms"),
+                    "generation_elapsed_ms": timings.get("generation_elapsed_ms"),
+                    "response_status": response_status,
+                    "budget_remaining_ms": request_budget.remaining_ms() if request_budget is not None else None,
+                },
+            )
             set_span_outputs(
                 trace_span,
-                {"error": f"{type(e).__name__}: {e}"},
+                {
+                    "answer": answer,
+                    "context": context_payload,
+                    "timings": timings,
+                    "policy": policy,
+                },
             )
+            return QueryResponse(answer=answer, context=context)
+    except (RetrievalTimeoutError, GenerationTimeoutError, RequestBudgetExceededError) as e:
+        elapsed_ms = max(0, int(round((time.perf_counter() - request_started_at) * 1000.0)))
+        detail = build_failure_detail(
+            e,
+            elapsed_ms=elapsed_ms,
+            http_status=504,
+            request_budget=request_budget,
+        )
+        if trace_span is not None:
+            set_span_attributes(
+                trace_span,
+                {
+                    "failure_class": detail["failure_class"],
+                    "response_status": detail["response_status"],
+                    "budget_remaining_ms": request_budget.remaining_ms() if request_budget is not None else None,
+                },
+            )
+            set_span_outputs(trace_span, detail)
+        logger.warning("Timeout while handling /v1/query: %s", detail["error"])
+        raise HTTPException(status_code=504, detail=detail)
+    except Exception as e:
+        elapsed_ms = max(0, int(round((time.perf_counter() - request_started_at) * 1000.0)))
+        tb = traceback.format_exc()
+        detail = build_failure_detail(
+            e,
+            elapsed_ms=elapsed_ms,
+            http_status=500,
+            request_budget=request_budget,
+            response_status="error",
+            traceback_text=tb,
+        )
+        detail.setdefault("failure_class", FAILURE_CLASS_API_INTERNAL_ERROR)
+        detail.setdefault("failure_stage", FAILURE_STAGE_API)
         # Log full traceback to container logs for debugging
         logger.exception("Error while handling /v1/query")
+        if trace_span is not None:
+            set_span_attributes(
+                trace_span,
+                {
+                    "failure_class": detail["failure_class"],
+                    "response_status": detail["response_status"],
+                    "budget_remaining_ms": request_budget.remaining_ms() if request_budget is not None else None,
+                },
+            )
+            set_span_outputs(trace_span, detail)
 
-        # Return a useful error message to clients (still a 500)
-        tb = traceback.format_exc()
         raise HTTPException(
             status_code=500,
-            detail={
-                "error": f"{type(e).__name__}: {e}",
-                "traceback": tb,
-            },
+            detail=detail,
         )
