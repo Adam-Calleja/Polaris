@@ -141,6 +141,20 @@ You can also override this at runtime:
 polaris-eval -c config/config.yaml --generation-mode api --query-api-url http://127.0.0.1:8000/v1/query
 ```
 
+Evaluation remains file-driven. The evaluator reads the dataset from
+`--dataset-path` or `evaluation.dataset.input_path`, and optionally reuses
+prepared rows from `--prepared-path` / `evaluation.dataset.prepared_path`.
+MLflow dataset objects are logged for lineage, but eval does not resolve its
+runtime input back out of MLflow.
+
+To evaluate a specific split explicitly:
+
+```bash
+polaris-eval -c config/config.yaml \
+  --dataset-path /path/to/ragas_one_hop_eval_dataset_v1.test.jsonl \
+  --prepared-path /path/to/prepared_test_rows.json
+```
+
 To control MLflow from CLI:
 
 ```bash
@@ -170,6 +184,52 @@ Additional MLflow-tracked artifacts include:
 - `config_snapshot.json`
 - `env_snapshot.json`
 
+### Create Dev/Test Splits
+
+Use `polaris-create-dev-test-sets` (or `scripts/create_dev_test_sets.py`) to
+create local dev/test dataset files. These files are the executable source of
+truth for evaluation; the same command can also register the splits as MLflow
+dataset inputs for discoverability and lineage.
+
+Explicit test IDs:
+
+```bash
+polaris-create-dev-test-sets \
+  --dataset-file data/test/ragas_one_hop_eval_dataset_v1.jsonl \
+  --test-samples-file data/test/eval_ticket_keys.txt
+```
+
+Stratified split from category mappings:
+
+```bash
+polaris-create-dev-test-sets \
+  --dataset-file data/test/ragas_one_hop_eval_dataset_v1.jsonl \
+  --categories-file data/test/eval_categories.json \
+  --test-size 17 \
+  --random-state 42
+```
+
+With MLflow lineage logging enabled:
+
+```bash
+polaris-create-dev-test-sets \
+  --dataset-file data/test/ragas_one_hop_eval_dataset_v1.jsonl \
+  --categories-file data/test/eval_categories.json \
+  --test-size 17 \
+  --random-state 42 \
+  --mlflow \
+  --config-file config/config.yaml
+```
+
+Notes:
+- Stratified splitting uses `scikit-learn` and only stratifies categories with
+  more than one sample.
+- Singleton or uncategorized samples remain in the dev split.
+- Dev and test are logged to MLflow as separate dataset objects with
+  `validation` and `testing` contexts.
+- Prepared rows and predictions are kept as eval run artifacts rather than
+  canonical MLflow datasets.
+
 ## Prompt Registry Workflow
 Runtime prompt loading is registry-first (`mlflow.prompt_registry.enabled: true`).
 Register/update prompt versions from repo templates, then set alias:
@@ -189,6 +249,14 @@ Polaris logs the four required experiment categories:
 2. Metrics: RAGAS quality metrics and system metrics (prep/eval latency, throughput, failures, concurrency).
 3. Artifacts: scores, summaries, run manifests, prepared rows, config/env snapshots.
 4. Traces: `/v1/query` request trace plus pipeline spans (retrieve, prompt render, generation), linked to eval runs via request headers.
+
+Dataset lineage is split across two layers:
+- Split creation logs local dev/test files as MLflow dataset inputs for lineage.
+- Each `polaris-eval` run logs the local benchmark file it consumed as an
+  MLflow dataset input.
+
+This means MLflow shows which benchmark split a run used, while the runtime
+execution path still depends only on local dataset files.
 
 ## Project Structure
 - `src/polaris_rag`: Core pipeline, retrieval, generation, and evaluation code.
