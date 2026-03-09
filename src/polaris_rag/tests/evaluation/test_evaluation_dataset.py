@@ -7,6 +7,10 @@ from polaris_rag.evaluation.evaluation_dataset import (
     build_prepared_rows,
     build_prepared_rows_from_api,
     load_raw_examples,
+    load_sample_categories,
+    load_sample_ids,
+    stratified_split_raw_examples_by_categories,
+    split_raw_examples_by_ids,
 )
 
 
@@ -68,6 +72,87 @@ def test_load_raw_examples_supports_json_array_in_jsonl_suffix(tmp_path) -> None
 
     rows = load_raw_examples(path)
     assert rows == payload
+
+
+def test_load_sample_ids_supports_plain_text(tmp_path) -> None:
+    path = tmp_path / "sample_ids.txt"
+    path.write_text("ex-2\n\n# comment\nex-1\n", encoding="utf-8")
+
+    ids = load_sample_ids(path)
+
+    assert ids == ["ex-2", "ex-1"]
+
+
+def test_load_sample_categories_supports_json_mapping(tmp_path) -> None:
+    path = tmp_path / "categories.json"
+    path.write_text(json.dumps({"cat-a": ["ex-1", "ex-2"], "cat-b": ["ex-3"]}), encoding="utf-8")
+
+    categories = load_sample_categories(path)
+
+    assert categories == {"cat-a": ["ex-1", "ex-2"], "cat-b": ["ex-3"]}
+
+
+def test_split_raw_examples_by_ids_preserves_requested_test_order() -> None:
+    raw_examples = [
+        {"id": "ex-1", "query": "Q1", "expected_answer": "A1"},
+        {"id": "ex-2", "query": "Q2", "expected_answer": "A2"},
+        {"id": "ex-3", "query": "Q3", "expected_answer": "A3"},
+    ]
+
+    dev_rows, test_rows = split_raw_examples_by_ids(raw_examples, ["ex-3", "ex-1"])
+
+    assert [row["id"] for row in dev_rows] == ["ex-2"]
+    assert [row["id"] for row in test_rows] == ["ex-3", "ex-1"]
+
+
+def test_split_raw_examples_by_ids_rejects_unknown_ids() -> None:
+    raw_examples = [{"id": "ex-1", "query": "Q1", "expected_answer": "A1"}]
+
+    with pytest.raises(ValueError, match="Unknown test sample ids: ex-2"):
+        split_raw_examples_by_ids(raw_examples, ["ex-2"])
+
+
+def test_stratified_split_raw_examples_by_categories_keeps_singletons_in_dev(
+    monkeypatch,
+) -> None:
+    raw_examples = [
+        {"id": "a-1", "query": "Q1", "expected_answer": "A1"},
+        {"id": "a-2", "query": "Q2", "expected_answer": "A2"},
+        {"id": "b-1", "query": "Q3", "expected_answer": "A3"},
+        {"id": "b-2", "query": "Q4", "expected_answer": "A4"},
+        {"id": "solo-1", "query": "Q5", "expected_answer": "A5"},
+    ]
+    categories = {
+        "cat-a": ["a-1", "a-2"],
+        "cat-b": ["b-1", "b-2"],
+        "cat-solo": ["solo-1"],
+    }
+
+    monkeypatch.setattr(
+        "polaris_rag.evaluation.evaluation_dataset._import_train_test_split",
+        lambda: (
+            lambda ticket_ids, *, test_size, random_state, stratify: (  # noqa: ARG005
+                ["a-2", "b-2"],
+                ["a-1", "b-1"],
+            )
+        ),
+    )
+
+    dev_rows, test_rows, stats = stratified_split_raw_examples_by_categories(
+        raw_examples,
+        categories,
+        test_size=2,
+        random_state=42,
+    )
+
+    assert [row["id"] for row in dev_rows] == ["a-2", "b-2", "solo-1"]
+    assert [row["id"] for row in test_rows] == ["a-1", "b-1"]
+    assert stats["category_test_counts"] == {
+        "cat-a": 1,
+        "cat-b": 1,
+        "cat-solo": 0,
+    }
+    assert stats["excluded_singleton_categories"] == ["cat-solo"]
 
 
 def test_build_prepared_rows_maps_query_and_expected_answer() -> None:

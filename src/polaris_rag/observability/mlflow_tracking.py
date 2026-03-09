@@ -996,6 +996,43 @@ class EvaluationTrackingContext:
         except Exception:
             logger.warning("Failed to log MLflow artifact: %s", p, exc_info=True)
 
+    def log_input(
+        self,
+        dataset: Any,
+        *,
+        context: str | None = None,
+        tags: Mapping[str, Any] | None = None,
+    ) -> None:
+        if not self._active or self._mlflow is None or dataset is None:
+            return
+
+        log_input = getattr(self._mlflow, "log_input", None)
+        if log_input is None:
+            return
+
+        normalized_tags = None
+        if tags:
+            normalized_tags = {str(key): str(value) for key, value in tags.items()}
+
+        kwargs = _filter_supported_kwargs(
+            log_input,
+            {
+                "dataset": dataset,
+                "context": context,
+                "tags": normalized_tags,
+            },
+        )
+
+        try:
+            log_input(**kwargs)
+        except TypeError:
+            try:
+                log_input(dataset, context)
+            except Exception:
+                logger.warning("Failed to log MLflow dataset input", exc_info=True)
+        except Exception:
+            logger.warning("Failed to log MLflow dataset input", exc_info=True)
+
     def log_json_artifact(
         self,
         payload: Mapping[str, Any] | list[Any],

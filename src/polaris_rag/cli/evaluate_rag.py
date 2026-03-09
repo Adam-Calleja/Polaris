@@ -962,6 +962,95 @@ def _collect_system_metrics(
     return metrics
 
 
+def _import_pandas() -> Any:
+    try:
+        import pandas as pd
+    except Exception as exc:
+        raise RuntimeError(
+            "Logging MLflow dataset inputs requires pandas. Install the evaluation/tracking extras first."
+        ) from exc
+    return pd
+
+
+def _build_mlflow_dataset(
+    mlflow: Any,
+    rows: list[dict[str, Any]],
+    *,
+    source: Path,
+    dataset_name: str,
+) -> Any:
+    pd = _import_pandas()
+    frame = pd.DataFrame.from_records(rows)
+    return mlflow.data.from_pandas(
+        frame,
+        source=str(source),
+        name=dataset_name,
+    )
+
+
+def _infer_mlflow_dataset_context(dataset_path: Path) -> tuple[str, str]:
+    stem = dataset_path.stem.lower()
+    validation_suffixes = (".dev", "_dev", "-dev", ".validation", "_validation", "-validation", ".val", "_val", "-val")
+    testing_suffixes = (".test", "_test", "-test", ".testing", "_testing", "-testing")
+
+    if stem.endswith(validation_suffixes):
+        return "validation", "dev"
+    if stem.endswith(testing_suffixes):
+        return "testing", "test"
+    return "evaluation", "dataset"
+
+
+def _log_input_dataset_to_mlflow(
+    tracking: EvaluationTrackingContext,
+    dataset_manifest: Mapping[str, Any],
+) -> None:
+    if not tracking.enabled:
+        return
+
+    mlflow = getattr(tracking, "_mlflow", None)
+    if mlflow is None:
+        return
+
+    dataset_path_raw = str(dataset_manifest.get("dataset_path") or "").strip()
+    if not dataset_path_raw:
+        return
+
+    dataset_path = Path(dataset_path_raw).expanduser().resolve()
+    if not dataset_path.exists() or not dataset_path.is_file():
+        logger.warning("Skipping MLflow dataset input logging because dataset file is missing: %s", dataset_path)
+        return
+
+    try:
+        raw_examples = load_raw_examples(dataset_path)
+    except Exception:
+        logger.warning("Failed to load raw dataset for MLflow input logging: %s", dataset_path, exc_info=True)
+        return
+
+    context, split = _infer_mlflow_dataset_context(dataset_path)
+
+    try:
+        dataset = _build_mlflow_dataset(
+            mlflow,
+            raw_examples,
+            source=dataset_path,
+            dataset_name=dataset_path.stem,
+        )
+    except Exception:
+        logger.warning("Failed to construct MLflow dataset input for: %s", dataset_path, exc_info=True)
+        return
+
+    tracking.log_input(
+        dataset,
+        context=context,
+        tags={
+            "split": split,
+            "rows": len(raw_examples),
+            "dataset_path": str(dataset_path),
+            "prepared_source": str(dataset_manifest.get("prepared_source", "")),
+        },
+    )
+
+
 def main() -> None:
     _configure_logging()
     args = parse_args()
@@ -1019,6 +1108,7 @@ def main() -> None:
                     stage_context=dataset_stage,
                 )
             tracking.log_flat_params(dataset_manifest, prefix="dataset")
+            _log_input_dataset_to_mlflow(tracking, dataset_manifest)
             tracking.log_metrics(
                 {
                     "system.prep.prep_total_rows": dataset_manifest.get("prep_total_rows", 0),

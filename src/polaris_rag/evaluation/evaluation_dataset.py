@@ -349,6 +349,209 @@ def load_prepared_rows(path: str | Path) -> list[dict[str, Any]]:
     return load_raw_examples(path)
 
 
+def load_sample_ids(path: str | Path) -> list[str]:
+    """Load sample IDs from a plain-text file or JSON/JSONL payload."""
+
+    p = Path(path).expanduser().resolve()
+    if not p.exists():
+        raise FileNotFoundError(f"Sample ID file not found: {p}")
+
+    text = p.read_text(encoding="utf-8").strip()
+    if not text:
+        return []
+
+    suffix = p.suffix.lower()
+    if suffix in {".json", ".jsonl"}:
+        if text[0] == "[":
+            payload = json.loads(text)
+            if not isinstance(payload, list):
+                raise ValueError(f"Expected JSON list in {p}, got {type(payload)!r}")
+            return _coerce_sample_ids(payload, source=str(p))
+
+        ids: list[str] = []
+        for line_no, line in enumerate(text.splitlines(), start=1):
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                payload = json.loads(line)
+            except json.JSONDecodeError as exc:
+                raise ValueError(f"Invalid JSONL at {p}:{line_no}: {exc}") from exc
+            ids.extend(_coerce_sample_ids([payload], source=f"{p}:{line_no}"))
+        return ids
+
+    ids: list[str] = []
+    for line_no, line in enumerate(text.splitlines(), start=1):
+        value = line.strip()
+        if not value or value.startswith("#"):
+            continue
+        ids.extend(_coerce_sample_ids([value], source=f"{p}:{line_no}"))
+    return ids
+
+
+def load_sample_categories(path: str | Path) -> dict[str, list[str]]:
+    """Load category -> sample-id mappings from JSON or YAML."""
+
+    p = Path(path).expanduser().resolve()
+    if not p.exists():
+        raise FileNotFoundError(f"Sample category file not found: {p}")
+
+    text = p.read_text(encoding="utf-8").strip()
+    if not text:
+        return {}
+
+    suffix = p.suffix.lower()
+    if suffix in {".yaml", ".yml"}:
+        import yaml
+
+        payload = yaml.safe_load(text)
+    else:
+        payload = json.loads(text)
+
+    if not isinstance(payload, Mapping):
+        raise ValueError(f"Expected mapping of category -> sample ids in {p}, got {type(payload)!r}")
+
+    categories: dict[str, list[str]] = {}
+    for raw_category, raw_ids in payload.items():
+        category = str(raw_category).strip()
+        if not category:
+            raise ValueError(f"Encountered empty category name in {p}")
+        if not isinstance(raw_ids, list):
+            raise ValueError(f"Expected list of sample ids for category '{category}' in {p}")
+        categories[category] = _coerce_sample_ids(raw_ids, source=f"{p}:{category}")
+    return categories
+
+
+def split_raw_examples_by_ids(
+    raw_examples: Iterable[Mapping[str, Any]],
+    selected_ids: Iterable[str],
+    *,
+    id_field: str = "id",
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Split raw examples into dev and test rows using the provided test IDs."""
+
+    dataset_by_id: dict[str, dict[str, Any]] = {}
+    dataset_order: list[str] = []
+
+    for index, example in enumerate(raw_examples):
+        row = dict(example)
+        sample_id = str(row.get(id_field, "") or "").strip()
+        if not sample_id:
+            raise ValueError(f"Missing '{id_field}' for dataset row index={index}")
+        if sample_id in dataset_by_id:
+            raise ValueError(f"Duplicate dataset sample id '{sample_id}' at index={index}")
+        dataset_by_id[sample_id] = row
+        dataset_order.append(sample_id)
+
+    normalized_selected_ids = _coerce_sample_ids(selected_ids, source="selected_ids")
+    selected_counts: dict[str, int] = {}
+    for sample_id in normalized_selected_ids:
+        selected_counts[sample_id] = selected_counts.get(sample_id, 0) + 1
+    duplicate_ids = sorted(sample_id for sample_id, count in selected_counts.items() if count > 1)
+    if duplicate_ids:
+        raise ValueError(f"Duplicate test sample ids provided: {', '.join(duplicate_ids)}")
+
+    missing_ids = [sample_id for sample_id in normalized_selected_ids if sample_id not in dataset_by_id]
+    if missing_ids:
+        raise ValueError(f"Unknown test sample ids: {', '.join(missing_ids)}")
+
+    selected_id_set = set(normalized_selected_ids)
+    test_rows = [dataset_by_id[sample_id] for sample_id in normalized_selected_ids]
+    dev_rows = [dataset_by_id[sample_id] for sample_id in dataset_order if sample_id not in selected_id_set]
+    return dev_rows, test_rows
+
+
+def stratified_split_raw_examples_by_categories(
+    raw_examples: Iterable[Mapping[str, Any]],
+    categories: Mapping[str, list[str]],
+    *,
+    test_size: int,
+    random_state: int = 42,
+    id_field: str = "id",
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, Any]]:
+    """Split raw examples using stratified category labels for non-singleton categories."""
+
+    dataset_by_id: dict[str, dict[str, Any]] = {}
+    dataset_order: list[str] = []
+
+    for index, example in enumerate(raw_examples):
+        row = dict(example)
+        sample_id = str(row.get(id_field, "") or "").strip()
+        if not sample_id:
+            raise ValueError(f"Missing '{id_field}' for dataset row index={index}")
+        if sample_id in dataset_by_id:
+            raise ValueError(f"Duplicate dataset sample id '{sample_id}' at index={index}")
+        dataset_by_id[sample_id] = row
+        dataset_order.append(sample_id)
+
+    category_lookup: dict[str, str] = {}
+    normalized_categories: dict[str, list[str]] = {}
+    for raw_category, raw_ids in categories.items():
+        category = str(raw_category).strip()
+        sample_ids = _coerce_sample_ids(raw_ids, source=f"categories:{category}")
+        normalized_categories[category] = sample_ids
+        for sample_id in sample_ids:
+            existing_category = category_lookup.get(sample_id)
+            if existing_category is not None:
+                raise ValueError(
+                    f"Sample id '{sample_id}' is assigned to multiple categories: "
+                    f"'{existing_category}' and '{category}'"
+                )
+            category_lookup[sample_id] = category
+
+    missing_ids = sorted(sample_id for sample_id in category_lookup if sample_id not in dataset_by_id)
+    if missing_ids:
+        raise ValueError(f"Category mapping contains unknown sample ids: {', '.join(missing_ids)}")
+
+    eligible_rows = [
+        (sample_id, category)
+        for category, sample_ids in normalized_categories.items()
+        if len(sample_ids) > 1
+        for sample_id in sample_ids
+    ]
+    if not eligible_rows:
+        raise ValueError("No eligible categories with more than one sample were provided.")
+
+    train_test_split = _import_train_test_split()
+    ticket_ids = [sample_id for sample_id, _ in eligible_rows]
+    labels = [category for _, category in eligible_rows]
+
+    dev_ids, test_ids = train_test_split(
+        ticket_ids,
+        test_size=int(test_size),
+        random_state=int(random_state),
+        stratify=labels,
+    )
+
+    eligible_id_set = set(ticket_ids)
+    remaining_dev_ids = [
+        sample_id
+        for sample_id in dataset_order
+        if sample_id not in eligible_id_set
+    ]
+
+    dev_rows = [dataset_by_id[sample_id] for sample_id in dev_ids]
+    dev_rows.extend(dataset_by_id[sample_id] for sample_id in remaining_dev_ids)
+    test_rows = [dataset_by_id[sample_id] for sample_id in test_ids]
+
+    category_test_counts = {
+        category: len(set(test_ids) & set(sample_ids))
+        for category, sample_ids in normalized_categories.items()
+    }
+    stats = {
+        "test_ids": list(test_ids),
+        "dev_ids": list(dev_ids),
+        "category_test_counts": category_test_counts,
+        "excluded_singleton_categories": sorted(
+            category for category, sample_ids in normalized_categories.items() if len(sample_ids) <= 1
+        ),
+        "uncategorized_ids": [
+            sample_id for sample_id in dataset_order if sample_id not in category_lookup
+        ],
+    }
+    return dev_rows, test_rows, stats
+
+
 def persist_prepared_rows(rows: Iterable[dict[str, Any]], path: str | Path) -> Path:
     """Persist prepared rows to JSON or JSONL based on file extension."""
 
@@ -366,6 +569,33 @@ def persist_prepared_rows(rows: Iterable[dict[str, Any]], path: str | Path) -> P
         p.write_text(json.dumps(row_list, ensure_ascii=False, indent=2), encoding="utf-8")
 
     return p
+
+
+def _coerce_sample_ids(values: Iterable[Any], *, source: str) -> list[str]:
+    ids: list[str] = []
+    for value in values:
+        sample_id = ""
+        if isinstance(value, str):
+            sample_id = value.strip()
+        elif isinstance(value, Mapping):
+            sample_id = str(value.get("id", "") or "").strip()
+        else:
+            raise ValueError(f"Unsupported sample id payload in {source}: {type(value)!r}")
+
+        if not sample_id:
+            raise ValueError(f"Missing sample id in {source}")
+        ids.append(sample_id)
+    return ids
+
+
+def _import_train_test_split() -> Any:
+    try:
+        from sklearn.model_selection import train_test_split
+    except Exception as exc:
+        raise RuntimeError(
+            "Stratified category splitting requires scikit-learn. Install the evaluation extras first."
+        ) from exc
+    return train_test_split
 
 
 def _prepare_one(
@@ -1285,6 +1515,10 @@ __all__ = [
     "build_prepared_rows_from_api",
     "load_prepared_rows",
     "load_raw_examples",
+    "load_sample_categories",
+    "load_sample_ids",
     "persist_prepared_rows",
+    "stratified_split_raw_examples_by_categories",
+    "split_raw_examples_by_ids",
     "to_evaluation_dataset",
 ]

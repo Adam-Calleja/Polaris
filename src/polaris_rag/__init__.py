@@ -44,6 +44,7 @@ DocumentChunk
     Chunk schema derived from a parent document.
 """
 
+import importlib
 from importlib.metadata import PackageNotFoundError, version
 
 try:
@@ -51,10 +52,29 @@ try:
 except PackageNotFoundError:
     __version__ = "0.0.0-dev"
 
-from .config import GlobalConfig
-from .app.container import PolarisContainer, build_container
-from .pipelines.rag_pipeline import RAGPipeline
-from .common import Document, DocumentChunk
+_EXPORTS: dict[str, tuple[str, str]] = {
+    "GlobalConfig": ("polaris_rag.config", "GlobalConfig"),
+    "PolarisContainer": ("polaris_rag.app.container", "PolarisContainer"),
+    "build_container": ("polaris_rag.app.container", "build_container"),
+    "RAGPipeline": ("polaris_rag.pipelines.rag_pipeline", "RAGPipeline"),
+    "Document": ("polaris_rag.common", "Document"),
+    "DocumentChunk": ("polaris_rag.common", "DocumentChunk"),
+}
+
+
+def __getattr__(name: str):
+    target = _EXPORTS.get(name)
+    if target is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    module_name, attr_name = target
+    module = importlib.import_module(module_name)
+    value = getattr(module, attr_name)
+    globals()[name] = value
+    return value
+
+
+def __dir__() -> list[str]:
+    return sorted(set(globals().keys()) | set(_EXPORTS.keys()))
 
 __all__ = [
     "__version__",

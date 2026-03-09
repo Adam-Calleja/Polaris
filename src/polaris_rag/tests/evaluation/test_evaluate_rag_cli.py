@@ -48,6 +48,23 @@ class _DummyStageContext:
         yield _DummyTraceRecorder()
 
 
+class _DummyTracking:
+    enabled = True
+
+    def __init__(self) -> None:
+        self._mlflow = object()
+        self.logged_inputs: list[dict[str, object]] = []
+
+    def log_input(self, dataset, *, context=None, tags=None):  # noqa: ANN001
+        self.logged_inputs.append(
+            {
+                "dataset": dataset,
+                "context": context,
+                "tags": dict(tags or {}),
+            }
+        )
+
+
 def _fake_build_prepared_rows(**kwargs):  # noqa: ANN003
     callback = kwargs.get("progress_callback")
     if callback:
@@ -71,6 +88,48 @@ def _fake_build_prepared_rows(**kwargs):  # noqa: ANN003
             "retrieved_contexts": ["ctx-1"],
             "retrieved_context_ids": ["doc-1"],
             "metadata": {},
+        }
+    ]
+
+
+def test_log_input_dataset_to_mlflow_uses_test_context(monkeypatch, tmp_path) -> None:
+    dataset_path = tmp_path / "tickets.test.jsonl"
+    dataset_path.write_text('{"id":"1","query":"Q1","expected_answer":"A1"}\n', encoding="utf-8")
+
+    tracking = _DummyTracking()
+
+    monkeypatch.setattr(
+        evaluate_rag,
+        "_build_mlflow_dataset",
+        lambda mlflow, rows, *, source, dataset_name: {
+            "rows": list(rows),
+            "source": str(source),
+            "dataset_name": dataset_name,
+        },
+    )
+
+    evaluate_rag._log_input_dataset_to_mlflow(
+        tracking,
+        {
+            "dataset_path": str(dataset_path),
+            "prepared_source": "generated",
+        },
+    )
+
+    assert tracking.logged_inputs == [
+        {
+            "dataset": {
+                "rows": [{"id": "1", "query": "Q1", "expected_answer": "A1"}],
+                "source": str(dataset_path.resolve()),
+                "dataset_name": "tickets.test",
+            },
+            "context": "testing",
+            "tags": {
+                "split": "test",
+                "rows": 1,
+                "dataset_path": str(dataset_path.resolve()),
+                "prepared_source": "generated",
+            },
         }
     ]
 

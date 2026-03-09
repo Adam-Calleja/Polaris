@@ -56,6 +56,7 @@ class _FakeMLflow:
         self.log_params_calls: list[dict[str, str]] = []
         self.log_metrics_calls: list[dict[str, float]] = []
         self.log_artifact_calls: list[tuple[str, str | None]] = []
+        self.log_input_calls: list[dict[str, object]] = []
         self.start_span_calls: list[dict[str, object]] = []
         self.start_span_no_context_calls: list[dict[str, object]] = []
         self.update_current_trace_calls: list[dict[str, str]] = []
@@ -98,6 +99,15 @@ class _FakeMLflow:
 
     def log_artifact(self, local_path: str, artifact_path: str | None = None) -> None:
         self.log_artifact_calls.append((local_path, artifact_path))
+
+    def log_input(self, dataset, context: str | None = None, tags: dict[str, str] | None = None) -> None:  # noqa: ANN001
+        self.log_input_calls.append(
+            {
+                "dataset": dataset,
+                "context": context,
+                "tags": dict(tags or {}),
+            }
+        )
 
     @contextmanager
     def start_span(self, name: str):
@@ -215,6 +225,34 @@ def test_evaluation_tracking_context_logs_nested_runs(monkeypatch, tmp_path) -> 
     assert fake_mlflow.log_params_calls
     assert fake_mlflow.log_metrics_calls
     assert fake_mlflow.log_artifact_calls
+
+
+def test_evaluation_tracking_context_logs_dataset_inputs(monkeypatch) -> None:
+    fake_mlflow = _FakeMLflow()
+    monkeypatch.setattr(mlflow_tracking, "_import_mlflow", lambda: fake_mlflow)
+
+    runtime_cfg = mlflow_tracking.MLflowRuntimeConfig(
+        enabled=True,
+        tracking_uri="http://mlflow:5000",
+        experiment_name="polaris-evals",
+        tracing=mlflow_tracking.TraceRuntimeConfig(enabled=False),
+    )
+    tracker = mlflow_tracking.EvaluationTrackingContext(runtime_cfg)
+
+    with tracker.open(run_name="dataset-run"):
+        tracker.log_input(
+            {"name": "dev-dataset"},
+            context="validation",
+            tags={"split": "dev"},
+        )
+
+    assert fake_mlflow.log_input_calls == [
+        {
+            "dataset": {"name": "dev-dataset"},
+            "context": "validation",
+            "tags": {"split": "dev"},
+        }
+    ]
 
 
 def test_evaluation_tracking_context_emits_parent_and_stage_trace_context(monkeypatch) -> None:
