@@ -29,12 +29,14 @@ Polaris is a Retrieval-Augmented Generation (RAG) system for HPC service support
 2. Build and start the stack.
 3. Open the UI or call the API.
 
+All commands below assume you are running from the repository root and using
+the Docker Compose services as the execution environment.
+
 ```bash
 # .env (example)
 POLARIS_LLM_API_KEY=your_llm_key
 GEMINI_API_KEY=your_gemini_key
 JIRA_API_TOKEN=your_jira_token
-MLFLOW_TRACKING_URI=http://localhost:5000
 ```
 
 ```bash
@@ -45,40 +47,19 @@ UI: [http://localhost:8501](http://localhost:8501)
 API: [http://localhost:8000](http://localhost:8000)
 MLflow: [http://localhost:5000](http://localhost:5000)
 
-## Local Setup
-Python 3.11+ is required.
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-python -m pip install -e ".[api,ingestion,eval,tracking]"
-```
-
-## Run The API
-```bash
-export POLARIS_CONFIG=config/config.yaml
-uvicorn polaris_rag.app.api:app --reload --host 0.0.0.0 --port 8000
-```
-
-## Run The Streamlit UI
-```bash
-export POLARIS_API_BASE_URL=http://localhost:8000
-streamlit run src/polaris_rag/streamlit/polaris_interface.py
-```
-
 ## Ingest Data
 Jira tickets:
 ```bash
-python scripts/ingest_jira_tickets.py \
-  -c config/config.yaml \
+docker compose run --rm rag-api python /app/scripts/ingest_jira_tickets.py \
+  -c /app/config/config.yaml \
   -s 2024-01-01 \
   -e 2025-01-01
 ```
 
 HTML documentation:
 ```bash
-python scripts/ingest_html_documents.py \
-  -c config/config.yaml \
+docker compose run --rm rag-api python /app/scripts/ingest_html_documents.py \
+  -c /app/config/config.yaml \
   -p https://docs.example.org \
   --ingest-internal-links
 ```
@@ -96,19 +77,20 @@ Environment variables used by the stack:
 - `GEMINI_API_KEY`: API key used when `generator_llm.api_key` is configured as `${GEMINI_API_KEY}`.
 - `JIRA_API_TOKEN`: Jira API token for ticket ingestion.
 - `EMBED_API_BASE`: Base URL for the embeddings service.
-- `POLARIS_CONFIG`: Path to the runtime config used by the API.
+- `POLARIS_CONFIG`: Path to the runtime config inside the API/eval containers.
 - `POLARIS_API_BASE_URL`: API base URL used by Streamlit.
-- `MLFLOW_TRACKING_URI`: MLflow tracking server URI.
+- `MLFLOW_TRACKING_URI`: MLflow tracking server URI inside the containers. Docker
+  Compose configures this as `http://mlflow:5000` for the API and eval services.
 
 ## Evaluation
 Evaluation utilities live in `src/polaris_rag/evaluation`. There are notebooks for dataset creation and analysis:
 - `create_evaluation_dataset.ipynb`
 - `support_ticket_analysis.ipynb`
 
-You can also run the modern RAGAS evaluation pipeline from CLI:
+You can run the modern RAGAS evaluation pipeline through the `eval` service:
 
 ```bash
-polaris-eval -c config/config.yaml
+docker compose run --rm eval
 ```
 
 By default, evaluation row preparation uses API mode for production-like
@@ -136,7 +118,10 @@ evaluation:
 You can also override this at runtime:
 
 ```bash
-polaris-eval -c config/config.yaml --generation-mode api --query-api-url http://127.0.0.1:8000/v1/query
+docker compose run --rm eval \
+  polaris-eval -c /app/config/config.yaml \
+  --generation-mode api \
+  --query-api-url http://rag-api:8000/v1/query
 ```
 
 Evaluation remains file-driven. The evaluator reads the dataset from
@@ -148,21 +133,27 @@ runtime input back out of MLflow.
 To evaluate a specific split explicitly:
 
 ```bash
-polaris-eval -c config/config.yaml \
-  --dataset-path /path/to/ragas_one_hop_eval_dataset_v1.test.jsonl \
-  --prepared-path /path/to/prepared_test_rows.json
+docker compose run --rm eval \
+  polaris-eval -c /app/config/config.yaml \
+  --dataset-path /app/data/test/ragas_one_hop_eval_dataset_v1.test.jsonl \
+  --prepared-path /app/data/test/prepared_test_rows.json
 ```
 
 To control MLflow from CLI:
 
 ```bash
-polaris-eval -c config/config.yaml --mlflow --mlflow-experiment polaris-rag-evals --mlflow-run-name eval-baseline
+docker compose run --rm eval \
+  polaris-eval -c /app/config/config.yaml \
+  --mlflow \
+  --mlflow-experiment polaris-rag-evals \
+  --mlflow-run-name eval-baseline
 ```
 
 To enable retries during dataset preparation from CLI:
 
 ```bash
-polaris-eval -c config/config.yaml \
+docker compose run --rm eval \
+  polaris-eval -c /app/config/config.yaml \
   --generation-max-attempts 3 \
   --generation-retry-initial-backoff 1.0 \
   --generation-retry-max-backoff 8.0 \
@@ -192,17 +183,19 @@ dataset inputs for discoverability and lineage.
 Explicit test IDs:
 
 ```bash
-polaris-create-dev-test-sets \
-  --dataset-file data/test/ragas_one_hop_eval_dataset_v1.jsonl \
-  --test-samples-file data/test/eval_ticket_keys.txt
+docker compose run --rm eval \
+  polaris-create-dev-test-sets \
+  --dataset-file /app/data/test/ragas_one_hop_eval_dataset_v1.jsonl \
+  --test-samples-file /app/data/test/eval_ticket_keys.txt
 ```
 
 Stratified split from category mappings:
 
 ```bash
-polaris-create-dev-test-sets \
-  --dataset-file data/test/ragas_one_hop_eval_dataset_v1.jsonl \
-  --categories-file data/test/eval_categories.json \
+docker compose run --rm eval \
+  polaris-create-dev-test-sets \
+  --dataset-file /app/data/test/ragas_one_hop_eval_dataset_v1.jsonl \
+  --categories-file /app/data/test/eval_categories.json \
   --test-size 17 \
   --random-state 42
 ```
@@ -210,13 +203,14 @@ polaris-create-dev-test-sets \
 With MLflow lineage logging enabled:
 
 ```bash
-polaris-create-dev-test-sets \
-  --dataset-file data/test/ragas_one_hop_eval_dataset_v1.jsonl \
-  --categories-file data/test/eval_categories.json \
+docker compose run --rm eval \
+  polaris-create-dev-test-sets \
+  --dataset-file /app/data/test/ragas_one_hop_eval_dataset_v1.jsonl \
+  --categories-file /app/data/test/eval_categories.json \
   --test-size 17 \
   --random-state 42 \
   --mlflow \
-  --config-file config/config.yaml
+  --config-file /app/config/config.yaml
 ```
 
 Notes:
@@ -227,13 +221,16 @@ Notes:
   `validation` and `testing` contexts.
 - Prepared rows and predictions are kept as eval run artifacts rather than
   canonical MLflow datasets.
+- The `eval` service mounts `./data` to `/app/data`, so generated split files
+  written under `/app/data/...` are persisted back to the host repository.
 
 ## Prompt Registry Workflow
 Runtime prompt loading is registry-first (`mlflow.prompt_registry.enabled: true`).
 Register/update prompt versions from repo templates, then set alias:
 
 ```bash
-polaris-register-prompts-mlflow -c config/config.yaml
+docker compose run --rm rag-api \
+  polaris-register-prompts-mlflow -c /app/config/config.yaml
 ```
 
 Typical promotion flow:
