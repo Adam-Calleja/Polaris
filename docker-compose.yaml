@@ -30,6 +30,8 @@ services:
       - ./config:/app/config:ro
       # Persist dir for your StorageContext (highly recommended)
       - ./persist:/app/persist
+      # Direct MLflow artifact logging needs client access to the artifact root.
+      - ./mlflow_artifacts:/mlflow/artifacts
     depends_on:
       - qdrant
       - embed
@@ -80,6 +82,8 @@ services:
     volumes:
       - ./config:/app/config:ro
       - ./data:/app/data
+      # Direct MLflow artifact logging needs client access to the artifact root.
+      - ./mlflow_artifacts:/mlflow/artifacts
     depends_on:
       - rag-api
       - embed
