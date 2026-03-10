@@ -454,7 +454,7 @@ class PolarisContainer:
             Mapping from source name to retriever instance.
         """
 
-                section = _as_mapping(self.config.retriever)
+        section = _as_mapping(self.config.retriever)
         source_kind = section.get("source_type") or "vector"
         source_kind = str(source_kind).strip().lower().replace("-", "_")
         if source_kind not in {"vector", "hybrid"}:
