@@ -12,3 +12,5 @@ __pycache__/
 *.dylib
 .env
 *.egg-info/
+mlflow.db
+data/eval_runs
