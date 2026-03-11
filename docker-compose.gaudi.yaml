@@ -16,7 +16,7 @@ services:
 
   embed:
     networks: [polaris_net]
-    build: null
+    build: !reset null
     image: ghcr.io/huggingface/text-embeddings-inference:hpu-latest
     runtime: habana
     ipc: host
@@ -28,15 +28,22 @@ services:
       RUST_BACKTRACE: "1"
     volumes:
       - /mnt/data/ac2650/test:/data
-    command: >
-      --model-id Qwen/Qwen3-Embedding-8B
-      --dtype bfloat16
-      --pooling last-token
-      --auto-truncate
-      --max-concurrent-requests 16
-      --max-client-batch-size 8
-      --max-batch-requests 8
-      --max-batch-tokens 2048
+    command:
+      - --model-id
+      - Qwen/Qwen3-Embedding-8B
+      - --dtype
+      - bfloat16
+      - --pooling
+      - last-token
+      - --auto-truncate
+      - --max-concurrent-requests
+      - "16"
+      - --max-client-batch-size
+      - "8"
+      - --max-batch-requests
+      - "8"
+      - --max-batch-tokens
+      - "2048"
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:80/health >/dev/null || exit 1"]
       interval: 15s
