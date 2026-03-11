@@ -1,3 +1,7 @@
+import pytest
+
+pytest.importorskip("ragas")
+
 from polaris_rag.evaluation.evaluator import ConcurrencyTrial, _select_best_trial
 
 

@@ -149,6 +149,28 @@ docker compose run --rm eval \
   --mlflow-run-name eval-baseline
 ```
 
+To capture raw evaluator prompts and responses for RAGAS metric debugging:
+
+```bash
+docker compose run --rm eval \
+  polaris-eval -c /app/config/config.yaml \
+  --mlflow \
+  --trace-evaluator-llm
+```
+
+You can also enable this in config with:
+
+```yaml
+evaluation:
+  tracing:
+    evaluator_llm: true
+```
+
+Evaluator traces are only emitted when MLflow tracing is enabled. They appear
+under the `ragas_evaluation` stage in the MLflow trace experiment and include
+the evaluator prompt, request kwargs, and raw provider response for each judged
+metric call.
+
 To enable retries during dataset preparation from CLI:
 
 ```bash

@@ -555,6 +555,15 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Optional MLflow run name for the parent evaluation run.",
     )
+    parser.add_argument(
+        "--trace-evaluator-llm",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help=(
+            "Log raw evaluator LLM prompt/response traces during RAGAS evaluation. "
+            "Requires MLflow tracing; use --no-trace-evaluator-llm to disable."
+        ),
+    )
 
     return parser.parse_args()
 
@@ -617,6 +626,33 @@ def _resolve_evaluation_policy(
 ) -> str:
     configured = getattr(args, "evaluation_policy", None) or generation_cfg.get("policy")
     return normalize_evaluation_policy(configured, default=EVAL_POLICY_OFFICIAL)
+
+
+def _resolve_evaluator_llm_tracing(
+    eval_cfg: Mapping[str, Any],
+    args: argparse.Namespace,
+) -> bool:
+    tracing_cfg = _as_mapping(eval_cfg.get("tracing", {}))
+    cli_value = getattr(args, "trace_evaluator_llm", None)
+    if cli_value is not None:
+        return bool(cli_value)
+    return _as_bool(tracing_cfg.get("evaluator_llm"), False)
+
+
+def _build_evaluator_trace_factory(
+    stage_context: EvaluationStageContext | None,
+    *,
+    enabled: bool,
+):
+    if not enabled or stage_context is None:
+        return None
+
+    return lambda name, inputs, attributes=None: stage_context.open_detached_mirrored_span(
+        name,
+        inputs=inputs,
+        attributes=attributes,
+        include_child_trace=True,
+    )
 
 
 def _resolve_generation_deadlines(
@@ -1076,6 +1112,16 @@ def main() -> None:
     config_file = Path(args.config_file).expanduser().resolve()
     requested_metrics = _parse_metrics(args.metrics)
     tune_concurrency = not args.no_tune_concurrency
+    trace_evaluator_llm_requested = _resolve_evaluator_llm_tracing(eval_cfg, args)
+    trace_evaluator_llm = bool(
+        trace_evaluator_llm_requested
+        and tracking.enabled
+        and tracking.runtime_config.tracing.enabled
+    )
+    if trace_evaluator_llm_requested and not trace_evaluator_llm:
+        logger.warning(
+            "Evaluator LLM tracing was requested but MLflow tracing is disabled; continuing without evaluator traces."
+        )
 
     with tracking.open(
         run_name=getattr(args, "mlflow_run_name", None),
@@ -1093,6 +1139,7 @@ def main() -> None:
                 "runtime.show_progress": str(show_progress),
                 "runtime.interactive_progress": str(interactive_progress),
                 "runtime.tune_concurrency": str(tune_concurrency),
+                "runtime.trace_evaluator_llm": str(trace_evaluator_llm),
             }
         )
         tracking.log_artifact(config_file, artifact_path="inputs")
@@ -1134,12 +1181,17 @@ def main() -> None:
             )
 
         dataset = to_evaluation_dataset(prepared_rows)
-        evaluator = Evaluator.from_global_config(
-            cfg,
-            requested_metrics=requested_metrics,
-        )
 
         with tracking.stage("ragas_evaluation") as evaluation_stage:
+            evaluator = Evaluator.from_global_config(
+                cfg,
+                requested_metrics=requested_metrics,
+                trace_evaluator_llm=trace_evaluator_llm,
+                trace_factory=_build_evaluator_trace_factory(
+                    evaluation_stage,
+                    enabled=trace_evaluator_llm,
+                ),
+            )
             with evaluation_stage.open_active_mirrored_span(
                 "polaris.ragas_evaluation.execute",
                 attributes={"stage": "ragas_evaluation"},
@@ -1180,6 +1232,7 @@ def main() -> None:
                 "config_file": str(config_file),
                 "dataset": dataset_manifest,
                 "tune_concurrency": tune_concurrency,
+                "trace_evaluator_llm": trace_evaluator_llm,
                 "mlflow_parent_run_id": tracking.run_id,
             },
         )

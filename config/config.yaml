@@ -178,6 +178,9 @@ evaluation:
     warmup_max_samples: 16
     failure_threshold: 0.02
 
+  tracing:
+    evaluator_llm: false
+
   cache:
     enabled: false
     dir: ".cache/ragas_eval"
