@@ -2,6 +2,7 @@ import asyncio
 from contextlib import contextmanager
 from types import SimpleNamespace
 
+from openai import AsyncOpenAI
 import pytest
 
 pytest.importorskip("ragas")
@@ -32,6 +33,20 @@ class _TraceFactory:
         trace = _RecordedTrace(name, inputs, attributes)
         self.calls.append(trace)
         yield trace
+
+
+def test_traced_client_preserves_async_openai_instance() -> None:
+    trace_factory = _TraceFactory()
+    client = AsyncOpenAI(
+        api_key="test-key",
+        base_url="http://localhost:8080/v1",
+        max_retries=0,
+    )
+
+    traced_client = evaluator._TracedAsyncOpenAIClient(client, trace_factory=trace_factory)
+
+    assert traced_client is client
+    assert isinstance(traced_client, AsyncOpenAI)
 
 
 def test_traced_client_logs_prompt_response_and_metric_context() -> None:

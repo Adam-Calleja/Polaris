@@ -258,25 +258,23 @@ def _open_evaluator_trace(
         yield recorder
 
 
-class _TracedCreateResource:
-    def __init__(
-        self,
-        resource: Any,
-        *,
-        endpoint_name: str,
-        trace_factory: EvaluatorTraceFactory | None,
-    ) -> None:
-        self._resource = resource
-        self._endpoint_name = endpoint_name
-        self._trace_factory = trace_factory
+def _install_traced_create(
+    resource: Any,
+    *,
+    endpoint_name: str,
+    trace_factory: EvaluatorTraceFactory | None,
+) -> None:
+    if resource is None or trace_factory is None:
+        return
 
-    def __getattr__(self, name: str) -> Any:
-        return getattr(self._resource, name)
+    create = getattr(resource, "create", None)
+    if create is None or getattr(create, "_polaris_evaluator_traced", False):
+        return
 
-    async def create(self, *args: Any, **kwargs: Any) -> Any:
+    async def _traced_create(*args: Any, **kwargs: Any) -> Any:
         context = _ACTIVE_EVALUATOR_TRACE_CONTEXT.get()
         trace_inputs = {
-            "endpoint": self._endpoint_name,
+            "endpoint": endpoint_name,
             "model": kwargs.get("model"),
             "messages": _to_trace_payload(kwargs.get("messages")),
             "input": _to_trace_payload(kwargs.get("input")),
@@ -287,7 +285,7 @@ class _TracedCreateResource:
         }
         trace_attributes: dict[str, Any] = {
             "component": "evaluator_llm",
-            "endpoint": self._endpoint_name,
+            "endpoint": endpoint_name,
         }
         if context is not None:
             trace_attributes.update(
@@ -299,13 +297,13 @@ class _TracedCreateResource:
             )
 
         with _open_evaluator_trace(
-            self._trace_factory,
+            trace_factory,
             name="polaris.ragas_evaluation.evaluator_llm",
             inputs=trace_inputs,
             attributes=trace_attributes,
         ) as recorder:
             try:
-                response = await self._resource.create(*args, **kwargs)
+                response = await create(*args, **kwargs)
             except Exception as exc:
                 recorder.set_attributes({"status": "error"})
                 recorder.set_outputs({"error": _error_text_from_exception(exc)})
@@ -315,40 +313,27 @@ class _TracedCreateResource:
             recorder.set_outputs({"response": _to_trace_payload(response)})
             return response
 
-
-class _TracedChatResource:
-    def __init__(self, resource: Any, *, trace_factory: EvaluatorTraceFactory | None) -> None:
-        self._resource = resource
-        completions = getattr(resource, "completions", None)
-        if completions is not None:
-            self.completions = _TracedCreateResource(
-                completions,
-                endpoint_name="chat.completions",
-                trace_factory=trace_factory,
-            )
-
-    def __getattr__(self, name: str) -> Any:
-        return getattr(self._resource, name)
+    setattr(_traced_create, "_polaris_evaluator_traced", True)
+    setattr(resource, "create", _traced_create)
 
 
-class _TracedAsyncOpenAIClient:
-    def __init__(self, client: AsyncOpenAI, *, trace_factory: EvaluatorTraceFactory | None) -> None:
-        self._client = client
-
-        chat = getattr(client, "chat", None)
-        if chat is not None:
-            self.chat = _TracedChatResource(chat, trace_factory=trace_factory)
-
-        responses = getattr(client, "responses", None)
-        if responses is not None:
-            self.responses = _TracedCreateResource(
-                responses,
-                endpoint_name="responses",
-                trace_factory=trace_factory,
-            )
-
-    def __getattr__(self, name: str) -> Any:
-        return getattr(self._client, name)
+def _TracedAsyncOpenAIClient(
+    client: AsyncOpenAI,
+    *,
+    trace_factory: EvaluatorTraceFactory | None,
+) -> AsyncOpenAI:
+    chat = getattr(client, "chat", None)
+    _install_traced_create(
+        getattr(chat, "completions", None),
+        endpoint_name="chat.completions",
+        trace_factory=trace_factory,
+    )
+    _install_traced_create(
+        getattr(client, "responses", None),
+        endpoint_name="responses",
+        trace_factory=trace_factory,
+    )
+    return client
 
 
 async def _score_metric(
