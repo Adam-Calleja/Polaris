@@ -45,6 +45,15 @@ class _FakeLLM:
         return "ANSWER"
 
 
+class _FakeResolver:
+    def __init__(self) -> None:
+        self.calls: list[list[object]] = []
+
+    def resolve(self, source_nodes):  # noqa: ANN001
+        self.calls.append(list(source_nodes))
+        return [_FakeSource(_FakeNode("ticket-1", "FULL-TICKET"))]
+
+
 class _Span:
     def __init__(self, name: str):
         self.name = name
@@ -114,3 +123,27 @@ def test_pipeline_propagates_budget_to_retrieval_and_generation() -> None:
 
     assert retriever.calls[0]["kwargs"]["timeout_seconds"] == 10.0
     assert llm.calls[0]["kwargs"]["timeout_seconds"] > 90.0
+
+
+def test_pipeline_uses_resolved_contexts_for_prompt_and_output() -> None:
+    retriever = _FakeRetriever()
+    prompt_builder = _FakePromptBuilder()
+    llm = _FakeLLM()
+    resolver = _FakeResolver()
+
+    pipeline = RAGPipeline(
+        retriever=retriever,
+        prompt_builder=prompt_builder,
+        prompt_name="hpc_prompt",
+        llm=llm,
+        context_resolver=resolver,
+    )
+
+    result = pipeline.run("How do I submit a job?")
+
+    docs = prompt_builder.calls[0]["kwargs"]["docs"]
+    assert resolver.calls
+    assert docs[0].node.id_ == "ticket-1"
+    assert docs[0].node.text == "FULL-TICKET"
+    assert result["source_nodes"][0].node.id_ == "ticket-1"
+    assert result["raw_source_nodes"][0].node.id_ == "doc-1"

@@ -29,7 +29,15 @@ from polaris_rag.retrieval.document_loader import load_support_tickets
 from polaris_rag.retrieval.document_preprocessor import preprocess_jira_tickets
 from polaris_rag.retrieval.text_splitter import get_chunks_from_jira_tickets
 from polaris_rag.app.container import build_container
-from polaris_rag.retrieval.document_store_factory import add_chunks_to_docstore, persist_storage
+from polaris_rag.retrieval.document_store_factory import (
+    add_chunks_to_docstore,
+    add_documents_to_docstore,
+    delete_ref_docs_from_docstore,
+    load_or_create_source_document_store,
+    persist_docstore,
+    persist_storage,
+    source_document_store_path,
+)
 
 
 def _as_mapping(obj: Any) -> Mapping[str, Any]:
@@ -319,6 +327,7 @@ def main() -> None:
 
     print(f"Loaded {len(tickets)} tickets. Preprocessing...")
     processed_tickets = preprocess_jira_tickets(tickets)
+    ticket_ids = list(dict.fromkeys(str(ticket.id) for ticket in processed_tickets if getattr(ticket, "id", None)))
 
     if args.dump_processed:
         print(f"Dumping processed tickets to: {dump_path}")
@@ -326,6 +335,16 @@ def main() -> None:
 
     print("Generating chunks from tickets...")
     chunks = get_chunks_from_jira_tickets(tickets=processed_tickets, token_counter=container.token_counter)
+    source_document_store = load_or_create_source_document_store(persist_dir=persist_dir)
+
+    if ticket_ids:
+        print(f"Removing existing chunks for {len(ticket_ids)} tickets...")
+        if hasattr(storage_context.vector_store, "delete_ref_docs"):
+            storage_context.vector_store.delete_ref_docs(ticket_ids)
+        elif hasattr(storage_context.vector_store, "delete_ref_doc"):
+            for ticket_id in ticket_ids:
+                storage_context.vector_store.delete_ref_doc(ticket_id)
+        delete_ref_docs_from_docstore(storage_context.docstore, ticket_ids)
 
     print("Adding chunks to vector store...")
     embedding_workers = _resolve_embedding_workers(cfg, args.embedding_workers)
@@ -346,8 +365,15 @@ def main() -> None:
     print("Adding chunks to document store...")
     add_chunks_to_docstore(storage=storage_context, chunks=chunks)
 
+    print("Persisting full tickets to source document store...")
+    add_documents_to_docstore(source_document_store, processed_tickets)
+
     print("Persisting storage context...")
     persist_storage(storage=storage_context, persist_dir=persist_dir)
+    persist_docstore(
+        source_document_store,
+        persist_path=source_document_store_path(persist_dir),
+    )
 
     print("Ingestion complete!")
 
