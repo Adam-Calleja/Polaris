@@ -13,10 +13,10 @@ generator_llm:
 
 evaluator_llm:
   type: "OpenAILike"
-  # model_name: "Qwen/Qwen2.5-14B-Instruct" 
-  model_name: "mistralai/Devstral-2-123B-Instruct-2512"
-  # api_base: "http://vllm:8080/v1"
-  api_base: "https://llm.hpc.cam.ac.uk/v1"
+  model_name: "Qwen/Qwen2.5-14B-Instruct" 
+  # model_name: "mistralai/Devstral-2-123B-Instruct-2512"
+  api_base: "http://vllm:8080/v1"
+  # api_base: "https://llm.hpc.cam.ac.uk/v1"
   api_key: "${POLARIS_LLM_API_KEY}"
   model_kwargs:
     temperature: 0
@@ -163,8 +163,8 @@ evaluation:
     timeout: 240
     max_retries: 0
     max_wait: 30
-    max_workers: 1
-    batch_size: 1
+    max_workers: 16
+    batch_size: null
     log_tenacity: true
     seed: 42
     raise_exceptions: false
