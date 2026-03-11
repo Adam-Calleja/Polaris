@@ -10,13 +10,15 @@ concurrency.
 from __future__ import annotations
 
 import asyncio
-from dataclasses import asdict, dataclass
+import contextlib
+from contextvars import ContextVar
+from dataclasses import asdict, dataclass, is_dataclass
 import json
 import logging
 import math
 from pathlib import Path
 import time
-from typing import Any, Iterable, Mapping
+from typing import Any, Callable, Iterable, Mapping, Protocol
 
 import pandas as pd
 from openai import AsyncOpenAI
@@ -36,6 +38,18 @@ from polaris_rag.evaluation.metrics import (
 from polaris_rag.observability.mlflow_tracking import set_span_outputs, start_span
 
 logger = logging.getLogger(__name__)
+
+
+class EvaluatorTraceRecorder(Protocol):
+    def set_outputs(self, outputs: Any) -> None: ...
+
+    def set_attributes(self, attributes: Mapping[str, Any]) -> None: ...
+
+
+EvaluatorTraceFactory = Callable[
+    [str, Mapping[str, Any], Mapping[str, Any] | None],
+    contextlib.AbstractContextManager[EvaluatorTraceRecorder],
+]
 
 
 @dataclass(frozen=True)
@@ -103,6 +117,28 @@ class EvaluationRunResult:
         }
 
 
+@dataclass(frozen=True)
+class EvaluatorMetricTraceContext:
+    metric_name: str
+    sample_id: str
+    row_index: int
+    required_columns: tuple[str, ...]
+
+
+class _NoopTraceRecorder:
+    def set_outputs(self, outputs: Any) -> None:
+        return None
+
+    def set_attributes(self, attributes: Mapping[str, Any]) -> None:
+        return None
+
+
+_ACTIVE_EVALUATOR_TRACE_CONTEXT: ContextVar[EvaluatorMetricTraceContext | None] = ContextVar(
+    "polaris_evaluator_trace_context",
+    default=None,
+)
+
+
 def _as_mapping(obj: Any) -> Mapping[str, Any]:
     if isinstance(obj, Mapping):
         return obj
@@ -161,11 +197,177 @@ def _select_best_trial(
     return min(trials, key=lambda t: (t.failure_rate, -t.throughput)).workers
 
 
-async def _score_metric(metric: Any, kwargs: dict[str, Any]) -> Any:
+def _error_text_from_exception(exc: Exception) -> str:
+    return f"{type(exc).__name__}: {exc}"
+
+
+def _to_trace_payload(value: Any) -> Any:
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+
+    if isinstance(value, Mapping):
+        return {str(k): _to_trace_payload(v) for k, v in value.items()}
+
+    if isinstance(value, (list, tuple, set)):
+        return [_to_trace_payload(v) for v in value]
+
+    if is_dataclass(value):
+        return _to_trace_payload(asdict(value))
+
+    model_dump = getattr(value, "model_dump", None)
+    if callable(model_dump):
+        try:
+            return _to_trace_payload(model_dump())
+        except Exception:
+            logger.debug("model_dump failed while serializing evaluator trace payload", exc_info=True)
+
+    to_dict = getattr(value, "dict", None)
+    if callable(to_dict):
+        try:
+            return _to_trace_payload(to_dict())
+        except Exception:
+            logger.debug("dict() failed while serializing evaluator trace payload", exc_info=True)
+
+    return str(value)
+
+
+def _trace_context_payload(context: EvaluatorMetricTraceContext | None) -> dict[str, Any] | None:
+    if context is None:
+        return None
+    return {
+        "metric_name": context.metric_name,
+        "sample_id": context.sample_id,
+        "row_index": context.row_index,
+        "required_columns": list(context.required_columns),
+    }
+
+
+@contextlib.contextmanager
+def _open_evaluator_trace(
+    trace_factory: EvaluatorTraceFactory | None,
+    *,
+    name: str,
+    inputs: Mapping[str, Any],
+    attributes: Mapping[str, Any] | None = None,
+):
+    if trace_factory is None:
+        yield _NoopTraceRecorder()
+        return
+
+    with trace_factory(name, inputs, attributes) as recorder:
+        yield recorder
+
+
+class _TracedCreateResource:
+    def __init__(
+        self,
+        resource: Any,
+        *,
+        endpoint_name: str,
+        trace_factory: EvaluatorTraceFactory | None,
+    ) -> None:
+        self._resource = resource
+        self._endpoint_name = endpoint_name
+        self._trace_factory = trace_factory
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._resource, name)
+
+    async def create(self, *args: Any, **kwargs: Any) -> Any:
+        context = _ACTIVE_EVALUATOR_TRACE_CONTEXT.get()
+        trace_inputs = {
+            "endpoint": self._endpoint_name,
+            "model": kwargs.get("model"),
+            "messages": _to_trace_payload(kwargs.get("messages")),
+            "input": _to_trace_payload(kwargs.get("input")),
+            "response_model": _to_trace_payload(kwargs.get("response_model")),
+            "request_args": _to_trace_payload(list(args)),
+            "request_kwargs": _to_trace_payload(dict(kwargs)),
+            "metric_context": _trace_context_payload(context),
+        }
+        trace_attributes: dict[str, Any] = {
+            "component": "evaluator_llm",
+            "endpoint": self._endpoint_name,
+        }
+        if context is not None:
+            trace_attributes.update(
+                {
+                    "metric_name": context.metric_name,
+                    "sample_id": context.sample_id,
+                    "row_index": context.row_index,
+                }
+            )
+
+        with _open_evaluator_trace(
+            self._trace_factory,
+            name="polaris.ragas_evaluation.evaluator_llm",
+            inputs=trace_inputs,
+            attributes=trace_attributes,
+        ) as recorder:
+            try:
+                response = await self._resource.create(*args, **kwargs)
+            except Exception as exc:
+                recorder.set_attributes({"status": "error"})
+                recorder.set_outputs({"error": _error_text_from_exception(exc)})
+                raise
+
+            recorder.set_attributes({"status": "success"})
+            recorder.set_outputs({"response": _to_trace_payload(response)})
+            return response
+
+
+class _TracedChatResource:
+    def __init__(self, resource: Any, *, trace_factory: EvaluatorTraceFactory | None) -> None:
+        self._resource = resource
+        completions = getattr(resource, "completions", None)
+        if completions is not None:
+            self.completions = _TracedCreateResource(
+                completions,
+                endpoint_name="chat.completions",
+                trace_factory=trace_factory,
+            )
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._resource, name)
+
+
+class _TracedAsyncOpenAIClient:
+    def __init__(self, client: AsyncOpenAI, *, trace_factory: EvaluatorTraceFactory | None) -> None:
+        self._client = client
+
+        chat = getattr(client, "chat", None)
+        if chat is not None:
+            self.chat = _TracedChatResource(chat, trace_factory=trace_factory)
+
+        responses = getattr(client, "responses", None)
+        if responses is not None:
+            self.responses = _TracedCreateResource(
+                responses,
+                endpoint_name="responses",
+                trace_factory=trace_factory,
+            )
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._client, name)
+
+
+async def _score_metric(
+    metric: Any,
+    kwargs: dict[str, Any],
+    trace_context: EvaluatorMetricTraceContext | None = None,
+) -> Any:
     """Score one metric call and return raw numeric/string value."""
 
-    result = await metric.ascore(**kwargs)
-    return result.value if hasattr(result, "value") else result
+    token = None
+    if trace_context is not None:
+        token = _ACTIVE_EVALUATOR_TRACE_CONTEXT.set(trace_context)
+
+    try:
+        result = await metric.ascore(**kwargs)
+        return result.value if hasattr(result, "value") else result
+    finally:
+        if token is not None:
+            _ACTIVE_EVALUATOR_TRACE_CONTEXT.reset(token)
 
 
 def _rows_from_executor_results(
@@ -238,10 +440,14 @@ class Evaluator:
         raise_exceptions: bool = False,
         use_cache: bool = False,
         cache_dir: str = ".cache/ragas_eval",
+        trace_evaluator_llm: bool = False,
+        trace_factory: EvaluatorTraceFactory | None = None,
     ):
         self.requested_metrics = list(requested_metrics) if requested_metrics is not None else None
         self.auto_gate_metrics = auto_gate_metrics
         self.raise_exceptions = raise_exceptions
+        self.trace_evaluator_llm = bool(trace_evaluator_llm)
+        self.trace_factory = trace_factory
 
         self.run_config = run_config or RunConfig(
             timeout=120,
@@ -256,6 +462,10 @@ class Evaluator:
         self.adaptive_concurrency = adaptive_concurrency or AdaptiveConcurrencySettings()
 
         self.cache = DiskCacheBackend(cache_dir=cache_dir) if use_cache else None
+        if self.trace_evaluator_llm and self.trace_factory is None:
+            logger.warning(
+                "Evaluator LLM tracing was enabled without a trace_factory; evaluator requests will not be traced."
+            )
 
         self.llm = self._build_llm(
             model=llm_model,
@@ -307,6 +517,8 @@ class Evaluator:
         cfg: Any,
         *,
         requested_metrics: Iterable[str] | None = None,
+        trace_evaluator_llm: bool = False,
+        trace_factory: EvaluatorTraceFactory | None = None,
     ) -> "Evaluator":
         """Build an evaluator from ``GlobalConfig``."""
 
@@ -361,6 +573,8 @@ class Evaluator:
             raise_exceptions=_as_bool(run_cfg.get("raise_exceptions"), False),
             use_cache=_as_bool(cache_cfg.get("enabled"), False),
             cache_dir=str(cache_cfg.get("dir", ".cache/ragas_eval")),
+            trace_evaluator_llm=trace_evaluator_llm,
+            trace_factory=trace_factory,
         )
 
     def _build_llm(
@@ -376,12 +590,15 @@ class Evaluator:
         kwargs.pop("stop", None)
         kwargs.pop("stop_list", None)
 
-        client = AsyncOpenAI(
+        raw_client = AsyncOpenAI(
             base_url=api_base,
             api_key=api_key or "fake",
             timeout=float(self.run_config.timeout),
             max_retries=max(0, int(self.run_config.max_retries)),
         )
+        client: Any = raw_client
+        if self.trace_evaluator_llm and self.trace_factory is not None:
+            client = _TracedAsyncOpenAIClient(raw_client, trace_factory=self.trace_factory)
 
         llm = llm_factory(
             model=model,
@@ -467,6 +684,7 @@ class Evaluator:
         run_config: RunConfig,
         batch_size: int,
         show_progress: bool,
+        source_rows: list[dict[str, Any]] | None = None,
     ) -> pd.DataFrame:
         executor, rows, metric_names = self._create_executor(
             dataset=dataset,
@@ -474,6 +692,7 @@ class Evaluator:
             run_config=run_config,
             batch_size=batch_size,
             show_progress=show_progress,
+            source_rows=source_rows,
         )
         results = await executor.aresults()
         scored_rows = _rows_from_executor_results(
@@ -491,6 +710,7 @@ class Evaluator:
         run_config: RunConfig,
         batch_size: int,
         show_progress: bool,
+        source_rows: list[dict[str, Any]] | None = None,
     ) -> tuple[Executor, list[dict[str, Any]], list[str]]:
         """Create and populate a RAGAS executor for all metric jobs."""
 
@@ -505,10 +725,22 @@ class Evaluator:
 
         metric_names = [spec.name for spec, _ in metrics]
         rows = dataset.to_list()
-        for row in rows:
+        for row_index, row in enumerate(rows):
+            source_row = source_rows[row_index] if source_rows is not None and row_index < len(source_rows) else row
+            sample_id = str(
+                source_row.get("id")
+                or row.get("id")
+                or f"row-{row_index}"
+            )
             for spec, metric in metrics:
                 kwargs = {col: row.get(col) for col in spec.required_columns}
-                executor.submit(_score_metric, metric, kwargs)
+                trace_context = EvaluatorMetricTraceContext(
+                    metric_name=spec.name,
+                    sample_id=sample_id,
+                    row_index=row_index,
+                    required_columns=tuple(sorted(spec.required_columns)),
+                )
+                executor.submit(_score_metric, metric, kwargs, trace_context)
 
         return executor, rows, metric_names
 
@@ -520,6 +752,7 @@ class Evaluator:
         run_config: RunConfig,
         batch_size: int,
         show_progress: bool,
+        source_rows: list[dict[str, Any]] | None = None,
     ) -> pd.DataFrame:
         return asyncio.run(
             self._score_dataset_async(
@@ -528,6 +761,7 @@ class Evaluator:
                 run_config=run_config,
                 batch_size=batch_size,
                 show_progress=show_progress,
+                source_rows=source_rows,
             )
         )
 
@@ -536,6 +770,7 @@ class Evaluator:
         *,
         dataset: EvaluationDataset,
         metrics: list[tuple[MetricSpec, Any]],
+        source_rows: list[dict[str, Any]] | None = None,
     ) -> tuple[int, list[ConcurrencyTrial]]:
         settings = self.adaptive_concurrency
 
@@ -550,6 +785,7 @@ class Evaluator:
         warmup_size = min(settings.warmup_max_samples, warmup_size, len(dataset))
 
         warmup_dataset = dataset[:warmup_size]
+        warmup_source_rows = source_rows[:warmup_size] if source_rows is not None else None
 
         candidates = sorted(
             {
@@ -580,6 +816,7 @@ class Evaluator:
                 run_config=rc,
                 batch_size=batch_size,
                 show_progress=False,
+                source_rows=warmup_source_rows,
             )
             duration = max(1e-9, time.perf_counter() - start)
 
@@ -646,6 +883,7 @@ class Evaluator:
                 selected_workers, tuning_trials = self._tune_max_workers(
                     dataset=dataset,
                     metrics=runtime_metrics,
+                    source_rows=source_rows,
                 )
                 set_span_outputs(
                     tuning_span,
@@ -691,6 +929,7 @@ class Evaluator:
                 run_config=run_config,
                 batch_size=batch_size,
                 show_progress=show_progress,
+                source_rows=source_rows,
             )
             duration = time.perf_counter() - start
             set_span_outputs(
