@@ -1,0 +1,34 @@
+extends: "config.base.yaml"
+
+generator_llm:
+  type: "openai_chat"
+  model_name: "gemini-2.5-flash"
+  api_base: "https://generativelanguage.googleapis.com/v1beta/openai/"
+  api_key: "${GEMINI_API_KEY}"
+  request_timeout: 90
+  max_retries: 1
+  model_kwargs:
+    max_tokens: 384
+    temperature: 0.8
+    top_p: 0.9
+    stop_list: ["\nUser:", "\n\nUser:"]
+
+evaluator_llm:
+  type: "OpenAILike"
+  model_name: "Qwen/Qwen2.5-72B-Instruct"
+  api_base: "http://localhost:8080/v1"
+  model_kwargs:
+    max_tokens: 1024
+    temperature: 0
+    top_p: 0.9
+    stop: ["</ANS>"]
+
+embedder:
+  type: "OpenAILike"
+  api_base: "${EMBED_API_BASE}"
+  model_name: "Qwen/Qwen3-Embedding-0.6B"
+  api_key: "${POLARIS_LLM_API_KEY}"
+  timeout: 300
+  max_retries: 3
+  embed_batch_size: 2
+  model_kwargs: {}

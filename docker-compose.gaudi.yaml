@@ -1,0 +1,53 @@
+networks:
+  polaris_net:
+    name: polaris_net
+
+services:
+  mlflow:
+    networks: [polaris_net]
+
+  rag-api:
+    networks: [polaris_net]
+    environment:
+      POLARIS_CONFIG: /app/config/config.gaudi.yaml
+
+  qdrant:
+    networks: [polaris_net]
+
+  embed:
+    networks: [polaris_net]
+    build: null
+    image: ghcr.io/huggingface/text-embeddings-inference:hpu-latest
+    runtime: habana
+    ipc: host
+    cap_add:
+      - SYS_NICE
+    environment:
+      HABANA_VISIBLE_DEVICES: "7"
+      HF_TOKEN: ${HF_TOKEN}
+      RUST_BACKTRACE: "1"
+    volumes:
+      - /mnt/data/ac2650/test:/data
+    command: >
+      --model-id Qwen/Qwen3-Embedding-8B
+      --dtype bfloat16
+      --pooling last-token
+      --auto-truncate
+      --max-concurrent-requests 16
+      --max-client-batch-size 8
+      --max-batch-requests 8
+      --max-batch-tokens 2048
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:80/health >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 120s
+
+  eval:
+    networks: [polaris_net]
+    environment:
+      POLARIS_CONFIG: /app/config/config.gaudi.yaml
+
+  streamlit:
+    networks: [polaris_net]

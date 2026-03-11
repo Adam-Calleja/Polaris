@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
+from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SRC_DIR = REPO_ROOT / "src"
@@ -129,19 +130,27 @@ def _override_qdrant_collection_name(cfg: GlobalConfig, source: str, cli_value: 
     if not cli_value:
         return
 
-    vector_store = cfg.raw.get("vector_store")
-    if vector_store is None:
-        cfg.raw["vector_store"] = {
-            "type": "qdrant",
-            "collection_name": cli_value,
-        }
-        return
+    vector_stores = cfg.raw.get("vector_stores")
+    if not isinstance(vector_stores, dict):
+        raise TypeError("'vector_stores' config must be a mapping.")
 
-    if isinstance(vector_store, dict):
-        vector_store["collection_name"] = cli_value
-        return
+    selected_store = vector_stores.get(source)
+    if not isinstance(selected_store, dict):
+        raise KeyError(f"Missing 'vector_stores.{source}' config; cannot override collection name.")
 
-    raise TypeError("'vector_store' config must be a mapping to override collection_name.")
+    selected_store["collection_name"] = cli_value
+
+
+def _build_source_storage_context(container: Any, source: str) -> Any:
+    stores = container.vector_stores
+    if source not in stores:
+        raise KeyError(f"Unknown source {source!r}. Available sources: {sorted(stores.keys())}")
+
+    return build_storage_context(
+        vector_store=stores[source],
+        docstore=container.doc_store,
+        persist_dir=None,
+    )
 
 
 def _resolve_embedding_workers(cfg: GlobalConfig, cli_value: int | None) -> int | None:
@@ -171,7 +180,7 @@ def main() -> None:
             cfg.raw["embedder"] = embedder_cfg
         embedder_cfg["num_workers"] = int(args.embedding_workers)
 
-    _override_qdrant_collection_name(cfg, args.qdrant_collection_name)
+    _override_qdrant_collection_name(cfg, args.source, args.qdrant_collection_name)
     container = build_container(cfg)
 
     persist_dir = _resolve_persist_dir(cfg, args.persist_dir)

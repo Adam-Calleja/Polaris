@@ -1,10 +1,5 @@
-networks:
-  polaris_net:
-    name: polaris_net
-
 services:
   mlflow:
-    networks: [polaris_net]
     build:
       context: .
       dockerfile: Dockerfile.mlflow
@@ -15,28 +10,22 @@ services:
       - ./mlflow_artifacts:/mlflow/artifacts
 
   rag-api:
-    networks: [polaris_net]
     build:
       context: .
       dockerfile: Dockerfile.api
     environment:
-      - POLARIS_CONFIG=/app/config/config.yaml
-      - POLARIS_LLM_API_KEY=${POLARIS_LLM_API_KEY}
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
-      - JIRA_API_TOKEN=${JIRA_API_TOKEN}
-      - EMBED_API_BASE=http://embed:80/v1
-      - MLFLOW_TRACKING_URI=http://mlflow:5000
-      # If you want to override API bases for LLM/embeddings inside Docker:
-      # - LLM_API_BASE=http://llm:8080/v1
-      # - EMBED_API_BASE=http://embed:8080/v1
+      POLARIS_CONFIG: /app/config/config.yaml
+      POLARIS_LLM_API_KEY: ${POLARIS_LLM_API_KEY}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      JIRA_API_TOKEN: ${JIRA_API_TOKEN}
+      EMBED_API_BASE: http://embed:80/v1
+      MLFLOW_TRACKING_URI: http://mlflow:5000
     ports:
       - "8000:8000"
     volumes:
-      # Mount config if you want to edit without rebuild
       - ./config:/app/config:ro
-      # Persist dir for your StorageContext (highly recommended)
+      - ./data:/app/data
       - ./persist:/app/persist
-      # Direct MLflow artifact logging needs client access to the artifact root.
       - ./mlflow_artifacts:/mlflow/artifacts
     depends_on:
       - qdrant
@@ -44,7 +33,6 @@ services:
       - mlflow
 
   qdrant:
-    networks: [polaris_net]
     image: qdrant/qdrant:v1.14.1
     ports:
       - "6333:6333"
@@ -52,52 +40,43 @@ services:
       - ./qdrant_data:/qdrant/storage
 
   embed:
-    networks: [polaris_net]
-    image: ghcr.io/huggingface/text-embeddings-inference:hpu-latest
-    runtime: habana
+    build:
+      context: .
+      dockerfile: Dockerfile.embed
+    image: rag_project-embed
     restart: unless-stopped
-    ipc: host
-    cap_add:
-      - SYS_NICE
     environment:
-      - HABANA_VISIBLE_DEVICES=7
-      - HF_TOKEN=${HF_TOKEN}
-      - RUST_BACKTRACE=1
+      MODEL_ID: Qwen/Qwen3-Embedding-0.6B
+      TRUST_REMOTE_CODE: "1"
+      NORMALIZE_EMBEDDINGS: "1"
+      MAX_LENGTH: "512"
+      TORCH_NUM_THREADS: "4"
+      USE_MODEL_ENCODE: "0"
+      EMBED_MAX_BATCH_SIZE: "8"
+      DISABLE_MKLDNN: "1"
+      TOKENIZERS_PARALLELISM: "false"
+      HF_HOME: /hf_cache
+      TRANSFORMERS_CACHE: /hf_cache
+      HF_TOKEN: ${HF_TOKEN:-}
+      HUGGINGFACE_HUB_TOKEN: ${HUGGINGFACE_HUB_TOKEN:-}
     volumes:
-      - /mnt/data/ac2650/test:/data
+      - ./hf_cache:/hf_cache
     ports:
       - "8081:80"
-    command: >
-      --model-id Qwen/Qwen3-Embedding-8B
-      --dtype bfloat16
-      --pooling last-token
-      --auto-truncate
-      --max-concurrent-requests 16
-      --max-client-batch-size 8
-      --max-batch-requests 8
-      --max-batch-tokens 2048
-    healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:80/health >/dev/null || exit 1"]
-      interval: 15s
-      timeout: 5s
-      retries: 20
-      start_period: 120s
 
   eval:
-    networks: [polaris_net]
     build:
       context: .
       dockerfile: Dockerfile.eval
     environment:
-      - POLARIS_CONFIG=/app/config/config.yaml
-      - POLARIS_LLM_API_KEY=${POLARIS_LLM_API_KEY}
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
-      - EMBED_API_BASE=http://embed:80/v1
-      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      POLARIS_CONFIG: /app/config/config.yaml
+      POLARIS_LLM_API_KEY: ${POLARIS_LLM_API_KEY}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      EMBED_API_BASE: http://embed:80/v1
+      MLFLOW_TRACKING_URI: http://mlflow:5000
     volumes:
       - ./config:/app/config:ro
       - ./data:/app/data
-      # Direct MLflow artifact logging needs client access to the artifact root.
       - ./mlflow_artifacts:/mlflow/artifacts
     depends_on:
       - rag-api
@@ -105,13 +84,11 @@ services:
       - mlflow
 
   streamlit:
-    networks: [polaris_net]
     build:
       context: .
       dockerfile: Dockerfile.streamlit
     environment:
-      # Inside docker, use service name rag-api
-      - RAG_API_BASE=http://rag-api:8000
+      RAG_API_BASE: http://rag-api:8000
     ports:
       - "8501:8501"
     depends_on:

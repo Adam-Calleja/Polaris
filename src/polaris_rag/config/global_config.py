@@ -20,6 +20,7 @@ import yaml
 from pathlib import Path
 from functools import cached_property
 
+
 def _expand_env(obj):
     """Recursively expand environment variables in a nested structure.
 
@@ -46,6 +47,55 @@ def _expand_env(obj):
     if isinstance(obj, str):
         return os.path.expandvars(obj)
     return obj
+
+
+def _deep_merge(base, override):
+    """Recursively merge nested mappings, replacing non-mapping values."""
+    if not isinstance(base, dict) or not isinstance(override, dict):
+        return override
+
+    merged = dict(base)
+    for key, value in override.items():
+        if key in merged and isinstance(merged[key], dict) and isinstance(value, dict):
+            merged[key] = _deep_merge(merged[key], value)
+        else:
+            merged[key] = value
+    return merged
+
+
+def _load_yaml_with_extends(path: Path, stack: tuple[Path, ...] = ()) -> dict:
+    """Load YAML config with optional top-level ``extends`` inheritance."""
+    resolved = path.expanduser().resolve()
+    if resolved in stack:
+        chain = " -> ".join(str(p) for p in (*stack, resolved))
+        raise ValueError(f"Config inheritance cycle detected: {chain}")
+
+    with resolved.open("r") as handle:
+        data = yaml.safe_load(handle) or {}
+
+    if not isinstance(data, dict):
+        raise TypeError(f"Configuration file {resolved} must contain a top-level mapping.")
+
+    extends = data.pop("extends", None)
+    merged: dict = {}
+
+    if extends is None:
+        parents: list[str] = []
+    elif isinstance(extends, str):
+        parents = [extends]
+    elif isinstance(extends, list) and all(isinstance(item, str) for item in extends):
+        parents = extends
+    else:
+        raise TypeError("'extends' must be a string path or a list of string paths.")
+
+    for parent in parents:
+        parent_path = Path(parent)
+        if not parent_path.is_absolute():
+            parent_path = resolved.parent / parent_path
+        parent_data = _load_yaml_with_extends(parent_path, (*stack, resolved))
+        merged = _deep_merge(merged, parent_data)
+
+    return _deep_merge(merged, data)
 
 class GlobalConfig:
     """Loader and accessor for global project configuration.
@@ -96,12 +146,13 @@ class GlobalConfig:
 
         Notes
         -----
-        All string values in the loaded YAML are processed with recursive
-        environment-variable expansion (``${VAR}``) via :func:`os.path.expandvars`.
+        Supports optional top-level ``extends`` inheritance where child configs
+        deep-merge nested mappings onto parent configs. All string values in the
+        final merged YAML are then processed with recursive environment-variable
+        expansion (``${VAR}``) via :func:`os.path.expandvars`.
         """
         cfg_path = Path(path).expanduser().resolve()
-        with cfg_path.open("r") as f:
-            data = yaml.safe_load(f)
+        data = _load_yaml_with_extends(cfg_path)
         data = _expand_env(data)
         return cls(data, config_path=cfg_path)
 

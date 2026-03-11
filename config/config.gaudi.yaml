@@ -1,0 +1,53 @@
+extends: "config.base.yaml"
+
+generator_llm:
+  type: "openai_like"
+  model_name: "llama-cam"
+  api_base: "https://llm.hpc.cam.ac.uk/v1"
+  api_key: "${POLARIS_LLM_API_KEY}"
+  request_timeout: 90
+  max_retries: 1
+  model_kwargs:
+    max_tokens: 4000
+    temperature: 0.8
+    top_p: 0.9
+    stop_list: ["\nUser:", "\n\nUser:"]
+
+evaluator_llm:
+  type: "OpenAILike"
+  model_name: "Qwen/Qwen2.5-72B-Instruct"
+  api_base: "http://vllm:8080/v1"
+  api_key: "${POLARIS_LLM_API_KEY}"
+  model_kwargs:
+    temperature: 0
+    top_p: 1.0
+    max_tokens: 4096
+
+embedder:
+  type: "OpenAILike"
+  api_base: "${EMBED_API_BASE}"
+  model_name: "Qwen/Qwen3-Embedding-8B"
+  api_key: ""
+  timeout: 600
+  max_retries: 3
+  embed_batch_size: 1
+  num_workers: 1
+  model_kwargs: {}
+
+vector_stores:
+  docs:
+    collection_name: "support_docs_qwen3_8b"
+  tickets:
+    collection_name: "support_tickets_qwen3_8b"
+
+evaluation:
+  metrics:
+    requested:
+      - "context_recall"
+      - "faithfulness"
+      - "answer_relevancy"
+      - "factual_correctness"
+  run:
+    timeout: 240
+    max_retries: 0
+    max_workers: 16

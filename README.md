@@ -43,6 +43,12 @@ JIRA_API_TOKEN=your_jira_token
 docker compose up --build
 ```
 
+To run the same stack with the Gaudi-specific overrides:
+
+```bash
+docker compose -f docker-compose.yaml -f docker-compose.gaudi.yaml up --build
+```
+
 UI: [http://localhost:8501](http://localhost:8501)  
 API: [http://localhost:8000](http://localhost:8000)
 MLflow: [http://localhost:5000](http://localhost:5000)
@@ -65,17 +71,27 @@ docker compose run --rm rag-api python /app/scripts/ingest_html_documents.py \
 ```
 
 ## Configuration
-Configuration lives in `config/config.yaml`. Key sections include:
+Configuration is split into shared and environment-specific files:
+- `config/config.base.yaml`: shared retrieval, ingestion, evaluation, and MLflow settings.
+- `config/config.local.yaml`: local/default model and embedder settings.
+- `config/config.gaudi.yaml`: Gaudi-specific model, embedder, and eval-tuning overrides.
+- `config/config.yaml`: local default alias that extends `config/config.local.yaml`.
+
+Key sections include:
 - `generator_llm` and `evaluator_llm` for model selection and parameters.
 - `embedder` for embeddings endpoint configuration.
 - `vector_stores` and `storage_context` for per-source persistence.
 - `prompts` and `prompt_name` for prompt templates.
 - `mlflow` for tracking, tracing, and prompt-registry settings.
 
+The local Docker Compose stack uses `/app/config/config.yaml` by default. The
+Gaudi override file switches runtime config to `/app/config/config.gaudi.yaml`.
+
 Environment variables used by the stack:
 - `POLARIS_LLM_API_KEY`: API key for the configured LLM or embeddings provider.
 - `GEMINI_API_KEY`: API key used when `generator_llm.api_key` is configured as `${GEMINI_API_KEY}`.
 - `JIRA_API_TOKEN`: Jira API token for ticket ingestion.
+- `HF_TOKEN`: Hugging Face token used by the embedding service, including the Gaudi TEI image.
 - `EMBED_API_BASE`: Base URL for the embeddings service.
 - `POLARIS_CONFIG`: Path to the runtime config inside the API/eval containers.
 - `POLARIS_API_BASE_URL`: API base URL used by Streamlit.

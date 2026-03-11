@@ -21,4 +21,4 @@ RUN pip install --no-cache-dir -U pip \
 
 ENV POLARIS_CONFIG=/app/config/config.yaml
 
-CMD ["polaris-eval", "-c", "/app/config/config.yaml", "--generation-mode", "api", "--query-api-url", "http://rag-api:8000/v1/query"]
+CMD ["sh", "-lc", "polaris-eval -c \"${POLARIS_CONFIG:-/app/config/config.yaml}\" --generation-mode api --query-api-url http://rag-api:8000/v1/query"]
