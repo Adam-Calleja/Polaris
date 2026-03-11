@@ -23,7 +23,8 @@ create_vector_store
 import asyncio
 import math
 import time
-from typing import Iterable, Optional
+from typing import TYPE_CHECKING, Any, Iterable, Optional
+from uuid import UUID, NAMESPACE_URL, uuid5
 from qdrant_client import QdrantClient, AsyncQdrantClient
 from qdrant_client.http import models as rest
 from os import environ
@@ -37,9 +38,81 @@ from llama_index.core.vector_stores.types import MetadataFilter, MetadataFilters
 
 from polaris_rag.common.schemas import DocumentChunk
 from polaris_rag.common.request_budget import RetrievalTimeoutError, is_timeout_exception
-from polaris_rag.generation.llm_interface import BaseLLM
-from polaris_rag.retrieval.embedder import BaseEmbedder
 from polaris_rag.retrieval.node_utils import chunk_to_text_node
+
+if TYPE_CHECKING:
+    from polaris_rag.generation.llm_interface import BaseLLM
+    from polaris_rag.retrieval.embedder import BaseEmbedder
+else:
+    BaseLLM = Any
+    BaseEmbedder = Any
+
+QDRANT_POINT_ID_NAMESPACE = uuid5(NAMESPACE_URL, "polaris-rag/qdrant-point-id")
+
+
+def qdrant_point_id_from_node_id(node_id: Any) -> int | str:
+    """Return a Qdrant-compatible point id for an arbitrary logical node id."""
+    if isinstance(node_id, int):
+        if node_id < 0:
+            raise ValueError("Qdrant point ids must be unsigned integers or UUID strings.")
+        return node_id
+
+    raw_node_id = str(node_id or "").strip()
+    if not raw_node_id:
+        raise ValueError("Node id must be non-empty.")
+
+    try:
+        return str(UUID(raw_node_id))
+    except ValueError:
+        return str(uuid5(QDRANT_POINT_ID_NAMESPACE, raw_node_id))
+
+
+def _translate_node_ids_for_qdrant(node_ids: list[str] | None) -> list[int | str] | None:
+    if node_ids is None:
+        return None
+    return [qdrant_point_id_from_node_id(node_id) for node_id in node_ids]
+
+
+class PolarisQdrantVectorStore(QdrantVectorStore):
+    """Qdrant adapter that maps arbitrary logical node ids to valid point ids."""
+
+    def _build_points(self, nodes, sparse_vector_name):
+        points, ids = super()._build_points(nodes, sparse_vector_name)
+        for point, node_id in zip(points, ids):
+            point.id = qdrant_point_id_from_node_id(node_id)
+        return points, ids
+
+    def get_nodes(self, node_ids=None, filters=None, limit=None, shard_identifier=None):
+        return super().get_nodes(
+            node_ids=_translate_node_ids_for_qdrant(node_ids),
+            filters=filters,
+            limit=limit,
+            shard_identifier=shard_identifier,
+        )
+
+    async def aget_nodes(self, node_ids=None, filters=None, limit=None, shard_identifier=None):
+        return await super().aget_nodes(
+            node_ids=_translate_node_ids_for_qdrant(node_ids),
+            filters=filters,
+            limit=limit,
+            shard_identifier=shard_identifier,
+        )
+
+    def delete_nodes(self, node_ids=None, filters=None, shard_identifier=None, **delete_kwargs):
+        return super().delete_nodes(
+            node_ids=_translate_node_ids_for_qdrant(node_ids),
+            filters=filters,
+            shard_identifier=shard_identifier,
+            **delete_kwargs,
+        )
+
+    async def adelete_nodes(self, node_ids=None, filters=None, shard_identifier=None, **delete_kwargs):
+        return await super().adelete_nodes(
+            node_ids=_translate_node_ids_for_qdrant(node_ids),
+            filters=filters,
+            shard_identifier=shard_identifier,
+            **delete_kwargs,
+        )
 
 
 class BaseVectorStore(ABC):
@@ -129,7 +202,7 @@ class QdrantIndexStore(BaseVectorStore):
     def from_config_dict(
             cls, 
             config: dict,
-            llm: BaseLLM,
+            llm: "BaseLLM",
             embedder: BaseEmbedder,
         ) -> "QdrantIndexStore":
         """Create a QdrantIndexStore instance from a configuration mapping.
@@ -171,7 +244,7 @@ class QdrantIndexStore(BaseVectorStore):
         cls, 
         config_path: str, 
         *, 
-        llm: BaseLLM,
+        llm: "BaseLLM",
         embedder: BaseEmbedder,
     ) -> "QdrantIndexStore":
         """Load YAML configuration and create a QdrantIndexStore.
@@ -202,7 +275,7 @@ class QdrantIndexStore(BaseVectorStore):
     def __init__(
         self, 
         *,
-        llm: BaseLLM = None,
+        llm: "BaseLLM" = None,
         embedder: BaseEmbedder = None,
         host: str = "localhost",
         port: int = 6333,
@@ -249,7 +322,7 @@ class QdrantIndexStore(BaseVectorStore):
 
         self.client = QdrantClient(host=host, port=port)
         self.aclient = AsyncQdrantClient(host=host, port=port)
-        self.vector_store = QdrantVectorStore(
+        self.vector_store = PolarisQdrantVectorStore(
             client=self.client,
             aclient=self.aclient,
             collection_name=collection_name,
@@ -470,7 +543,7 @@ class QdrantIndexStore(BaseVectorStore):
             top_k: int = 5,
             *,
             filter: Optional[dict] = None,
-            llm: Optional[BaseLLM] = None,
+            llm: Optional["BaseLLM"] = None,
     ) -> Response:
         """Run a similarity query against the vector index.
 
