@@ -14,11 +14,12 @@ RAGPipeline
 Notes
 -----
 Post-processing hooks are not yet implemented; the pipeline currently
-returns raw model output alongside retrieved source nodes.
+returns raw model output alongside the final resolved source nodes used
+for prompt rendering.
 """
 
 import time
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from polaris_rag.common.request_budget import (
     GenerationTimeoutError,
@@ -26,14 +27,16 @@ from polaris_rag.common.request_budget import (
     RequestBudgetExceededError,
     RetrievalTimeoutError,
 )
-from polaris_rag.retrieval.retriever import VectorIndexRetriever as Retriever
+from polaris_rag.retrieval.types import Retriever
 from polaris_rag.generation.prompt_builder import PromptBuilder
-from polaris_rag.generation.llm_interface import BaseLLM
 from polaris_rag.observability.mlflow_tracking import (
     set_span_attributes,
     set_span_outputs,
     start_span,
 )
+
+if TYPE_CHECKING:
+    from polaris_rag.generation.llm_interface import BaseLLM
 
 class RAGPipeline:
     """Retrieval-Augmented Generation (RAG) orchestrator.
@@ -65,7 +68,8 @@ class RAGPipeline:
                  retriever: Retriever, 
                  prompt_builder: PromptBuilder, 
                  prompt_name: str,
-                 llm: BaseLLM,
+                 llm: "BaseLLM",
+                 context_resolver: Any | None = None,
                  llm_generate_defaults: dict | None = None,
         ):
         """Initialise the RAG pipeline.
@@ -89,6 +93,7 @@ class RAGPipeline:
         self.prompt_builder = prompt_builder
         self.prompt_name = prompt_name
         self.llm = llm
+        self.context_resolver = context_resolver
         self.llm_generate_defaults = llm_generate_defaults or {
             'stop': ['\nUser:', '\n\nUser:'],
             'temperature': 0.2,
@@ -118,7 +123,8 @@ class RAGPipeline:
             Dictionary containing:
             - ``"prompt"``: the rendered prompt string
             - ``"response"``: the raw model output
-            - ``"source_nodes"``: retrieved document chunks
+            - ``"source_nodes"``: final resolved context nodes passed to the model
+            - ``"raw_source_nodes"``: raw retrieved nodes prior to context resolution
         """
         request_budget = kwargs.pop("request_budget", None)
         if request_budget is not None and not isinstance(request_budget, RequestBudget):
@@ -216,16 +222,23 @@ class RAGPipeline:
                     },
                 )
 
+            resolved_contexts = self._resolve_contexts(retrieved_chunks)
             with start_span(
                 "rag.pipeline.prompt_render",
-                inputs={"query": query, "retrieved_contexts": self._serialize_nodes(retrieved_chunks)},
+                inputs={"query": query, "retrieved_contexts": self._serialize_nodes(resolved_contexts)},
             ) as prompt_span:
                 prompt = self.prompt_builder.build(
                     name=self.prompt_name,
                     question=query,
-                    docs=retrieved_chunks,
+                    docs=resolved_contexts,
                 )
-                set_span_outputs(prompt_span, {"prompt": prompt})
+                set_span_outputs(
+                    prompt_span,
+                    {
+                        "prompt": prompt,
+                        "resolved_contexts": self._serialize_nodes(resolved_contexts),
+                    },
+                )
 
             gen_kwargs = {**self.llm_generate_defaults, **call_overrides}
             with start_span(
@@ -318,7 +331,8 @@ class RAGPipeline:
                 {
                     "prompt": prompt,
                     "response": raw_output,
-                    "retrieved_contexts": self._serialize_nodes(retrieved_chunks),
+                    "retrieved_contexts": self._serialize_nodes(resolved_contexts),
+                    "raw_retrieved_contexts": self._serialize_nodes(retrieved_chunks),
                     "timings": {
                         "retrieval_elapsed_ms": retrieval_elapsed_ms,
                         "generation_elapsed_ms": generation_elapsed_ms,
@@ -338,7 +352,8 @@ class RAGPipeline:
         return {
             "prompt": prompt,
             "response": raw_output,
-            "source_nodes": retrieved_chunks,
+            "source_nodes": resolved_contexts,
+            "raw_source_nodes": retrieved_chunks,
             "timings": {
                 "retrieval_elapsed_ms": retrieval_elapsed_ms,
                 "generation_elapsed_ms": generation_elapsed_ms,
@@ -364,6 +379,11 @@ class RAGPipeline:
             Result of :meth:`run(query, **kwargs)`.
         """
         return self.run(query, **kwargs)
+
+    def _resolve_contexts(self, source_nodes: list[Any]) -> list[Any]:
+        if self.context_resolver is None:
+            return source_nodes
+        return list(self.context_resolver.resolve(source_nodes))
 
     @staticmethod
     def _serialize_nodes(source_nodes: list[Any]) -> list[dict[str, Any]]:

@@ -369,6 +369,57 @@ class PolarisContainer:
         return create_docstore(kind)
 
     @cached_property
+    def storage_persist_dir(self) -> str | None:
+        """Return the resolved storage-context persist dir, if configured."""
+        sc_cfg = getattr(self.config, "storage_context", {})
+        persist_dir = None
+
+        if hasattr(sc_cfg, "persist_dir") and getattr(sc_cfg, "persist_dir"):
+            persist_dir = str(getattr(sc_cfg, "persist_dir"))
+        elif isinstance(sc_cfg, Mapping):
+            raw_persist_dir = sc_cfg.get("persist_dir")
+            if raw_persist_dir:
+                persist_dir = str(raw_persist_dir)
+        else:
+            try:
+                sc_map = _as_mapping(sc_cfg)
+            except TypeError:
+                sc_map = {}
+            raw_persist_dir = sc_map.get("persist_dir")
+            if raw_persist_dir:
+                persist_dir = str(raw_persist_dir)
+
+        if not persist_dir:
+            return None
+
+        cfg_path = (
+            getattr(self.config, "config_path", None)
+            or getattr(self.config, "_config_path", None)
+            or getattr(self.config, "path", None)
+        )
+        if cfg_path:
+            base_dir = Path(cfg_path).expanduser().resolve().parent
+            p = Path(persist_dir)
+            if not p.is_absolute():
+                persist_dir = str((base_dir / p).resolve())
+
+        return persist_dir
+
+    @cached_property
+    def source_document_store(self) -> Any:
+        """Return the persisted store of full source documents."""
+        from polaris_rag.retrieval.document_store_factory import load_or_create_source_document_store
+
+        return load_or_create_source_document_store(persist_dir=self.storage_persist_dir)
+
+    @cached_property
+    def context_resolver(self) -> Any:
+        """Return the resolver that expands retrieved chunks into final contexts."""
+        from polaris_rag.retrieval.context_resolver import SupportTicketContextResolver
+
+        return SupportTicketContextResolver(source_document_store=self.source_document_store)
+
+    @cached_property
     def retriever_source_settings(self) -> dict[str, dict[str, Any]]:
         """Return validated per-source retriever settings.
 
@@ -502,27 +553,11 @@ class PolarisContainer:
 
         vector_store = self.vector_store
         doc_store = self.doc_store
-        persist_dir = None
-        sc_cfg = getattr(self.config, "storage_context", {})
-        
-        if isinstance(sc_cfg, dict):
-            persist_dir = sc_cfg.get("persist_dir")
-            if persist_dir:
-                cfg_path = (
-                    getattr(self.config, "config_path", None)
-                    or getattr(self.config, "_config_path", None)
-                    or getattr(self.config, "path", None)
-                )
-                if cfg_path:
-                    base_dir = Path(cfg_path).expanduser().resolve().parent
-                    p = Path(str(persist_dir))
-                    if not p.is_absolute():
-                        persist_dir = str((base_dir / p).resolve())
 
         return build_storage_context(
             vector_store=vector_store,
             docstore=doc_store,
-            persist_dir=persist_dir,
+            persist_dir=self.storage_persist_dir,
         )
 
     @cached_property
@@ -591,6 +626,7 @@ class PolarisContainer:
                 prompt_builder=self.prompt_builder,
                 prompt_name=self.prompt_name,
                 llm=self.generator_llm,
+                context_resolver=self.context_resolver,
             )
 
 

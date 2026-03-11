@@ -1,7 +1,5 @@
 from types import SimpleNamespace
 
-import pytest
-
 from polaris_rag.retrieval.text_splitter import get_chunks_from_jira_ticket
 
 
@@ -29,47 +27,25 @@ class DummyTokenizer:
         return str(tokens)
 
 
-class DummyConfig:
-    """Minimal stub to satisfy GlobalConfig.load usage in get_chunks_from_jira_ticket."""
+class DummyTokenCounter:
+    def __init__(self) -> None:
+        self.tokenizer = DummyTokenizer()
 
-    def __init__(self, model_name: str = "dummy-model"):
-        embedder = SimpleNamespace(embedder=SimpleNamespace(model_name=model_name))
-        self.embedder = embedder
+    def count(self, text: str) -> int:
+        return len(self.tokenizer.encode(text))
 
-
-class DummyAutoTokenizer:
-    """Stub AutoTokenizer with a from_pretrained constructor returning DummyTokenizer."""
-
-    @classmethod
-    def from_pretrained(cls, model_name: str):
-        return DummyTokenizer()
+    def tail(self, text: str, n_tokens: int) -> str:
+        return self.tokenizer.decode(self.tokenizer.encode(text)[-n_tokens:])
 
 
-@pytest.fixture(autouse=True)
-def patch_tokenizer_and_config(monkeypatch):
-    """
-    Patch GlobalConfig.load and AutoTokenizer.from_pretrained so tests do not
-    depend on real config files or HF models.
-
-    We patch by string path to guarantee we hit the exact symbols that
-    JIRATicketChunker uses inside src.retrieval.text_splitter.
-    """
-    monkeypatch.setattr(
-        "src.retrieval.text_splitter.GlobalConfig.load",
-        lambda path: DummyConfig(),
-        raising=True,
-    )
-
-    monkeypatch.setattr(
-        "src.retrieval.text_splitter.AutoTokenizer",
-        DummyAutoTokenizer,
-        raising=True,
-    )
-
-    yield
-
-
-def _make_ticket(summary: str, initial_desc: str, conversation_body: str) -> SimpleNamespace:
+def _make_ticket(
+    summary: str,
+    initial_desc: str,
+    conversation_body: str,
+    *,
+    resolved_at: str | None = None,
+    time_to_resolution: float | None = None,
+) -> SimpleNamespace:
     """
     Helper to build a minimal ticket object compatible with get_chunks_from_jira_ticket.
 
@@ -92,7 +68,21 @@ def _make_ticket(summary: str, initial_desc: str, conversation_body: str) -> Sim
     return SimpleNamespace(
         id="ticket-1",
         text=text,
-        metadata={"summary": summary, "document_type": "jira_ticket"},
+        metadata={
+            "summary": summary,
+            "document_type": "jira_ticket",
+            "resolved_at": resolved_at,
+            "time_to_resolution": time_to_resolution,
+        },
+    )
+
+
+def _chunk_ticket(ticket: SimpleNamespace, *, chunk_size: int, overlap: int):
+    return get_chunks_from_jira_ticket(
+        ticket,
+        token_counter=DummyTokenCounter(),
+        chunk_size=chunk_size,
+        overlap=overlap,
     )
 
 
@@ -121,7 +111,7 @@ def test_single_conversation_chunk_no_overlap():
     )
 
     chunk_size = 800
-    chunks = get_chunks_from_jira_ticket(ticket, chunk_size=chunk_size, overlap=5)
+    chunks = _chunk_ticket(ticket, chunk_size=chunk_size, overlap=5)
 
     assert len(chunks) == 2
 
@@ -181,7 +171,7 @@ def test_multiple_conversation_chunks_with_overlap():
     )
 
     chunk_size = 800
-    chunks = get_chunks_from_jira_ticket(ticket, chunk_size=chunk_size, overlap=5)
+    chunks = _chunk_ticket(ticket, chunk_size=chunk_size, overlap=5)
 
     assert len(chunks) == 3
     initial_chunk, conversation_chunk_1, conversation_chunk_2 = chunks
@@ -241,7 +231,7 @@ def test_long_message_is_split_into_parts():
     )
 
     chunk_size = 20
-    chunks = get_chunks_from_jira_ticket(ticket, chunk_size=chunk_size, overlap=0)
+    chunks = _chunk_ticket(ticket, chunk_size=chunk_size, overlap=0)
 
     assert len(chunks) >= 3
 
@@ -314,7 +304,7 @@ def test_very_long_message_can_span_three_conversation_chunks():
     )
 
     chunk_size = 60
-    chunks = get_chunks_from_jira_ticket(ticket, chunk_size=chunk_size, overlap=0)
+    chunks = _chunk_ticket(ticket, chunk_size=chunk_size, overlap=0)
 
     conversation_chunks = [
         chunk for chunk in chunks if chunk.metadata["chunk_type"] == "conversation"
@@ -370,7 +360,7 @@ def test_prev_and_next_links_are_wired_correctly():
         conversation_body=conversation_body,
     )
 
-    chunks = get_chunks_from_jira_ticket(ticket, chunk_size=20, overlap=3)
+    chunks = _chunk_ticket(ticket, chunk_size=20, overlap=3)
 
     assert len(chunks) >= 2
 
@@ -387,6 +377,37 @@ def test_prev_and_next_links_are_wired_correctly():
         assert chunk.metadata["chunk_index"] == i
 
 
+def test_ticket_chunk_ids_are_deterministic_and_include_resolution_metadata():
+    conversation_body = (
+        "<MESSAGE id=0001 role=USER>\n"
+        "First message.\n"
+        "</MESSAGE>\n\n"
+        "<MESSAGE id=0002 role=HELPDESK_ASSIGNEE>\n"
+        "Second message.\n"
+        "</MESSAGE>"
+    )
+
+    ticket = _make_ticket(
+        summary="Deterministic ids",
+        initial_desc="Description.",
+        conversation_body=conversation_body,
+        resolved_at="2025-01-01T11:00:00.000+0000",
+        time_to_resolution=7200.0,
+    )
+
+    chunks = _chunk_ticket(ticket, chunk_size=50, overlap=0)
+
+    assert [chunk.id for chunk in chunks] == [
+        "ticket-1::chunk::0000",
+        "ticket-1::chunk::0001",
+    ]
+    assert chunks[0].next_id == "ticket-1::chunk::0001"
+    assert chunks[1].prev_id == "ticket-1::chunk::0000"
+    for chunk in chunks:
+        assert chunk.metadata["resolved_at"] == "2025-01-01T11:00:00.000+0000"
+        assert chunk.metadata["time_to_resolution"] == 7200.0
+
+
 def test_ticket_with_no_conversation_messages_produces_only_initial_chunk():
     """
     A ticket with no <MESSAGE> blocks in the conversation section should produce
@@ -398,7 +419,7 @@ def test_ticket_with_no_conversation_messages_produces_only_initial_chunk():
         conversation_body="",
     )
 
-    chunks = get_chunks_from_jira_ticket(ticket, chunk_size=50, overlap=5)
+    chunks = _chunk_ticket(ticket, chunk_size=50, overlap=5)
 
     assert len(chunks) == 1
     chunk = chunks[0]
@@ -432,7 +453,7 @@ def test_empty_conversation_message_does_not_create_extra_chunks():
         conversation_body=conversation_body,
     )
 
-    chunks = get_chunks_from_jira_ticket(ticket, chunk_size=50, overlap=5)
+    chunks = _chunk_ticket(ticket, chunk_size=50, overlap=5)
 
     assert len(chunks) == 2
 
@@ -487,7 +508,7 @@ def test_two_short_messages_then_split_long_third_message_across_two_chunks():
     )
 
     chunk_size = 22
-    chunks = get_chunks_from_jira_ticket(ticket, chunk_size=chunk_size, overlap=0)
+    chunks = _chunk_ticket(ticket, chunk_size=chunk_size, overlap=0)
 
     conversation_chunks = [
         chunk for chunk in chunks if chunk.metadata["chunk_type"] == "conversation"
@@ -569,7 +590,7 @@ def test_overlap_can_create_additional_chunk_when_exceeding_budget():
 
     chunk_size = 40
     overlap = 5
-    chunks = get_chunks_from_jira_ticket(ticket, chunk_size=chunk_size, overlap=overlap)
+    chunks = _chunk_ticket(ticket, chunk_size=chunk_size, overlap=overlap)
 
     conversation_chunks = [
         chunk for chunk in chunks if chunk.metadata["chunk_type"] == "conversation"
@@ -629,7 +650,7 @@ def test_conversation_chunks_respect_max_message_count():
     )
 
     chunk_size = 800
-    chunks = get_chunks_from_jira_ticket(ticket, chunk_size=chunk_size, overlap=0)
+    chunks = _chunk_ticket(ticket, chunk_size=chunk_size, overlap=0)
 
     conversation_chunks = [
         chunk for chunk in chunks if chunk.metadata["chunk_type"] == "conversation"

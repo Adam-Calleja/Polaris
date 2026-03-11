@@ -23,6 +23,19 @@ class _FakePipeline:
         }
 
 
+class _ContextPipeline:
+    def run(self, query: str, **kwargs):
+        node = type("_Node", (), {"id_": "ticket-1", "text": "FULL-TICKET"})()
+        raw_node = type("_Node", (), {"id_": "ticket-1::chunk::0001", "text": "chunk"})()
+        source = type("_Source", (), {"node": node, "score": 0.9})()
+        raw_source = type("_Source", (), {"node": raw_node, "score": 0.8})()
+        return {
+            "response": f"resp::{query}",
+            "source_nodes": [source],
+            "raw_source_nodes": [raw_source],
+        }
+
+
 class _FakeContainer:
     def __init__(self):
         self.pipeline = _FakePipeline()
@@ -106,6 +119,25 @@ def test_query_adds_child_run_and_stage_tags(monkeypatch) -> None:
         "polaris.child_run_id": "run-child",
         "polaris.stage": "dataset_preparation",
     }
+
+
+def test_query_returns_resolved_context_not_raw_chunks(monkeypatch) -> None:
+    api.app.state.container = _FakeContainer()
+    api.app.state.container.pipeline = _ContextPipeline()
+
+    request = Request(
+        {
+            "type": "http",
+            "method": "POST",
+            "path": "/v1/query",
+            "headers": [],
+        }
+    )
+
+    response = api.query(api.QueryRequest(query="hello"), request)
+
+    assert response.context[0].doc_id == "ticket-1"
+    assert response.context[0].text == "FULL-TICKET"
 
 
 def test_query_maps_generation_timeout_to_504(monkeypatch) -> None:

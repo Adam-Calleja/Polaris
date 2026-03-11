@@ -46,6 +46,15 @@ class _FlakyPipeline:
         }
 
 
+class _ResolvedContextPipeline:
+    def run(self, query: str, **kwargs):  # noqa: ANN001
+        return {
+            "response": f"resp::{query}",
+            "source_nodes": [_Source(_Node("ticket-1", "full-ticket-context"))],
+            "raw_source_nodes": [_Source(_Node("ticket-1::chunk::0001", "chunk-context"))],
+        }
+
+
 def _ok_requester(
     api_url: str, query: str, timeout_seconds: float, headers  # noqa: ANN001
 ) -> dict[str, object]:
@@ -208,6 +217,19 @@ def test_build_prepared_rows_from_api_maps_answer_and_context() -> None:
     assert [row["response"] for row in rows] == ["ans::Q1", "ans::Q2"]
     assert rows[0]["retrieved_contexts"] == ["ctx-1", "ctx-2"]
     assert rows[0]["retrieved_context_ids"] == ["doc-1", "doc-2"]
+
+
+def test_build_prepared_rows_uses_resolved_source_nodes_not_raw_source_nodes() -> None:
+    raw_examples = [{"id": "ex-1", "query": "Q1", "expected_answer": "A1"}]
+
+    rows = build_prepared_rows(
+        raw_examples=raw_examples,
+        pipeline=_ResolvedContextPipeline(),
+        generation_workers=1,
+    )
+
+    assert rows[0]["retrieved_contexts"] == ["full-ticket-context"]
+    assert rows[0]["retrieved_context_ids"] == ["ticket-1"]
 
 
 def test_build_prepared_rows_from_api_fail_soft_captures_source_error() -> None:

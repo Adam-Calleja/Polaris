@@ -50,6 +50,19 @@ DEFAULT_CHUNK_SIZE = 500
 DEFAULT_OVERLAP = 50
 DEFAULT_UNWANTED_CHARS_PATTERN = r"[¶]"
 
+
+def _ticket_chunk_id(parent_id: str, chunk_index: int) -> str:
+    """Return a deterministic Jira chunk id derived from ticket id and chunk index."""
+    return f"{parent_id}::chunk::{int(chunk_index):04d}"
+
+
+def _ticket_chunk_metadata(ticket: Document, **chunk_metadata: Any) -> dict[str, Any]:
+    """Merge chunk-local metadata with selected ticket-level metadata."""
+    metadata = dict(chunk_metadata)
+    metadata["resolved_at"] = ticket.metadata.get("resolved_at")
+    metadata["time_to_resolution"] = ticket.metadata.get("time_to_resolution")
+    return metadata
+
 class HTMLHeirarchicalSplitter(HTMLNodeParser):
     """HTML splitter that groups text under the same heading.
 
@@ -530,20 +543,22 @@ class JIRATicketChunker:
             f"[INITIAL_DESCRIPTION]\n"
             f"{initial_description_text}"
         )
-        metadata = {
-            "chunk_type": "initial",
-            "chunk_index": 0,
-            "turn_range": None,
-            "speakers": ["TICKET_CREATOR"],
-            "overlap": {"has_overlap": False, "size": 0},
-        }
+        chunk_index = 0
+        metadata = _ticket_chunk_metadata(
+            ticket,
+            chunk_type="initial",
+            chunk_index=chunk_index,
+            turn_range=None,
+            speakers=["TICKET_CREATOR"],
+            overlap={"has_overlap": False, "size": 0},
+        )
         return DocumentChunk(
             parent_id=ticket.id,
             prev_id=None,
             next_id=None,
             text=initial_chunk_text,
             document_type=ticket.metadata['document_type'],
-            id=str(uuid4()),
+            id=_ticket_chunk_id(ticket.id, chunk_index),
             metadata=metadata,
             source_node=ticket,
         )
@@ -742,16 +757,18 @@ class JIRATicketChunker:
             prefix = current_prefix if current_prefix is not None else self._build_prefix(ticket, prev_conv_body)
             chunk_text = prefix + current_body
             has_prev = bool(prev_conv_body)
-            metadata = {
-                "chunk_type": "conversation",
-                "chunk_index": len(chunks),
-                "turn_range": f"{current_turns[0]}-{current_turns[-1]}" if current_turns else None,
-                "speakers": current_speakers[:],
-                "overlap": {
+            chunk_index = len(chunks)
+            metadata = _ticket_chunk_metadata(
+                ticket,
+                chunk_type="conversation",
+                chunk_index=chunk_index,
+                turn_range=f"{current_turns[0]}-{current_turns[-1]}" if current_turns else None,
+                speakers=current_speakers[:],
+                overlap={
                     "has_overlap": has_prev and self.include_context and self.overlap_tokens > 0,
                     "size": self.overlap_tokens if has_prev else 0,
                 },
-            }
+            )
             chunks.append(
                 DocumentChunk(
                     parent_id=ticket.id,
@@ -759,7 +776,7 @@ class JIRATicketChunker:
                     next_id=None,
                     text=chunk_text,
                     document_type=ticket.metadata["document_type"],
-                    id=str(uuid4()),
+                    id=_ticket_chunk_id(ticket.id, chunk_index),
                     metadata=metadata,
                     source_node=ticket,
                 )

@@ -23,8 +23,9 @@ create_vector_store
 import asyncio
 import math
 import time
-from typing import Optional
+from typing import Iterable, Optional
 from qdrant_client import QdrantClient, AsyncQdrantClient
+from qdrant_client.http import models as rest
 from os import environ
 import yaml
 from abc import ABC, abstractmethod
@@ -38,6 +39,7 @@ from polaris_rag.common.schemas import DocumentChunk
 from polaris_rag.common.request_budget import RetrievalTimeoutError, is_timeout_exception
 from polaris_rag.generation.llm_interface import BaseLLM
 from polaris_rag.retrieval.embedder import BaseEmbedder
+from polaris_rag.retrieval.node_utils import chunk_to_text_node
 
 
 class BaseVectorStore(ABC):
@@ -362,24 +364,39 @@ class QdrantIndexStore(BaseVectorStore):
                 self._index.insert_nodes(batch)
 
     def _build_nodes(self, chunks: list[DocumentChunk]) -> list[TextNode]:
-        nodes: list[TextNode] = []
+        return [chunk_to_text_node(chunk) for chunk in chunks]
 
-        for chunk in chunks:
-            text = chunk.text
-            document_type = chunk.document_type
-            id = chunk.id
-            parent_id = chunk.parent_id
-            metadata = dict(chunk.metadata or {})
+    def delete_ref_doc(self, ref_doc_id: str) -> None:
+        """Delete all chunks associated with a parent/source document id."""
+        ref_doc_id = str(ref_doc_id or "").strip()
+        if not ref_doc_id:
+            return
 
-            if parent_id:
-                metadata.update({'parent_id': parent_id})
+        self.vector_store.delete(ref_doc_id)
+        self.client.delete(
+            collection_name=self.vector_store.collection_name,
+            points_selector=rest.Filter(
+                must=[
+                    rest.FieldCondition(
+                        key="parent_id",
+                        match=rest.MatchValue(value=ref_doc_id),
+                    )
+                ]
+            ),
+        )
 
-            metadata.update({'document_type': document_type})
-
-            node = TextNode(text=text, id_=id, metadata=metadata)
-            nodes.append(node)
-
-        return nodes
+    def delete_ref_docs(self, ref_doc_ids: Iterable[str]) -> int:
+        """Delete all chunks associated with the provided parent/source ids."""
+        deleted = 0
+        seen: set[str] = set()
+        for ref_doc_id in ref_doc_ids:
+            ref_doc_id = str(ref_doc_id or "").strip()
+            if not ref_doc_id or ref_doc_id in seen:
+                continue
+            seen.add(ref_doc_id)
+            self.delete_ref_doc(ref_doc_id)
+            deleted += 1
+        return deleted
 
     @staticmethod
     def _coerce_metadata_filters(filters: MetadataFilters | dict | None) -> MetadataFilters | None:
