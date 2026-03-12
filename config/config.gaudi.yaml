@@ -40,6 +40,9 @@ vector_stores:
   tickets:
     collection_name: "support_tickets_turn_based_qwen_3_8b"
 
+storage_context:
+  persist_dir: "/app/persist/turn_based_chunking"
+
 evaluation:
   metrics:
     requested:
