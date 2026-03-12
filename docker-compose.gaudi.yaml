@@ -46,7 +46,11 @@ services:
       - --max-batch-tokens
       - "2048"
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:80/health >/dev/null || exit 1"]
+      test:
+        - CMD-SHELL
+        - >-
+          python3 -c "import sys, urllib.request;
+          sys.exit(0 if urllib.request.urlopen('http://localhost:80/health', timeout=5).getcode() < 400 else 1)"
       interval: 15s
       timeout: 5s
       retries: 20
