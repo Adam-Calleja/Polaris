@@ -6,6 +6,7 @@ from uuid import UUID
 from llama_index.vector_stores.qdrant import QdrantVectorStore
 
 from polaris_rag.retrieval.vector_store import (
+    QdrantIndexStore,
     PolarisQdrantVectorStore,
     qdrant_point_id_from_node_id,
 )
@@ -48,3 +49,30 @@ def test_polaris_qdrant_vector_store_translates_point_ids_but_preserves_logical_
     assert returned_ids == logical_ids
     assert str(UUID(str(built_points[0].id))) == built_points[0].id
     assert built_points[1].id == logical_ids[1]
+
+
+def test_delete_ref_doc_is_noop_when_collection_does_not_exist():
+    vector_store = SimpleNamespace(
+        collection_name="support_tickets_turn_based_qwen_3_8b",
+        delete_called_with=None,
+    )
+
+    def _delete(ref_doc_id):
+        vector_store.delete_called_with = ref_doc_id
+
+    vector_store.delete = _delete
+
+    delete_calls: list[str] = []
+    client = SimpleNamespace(
+        collection_exists=lambda collection_name: False,
+        delete=lambda **kwargs: delete_calls.append(kwargs["collection_name"]),
+    )
+
+    store = object.__new__(QdrantIndexStore)
+    store.client = client
+    store.vector_store = vector_store
+
+    store.delete_ref_doc("HPCSSUP-96994")
+
+    assert vector_store.delete_called_with is None
+    assert delete_calls == []

@@ -445,6 +445,9 @@ class QdrantIndexStore(BaseVectorStore):
         if not ref_doc_id:
             return
 
+        if not self.client.collection_exists(self.vector_store.collection_name):
+            return
+
         self.vector_store.delete(ref_doc_id)
         self.client.delete(
             collection_name=self.vector_store.collection_name,
