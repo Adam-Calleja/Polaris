@@ -38,7 +38,7 @@ vector_stores:
   docs:
     collection_name: "support_docs_qwen3_8b"
   tickets:
-    collection_name: "support_tickets_qwen3_8b"
+    collection_name: "support_tickets_turn_based_qwen_3_8b"
 
 evaluation:
   metrics:
