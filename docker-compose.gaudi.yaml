@@ -18,6 +18,7 @@ services:
     networks: [polaris_net]
     build: !reset null
     image: ghcr.io/huggingface/text-embeddings-inference:hpu-latest
+    pull_policy: always
     runtime: habana
     ipc: host
     cap_add:
