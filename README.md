@@ -53,6 +53,12 @@ UI: [http://localhost:8501](http://localhost:8501)
 API: [http://localhost:8000](http://localhost:8000)
 MLflow: [http://localhost:5000](http://localhost:5000)
 
+Check API dependency readiness with:
+
+```bash
+curl http://localhost:8000/ready
+```
+
 ## Ingest Data
 Jira tickets:
 ```bash
@@ -109,11 +115,25 @@ You can run the modern RAGAS evaluation pipeline through the `eval` service:
 docker compose run --rm eval
 ```
 
+When the stack is already running, prefer `--no-deps` so Compose does not
+recreate dependency containers unnecessarily:
+
+```bash
+docker compose run --no-deps --rm eval
+```
+
 By default, evaluation row preparation uses API mode for production-like
 end-to-end evaluation. The `eval` service in Docker Compose runs this by default:
 
 ```bash
 docker compose run --rm eval
+```
+
+If evaluation prep fails before the first request completes, verify the API is
+fully ready before running eval:
+
+```bash
+curl http://localhost:8000/ready
 ```
 
 You can still configure generation mode explicitly:
@@ -134,7 +154,7 @@ evaluation:
 You can also override this at runtime:
 
 ```bash
-docker compose run --rm eval \
+docker compose run --no-deps --rm eval \
   polaris-eval -c /app/config/config.yaml \
   --generation-mode api \
   --query-api-url http://rag-api:8000/v1/query
@@ -149,7 +169,7 @@ runtime input back out of MLflow.
 To evaluate a specific split explicitly:
 
 ```bash
-docker compose run --rm eval \
+docker compose run --no-deps --rm eval \
   polaris-eval -c /app/config/config.yaml \
   --dataset-path /app/data/test/ragas_one_hop_eval_dataset_v1.test.jsonl \
   --prepared-path /app/data/test/prepared_test_rows.json
@@ -158,7 +178,7 @@ docker compose run --rm eval \
 To control MLflow from CLI:
 
 ```bash
-docker compose run --rm eval \
+docker compose run --no-deps --rm eval \
   polaris-eval -c /app/config/config.yaml \
   --mlflow \
   --mlflow-experiment polaris-rag-evals \
@@ -168,7 +188,7 @@ docker compose run --rm eval \
 To capture raw evaluator prompts and responses for RAGAS metric debugging:
 
 ```bash
-docker compose run --rm eval \
+docker compose run --no-deps --rm eval \
   polaris-eval -c /app/config/config.yaml \
   --mlflow \
   --trace-evaluator-llm
@@ -190,7 +210,7 @@ metric call.
 To enable retries during dataset preparation from CLI:
 
 ```bash
-docker compose run --rm eval \
+docker compose run --no-deps --rm eval \
   polaris-eval -c /app/config/config.yaml \
   --generation-max-attempts 3 \
   --generation-retry-initial-backoff 1.0 \

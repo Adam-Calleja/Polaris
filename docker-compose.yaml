@@ -28,9 +28,12 @@ services:
       - ./persist:/app/persist
       - ./mlflow_artifacts:/mlflow/artifacts
     depends_on:
-      - qdrant
-      - embed
-      - mlflow
+      qdrant:
+        condition: service_started
+      embed:
+        condition: service_healthy
+      mlflow:
+        condition: service_started
 
   qdrant:
     image: qdrant/qdrant:v1.14.1
@@ -63,6 +66,12 @@ services:
       - ./hf_cache:/hf_cache
     ports:
       - "8081:80"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:80/healthz >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 120s
 
   eval:
     build:
@@ -79,9 +88,10 @@ services:
       - ./data:/app/data
       - ./mlflow_artifacts:/mlflow/artifacts
     depends_on:
-      - rag-api
-      - embed
-      - mlflow
+      rag-api:
+        condition: service_healthy
+      mlflow:
+        condition: service_started
 
   streamlit:
     build:
@@ -92,4 +102,5 @@ services:
     ports:
       - "8501:8501"
     depends_on:
-      - rag-api
+      rag-api:
+        condition: service_healthy

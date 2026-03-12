@@ -3,9 +3,11 @@ from __future__ import annotations
 
 import time
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from polaris_rag.config import GlobalConfig
 from polaris_rag.app.container import build_container
+from polaris_rag.app.readiness import build_readiness_report
 import logging
 import traceback
 from typing import Any, Mapping
@@ -154,6 +156,13 @@ def startup():
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/ready")
+def ready():
+    report = build_readiness_report(app.state.container.config)
+    status_code = 200 if report.get("ready") else 503
+    return JSONResponse(status_code=status_code, content=report)
 
 @app.post("/v1/query", response_model=QueryResponse)
 def query(req: QueryRequest, request: Request):

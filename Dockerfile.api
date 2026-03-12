@@ -36,8 +36,8 @@ RUN pip install --no-cache-dir -U pip \
 EXPOSE 8000
 
 # Healthcheck (optional)
-HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
-  CMD curl -fsS http://localhost:8000/health || exit 1
+HEALTHCHECK --interval=5s --timeout=3s --start-period=10s --retries=12 \
+  CMD curl -fsS http://localhost:8000/ready || exit 1
 
 # Run with uvicorn
 CMD ["uvicorn", "polaris_rag.app.api:app", "--host", "0.0.0.0", "--port", "8000"]
