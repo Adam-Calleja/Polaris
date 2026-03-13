@@ -175,6 +175,16 @@ docker compose run --no-deps --rm eval \
   --prepared-path /app/data/test/prepared_test_rows.json
 ```
 
+To prepare rows without running RAGAS scoring:
+
+```bash
+docker compose run --no-deps --rm eval \
+  polaris-eval -c /app/config/config.yaml \
+  --dataset-path /app/data/test/ragas_one_hop_eval_dataset_v1.test.jsonl \
+  --prepared-path /app/data/test/prepared_test_rows.json \
+  --prepare-only
+```
+
 To control MLflow from CLI:
 
 ```bash

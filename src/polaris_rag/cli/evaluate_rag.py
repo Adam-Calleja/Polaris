@@ -88,6 +88,39 @@ def _parse_metrics(value: str | None) -> list[str] | None:
     return [x.strip() for x in value.split(",") if x.strip()]
 
 
+def _write_prepared_rows_artifact(
+    *,
+    output_dir: Path,
+    prepared_rows: list[dict[str, Any]],
+    tracking: EvaluationTrackingContext,
+) -> Path:
+    path = output_dir / "prepared_rows.json"
+    path.write_text(
+        json.dumps(prepared_rows, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    tracking.log_artifact(path, artifact_path="outputs")
+    return path
+
+
+def _write_runtime_snapshots(
+    *,
+    output_dir: Path,
+    config_payload: Mapping[str, Any],
+    tracking: EvaluationTrackingContext,
+) -> None:
+    tracking.log_json_artifact(
+        build_environment_snapshot(),
+        output_path=output_dir / "env_snapshot.json",
+        artifact_path="outputs",
+    )
+    tracking.log_json_artifact(
+        config_payload,
+        output_path=output_dir / "config_snapshot.json",
+        artifact_path="inputs",
+    )
+
+
 def _compact_error_text(value: str | None, *, limit: int = 120) -> str | None:
     if value is None:
         return None
@@ -448,6 +481,11 @@ def parse_args() -> argparse.Namespace:
         "--reuse-prepared",
         action="store_true",
         help="If set, use prepared dataset when available",
+    )
+    parser.add_argument(
+        "--prepare-only",
+        action="store_true",
+        help="Prepare dataset rows and exit before RAGAS scoring",
     )
     parser.add_argument(
         "--generation-workers",
@@ -1092,7 +1130,6 @@ def main() -> None:
     args = parse_args()
     show_progress = not args.no_progress
     interactive_progress = show_progress and sys.stderr.isatty()
-    from polaris_rag.evaluation.evaluator import Evaluator, write_outputs
 
     cfg = GlobalConfig.load(args.config_file)
     eval_cfg = _as_mapping(_as_mapping(cfg.raw).get("evaluation", {}))
@@ -1112,12 +1149,16 @@ def main() -> None:
     config_file = Path(args.config_file).expanduser().resolve()
     requested_metrics = _parse_metrics(args.metrics)
     tune_concurrency = not args.no_tune_concurrency
-    trace_evaluator_llm_requested = _resolve_evaluator_llm_tracing(eval_cfg, args)
-    trace_evaluator_llm = bool(
-        trace_evaluator_llm_requested
-        and tracking.enabled
-        and tracking.runtime_config.tracing.enabled
-    )
+    prepare_only = bool(getattr(args, "prepare_only", False))
+    trace_evaluator_llm_requested = False
+    trace_evaluator_llm = False
+    if not prepare_only:
+        trace_evaluator_llm_requested = _resolve_evaluator_llm_tracing(eval_cfg, args)
+        trace_evaluator_llm = bool(
+            trace_evaluator_llm_requested
+            and tracking.enabled
+            and tracking.runtime_config.tracing.enabled
+        )
     if trace_evaluator_llm_requested and not trace_evaluator_llm:
         logger.warning(
             "Evaluator LLM tracing was requested but MLflow tracing is disabled; continuing without evaluator traces."
@@ -1138,6 +1179,7 @@ def main() -> None:
                 "input.output_dir": str(output_dir),
                 "runtime.show_progress": str(show_progress),
                 "runtime.interactive_progress": str(interactive_progress),
+                "runtime.prepare_only": str(prepare_only),
                 "runtime.tune_concurrency": str(tune_concurrency),
                 "runtime.trace_evaluator_llm": str(trace_evaluator_llm),
             }
@@ -1179,6 +1221,26 @@ def main() -> None:
                 output_path=output_dir / "dataset_manifest.json",
                 artifact_path="dataset",
             )
+
+        prepared_rows_path = _write_prepared_rows_artifact(
+            output_dir=output_dir,
+            prepared_rows=prepared_rows,
+            tracking=tracking,
+        )
+        _write_runtime_snapshots(
+            output_dir=output_dir,
+            config_payload=_as_mapping(cfg.raw),
+            tracking=tracking,
+        )
+
+        if prepare_only:
+            print("Dataset preparation complete.")
+            print(f"Rows: {len(prepared_rows)}")
+            print(f"Prep run validity: {dataset_manifest.get('run_validity', 'UNKNOWN')}")
+            print(f"Prepared rows: {prepared_rows_path}")
+            return
+
+        from polaris_rag.evaluation.evaluator import Evaluator, write_outputs
 
         dataset = to_evaluation_dataset(prepared_rows)
 
@@ -1239,24 +1301,6 @@ def main() -> None:
 
         for artifact_path in artifacts.values():
             tracking.log_artifact(artifact_path, artifact_path="outputs")
-
-        prepared_rows_path = output_dir / "prepared_rows.json"
-        prepared_rows_path.write_text(
-            json.dumps(prepared_rows, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
-        tracking.log_artifact(prepared_rows_path, artifact_path="outputs")
-
-        tracking.log_json_artifact(
-            build_environment_snapshot(),
-            output_path=output_dir / "env_snapshot.json",
-            artifact_path="outputs",
-        )
-        tracking.log_json_artifact(
-            _as_mapping(cfg.raw),
-            output_path=output_dir / "config_snapshot.json",
-            artifact_path="inputs",
-        )
 
     print("Evaluation complete.")
     print(f"Rows: {len(result.scores_df)}")

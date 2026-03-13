@@ -958,3 +958,106 @@ def test_main_disables_evaluator_tracing_when_mlflow_tracing_is_off(monkeypatch,
     )
     assert captured_manifest["trace_evaluator_llm"] is False
     assert "Evaluator LLM tracing was requested but MLflow tracing is disabled" in caplog.text
+
+
+def test_main_prepare_only_skips_ragas_evaluation(monkeypatch, tmp_path, capsys) -> None:
+    output_dir = tmp_path / "prep-output"
+    tracking = _DummyMainTracking(enabled=True, tracing_enabled=True)
+
+    monkeypatch.setattr(
+        evaluate_rag,
+        "parse_args",
+        lambda: Namespace(
+            config_file=str(tmp_path / "config.yaml"),
+            dataset_path=None,
+            prepared_path=None,
+            reuse_prepared=False,
+            prepare_only=True,
+            generation_workers=None,
+            generation_max_attempts=None,
+            generation_retry_initial_backoff=None,
+            generation_retry_max_backoff=None,
+            generation_retry_jitter=None,
+            generation_retry_on_empty_response=None,
+            generation_mode=None,
+            evaluation_policy=None,
+            replay_failures_from=None,
+            query_api_url=None,
+            query_api_timeout=None,
+            metrics=None,
+            output_dir=str(output_dir),
+            no_tune_concurrency=False,
+            no_progress=True,
+            mlflow=None,
+            mlflow_experiment=None,
+            mlflow_run_name=None,
+            trace_evaluator_llm=True,
+        ),
+    )
+    monkeypatch.setattr(
+        evaluate_rag.GlobalConfig,
+        "load",
+        lambda path: SimpleNamespace(
+            raw={
+                "evaluation": {
+                    "output_dir": str(output_dir),
+                    "tracing": {"evaluator_llm": True},
+                },
+                "mlflow": {"enabled": True, "tracing": {"enabled": True}},
+            }
+        ),
+    )
+    monkeypatch.setattr(evaluate_rag, "load_mlflow_runtime_config", lambda cfg: object())
+    monkeypatch.setattr(evaluate_rag, "EvaluationTrackingContext", lambda *args, **kwargs: tracking)
+    monkeypatch.setattr(
+        evaluate_rag,
+        "_resolve_prepared_rows",
+        lambda **kwargs: (
+            [
+                {
+                    "id": "row-1",
+                    "user_input": "Q1",
+                    "reference": "A1",
+                    "response": "R1",
+                    "retrieved_contexts": ["ctx-1"],
+                    "retrieved_context_ids": ["doc-1"],
+                    "metadata": {},
+                }
+            ],
+            {"run_validity": "VALID", "prepared_source": "generated"},
+        ),
+    )
+    monkeypatch.setattr(
+        evaluate_rag,
+        "to_evaluation_dataset",
+        lambda rows: (_ for _ in ()).throw(AssertionError("prepare-only should not score rows")),
+    )
+    monkeypatch.setattr(evaluate_rag, "build_environment_snapshot", lambda: {"python": "test"})
+
+    evaluate_rag.main()
+
+    captured = capsys.readouterr()
+    prepared_rows_path = output_dir / "prepared_rows.json"
+
+    assert "Dataset preparation complete." in captured.out
+    assert "Prep run validity: VALID" in captured.out
+    assert prepared_rows_path.exists()
+    assert "\"id\": \"row-1\"" in prepared_rows_path.read_text(encoding="utf-8")
+    assert tracking.eval_stage.open_calls == []
+    assert tracking.eval_stage.active_open_calls == []
+    assert any(
+        batch.get("runtime.prepare_only") == "True"
+        for batch in tracking.logged_param_batches
+    )
+    assert any(
+        artifact["output_path"].endswith("dataset_manifest.json")
+        for artifact in tracking.logged_json_artifacts
+    )
+    assert any(
+        artifact["output_path"].endswith("env_snapshot.json")
+        for artifact in tracking.logged_json_artifacts
+    )
+    assert any(
+        artifact["output_path"].endswith("config_snapshot.json")
+        for artifact in tracking.logged_json_artifacts
+    )
