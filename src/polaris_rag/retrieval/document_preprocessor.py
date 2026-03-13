@@ -28,7 +28,79 @@ preprocess_jira_tickets
 from bs4 import BeautifulSoup, UnicodeDammit
 from datetime import datetime 
 
-from polaris_rag.common import Document
+from polaris_rag.common import Document, MarkdownDocument
+
+
+def _jira_comment_role(ticket_fields: dict, comment: dict) -> str:
+    """Infer a stable role label for a Jira comment author."""
+    assignee = ticket_fields.get("assignee") or {}
+    creator = ticket_fields.get("creator") or {}
+    reporter = ticket_fields.get("reporter") or {}
+    pi_field = ticket_fields.get("customfield_10042")
+
+    if isinstance(pi_field, list) and pi_field:
+        principal_investigator = pi_field[0] or {}
+    else:
+        principal_investigator = {}
+
+    author = comment.get("author", {})
+    author_email = author.get("emailAddress", "")
+    author_displayname = author.get("displayName", "")
+
+    if author_displayname == "Automation Pseudo-User":
+        return "AUTOMATED_PSEUDOUSER"
+    if author_email == assignee.get("emailAddress", ""):
+        return "HELPDESK_ASSIGNEE"
+    if author_email == creator.get("emailAddress", ""):
+        return "TICKET_CREATOR"
+    if author_email == principal_investigator.get("emailAddress", ""):
+        return "HELPDESK_PRINCIPAL_INVESTIGATOR"
+    if creator.get("emailAddress", "") != reporter.get("emailAddress", "") and author_email == reporter.get("emailAddress", ""):
+        return "REPORTER"
+    return "OTHER"
+
+
+def _build_jira_ticket_metadata(ticket: dict) -> dict[str, object]:
+    created_date = ticket["fields"].get("created", None)
+    updated_date = ticket["fields"].get("updated", None)
+    resolution_date = ticket["fields"].get("resolutionDate", None)
+    summary = ticket["fields"].get("summary", None)
+    key = ticket.get("key", None)
+    status = ticket["fields"]["status"]["name"].upper()
+
+    date_format = "%Y-%m-%dT%H:%M:%S.%f%z"
+
+    if resolution_date:
+        start = datetime.strptime(created_date, date_format)
+        end = datetime.strptime(resolution_date, date_format)
+        delta = end - start
+        time_to_resolution = delta.total_seconds()
+    else:
+        time_to_resolution = None
+
+    ingestion_date = datetime.strftime(datetime.now(), date_format)
+    index_version = "test"
+
+    return {
+        "created_at": created_date,
+        "updated_at": updated_date,
+        "resolved_at": resolution_date,
+        "time_to_resolution": time_to_resolution,
+        "summary": summary,
+        "ticket_key": key,
+        "document_type": "helpdesk_ticket",
+        "status": status,
+        "ingestion_date": ingestion_date,
+        "index_version": index_version,
+    }
+
+
+def _normalise_markdown(text: str) -> str:
+    lines = [(line or "").rstrip() for line in str(text or "").replace("\r\n", "\n").replace("\r", "\n").split("\n")]
+    output = "\n".join(lines)
+    while "\n\n\n" in output:
+        output = output.replace("\n\n\n", "\n\n")
+    return output.strip()
 
 def preprocess_html(
         html: str,
@@ -363,17 +435,6 @@ def build_jira_ticket_text(ticket: dict) -> str:
     status = ticket['fields']['status']['name'].upper()
     created_date = ticket['fields']['created']
 
-    assignee = ticket['fields'].get('assignee') or {}
-    creator = ticket['fields'].get('creator') or {}
-    reporter = ticket['fields'].get('reporter') or {}
-
-    pi_field = ticket['fields'].get('customfield_10042')
-
-    if isinstance(pi_field, list) and pi_field:
-        principal_investigator = pi_field[0] or {}
-    else:
-        principal_investigator = {}
-
     text = (
         "<BEGIN_TICKET>\n"
         f"[TICKET_KEY] {key}\n"
@@ -386,23 +447,7 @@ def build_jira_ticket_text(ticket: dict) -> str:
 
     for message_counter in range(len(comments)):
         comment = comments[message_counter]
-
-        author = comment.get('author', {})
-        author_email = author.get('emailAddress', "")
-        author_displayname = author.get('displayName', "")
-
-        user = "OTHER"
-
-        if author_email and author_displayname == "Automation Pseudo-User":
-            user = "AUTOMATED_PSEUDOUSER"
-        elif author_email == assignee.get("emailAddress", ""):
-            user = "HELPDESK_ASSIGNEE"
-        elif author_email == creator.get("emailAddress", ""):
-            user = "TICKET_CREATOR"
-        elif author_email == principal_investigator.get("emailAddress", ""):
-            user = "HELPDESK_PRINCIPAL_INVESTIGATOR"
-        elif creator.get("emailAddress", "") != reporter.get("emailAddress", "") and author_email == reporter.get("emailAddress", ""):
-            user = "REPORTER"
+        user = _jira_comment_role(ticket["fields"], comment)
 
         message_count = str(message_counter + 1).zfill(4)
         text += f"<MESSAGE id={message_count} role={user}>\n"
@@ -413,7 +458,79 @@ def build_jira_ticket_text(ticket: dict) -> str:
 
     return text
 
-def preprocess_jira_ticket(ticket: dict) -> Document:
+
+def build_jira_ticket_markdown(ticket: dict) -> str:
+    """Render a Jira ticket into readable Markdown while preserving turns."""
+    fields = ticket["fields"]
+    summary = fields.get("summary", "")
+    description = fields.get("description")
+    comments = fields.get("comment", {}).get("comments", [])
+    key = ticket["key"]
+    status = fields["status"]["name"].upper()
+    created_date = fields.get("created", "")
+    updated_date = fields.get("updated", "")
+    resolved_date = fields.get("resolutionDate", "")
+
+    parts = [
+        f"# Ticket {key}",
+        "",
+        f"- Summary: {summary}",
+        f"- Status: {status}",
+        f"- Created: {created_date}",
+    ]
+    if updated_date:
+        parts.append(f"- Updated: {updated_date}")
+    if resolved_date:
+        parts.append(f"- Resolved: {resolved_date}")
+
+    initial_description = _normalise_markdown(adf_to_text(description))
+    parts.extend([
+        "",
+        "## Initial Description",
+        "",
+        initial_description or "_No description provided._",
+        "",
+        "## Conversation",
+    ])
+
+    if not comments:
+        parts.extend(["", "_No comments._"])
+        return _normalise_markdown("\n".join(parts))
+
+    for idx, comment in enumerate(comments, start=1):
+        role = _jira_comment_role(fields, comment)
+        body = _normalise_markdown(adf_to_text(comment.get("body")))
+        parts.extend(
+            [
+                "",
+                f"### Message {str(idx).zfill(4)} ({role})",
+                "",
+                body or "_Empty message._",
+            ]
+        )
+
+    return _normalise_markdown("\n".join(parts))
+
+
+def convert_jira_ticket_to_markdown(ticket: dict) -> MarkdownDocument:
+    """Convert a Jira issue payload into a markdown-normalized document."""
+    metadata = _build_jira_ticket_metadata(ticket)
+    metadata["conversion_engine"] = "native_jira"
+    metadata["source_format"] = "jira_adf"
+    return MarkdownDocument(
+        text=build_jira_ticket_markdown(ticket),
+        document_type="helpdesk_ticket",
+        id=str(ticket.get("key", "")),
+        metadata=metadata,
+        source_node=ticket,
+    )
+
+
+def convert_jira_tickets_to_markdown(tickets: list[dict]) -> list[MarkdownDocument]:
+    """Batch-convert Jira issues into markdown-normalized documents."""
+    return [convert_jira_ticket_to_markdown(ticket) for ticket in tickets]
+
+def preprocess_jira_ticket(ticket: dict, anonymizer=None) -> Document:
     """
     Convert a Jira issue to a :class:`~polaris_rag.common.schemas.Document` with enriched metadata.
 
@@ -468,40 +585,17 @@ def preprocess_jira_ticket(ticket: dict) -> Document:
     build_jira_ticket_text : Generates the ticket transcript.
     preprocess_jira_tickets : Batch wrapper for multiple issues.
     """
-    created_date = ticket['fields'].get('created', None)
-    updated_date = ticket['fields'].get('updated', None)
-    resolution_date = ticket['fields'].get('resolutionDate', None)
-    summary = ticket['fields'].get('summary', None)
+    fields = ticket["fields"]
+    fields["summary"]
+    fields["status"]
+    fields["created"]
+
+    metadata = _build_jira_ticket_metadata(ticket)
     key = ticket.get('key', None)
-    status = ticket['fields']['status']['name'].upper()
-
-    date_format = "%Y-%m-%dT%H:%M:%S.%f%z"
-
-    if resolution_date:
-        start = datetime.strptime(created_date, date_format)
-        end = datetime.strptime(resolution_date, date_format)
-        delta = end - start
-        time_to_resolution = delta.total_seconds()
-    else: 
-        time_to_resolution = None
-
-    ingestion_date = datetime.strftime(datetime.now(), date_format)
-    index_version = "test"
-
-    metadata = {
-        "created_at": created_date,
-        "updated_at": updated_date,
-        "resolved_at": resolution_date,
-        "time_to_resolution": time_to_resolution,
-        "summary": summary,
-        "ticket_key": key,
-        "document_type": "helpdesk_ticket",
-        "status": status,
-        "ingestion_date": ingestion_date,
-        "index_version": index_version,
-    }
 
     text = build_jira_ticket_text(ticket)
+    if anonymizer is not None:
+        text = anonymizer(text)
 
     document = Document(
         text=text,
@@ -512,7 +606,7 @@ def preprocess_jira_ticket(ticket: dict) -> Document:
 
     return document
 
-def preprocess_jira_tickets(tickets: list[dict]) -> list[Document]:
+def preprocess_jira_tickets(tickets: list[dict], anonymizer=None) -> list[Document]:
     """
     Batch-convert Jira issues into ``Document`` objects.
 
@@ -536,6 +630,9 @@ def preprocess_jira_tickets(tickets: list[dict]) -> list[Document]:
     --------
     preprocess_jira_ticket : Single-issue preprocessing.
     """
-    preprocessed_tickets = [preprocess_jira_ticket(ticket) for ticket in tickets]
+    if anonymizer is None:
+        preprocessed_tickets = [preprocess_jira_ticket(ticket) for ticket in tickets]
+    else:
+        preprocessed_tickets = [preprocess_jira_ticket(ticket, anonymizer=anonymizer) for ticket in tickets]
 
     return preprocessed_tickets

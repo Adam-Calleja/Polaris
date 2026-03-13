@@ -8,8 +8,8 @@ Polaris is a Retrieval-Augmented Generation (RAG) system for HPC service support
 - Provide a clean API and lightweight UI for experimentation and evaluation.
 
 ## Key Features
-- Jira ticket ingestion with ADF-to-text conversion and chunking.
-- HTML documentation ingestion for user guides and knowledge base pages.
+- Jira ticket ingestion with native Jira-to-Markdown conversion and configurable chunking.
+- HTML documentation ingestion for user guides and knowledge base pages via HTML cleanup, Markdown normalization, and configurable chunking.
 - Vector search via Qdrant with configurable retrieval strategies.
 - OpenAI-compatible LLM and embedding backends (local or hosted).
 - FastAPI service with a stable `/v1/query` endpoint.
@@ -19,7 +19,7 @@ Polaris is a Retrieval-Augmented Generation (RAG) system for HPC service support
 - MLflow Prompt Registry-based runtime prompt versioning.
 
 ## Architecture Overview
-- Ingestion: Jira and HTML sources are loaded, cleaned, and chunked.
+- Ingestion: Jira and HTML sources are loaded, normalized to Markdown, and chunked.
 - Indexing: Chunks are embedded and stored in Qdrant plus a local doc store.
 - Query: User query is embedded, top-k chunks are retrieved, and a prompt is built.
 - Generation: The configured LLM produces a grounded response.
@@ -76,6 +76,16 @@ docker compose run --rm rag-api python /app/scripts/ingest_html_documents.py \
   --ingest-internal-links
 ```
 
+The ingestion commands also accept chunking overrides for experiments:
+
+```bash
+docker compose run --rm rag-api python /app/scripts/ingest_jira_tickets.py \
+  -c /app/config/config.yaml \
+  --chunking-strategy markdown_token \
+  --chunk-size-tokens 800 \
+  --chunk-overlap-tokens 80
+```
+
 ## Configuration
 Configuration is split into shared and environment-specific files:
 - `config/config.base.yaml`: shared retrieval, ingestion, evaluation, and MLflow settings.
@@ -87,6 +97,8 @@ Key sections include:
 - `generator_llm` and `evaluator_llm` for model selection and parameters.
 - `embedder` for embeddings endpoint configuration.
 - `vector_stores` and `storage_context` for per-source persistence.
+- `ingestion.conversion` for source-to-Markdown conversion engines.
+- `ingestion.chunking` for shared defaults and per-source chunking strategies.
 - `prompts` and `prompt_name` for prompt templates.
 - `mlflow` for tracking, tracing, and prompt-registry settings.
 

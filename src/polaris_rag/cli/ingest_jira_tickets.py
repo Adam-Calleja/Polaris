@@ -33,6 +33,14 @@ from polaris_rag.retrieval.document_store_factory import (
     persist_storage,
     source_document_store_path,
 )
+from polaris_rag.retrieval.ingestion_settings import (
+    JIRA_TURNS_TOKEN_CHUNKING_STRATEGY,
+    MARKDOWN_TOKEN_CHUNKING_STRATEGY,
+    resolve_chunking_settings,
+    resolve_conversion_settings,
+)
+from polaris_rag.retrieval.markdown_chunker import get_chunks_from_markdown_documents
+from polaris_rag.retrieval.markdown_converter import convert_tickets_to_markdown
 
 
 def _as_mapping(obj: Any) -> Mapping[str, Any]:
@@ -134,6 +142,34 @@ def parse_args() -> argparse.Namespace:
         type=str,
         default=None,
         help="Path to write processed ticket dump (optional; defaults to data/debug/jira_processed_tickets.txt)",
+    )
+    parser.add_argument(
+        "--conversion-engine",
+        required=False,
+        type=str,
+        default=None,
+        help="Override the markdown conversion engine for this source (optional).",
+    )
+    parser.add_argument(
+        "--chunking-strategy",
+        required=False,
+        type=str,
+        default=None,
+        help="Override the chunking strategy for this source (optional).",
+    )
+    parser.add_argument(
+        "--chunk-size-tokens",
+        required=False,
+        type=int,
+        default=None,
+        help="Override the markdown token chunk size (optional).",
+    )
+    parser.add_argument(
+        "--chunk-overlap-tokens",
+        required=False,
+        type=int,
+        default=None,
+        help="Override the markdown token overlap (optional).",
     )
 
     return parser.parse_args()
@@ -329,16 +365,49 @@ def main() -> None:
             if not any(unwanted in ticket.get("fields", {}).get("summary", "") for unwanted in unwanted_summaries)
         ]
 
+    chunking_settings = resolve_chunking_settings(
+        cfg,
+        source=args.source,
+        strategy_override=args.chunking_strategy,
+        chunk_size_override=args.chunk_size_tokens,
+        overlap_override=args.chunk_overlap_tokens,
+    )
+    conversion_settings = resolve_conversion_settings(
+        cfg,
+        source=args.source,
+        engine_override=args.conversion_engine,
+    )
+
     print(f"Loaded {len(tickets)} tickets. Preprocessing...")
-    processed_tickets = preprocess_jira_tickets(tickets)
+    if chunking_settings.strategy == MARKDOWN_TOKEN_CHUNKING_STRATEGY:
+        processed_tickets = convert_tickets_to_markdown(
+            tickets,
+            engine=conversion_settings.engine,
+            options=conversion_settings.options,
+        )
+        chunks = get_chunks_from_markdown_documents(
+            processed_tickets,
+            token_counter=container.token_counter,
+            chunk_size=chunking_settings.chunk_size_tokens,
+            overlap=chunking_settings.overlap_tokens,
+        )
+    elif chunking_settings.strategy == JIRA_TURNS_TOKEN_CHUNKING_STRATEGY:
+        processed_tickets = preprocess_jira_tickets(tickets)
+        chunks = get_chunks_from_jira_tickets(
+            tickets=processed_tickets,
+            token_counter=container.token_counter,
+            chunk_size=chunking_settings.chunk_size_tokens,
+            overlap=chunking_settings.overlap_tokens,
+        )
+    else:
+        raise ValueError(f"Unsupported ticket chunking strategy: {chunking_settings.strategy!r}")
+
     ticket_ids = list(dict.fromkeys(str(ticket.id) for ticket in processed_tickets if getattr(ticket, "id", None)))
 
     if args.dump_processed:
         print(f"Dumping processed tickets to: {dump_path}")
         _dump_processed_tickets(processed_tickets, dump_path)
-
     print("Generating chunks from tickets...")
-    chunks = get_chunks_from_jira_tickets(tickets=processed_tickets, token_counter=container.token_counter)
     source_document_store = load_or_create_source_document_store(persist_dir=persist_dir)
 
     if ticket_ids:

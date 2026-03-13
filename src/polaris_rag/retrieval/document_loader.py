@@ -99,6 +99,17 @@ def remove_link_fragment(link: str) -> str:
     return urlunsplit(parts._replace(fragment=""))
 
 
+def canonicalize_url(url: str) -> str:
+    """Return a stable canonical representation for an HTTP(S) URL."""
+    parts = urlsplit(remove_link_fragment(url.strip()))
+    scheme = parts.scheme.lower()
+    netloc = parts.netloc.lower()
+    path = parts.path or "/"
+    if path != "/" and path.endswith("/"):
+        path = path.rstrip("/")
+    return urlunsplit((scheme, netloc, path, parts.query, ""))
+
+
 def get_internal_links(webpage_url: str) -> list[str]:
     """Extract internal links from a webpage.
 
@@ -129,7 +140,7 @@ def get_internal_links(webpage_url: str) -> list[str]:
 
     soup = BeautifulSoup(html_content, 'html.parser')
     links = soup.find_all('a')
-    documentation_urls = [webpage_url]
+    documentation_urls = [canonicalize_url(webpage_url)]
 
     for link in links:
         url = link.get('href', None)
@@ -137,9 +148,9 @@ def get_internal_links(webpage_url: str) -> list[str]:
         if url and is_internal_link(link=url, base_url=webpage_url):
             url = remove_link_fragment(url)
 
-            documentation_urls.append(urljoin(webpage_url, url))
+            documentation_urls.append(canonicalize_url(urljoin(webpage_url, url)))
 
-    return list(set(documentation_urls))
+    return list(dict.fromkeys(documentation_urls))
 
 def load_website_docs(urls: list[str]) -> list[Document]:
     """Fetch HTML pages and return them as :class:`~polaris_rag.common.schemas.Document` objects.
@@ -183,12 +194,15 @@ def load_website_docs(urls: list[str]) -> list[Document]:
         except LookupError:
             html_text = html_content.decode(DEFAULT_CHARSET, errors="replace")
 
+        canonical_url = canonicalize_url(url)
+
         documents.append(
             Document(
-                document_type = 'html',
-                text = html_text,
-                metadata = {
-                    "source": url,
+                document_type='html',
+                text=html_text,
+                id=canonical_url,
+                metadata={
+                    "source": canonical_url,
                 }
             )
         )

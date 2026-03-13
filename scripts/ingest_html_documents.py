@@ -24,8 +24,17 @@ from polaris_rag.retrieval.document_preprocessor import preprocess_html_document
 from polaris_rag.retrieval.document_store_factory import (
     add_chunks_to_docstore,
     build_storage_context,
+    delete_ref_docs_from_docstore,
     persist_storage,
 )
+from polaris_rag.retrieval.ingestion_settings import (
+    HTML_HIERARCHICAL_CHUNKING_STRATEGY,
+    MARKDOWN_TOKEN_CHUNKING_STRATEGY,
+    resolve_chunking_settings,
+    resolve_conversion_settings,
+)
+from polaris_rag.retrieval.markdown_chunker import get_chunks_from_markdown_documents
+from polaris_rag.retrieval.markdown_converter import convert_documents_to_markdown
 from polaris_rag.retrieval.text_splitter import get_chunks_from_documents
 
 
@@ -98,6 +107,34 @@ def parse_args() -> argparse.Namespace:
             "Enable concurrent embedding requests by setting embedder.num_workers. "
             "Values > 1 use async insertion with parallel embedding batches."
         ),
+    )
+    parser.add_argument(
+        "--conversion-engine",
+        required=False,
+        type=str,
+        default=None,
+        help="Override the markdown conversion engine for this source (optional).",
+    )
+    parser.add_argument(
+        "--chunking-strategy",
+        required=False,
+        type=str,
+        default=None,
+        help="Override the chunking strategy for this source (optional).",
+    )
+    parser.add_argument(
+        "--chunk-size-tokens",
+        required=False,
+        type=int,
+        default=None,
+        help="Override the markdown token chunk size (optional).",
+    )
+    parser.add_argument(
+        "--chunk-overlap-tokens",
+        required=False,
+        type=int,
+        default=None,
+        help="Override the markdown token overlap (optional).",
     )
 
     return parser.parse_args()
@@ -200,15 +237,53 @@ def main() -> None:
         tags=tags,
         conditions=conditions,
     )
-
-    chunks = get_chunks_from_documents(
-        processed_documents,
-        link_classes=link_classes,
+    chunking_settings = resolve_chunking_settings(
+        cfg,
+        source=args.source,
+        strategy_override=args.chunking_strategy,
+        chunk_size_override=args.chunk_size_tokens,
+        overlap_override=args.chunk_overlap_tokens,
     )
+    conversion_settings = resolve_conversion_settings(
+        cfg,
+        source=args.source,
+        engine_override=args.conversion_engine,
+    )
+
+    if chunking_settings.strategy == MARKDOWN_TOKEN_CHUNKING_STRATEGY:
+        markdown_documents = convert_documents_to_markdown(
+            processed_documents,
+            engine=conversion_settings.engine,
+            options=conversion_settings.options,
+        )
+        chunks = get_chunks_from_markdown_documents(
+            markdown_documents,
+            token_counter=container.token_counter,
+            chunk_size=chunking_settings.chunk_size_tokens,
+            overlap=chunking_settings.overlap_tokens,
+        )
+        document_ids = [str(document.id) for document in markdown_documents if getattr(document, "id", None)]
+    elif chunking_settings.strategy == HTML_HIERARCHICAL_CHUNKING_STRATEGY:
+        chunks = get_chunks_from_documents(
+            processed_documents,
+            link_classes=link_classes,
+        )
+        document_ids = [str(document.id) for document in processed_documents if getattr(document, "id", None)]
+    else:
+        raise ValueError(f"Unsupported docs chunking strategy: {chunking_settings.strategy!r}")
 
     storage_context = _build_source_storage_context(container, args.source)
     if storage_context is None:
         raise RuntimeError("Storage context is not available; cannot persist HTML ingestion.")
+
+    if document_ids:
+        print(f"Removing existing chunks for {len(document_ids)} documents...")
+        if hasattr(storage_context.vector_store, "delete_ref_docs"):
+            storage_context.vector_store.delete_ref_docs(document_ids)
+        elif hasattr(storage_context.vector_store, "delete_ref_doc"):
+            for document_id in document_ids:
+                storage_context.vector_store.delete_ref_doc(document_id)
+        delete_ref_docs_from_docstore(storage_context.docstore, document_ids)
 
     print("Adding chunks to vector store...")
     embedding_workers = _resolve_embedding_workers(cfg, args.embedding_workers)

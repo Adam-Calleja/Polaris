@@ -275,6 +275,16 @@ class GlobalConfig:
         return self.raw.get('storage_context', {})
 
     @cached_property
+    def ingestion(self) -> dict:
+        """Return the ingestion configuration section."""
+        return self.raw.get("ingestion", {})
+
+    @cached_property
+    def tokenization(self) -> dict:
+        """Return the tokenization configuration section."""
+        return self.raw.get("tokenization", {})
+
+    @cached_property
     def retriever(self) -> dict:
         """Return the retriever configuration section.
 

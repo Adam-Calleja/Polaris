@@ -66,6 +66,25 @@ prompts:
 prompt_name: "hpc_rag_assistant_ticket_refs"
 
 ingestion:
+  conversion:
+    default:
+      engine: "markitdown"
+      options: {}
+    sources:
+      docs:
+        engine: "markitdown"
+      tickets:
+        engine: "native_jira"
+  chunking:
+    default:
+      strategy: "markdown_token"
+      chunk_size_tokens: 800
+      overlap_tokens: 80
+    sources:
+      docs:
+        strategy: "markdown_token"
+      tickets:
+        strategy: "markdown_token"
   jira:
     start_date: null
     end_date: null
