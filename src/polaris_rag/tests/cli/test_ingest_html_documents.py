@@ -1,23 +1,13 @@
 from __future__ import annotations
 
 import sys
-from importlib.util import module_from_spec, spec_from_file_location
-from pathlib import Path
 from types import SimpleNamespace
 import types
 
-from polaris_rag.common import Document, DocumentChunk, MarkdownDocument
-
-
-_MODULE_PATH = Path(__file__).resolve().parents[4] / "scripts" / "ingest_html_documents.py"
-_SPEC = spec_from_file_location("test_ingest_html_documents_module", _MODULE_PATH)
-assert _SPEC is not None
-assert _SPEC.loader is not None
 sys.modules.setdefault("atlassian", types.SimpleNamespace(Jira=object))
-_MODULE = module_from_spec(_SPEC)
-_SPEC.loader.exec_module(_MODULE)
-ingest_html_documents = _MODULE
 
+from polaris_rag.cli import ingest_html_documents
+from polaris_rag.common import Document, DocumentChunk, MarkdownDocument
 
 def test_build_source_storage_context_uses_named_store(monkeypatch):
     called: dict[str, object] = {}

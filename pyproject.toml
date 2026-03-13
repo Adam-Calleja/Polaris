@@ -84,6 +84,7 @@ api = [
 ]
 
 [project.scripts]
+polaris-ingest-html = "polaris_rag.cli.ingest_html_documents:main"
 polaris-ingest-jira = "polaris_rag.cli.ingest_jira_tickets:main"
 polaris-eval = "polaris_rag.cli.evaluate_rag:main"
 polaris-register-prompts-mlflow = "polaris_rag.cli.register_prompts_mlflow:main"

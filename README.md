@@ -62,7 +62,7 @@ curl http://localhost:8000/ready
 ## Ingest Data
 Jira tickets:
 ```bash
-docker compose run --rm rag-api python /app/scripts/ingest_jira_tickets.py \
+docker compose run --rm rag-api polaris-ingest-jira \
   -c /app/config/config.yaml \
   -s 2024-01-01 \
   -e 2025-01-01
@@ -70,7 +70,7 @@ docker compose run --rm rag-api python /app/scripts/ingest_jira_tickets.py \
 
 HTML documentation:
 ```bash
-docker compose run --rm rag-api python /app/scripts/ingest_html_documents.py \
+docker compose run --rm rag-api polaris-ingest-html \
   -c /app/config/config.yaml \
   -p https://docs.example.org \
   --ingest-internal-links
@@ -79,12 +79,15 @@ docker compose run --rm rag-api python /app/scripts/ingest_html_documents.py \
 The ingestion commands also accept chunking overrides for experiments:
 
 ```bash
-docker compose run --rm rag-api python /app/scripts/ingest_jira_tickets.py \
+docker compose run --rm rag-api polaris-ingest-jira \
   -c /app/config/config.yaml \
   --chunking-strategy markdown_token \
   --chunk-size-tokens 800 \
   --chunk-overlap-tokens 80
 ```
+
+For repo-local development, the matching files under `scripts/` remain available
+as thin compatibility wrappers around the packaged CLI entrypoints.
 
 ## Configuration
 Configuration is split into shared and environment-specific files:
@@ -255,10 +258,11 @@ Additional MLflow-tracked artifacts include:
 
 ### Create Dev/Test Splits
 
-Use `polaris-create-dev-test-sets` (or `scripts/create_dev_test_sets.py`) to
-create local dev/test dataset files. These files are the executable source of
-truth for evaluation; the same command can also register the splits as MLflow
-dataset inputs for discoverability and lineage.
+Use `polaris-create-dev-test-sets` to create local dev/test dataset files.
+These files are the executable source of truth for evaluation; the same command
+can also register the splits as MLflow dataset inputs for discoverability and
+lineage. The matching file under `scripts/` is a compatibility wrapper when
+you want `python scripts/create_dev_test_sets.py ...` from the repo root.
 
 Explicit test IDs:
 

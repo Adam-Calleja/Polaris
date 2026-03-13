@@ -315,11 +315,10 @@ def _build_source_storage_context(container: Any, source: str) -> Any:
 
 
 def main() -> None:
+    args = parse_args()
     from polaris_rag.retrieval.document_loader import load_support_tickets
     from polaris_rag.retrieval.document_preprocessor import preprocess_jira_tickets
     from polaris_rag.retrieval.text_splitter import get_chunks_from_jira_tickets
-
-    args = parse_args()
 
     cfg = GlobalConfig.load(args.config_file)
     if args.embedding_workers is not None:
