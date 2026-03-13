@@ -38,6 +38,7 @@ from typing import TypeAlias
 from .schemas import (
     Document,
     DocumentChunk,
+    MarkdownDocument,
 )
 from .request_budget import (
     DEFAULT_EVALUATION_DEADLINES,
@@ -78,6 +79,7 @@ ChunkId: TypeAlias = str
 __all__ = [
     "Document",
     "DocumentChunk",
+    "MarkdownDocument",
     "DocId",
     "ChunkId",
     "DEFAULT_EVALUATION_DEADLINES",

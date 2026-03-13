@@ -57,6 +57,41 @@ class Document:
 
 
 @dataclass
+class MarkdownDocument:
+    """A source document normalized to Markdown before chunking.
+
+    Attributes
+    ----------
+    text : str
+        Markdown content ready for token-based chunking.
+    document_type : str
+        Logical source category preserved from the original document.
+    id : str
+        Stable identifier for the markdown-normalized document.
+    node_id : str or None
+        Optional identifier used for graph/node-based integrations.
+    metadata : Dict[str, Any]
+        Source metadata augmented with conversion details. The
+        ``content_format`` key is forced to ``"markdown"``.
+    source_node : Any
+        Optional reference to the original source object.
+    """
+
+    text: str
+    document_type: str
+    id: str = field(default_factory=lambda: str(uuid4()))
+    node_id: str = None
+    metadata: Dict[str, Any] = field(default_factory=dict)
+    source_node: Any = None
+
+    def __post_init__(self):
+        if self.node_id is None:
+            self.node_id = self.id
+        self.metadata = dict(self.metadata or {})
+        self.metadata["content_format"] = "markdown"
+
+
+@dataclass
 class DocumentChunk:
     """A contiguous chunk of text derived from a parent :class:`~polaris_rag.common.schemas.Document`.
 
