@@ -114,9 +114,9 @@ evaluation:
     api_headers: {}
     deadlines:
       official:
-        client_total_seconds: 120
-        server_total_seconds: 110
-        retrieval_cap_seconds: 10
+        client_total_seconds: 200
+        server_total_seconds: 180
+        retrieval_cap_seconds: 30
         cleanup_reserve_seconds: 5
       diagnostic:
         client_total_seconds: 180

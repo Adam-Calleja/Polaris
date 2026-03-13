@@ -2,8 +2,10 @@ extends: "config.base.yaml"
 
 generator_llm:
   type: "openai_like"
-  model_name: "llama-cam"
-  api_base: "https://llm.hpc.cam.ac.uk/v1"
+  # model_name: "llama-cam"
+  # api_base: "https://llm.hpc.cam.ac.uk/v1"
+  model_name: "meta-llama/Llama-3.3-70B-Instruct"
+  api_base: "http://vllm:8080/v1"
   api_key: "${POLARIS_LLM_API_KEY}"
   request_timeout: 90
   max_retries: 1
@@ -38,7 +40,7 @@ vector_stores:
   docs:
     collection_name: "support_docs_qwen3_8b"
   tickets:
-    collection_name: "support_tickets_turn_based_qwen_3_8b"
+    collection_name: "support_tickets_turn_based_chunking_qwen_3_8b"
 
 storage_context:
   persist_dir: "/app/persist/turn_based_chunking"
