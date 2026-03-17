@@ -14,6 +14,7 @@ Preparation executes the Polaris RAG pipeline to generate:
 
 from __future__ import annotations
 
+from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import contextlib
 from dataclasses import dataclass
@@ -548,6 +549,355 @@ def stratified_split_raw_examples_by_categories(
         "uncategorized_ids": [
             sample_id for sample_id in dataset_order if sample_id not in category_lookup
         ],
+    }
+    return dev_rows, test_rows, stats
+
+
+def _resolve_requested_test_size(
+    *,
+    total_rows: int,
+    test_size: int | None,
+    test_fraction: float | None,
+) -> int:
+    if total_rows <= 1:
+        raise ValueError("Need at least two rows to create a dev/test split.")
+
+    if test_size is not None and test_fraction is not None:
+        raise ValueError("Provide either test_size or test_fraction, not both.")
+
+    if test_fraction is not None:
+        fraction = float(test_fraction)
+        if not 0.0 < fraction < 1.0:
+            raise ValueError(f"test_fraction must be between 0 and 1, got {fraction!r}")
+        resolved = int(round(total_rows * fraction))
+    elif test_size is not None:
+        resolved = int(test_size)
+    else:
+        raise ValueError("Provide either test_size or test_fraction.")
+
+    if resolved <= 0 or resolved >= total_rows:
+        raise ValueError(
+            f"Resolved test size must be between 1 and {total_rows - 1}, got {resolved}."
+        )
+    return resolved
+
+
+def _annotation_docs_scope_bucket(value: str) -> str:
+    normalized = str(value or "").strip()
+    if normalized in {"local_and_external", "external_official"}:
+        return "external_involved"
+    if normalized == "local_official":
+        return "local_official"
+    return "none"
+
+
+def _annotation_split_fields(row: Mapping[str, Any]) -> dict[str, str]:
+    return {
+        "source_needed": str(row.get("source_needed", "") or "").strip(),
+        "docs_scope_bucket": _annotation_docs_scope_bucket(row.get("docs_scope_needed", "")),
+        "validity_sensitive": str(row.get("validity_sensitive", "") or "").strip(),
+        "attachment_dependent": str(row.get("attachment_dependent", "") or "").strip(),
+        "query_type": str(row.get("query_type", "") or "").strip(),
+        "version_sensitive": str(row.get("version_sensitive", "") or "").strip(),
+        "system_scope_required": str(row.get("system_scope_required", "") or "").strip(),
+    }
+
+
+def _annotation_feature_names(split_fields: Mapping[str, str]) -> tuple[str, ...]:
+    return tuple(f"{field}={value}" for field, value in split_fields.items())
+
+
+def _count_selected_features(
+    selected_ids: Iterable[str],
+    *,
+    features_by_id: Mapping[str, tuple[str, ...]],
+) -> Counter[str]:
+    counts: Counter[str] = Counter()
+    for sample_id in selected_ids:
+        counts.update(features_by_id[sample_id])
+    return counts
+
+
+def _multilabel_selection_score(
+    counts: Mapping[str, int],
+    *,
+    target_counts: Mapping[str, int],
+    total_counts: Mapping[str, int],
+) -> float:
+    score = 0.0
+    for feature_name, total_count in total_counts.items():
+        observed = int(counts.get(feature_name, 0))
+        target = int(target_counts.get(feature_name, 0))
+        diff = observed - target
+        weight = 1.0 / max(int(total_count), 1)
+        score += weight * float(diff * diff)
+        if target > 0 and observed == 0:
+            score += 100.0
+    return score
+
+
+def _greedy_initial_multilabel_selection(
+    *,
+    sample_ids: list[str],
+    features_by_id: Mapping[str, tuple[str, ...]],
+    target_counts: Mapping[str, int],
+    total_counts: Mapping[str, int],
+    test_size: int,
+    random_state: int,
+) -> list[str]:
+    rng = random.Random(int(random_state))
+    remaining_ids = list(sample_ids)
+    rng.shuffle(remaining_ids)
+
+    selected_ids: list[str] = []
+    selected_counts: Counter[str] = Counter()
+
+    while remaining_ids and len(selected_ids) < test_size:
+        deficits = {
+            feature_name: max(0, int(target_counts.get(feature_name, 0)) - int(selected_counts.get(feature_name, 0)))
+            for feature_name in total_counts
+        }
+        best_id: str | None = None
+        best_score: tuple[float, float] | None = None
+
+        for sample_id in remaining_ids:
+            gain = 0.0
+            overfill = 0.0
+            for feature_name in features_by_id[sample_id]:
+                weight = 1.0 / max(int(total_counts.get(feature_name, 1)), 1)
+                deficit = deficits.get(feature_name, 0)
+                if deficit > 0:
+                    gain += float(deficit) + weight
+                else:
+                    overfill += weight
+            candidate_score = (gain, -overfill)
+            if best_score is None or candidate_score > best_score:
+                best_score = candidate_score
+                best_id = sample_id
+
+        if best_id is None or (best_score is not None and best_score[0] <= 0.0):
+            break
+
+        remaining_ids.remove(best_id)
+        selected_ids.append(best_id)
+        selected_counts.update(features_by_id[best_id])
+
+    if len(selected_ids) < test_size:
+        selected_ids.extend(remaining_ids[: test_size - len(selected_ids)])
+
+    return selected_ids
+
+
+def _optimise_multilabel_selection(
+    *,
+    sample_ids: list[str],
+    features_by_id: Mapping[str, tuple[str, ...]],
+    target_counts: Mapping[str, int],
+    total_counts: Mapping[str, int],
+    test_size: int,
+    random_state: int,
+    restarts: int = 8,
+) -> tuple[list[str], float, Counter[str]]:
+    sample_order = {sample_id: index for index, sample_id in enumerate(sample_ids)}
+
+    best_selected_ids: list[str] = []
+    best_counts: Counter[str] = Counter()
+    best_score = float("inf")
+
+    for restart in range(max(int(restarts), 1)):
+        selected_ids = _greedy_initial_multilabel_selection(
+            sample_ids=sample_ids,
+            features_by_id=features_by_id,
+            target_counts=target_counts,
+            total_counts=total_counts,
+            test_size=test_size,
+            random_state=int(random_state) + restart,
+        )
+        selected_ids = list(dict.fromkeys(selected_ids))[:test_size]
+        selected_set = set(selected_ids)
+        unselected_ids = [sample_id for sample_id in sample_ids if sample_id not in selected_set]
+        current_counts = _count_selected_features(selected_ids, features_by_id=features_by_id)
+        current_score = _multilabel_selection_score(
+            current_counts,
+            target_counts=target_counts,
+            total_counts=total_counts,
+        )
+
+        improved = True
+        while improved:
+            improved = False
+            swap_choice: tuple[float, int, int, str, str] | None = None
+            next_counts: Counter[str] | None = None
+
+            for out_id in selected_ids:
+                for in_id in unselected_ids:
+                    candidate_counts = Counter(current_counts)
+                    candidate_counts.subtract(features_by_id[out_id])
+                    candidate_counts.update(features_by_id[in_id])
+                    candidate_score = _multilabel_selection_score(
+                        candidate_counts,
+                        target_counts=target_counts,
+                        total_counts=total_counts,
+                    )
+                    candidate_key = (
+                        candidate_score,
+                        sample_order[in_id],
+                        sample_order[out_id],
+                        in_id,
+                        out_id,
+                    )
+                    if swap_choice is None or candidate_key < swap_choice:
+                        swap_choice = candidate_key
+                        next_counts = candidate_counts
+
+            if swap_choice is None or next_counts is None:
+                break
+
+            candidate_score, _, _, in_id, out_id = swap_choice
+            if candidate_score + 1e-12 >= current_score:
+                break
+
+            selected_ids = [in_id if sample_id == out_id else sample_id for sample_id in selected_ids]
+            selected_ids.sort(key=sample_order.get)
+            selected_set = set(selected_ids)
+            unselected_ids = [sample_id for sample_id in sample_ids if sample_id not in selected_set]
+            current_counts = next_counts
+            current_score = candidate_score
+            improved = True
+
+        candidate_selected_ids = sorted(selected_ids, key=sample_order.get)
+        candidate_key = (current_score, tuple(candidate_selected_ids))
+        best_key = (best_score, tuple(best_selected_ids))
+        if not best_selected_ids or candidate_key < best_key:
+            best_selected_ids = candidate_selected_ids
+            best_counts = Counter(current_counts)
+            best_score = current_score
+
+    return best_selected_ids, best_score, best_counts
+
+
+def _count_field_values(rows: Iterable[Mapping[str, str]], *, field: str) -> dict[str, int]:
+    counts = Counter(str(row.get(field, "") or "").strip() for row in rows)
+    return {key: counts[key] for key in sorted(counts)}
+
+
+def stratified_split_raw_examples_by_annotation_labels(
+    raw_examples: Iterable[Mapping[str, Any]],
+    annotation_rows: Iterable[Mapping[str, Any]],
+    *,
+    test_size: int | None = None,
+    test_fraction: float | None = None,
+    random_state: int = 42,
+    id_field: str = "id",
+    require_verified: bool = True,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, Any]]:
+    """Split raw examples using multilabel benchmark annotations."""
+
+    from polaris_rag.evaluation.benchmark_annotations import validate_annotation_rows
+
+    raw_rows = [dict(row) for row in raw_examples]
+    validated_annotations = validate_annotation_rows(
+        annotation_rows=annotation_rows,
+        raw_examples=raw_rows,
+        split_lookup=None,
+        require_verified=bool(require_verified),
+    )
+
+    dataset_by_id: dict[str, dict[str, Any]] = {}
+    dataset_order: list[str] = []
+    for index, row in enumerate(raw_rows):
+        sample_id = str(row.get(id_field, "") or "").strip()
+        if not sample_id:
+            raise ValueError(f"Missing '{id_field}' for dataset row index={index}")
+        if sample_id in dataset_by_id:
+            raise ValueError(f"Duplicate dataset sample id '{sample_id}' at index={index}")
+        dataset_by_id[sample_id] = row
+        dataset_order.append(sample_id)
+
+    resolved_test_size = _resolve_requested_test_size(
+        total_rows=len(dataset_order),
+        test_size=test_size,
+        test_fraction=test_fraction,
+    )
+
+    annotations_by_id = {str(row["id"]): dict(row) for row in validated_annotations}
+    split_fields_by_id = {
+        sample_id: _annotation_split_fields(annotations_by_id[sample_id])
+        for sample_id in dataset_order
+    }
+    features_by_id = {
+        sample_id: _annotation_feature_names(split_fields_by_id[sample_id])
+        for sample_id in dataset_order
+    }
+    feature_names = sorted({feature for features in features_by_id.values() for feature in features})
+    feature_totals = {
+        feature_name: sum(1 for features in features_by_id.values() if feature_name in features)
+        for feature_name in feature_names
+    }
+    feature_target_counts = {
+        feature_name: int(round(feature_totals[feature_name] * resolved_test_size / len(dataset_order)))
+        for feature_name in feature_names
+    }
+
+    test_ids, selection_score, feature_test_counts = _optimise_multilabel_selection(
+        sample_ids=dataset_order,
+        features_by_id=features_by_id,
+        target_counts=feature_target_counts,
+        total_counts=feature_totals,
+        test_size=resolved_test_size,
+        random_state=random_state,
+    )
+    test_id_set = set(test_ids)
+    dev_ids = [sample_id for sample_id in dataset_order if sample_id not in test_id_set]
+
+    dev_rows = [dataset_by_id[sample_id] for sample_id in dev_ids]
+    test_rows = [dataset_by_id[sample_id] for sample_id in test_ids]
+
+    annotation_dev_rows = [annotations_by_id[sample_id] for sample_id in dev_ids]
+    annotation_test_rows = [annotations_by_id[sample_id] for sample_id in test_ids]
+
+    field_names = (
+        "source_needed",
+        "docs_scope_bucket",
+        "validity_sensitive",
+        "attachment_dependent",
+        "query_type",
+        "version_sensitive",
+        "system_scope_required",
+    )
+    field_distributions = {
+        "all": {
+            field: _count_field_values(split_fields_by_id.values(), field=field)
+            for field in field_names
+        },
+        "dev": {
+            field: _count_field_values(
+                (_annotation_split_fields(row) for row in annotation_dev_rows),
+                field=field,
+            )
+            for field in field_names
+        },
+        "test": {
+            field: _count_field_values(
+                (_annotation_split_fields(row) for row in annotation_test_rows),
+                field=field,
+            )
+            for field in field_names
+        },
+    }
+
+    stats = {
+        "strategy": "annotation_multilabel",
+        "random_state": int(random_state),
+        "test_size": int(resolved_test_size),
+        "test_fraction": float(resolved_test_size / len(dataset_order)),
+        "selection_score": float(selection_score),
+        "test_ids": list(test_ids),
+        "dev_ids": list(dev_ids),
+        "feature_totals": dict(feature_totals),
+        "feature_target_counts": dict(feature_target_counts),
+        "feature_test_counts": {feature_name: int(feature_test_counts.get(feature_name, 0)) for feature_name in feature_names},
+        "field_distributions": field_distributions,
     }
     return dev_rows, test_rows, stats
 
@@ -1518,6 +1868,7 @@ __all__ = [
     "load_sample_categories",
     "load_sample_ids",
     "persist_prepared_rows",
+    "stratified_split_raw_examples_by_annotation_labels",
     "stratified_split_raw_examples_by_categories",
     "split_raw_examples_by_ids",
     "to_evaluation_dataset",

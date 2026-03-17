@@ -36,6 +36,11 @@ from polaris_rag.evaluation.evaluation_dataset import (
     persist_prepared_rows,
     to_evaluation_dataset,
 )
+from polaris_rag.evaluation.benchmark_annotations import (
+    join_annotations_into_rows,
+    load_annotation_rows,
+    validate_annotation_rows,
+)
 from polaris_rag.observability.mlflow_tracking import (
     EvaluationTrackingContext,
     EvaluationStageContext,
@@ -478,6 +483,11 @@ def parse_args() -> argparse.Namespace:
         help="Override prepared dataset path (JSON/JSONL)",
     )
     parser.add_argument(
+        "--annotations-file",
+        default=None,
+        help="Override benchmark annotation CSV used to enrich evaluation metadata",
+    )
+    parser.add_argument(
         "--reuse-prepared",
         action="store_true",
         help="If set, use prepared dataset when available",
@@ -749,6 +759,46 @@ def _raw_examples_from_replay_rows(
     return replay_rows
 
 
+def _join_annotation_metadata(
+    *,
+    rows: list[dict[str, Any]],
+    annotations_path: Path,
+    validate_summaries: bool,
+) -> list[dict[str, Any]]:
+    annotation_rows = load_annotation_rows(annotations_path)
+
+    if validate_summaries:
+        validated = validate_annotation_rows(
+            annotation_rows=annotation_rows,
+            raw_examples=rows,
+            require_verified=True,
+            allow_extra_annotations=True,
+        )
+        return join_annotations_into_rows(rows, validated)
+
+    annotation_lookup = {str(row.get("id", "")).strip(): row for row in annotation_rows}
+    synthetic_raw_examples: list[dict[str, str]] = []
+    subset_rows: list[dict[str, str]] = []
+    for row in rows:
+        sample_id = str(row.get("id", "") or "").strip()
+        synthetic_raw_examples.append(
+            {
+                "id": sample_id,
+                "summary": str(annotation_lookup.get(sample_id, {}).get("summary", "") or ""),
+            }
+        )
+        if sample_id in annotation_lookup:
+            subset_rows.append(annotation_lookup[sample_id])
+
+    validated = validate_annotation_rows(
+        annotation_rows=subset_rows,
+        raw_examples=synthetic_raw_examples,
+        require_verified=True,
+        allow_extra_annotations=False,
+    )
+    return join_annotations_into_rows(rows, validated)
+
+
 def _resolve_prepared_rows(
     *,
     cfg: GlobalConfig,
@@ -768,6 +818,8 @@ def _resolve_prepared_rows(
 
     prepared_path_raw = args.prepared_path or dataset_cfg.get("prepared_path")
     prepared_path = Path(str(prepared_path_raw)).expanduser().resolve() if prepared_path_raw else None
+    annotations_path_raw = getattr(args, "annotations_file", None) or dataset_cfg.get("annotations_path")
+    annotations_path = Path(str(annotations_path_raw)).expanduser().resolve() if annotations_path_raw else None
 
     reuse_prepared = args.reuse_prepared or _as_bool(dataset_cfg.get("reuse_prepared"), False)
 
@@ -799,6 +851,7 @@ def _resolve_prepared_rows(
 
     manifest: dict[str, Any] = {
         "dataset_path": str(Path(dataset_path).expanduser().resolve()) if dataset_path else None,
+        "annotations_path": str(annotations_path) if annotations_path else None,
         "prepared_path": str(prepared_path) if prepared_path else None,
         "reuse_prepared": bool(reuse_prepared),
         "query_field": query_field,
@@ -843,6 +896,13 @@ def _resolve_prepared_rows(
 
     if reuse_prepared and prepared_path and prepared_path.exists():
         rows = load_prepared_rows(prepared_path)
+        if annotations_path:
+            rows = _join_annotation_metadata(
+                rows=rows,
+                annotations_path=annotations_path,
+                validate_summaries=False,
+            )
+            manifest["annotation_rows"] = len(rows)
         manifest.update(
             _prep_stats(
                 rows,
@@ -869,6 +929,16 @@ def _resolve_prepared_rows(
         manifest["replay_selected_rows"] = len(raw_examples)
     else:
         raw_examples = load_raw_examples(dataset_path)
+    if annotations_path:
+        raw_examples = _join_annotation_metadata(
+            rows=raw_examples,
+            annotations_path=annotations_path,
+            validate_summaries=all(
+                isinstance(example, Mapping) and "summary" in example
+                for example in raw_examples
+            ),
+        )
+        manifest["annotation_rows"] = len(raw_examples)
     raise_exceptions = _as_bool(generation_cfg.get("raise_exceptions"), False)
 
     prep_renderer = (

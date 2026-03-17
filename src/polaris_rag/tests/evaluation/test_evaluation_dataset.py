@@ -2,6 +2,7 @@ import json
 
 import pytest
 
+from polaris_rag.evaluation.benchmark_annotations import validate_annotation_rows
 from polaris_rag.evaluation.evaluation_dataset import (
     PrepProgressEvent,
     build_prepared_rows,
@@ -9,6 +10,7 @@ from polaris_rag.evaluation.evaluation_dataset import (
     load_raw_examples,
     load_sample_categories,
     load_sample_ids,
+    stratified_split_raw_examples_by_annotation_labels,
     stratified_split_raw_examples_by_categories,
     split_raw_examples_by_ids,
 )
@@ -162,6 +164,186 @@ def test_stratified_split_raw_examples_by_categories_keeps_singletons_in_dev(
         "cat-solo": 0,
     }
     assert stats["excluded_singleton_categories"] == ["cat-solo"]
+
+
+def test_stratified_split_raw_examples_by_annotation_labels_preserves_core_buckets() -> None:
+    raw_examples = [
+        {"id": "both-1", "summary": "S1", "query": "Q1", "expected_answer": "A1"},
+        {"id": "both-2", "summary": "S2", "query": "Q2", "expected_answer": "A2"},
+        {"id": "both-3", "summary": "S3", "query": "Q3", "expected_answer": "A3"},
+        {"id": "ticket-1", "summary": "S4", "query": "Q4", "expected_answer": "A4"},
+        {"id": "ticket-2", "summary": "S5", "query": "Q5", "expected_answer": "A5"},
+        {"id": "ticket-3", "summary": "S6", "query": "Q6", "expected_answer": "A6"},
+        {"id": "docs-1", "summary": "S7", "query": "Q7", "expected_answer": "A7"},
+        {"id": "docs-2", "summary": "S8", "query": "Q8", "expected_answer": "A8"},
+        {"id": "docs-3", "summary": "S9", "query": "Q9", "expected_answer": "A9"},
+        {"id": "docs-4", "summary": "S10", "query": "Q10", "expected_answer": "A10"},
+    ]
+    annotations = validate_annotation_rows(
+        annotation_rows=[
+            {
+                "id": "both-1",
+                "split": "",
+                "summary": "S1",
+                "source_needed": "both",
+                "docs_scope_needed": "local_and_external",
+                "validity_sensitive": "yes",
+                "attachment_dependent": "no",
+                "query_type": "software_version",
+                "version_sensitive": "yes",
+                "system_scope_required": "yes",
+                "review_status": "verified",
+                "notes": "",
+            },
+            {
+                "id": "both-2",
+                "split": "",
+                "summary": "S2",
+                "source_needed": "both",
+                "docs_scope_needed": "local_and_external",
+                "validity_sensitive": "yes",
+                "attachment_dependent": "no",
+                "query_type": "software_version",
+                "version_sensitive": "yes",
+                "system_scope_required": "yes",
+                "review_status": "verified",
+                "notes": "",
+            },
+            {
+                "id": "both-3",
+                "split": "",
+                "summary": "S3",
+                "source_needed": "both",
+                "docs_scope_needed": "local_and_external",
+                "validity_sensitive": "yes",
+                "attachment_dependent": "no",
+                "query_type": "software_version",
+                "version_sensitive": "yes",
+                "system_scope_required": "yes",
+                "review_status": "verified",
+                "notes": "",
+            },
+            {
+                "id": "ticket-1",
+                "split": "",
+                "summary": "S4",
+                "source_needed": "tickets",
+                "docs_scope_needed": "none",
+                "validity_sensitive": "yes",
+                "attachment_dependent": "yes",
+                "query_type": "general_how_to",
+                "version_sensitive": "no",
+                "system_scope_required": "no",
+                "review_status": "verified",
+                "notes": "",
+            },
+            {
+                "id": "ticket-2",
+                "split": "",
+                "summary": "S5",
+                "source_needed": "tickets",
+                "docs_scope_needed": "none",
+                "validity_sensitive": "yes",
+                "attachment_dependent": "yes",
+                "query_type": "general_how_to",
+                "version_sensitive": "no",
+                "system_scope_required": "no",
+                "review_status": "verified",
+                "notes": "",
+            },
+            {
+                "id": "ticket-3",
+                "split": "",
+                "summary": "S6",
+                "source_needed": "tickets",
+                "docs_scope_needed": "none",
+                "validity_sensitive": "yes",
+                "attachment_dependent": "yes",
+                "query_type": "general_how_to",
+                "version_sensitive": "no",
+                "system_scope_required": "no",
+                "review_status": "verified",
+                "notes": "",
+            },
+            {
+                "id": "docs-1",
+                "split": "",
+                "summary": "S7",
+                "source_needed": "docs",
+                "docs_scope_needed": "local_official",
+                "validity_sensitive": "no",
+                "attachment_dependent": "no",
+                "query_type": "local_operational",
+                "version_sensitive": "no",
+                "system_scope_required": "yes",
+                "review_status": "verified",
+                "notes": "",
+            },
+            {
+                "id": "docs-2",
+                "split": "",
+                "summary": "S8",
+                "source_needed": "docs",
+                "docs_scope_needed": "local_official",
+                "validity_sensitive": "no",
+                "attachment_dependent": "no",
+                "query_type": "local_operational",
+                "version_sensitive": "no",
+                "system_scope_required": "yes",
+                "review_status": "verified",
+                "notes": "",
+            },
+            {
+                "id": "docs-3",
+                "split": "",
+                "summary": "S9",
+                "source_needed": "docs",
+                "docs_scope_needed": "local_official",
+                "validity_sensitive": "no",
+                "attachment_dependent": "no",
+                "query_type": "local_operational",
+                "version_sensitive": "no",
+                "system_scope_required": "yes",
+                "review_status": "verified",
+                "notes": "",
+            },
+            {
+                "id": "docs-4",
+                "split": "",
+                "summary": "S10",
+                "source_needed": "docs",
+                "docs_scope_needed": "local_official",
+                "validity_sensitive": "no",
+                "attachment_dependent": "no",
+                "query_type": "local_operational",
+                "version_sensitive": "no",
+                "system_scope_required": "yes",
+                "review_status": "verified",
+                "notes": "",
+            },
+        ],
+        raw_examples=raw_examples,
+    )
+
+    dev_rows, test_rows, stats = stratified_split_raw_examples_by_annotation_labels(
+        raw_examples,
+        annotations,
+        test_size=3,
+        random_state=7,
+    )
+
+    assert len(dev_rows) == 7
+    assert len(test_rows) == 3
+    assert {row["id"] for row in dev_rows}.isdisjoint({row["id"] for row in test_rows})
+    assert {row["id"] for row in dev_rows} | {row["id"] for row in test_rows} == {
+        row["id"] for row in raw_examples
+    }
+    assert stats["feature_test_counts"]["source_needed=both"] == 1
+    assert stats["feature_test_counts"]["source_needed=tickets"] == 1
+    assert stats["feature_test_counts"]["source_needed=docs"] == 1
+    assert stats["feature_test_counts"]["docs_scope_bucket=external_involved"] == 1
+    assert stats["feature_test_counts"]["attachment_dependent=yes"] == 1
+    assert stats["feature_test_counts"]["query_type=software_version"] == 1
 
 
 def test_build_prepared_rows_maps_query_and_expected_answer() -> None:

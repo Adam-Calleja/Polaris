@@ -178,6 +178,9 @@ docker compose run --no-deps --rm eval \
 Evaluation remains file-driven. The evaluator reads the dataset from
 `--dataset-path` or `evaluation.dataset.input_path`, and optionally reuses
 prepared rows from `--prepared-path` / `evaluation.dataset.prepared_path`.
+Benchmark annotations can be supplied via `--annotations-file` or
+`evaluation.dataset.annotations_path`; when present, the validated annotation
+payload is joined into each row's metadata under `benchmark_annotation`.
 MLflow dataset objects are logged for lineage, but eval does not resolve its
 runtime input back out of MLflow.
 
@@ -186,8 +189,8 @@ To evaluate a specific split explicitly:
 ```bash
 docker compose run --no-deps --rm eval \
   polaris-eval -c /app/config/config.yaml \
-  --dataset-path /app/data/test/ragas_one_hop_eval_dataset_v1.test.jsonl \
-  --prepared-path /app/data/test/prepared_test_rows.json
+  --dataset-path /app/data/test/ragas_one_hop_eval_dataset_final.test.jsonl \
+  --prepared-path /app/data/test/prepared_test_rows_final.json
 ```
 
 To prepare rows without running RAGAS scoring:
@@ -195,9 +198,18 @@ To prepare rows without running RAGAS scoring:
 ```bash
 docker compose run --no-deps --rm eval \
   polaris-eval -c /app/config/config.yaml \
-  --dataset-path /app/data/test/ragas_one_hop_eval_dataset_v1.test.jsonl \
-  --prepared-path /app/data/test/prepared_test_rows.json \
+  --dataset-path /app/data/test/ragas_one_hop_eval_dataset_final.test.jsonl \
+  --prepared-path /app/data/test/prepared_test_rows_final.json \
   --prepare-only
+```
+
+To evaluate a split while preserving benchmark subgroup labels in row metadata:
+
+```bash
+docker compose run --no-deps --rm eval \
+  polaris-eval -c /app/config/config.yaml \
+  --dataset-path /app/data/test/ragas_one_hop_eval_dataset_final.test.jsonl \
+  --annotations-file /app/data/test/benchmark_annotations_final.csv
 ```
 
 To control MLflow from CLI:
@@ -269,7 +281,7 @@ Explicit test IDs:
 ```bash
 docker compose run --rm eval \
   polaris-create-dev-test-sets \
-  --dataset-file /app/data/test/ragas_one_hop_eval_dataset_v1.jsonl \
+  --dataset-file /app/data/test/ragas_one_hop_eval_dataset_final.jsonl \
   --test-samples-file /app/data/test/eval_ticket_keys.txt
 ```
 
@@ -278,9 +290,19 @@ Stratified split from category mappings:
 ```bash
 docker compose run --rm eval \
   polaris-create-dev-test-sets \
-  --dataset-file /app/data/test/ragas_one_hop_eval_dataset_v1.jsonl \
+  --dataset-file /app/data/test/ragas_one_hop_eval_dataset_final.jsonl \
   --categories-file /app/data/test/eval_categories.json \
   --test-size 17 \
+  --random-state 42
+```
+
+Recommended multilabel split from verified benchmark annotations:
+
+```bash
+python scripts/create_dev_test_sets.py \
+  --dataset-file data/test/ragas_one_hop_eval_dataset_final.jsonl \
+  --annotations-file data/test/benchmark_annotations_final.csv \
+  --test-fraction 0.30 \
   --random-state 42
 ```
 
@@ -289,7 +311,7 @@ With MLflow lineage logging enabled:
 ```bash
 docker compose run --rm eval \
   polaris-create-dev-test-sets \
-  --dataset-file /app/data/test/ragas_one_hop_eval_dataset_v1.jsonl \
+  --dataset-file /app/data/test/ragas_one_hop_eval_dataset_final.jsonl \
   --categories-file /app/data/test/eval_categories.json \
   --test-size 17 \
   --random-state 42 \
@@ -301,12 +323,88 @@ Notes:
 - Stratified splitting uses `scikit-learn` and only stratifies categories with
   more than one sample.
 - Singleton or uncategorized samples remain in the dev split.
+- Annotation-driven splitting uses the verified benchmark labels to build a
+  multilabel stratification profile and also writes a frozen `test_ids` file
+  plus a split audit report.
 - Dev and test are logged to MLflow as separate dataset objects with
   `validation` and `testing` contexts.
 - Prepared rows and predictions are kept as eval run artifacts rather than
   canonical MLflow datasets.
 - The `eval` service mounts `./data` to `/app/data`, so generated split files
   written under `/app/data/...` are persisted back to the host repository.
+
+### Benchmark Annotation Workflow
+
+Stage-3 benchmark annotation is kept separate from the canonical benchmark
+JSONL. The annotation CSV is keyed by benchmark `id` and records the evidence
+class, authoritative doc scope, validity sensitivity, attachment dependence,
+and supporting query-type labels needed for subgroup analysis.
+
+The compatibility wrapper scripts under `scripts/` mirror the packaged CLIs if
+you want to run them directly from the repo root.
+
+To scaffold a seeded annotation CSV from the benchmark plus the current split
+files:
+
+```bash
+python scripts/benchmark_annotations.py scaffold \
+  --dataset-file data/test/ragas_one_hop_eval_dataset_final.jsonl \
+  --dev-dataset-file data/test/ragas_one_hop_eval_dataset_final.dev.jsonl \
+  --test-dataset-file data/test/ragas_one_hop_eval_dataset_final.test.jsonl \
+  --legacy-audit-file data/test/gold_standard_v1_audit_labels.csv \
+  --output-file data/test/benchmark_annotations_final.csv
+```
+
+To refresh split labels in an existing verified annotation CSV after regenerating
+the dev/test datasets:
+
+```bash
+python scripts/benchmark_annotations.py validate \
+  --dataset-file data/test/ragas_one_hop_eval_dataset_final.jsonl \
+  --dev-dataset-file data/test/ragas_one_hop_eval_dataset_final.dev.jsonl \
+  --test-dataset-file data/test/ragas_one_hop_eval_dataset_final.test.jsonl \
+  --annotations-file data/test/benchmark_annotations_final.csv \
+  --require-verified \
+  --regenerate-splits \
+  --output-file data/test/benchmark_annotations_final.csv
+```
+
+After manual review, validate the file and require all rows to be marked
+`review_status=verified`:
+
+```bash
+python scripts/benchmark_annotations.py validate \
+  --dataset-file data/test/ragas_one_hop_eval_dataset_final.jsonl \
+  --dev-dataset-file data/test/ragas_one_hop_eval_dataset_final.dev.jsonl \
+  --test-dataset-file data/test/ragas_one_hop_eval_dataset_final.test.jsonl \
+  --annotations-file data/test/benchmark_annotations_final.csv \
+  --require-verified
+```
+
+The stage-3 label definitions and tie-break rules live in
+`data/test/benchmark_annotation_codebook_v1.md`.
+
+### Experiment 1: Benchmark Characterisation
+
+Use `polaris-benchmark-analysis` or the matching wrapper script to generate the
+experiment-1 subgroup composition artifacts:
+
+```bash
+python scripts/benchmark_analysis.py \
+  --dataset-file data/test/ragas_one_hop_eval_dataset_final.jsonl \
+  --dev-dataset-file data/test/ragas_one_hop_eval_dataset_final.dev.jsonl \
+  --test-dataset-file data/test/ragas_one_hop_eval_dataset_final.test.jsonl \
+  --annotations-file data/test/benchmark_annotations_final.csv \
+  --output-dir data/test/benchmark_analysis_final
+```
+
+This writes:
+- `composition_counts.csv`
+- `composition_combinations.csv`
+- `composition_summary.json`
+- `composition_summary.md`
+- `composition_figure.png`
+- `composition_figure.svg`
 
 ## Prompt Registry Workflow
 Runtime prompt loading is registry-first (`mlflow.prompt_registry.enabled: true`).

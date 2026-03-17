@@ -1,6 +1,7 @@
 from argparse import Namespace
 from contextlib import contextmanager
 from dataclasses import dataclass
+import csv
 import logging
 import sys
 from types import SimpleNamespace
@@ -263,6 +264,91 @@ def test_resolve_prepared_rows_adds_manifest_stats(monkeypatch, tmp_path) -> Non
     assert manifest["prep_failed_rows"] == 0
     assert "prep_elapsed_seconds" in manifest
     assert "prep_rate_rows_per_second" in manifest
+
+
+def test_resolve_prepared_rows_joins_verified_annotations(monkeypatch, tmp_path) -> None:
+    dataset_path = tmp_path / "dataset.jsonl"
+    dataset_path.write_text(
+        '[{"id":"1","summary":"Storage path question","query":"Q1","expected_answer":"A1","metadata":{"k":1}}]',
+        encoding="utf-8",
+    )
+    annotations_path = tmp_path / "annotations.csv"
+    with annotations_path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(
+            handle,
+            fieldnames=[
+                "id",
+                "split",
+                "summary",
+                "source_needed",
+                "docs_scope_needed",
+                "validity_sensitive",
+                "attachment_dependent",
+                "query_type",
+                "version_sensitive",
+                "system_scope_required",
+                "review_status",
+                "notes",
+            ],
+        )
+        writer.writeheader()
+        writer.writerow(
+            {
+                "id": "1",
+                "split": "dev",
+                "summary": "Storage path question",
+                "source_needed": "docs",
+                "docs_scope_needed": "local_official",
+                "validity_sensitive": "yes",
+                "attachment_dependent": "no",
+                "query_type": "local_operational",
+                "version_sensitive": "no",
+                "system_scope_required": "yes",
+                "review_status": "verified",
+                "notes": "",
+            }
+        )
+
+    captured_raw_examples: list[object] = []
+
+    def _capture_build_prepared_rows(**kwargs):  # noqa: ANN003
+        raw_examples = kwargs.get("raw_examples")
+        captured_raw_examples.append(raw_examples)
+        return [
+            {
+                "id": "row-1",
+                "user_input": "Q1",
+                "reference": "A1",
+                "response": "R1",
+                "retrieved_contexts": ["ctx-1"],
+                "retrieved_context_ids": ["doc-1"],
+                "metadata": dict(raw_examples[0]["metadata"]),
+            }
+        ]
+
+    monkeypatch.setattr(evaluate_rag, "build_container", lambda cfg: _DummyContainer(pipeline=object()))
+    monkeypatch.setattr(evaluate_rag, "build_prepared_rows", _capture_build_prepared_rows)
+
+    args = Namespace(
+        dataset_path=str(dataset_path),
+        annotations_file=str(annotations_path),
+        prepared_path=None,
+        reuse_prepared=False,
+        generation_workers=1,
+    )
+
+    rows, manifest = evaluate_rag._resolve_prepared_rows(
+        cfg=object(),  # type: ignore[arg-type]
+        args=args,
+        eval_cfg={"dataset": {}, "generation": {"workers": 1}},
+        show_progress=False,
+    )
+
+    assert captured_raw_examples
+    assert captured_raw_examples[-1][0]["metadata"]["benchmark_annotation"]["source_needed"] == "docs"
+    assert rows[0]["metadata"]["benchmark_annotation"]["query_type"] == "local_operational"
+    assert manifest["annotations_path"] == str(annotations_path.resolve())
+    assert manifest["annotation_rows"] == 1
 
 
 def test_resolve_prepared_rows_passes_progress_callback_when_enabled(

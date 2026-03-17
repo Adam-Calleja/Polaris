@@ -41,6 +41,8 @@ def _install_stub_cli_module(monkeypatch, module_name: str, calls: list[dict[str
 @pytest.mark.parametrize(
     ("script_name", "module_name"),
     [
+        ("benchmark_analysis.py", "polaris_rag.cli.benchmark_analysis"),
+        ("benchmark_annotations.py", "polaris_rag.cli.benchmark_annotations"),
         ("create_dev_test_sets.py", "polaris_rag.cli.create_dev_test_sets"),
         ("evaluate_rag.py", "polaris_rag.cli.evaluate_rag"),
         ("ingest_html_documents.py", "polaris_rag.cli.ingest_html_documents"),

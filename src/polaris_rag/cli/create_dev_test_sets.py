@@ -4,15 +4,18 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import replace
+import json
 from pathlib import Path
 from typing import Any
 
 from polaris_rag.config import GlobalConfig
 from polaris_rag.evaluation import (
+    load_annotation_rows,
     load_raw_examples,
     load_sample_categories,
     load_sample_ids,
     persist_prepared_rows,
+    stratified_split_raw_examples_by_annotation_labels,
     stratified_split_raw_examples_by_categories,
     split_raw_examples_by_ids,
 )
@@ -51,10 +54,21 @@ def parse_args() -> argparse.Namespace:
         help="Optional JSON/YAML file mapping category names to sample IDs for stratified splitting",
     )
     parser.add_argument(
+        "--annotations-file",
+        default=None,
+        help="Optional benchmark annotation CSV used for multilabel stratified splitting",
+    )
+    parser.add_argument(
         "--test-size",
         type=int,
-        default=17,
-        help="Number of stratified test samples to draw when using --categories-file (default: 17)",
+        default=None,
+        help="Number of test samples to draw for stratified splitting",
+    )
+    parser.add_argument(
+        "--test-fraction",
+        type=float,
+        default=None,
+        help="Fraction of the dataset to allocate to test for annotation-driven stratified splitting",
     )
     parser.add_argument(
         "--random-state",
@@ -76,6 +90,16 @@ def parse_args() -> argparse.Namespace:
         "--id-field",
         default="id",
         help="Dataset field containing the sample ID (default: id)",
+    )
+    parser.add_argument(
+        "--test-ids-output-file",
+        default=None,
+        help="Optional output path for the frozen test ID list",
+    )
+    parser.add_argument(
+        "--split-report-output-file",
+        default=None,
+        help="Optional output path for the split audit report JSON",
     )
     parser.add_argument(
         "--mlflow",
@@ -119,6 +143,25 @@ def parse_args() -> argparse.Namespace:
 def _default_output_path(dataset_path: Path, split_name: str) -> Path:
     suffix = dataset_path.suffix
     return dataset_path.with_name(f"{dataset_path.stem}.{split_name}{suffix}")
+
+
+def _default_sidecar_path(dataset_path: Path, suffix: str) -> Path:
+    return dataset_path.with_name(f"{dataset_path.stem}.{suffix}")
+
+
+def _persist_sample_ids(sample_ids: list[str], path: Path) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    body = "\n".join(str(sample_id).strip() for sample_id in sample_ids if str(sample_id).strip())
+    if body:
+        body += "\n"
+    path.write_text(body, encoding="utf-8")
+    return path
+
+
+def _persist_split_report(report: dict[str, Any], path: Path) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True), encoding="utf-8")
+    return path
 
 
 def _import_pandas() -> Any:
@@ -249,33 +292,54 @@ def main() -> None:
     raw_examples = load_raw_examples(dataset_path)
 
     using_categories = bool(args.categories_file)
-    if using_categories and (args.test_samples_file or list(args.test_sample_id or [])):
+    using_annotations = bool(args.annotations_file)
+    using_explicit_ids = bool(args.test_samples_file or list(args.test_sample_id or []))
+    selected_modes = int(using_categories) + int(using_annotations) + int(using_explicit_ids)
+    if selected_modes > 1:
         raise ValueError(
-            "Use either --categories-file for stratified splitting or explicit test samples via "
-            "--test-samples-file/--test-sample-id, not both."
+            "Use exactly one of --categories-file, --annotations-file, or "
+            "--test-samples-file/--test-sample-id."
+        )
+    if selected_modes == 0:
+        raise ValueError(
+            "Provide one of --categories-file, --annotations-file, or "
+            "--test-samples-file/--test-sample-id."
         )
 
     split_stats: dict[str, Any] = {}
     if using_categories:
+        if args.test_fraction is not None:
+            raise ValueError("--test-fraction is only supported with --annotations-file.")
         categories = load_sample_categories(args.categories_file)
+        resolved_test_size = int(args.test_size) if args.test_size is not None else 17
         dev_rows, test_rows, split_stats = stratified_split_raw_examples_by_categories(
             raw_examples,
             categories,
-            test_size=int(args.test_size),
+            test_size=resolved_test_size,
             random_state=int(args.random_state),
             id_field=str(args.id_field or "id"),
         )
+    elif using_annotations:
+        annotation_rows = load_annotation_rows(args.annotations_file)
+        resolved_test_fraction = float(args.test_fraction) if args.test_fraction is not None else 0.30
+        dev_rows, test_rows, split_stats = stratified_split_raw_examples_by_annotation_labels(
+            raw_examples,
+            annotation_rows,
+            test_size=int(args.test_size) if args.test_size is not None else None,
+            test_fraction=resolved_test_fraction if args.test_size is None else None,
+            random_state=int(args.random_state),
+            id_field=str(args.id_field or "id"),
+            require_verified=True,
+        )
     else:
+        if args.test_fraction is not None:
+            raise ValueError("--test-fraction is only supported with --annotations-file.")
         selected_ids: list[str] = []
         if args.test_samples_file:
             selected_ids.extend(load_sample_ids(args.test_samples_file))
         selected_ids.extend(str(value).strip() for value in list(args.test_sample_id or []) if str(value).strip())
-
         if not selected_ids:
-            raise ValueError(
-                "Provide either --categories-file or at least one explicit test sample via "
-                "--test-samples-file/--test-sample-id."
-            )
+            raise ValueError("No explicit test sample ids were provided.")
 
         dev_rows, test_rows = split_raw_examples_by_ids(
             raw_examples,
@@ -296,6 +360,30 @@ def main() -> None:
 
     persist_prepared_rows(dev_rows, dev_output_path)
     persist_prepared_rows(test_rows, test_output_path)
+
+    test_ids_output_path = (
+        Path(args.test_ids_output_file).expanduser().resolve()
+        if args.test_ids_output_file
+        else _default_sidecar_path(dataset_path, "test_ids.txt")
+    )
+    report_output_path = (
+        Path(args.split_report_output_file).expanduser().resolve()
+        if args.split_report_output_file
+        else _default_sidecar_path(dataset_path, "split_report.json")
+    )
+
+    if not split_stats:
+        split_stats = {
+            "strategy": "explicit_ids",
+            "test_ids": [str(row.get(args.id_field or "id", "") or "").strip() for row in test_rows],
+            "dev_ids": [str(row.get(args.id_field or "id", "") or "").strip() for row in dev_rows],
+            "test_size": len(test_rows),
+            "test_fraction": float(len(test_rows) / len(raw_examples)),
+        }
+
+    test_id_values = list(split_stats.get("test_ids", []))
+    _persist_sample_ids(test_id_values, test_ids_output_path)
+    _persist_split_report(split_stats, report_output_path)
 
     dataset_name = str(args.mlflow_dataset_name).strip() if args.mlflow_dataset_name else None
     tracking = _resolve_tracking(args)
@@ -319,10 +407,20 @@ def main() -> None:
     print(f"Test rows: {len(test_rows)}")
     print(f"Dev output: {dev_output_path}")
     print(f"Test output: {test_output_path}")
+    print(f"Test ids output: {test_ids_output_path}")
+    print(f"Split report: {report_output_path}")
     if split_stats:
         print(f"Test ids: {split_stats.get('test_ids', [])}")
         for category, count in dict(split_stats.get("category_test_counts", {})).items():
             print(f"{category}: {count} test")
+        feature_counts = dict(split_stats.get("feature_test_counts", {}))
+        feature_targets = dict(split_stats.get("feature_target_counts", {}))
+        for feature_name in sorted(feature_counts):
+            target = feature_targets.get(feature_name)
+            total = dict(split_stats.get("feature_totals", {})).get(feature_name)
+            if target is None or total is None:
+                continue
+            print(f"{feature_name}: test={feature_counts[feature_name]} target={target} total={total}")
     if run_id:
         print(f"MLflow run id: {run_id}")
 

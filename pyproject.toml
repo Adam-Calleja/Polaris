@@ -66,8 +66,10 @@ tokenizers = [
 eval = [
   "ragas>=0.4.3,<0.5",
   "openai>=1.0",
+  "pandas>=2.0",
   "pyarrow>=15",
   "scikit-learn>=1.4",
+  "matplotlib>=3.8",
 ]
 
 tracking = [
@@ -84,6 +86,8 @@ api = [
 ]
 
 [project.scripts]
+polaris-benchmark-analysis = "polaris_rag.cli.benchmark_analysis:main"
+polaris-benchmark-annotations = "polaris_rag.cli.benchmark_annotations:main"
 polaris-ingest-html = "polaris_rag.cli.ingest_html_documents:main"
 polaris-ingest-jira = "polaris_rag.cli.ingest_jira_tickets:main"
 polaris-eval = "polaris_rag.cli.evaluate_rag:main"

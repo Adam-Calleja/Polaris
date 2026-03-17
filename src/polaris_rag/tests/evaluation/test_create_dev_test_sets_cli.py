@@ -1,3 +1,4 @@
+import csv
 import json
 import sys
 from contextlib import contextmanager
@@ -272,3 +273,132 @@ def test_main_supports_stratified_category_split(tmp_path, monkeypatch, capsys) 
     captured = capsys.readouterr()
     assert "Test ids: ['a-1', 'b-1']" in captured.out
     assert "cat-solo: 0 test" in captured.out
+
+
+def test_main_supports_annotation_driven_multilabel_split(tmp_path, monkeypatch, capsys) -> None:
+    dataset_rows = [
+        {"id": "ex-1", "summary": "S1", "query": "Q1", "expected_answer": "A1"},
+        {"id": "ex-2", "summary": "S2", "query": "Q2", "expected_answer": "A2"},
+        {"id": "ex-3", "summary": "S3", "query": "Q3", "expected_answer": "A3"},
+    ]
+    dataset_path = tmp_path / "dataset.jsonl"
+    dataset_path.write_text(json.dumps(dataset_rows), encoding="utf-8")
+
+    annotations_path = tmp_path / "annotations.csv"
+    with annotations_path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(
+            handle,
+            fieldnames=[
+                "id",
+                "split",
+                "summary",
+                "source_needed",
+                "docs_scope_needed",
+                "validity_sensitive",
+                "attachment_dependent",
+                "query_type",
+                "version_sensitive",
+                "system_scope_required",
+                "review_status",
+                "notes",
+            ],
+        )
+        writer.writeheader()
+        writer.writerows(
+            [
+                {
+                    "id": "ex-1",
+                    "split": "",
+                    "summary": "S1",
+                    "source_needed": "docs",
+                    "docs_scope_needed": "local_official",
+                    "validity_sensitive": "yes",
+                    "attachment_dependent": "no",
+                    "query_type": "local_operational",
+                    "version_sensitive": "no",
+                    "system_scope_required": "yes",
+                    "review_status": "verified",
+                    "notes": "",
+                },
+                {
+                    "id": "ex-2",
+                    "split": "",
+                    "summary": "S2",
+                    "source_needed": "tickets",
+                    "docs_scope_needed": "none",
+                    "validity_sensitive": "yes",
+                    "attachment_dependent": "yes",
+                    "query_type": "general_how_to",
+                    "version_sensitive": "no",
+                    "system_scope_required": "no",
+                    "review_status": "verified",
+                    "notes": "",
+                },
+                {
+                    "id": "ex-3",
+                    "split": "",
+                    "summary": "S3",
+                    "source_needed": "both",
+                    "docs_scope_needed": "local_and_external",
+                    "validity_sensitive": "yes",
+                    "attachment_dependent": "no",
+                    "query_type": "software_version",
+                    "version_sensitive": "yes",
+                    "system_scope_required": "yes",
+                    "review_status": "verified",
+                    "notes": "",
+                },
+            ]
+        )
+
+    monkeypatch.setattr(
+        create_dev_test_sets,
+        "stratified_split_raw_examples_by_annotation_labels",
+        lambda raw_examples, annotation_rows, *, test_size, test_fraction, random_state, id_field, require_verified: (  # noqa: ARG005
+            [raw_examples[0], raw_examples[2]],
+            [raw_examples[1]],
+            {
+                "strategy": "annotation_multilabel",
+                "test_ids": ["ex-2"],
+                "dev_ids": ["ex-1", "ex-3"],
+                "feature_totals": {"attachment_dependent=yes": 1},
+                "feature_target_counts": {"attachment_dependent=yes": 1},
+                "feature_test_counts": {"attachment_dependent=yes": 1},
+            },
+        ),
+    )
+
+    test_ids_path = tmp_path / "chosen_test_ids.txt"
+    report_path = tmp_path / "split_report.json"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "create_dev_test_sets.py",
+            "--dataset-file",
+            str(dataset_path),
+            "--annotations-file",
+            str(annotations_path),
+            "--test-fraction",
+            "0.34",
+            "--test-ids-output-file",
+            str(test_ids_path),
+            "--split-report-output-file",
+            str(report_path),
+        ],
+    )
+
+    create_dev_test_sets.main()
+
+    dev_rows = load_raw_examples(tmp_path / "dataset.dev.jsonl")
+    test_rows = load_raw_examples(tmp_path / "dataset.test.jsonl")
+
+    assert [row["id"] for row in dev_rows] == ["ex-1", "ex-3"]
+    assert [row["id"] for row in test_rows] == ["ex-2"]
+    assert test_ids_path.read_text(encoding="utf-8") == "ex-2\n"
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    assert report["strategy"] == "annotation_multilabel"
+    assert report["test_ids"] == ["ex-2"]
+
+    captured = capsys.readouterr()
+    assert "attachment_dependent=yes: test=1 target=1 total=1" in captured.out
