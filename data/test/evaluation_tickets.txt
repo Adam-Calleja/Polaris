@@ -5533,3 +5533,2192 @@ RCS Team
 
 ----------
 
+
+----------
+
+<BEGIN_TICKET>
+[TICKET_KEY] HPCSSUP-100615
+[STATUS] RESOLVED
+[CREATED] 2026-03-12T12:41:19.883+0000
+[SUMMARY] Installation of jaxDecomp with cuDecomp backend
+
+[INITIAL_DESCRIPTION]
+Hello,
+
+I am trying to install jaxDecomp with cuDecomp backend, following the instructions on the following link
+https://jaxdecomp.readthedocs.io/en/latest/installation.html 
+I run after logging on
+```
+cd libraries/fluidmac
+source .venv-gpu/bin/activate
+pip install jax[cuda]
+module load nvhpc/21.1
+pip install git+https://github.com/DifferentiableUniverseInitiative/jaxDecomp  -Ccmake.define.JD_CUDECOMP_BACKEND=ON
+```
+But I get the output:
+```
+  Collecting git+https://github.com/DifferentiableUniverseInitiative/jaxDecomp 
+  Cloning https://github.com/DifferentiableUniverseInitiative/jaxDecomp  to /tmp/pip-req-build-6um9o_pf
+  Running command git clone --filter=blob:none --quiet https://github.com/DifferentiableUniverseInitiative/jaxDecomp  /tmp/pip-req-build-6um9o_pf
+  Resolved https://github.com/DifferentiableUniverseInitiative/jaxDecomp  to commit b2f41a0daa71dd8e3daf12c5bed769e4d568318c
+  Running command git submodule update --init --recursive -q
+  Installing build dependencies ... done
+  Getting requirements to build wheel ... done
+  Installing backend dependencies ... done
+  Preparing metadata (pyproject.toml) ... done
+Requirement already satisfied: jaxtyping>=0.2.0 in ./.venv-gpu/lib64/python3.11/site-packages (from jaxdecomp==0.3.0) (0.3.3)
+Requirement already satisfied: jax>=0.4.35 in ./.venv-gpu/lib64/python3.11/site-packages (from jaxdecomp==0.3.0) (0.8.1)
+Requirement already satisfied: jaxlib<=0.8.1,>=0.8.1 in ./.venv-gpu/lib64/python3.11/site-packages (from jax>=0.4.35->jaxdecomp==0.3.0) (0.8.1)
+Requirement already satisfied: ml_dtypes>=0.5.0 in ./.venv-gpu/lib64/python3.11/site-packages (from jax>=0.4.35->jaxdecomp==0.3.0) (0.5.4)
+Requirement already satisfied: numpy>=2.0 in ./.venv-gpu/lib64/python3.11/site-packages (from jax>=0.4.35->jaxdecomp==0.3.0) (2.4.3)
+Requirement already satisfied: opt_einsum in ./.venv-gpu/lib64/python3.11/site-packages (from jax>=0.4.35->jaxdecomp==0.3.0) (3.4.0)
+Requirement already satisfied: scipy>=1.13 in ./.venv-gpu/lib64/python3.11/site-packages (from jax>=0.4.35->jaxdecomp==0.3.0) (1.17.1)
+Requirement already satisfied: wadler-lindig>=0.1.3 in ./.venv-gpu/lib64/python3.11/site-packages (from jaxtyping>=0.2.0->jaxdecomp==0.3.0) (0.1.7)
+Building wheels for collected packages: jaxdecomp
+  Building wheel for jaxdecomp (pyproject.toml) ... error
+  error: subprocess-exited-with-error
+
+  × Building wheel for jaxdecomp (pyproject.toml) did not run successfully.
+  │ exit code: 1
+  ╰─> [42 lines of output]
+      *** scikit-build-core 0.12.2 using CMake 3.26.5 (wheel)
+      *** Configuring CMake...
+      loading initial cache file build/cp311-cp311-linux_x86_64/CMakeInit.txt
+      -- The CXX compiler identification is NVHPC 21.1.0
+      -- Detecting CXX compiler ABI info
+      -- Detecting CXX compiler ABI info - failed
+      -- Check for working CXX compiler: /usr/local/software/nvidia/hpc_sdk/Linux_x86_64/21.1/compilers/bin/nvc++
+      -- Check for working CXX compiler: /usr/local/software/nvidia/hpc_sdk/Linux_x86_64/21.1/compilers/bin/nvc++ - broken
+      CMake Error at /usr/share/cmake/Modules/CMakeTestCXXCompiler.cmake:60 (message):
+        The C++ compiler
+      "/usr/local/software/nvidia/hpc_sdk/Linux_x86_64/21.1/compilers/bin/nvc++"
+  
+    is not able to compile a simple test program.
+  
+    It fails with the following output:
+  
+      Change Dir: /tmp/pip-req-build-6um9o_pf/build/cp311-cp311-linux_x86_64/CMakeFiles/CMakeScratch/TryCompile-J4W0cV
+  
+      Run Build Command(s):ninja -v cmTC_9f360 && [1/2] /usr/local/software/nvidia/hpc_sdk/Linux_x86_64/21.1/compilers/bin/nvc++   -noswitcherror -o CMakeFiles/cmTC_9f360.dir/testCXXCompiler.cxx.o -c /tmp/pip-req-build-6um9o_pf/build/cp311-cp311-linux_x86_64/CMakeFiles/CMakeScratch/TryCompile-J4W0cV/testCXXCompiler.cxx && /usr/local/software/nvidia/hpc_sdk/Linux_x86_64/21.1/compilers/bin/nvc++   -noswitcherror -x c++ -M /tmp/pip-req-build-6um9o_pf/build/cp311-cp311-linux_x86_64/CMakeFiles/CMakeScratch/TryCompile-J4W0cV/testCXXCompiler.cxx -MT CMakeFiles/cmTC_9f360.dir/testCXXCompiler.cxx.o -MDCMakeFiles/cmTC_9f360.dir/testCXXCompiler.cxx.o.d
+      [2/2] : && /usr/local/software/nvidia/hpc_sdk/Linux_x86_64/21.1/compilers/bin/nvc++ -noswitcherror  CMakeFiles/cmTC_9f360.dir/testCXXCompiler.cxx.o -o cmTC_9f360   && :
+      FAILED: [code=2] cmTC_9f360
+      : && /usr/local/software/nvidia/hpc_sdk/Linux_x86_64/21.1/compilers/bin/nvc++ -noswitcherror  CMakeFiles/cmTC_9f360.dir/testCXXCompiler.cxx.o -o cmTC_9f360   && :
+      /usr/local/software/spack/csd3/opt-2024-06-01/linux-rocky8-cascadelake/gcc-13.3.0/binutils-2.42-y33xj6rqcsxaa6c457snjnvebbrtrtg6/bin/ld: cannot find /usr/lib/gcc/x86_64-redhat-linux/4.8.5/crtbegin.o: No such file or directory
+      /usr/local/software/spack/csd3/opt-2024-06-01/linux-rocky8-cascadelake/gcc-13.3.0/binutils-2.42-y33xj6rqcsxaa6c457snjnvebbrtrtg6/bin/ld: warning: /usr/local/software/nvidia/hpc_sdk/Linux_x86_64/21.1/compilers/lib/nvhpc.ld contains output sections; did you forget -T?
+      /usr/local/software/spack/csd3/opt-2024-06-01/linux-rocky8-cascadelake/gcc-13.3.0/binutils-2.42-y33xj6rqcsxaa6c457snjnvebbrtrtg6/bin/ld: cannot find -latomic: No such file or directory
+      /usr/local/software/spack/csd3/opt-2024-06-01/linux-rocky8-cascadelake/gcc-13.3.0/binutils-2.42-y33xj6rqcsxaa6c457snjnvebbrtrtg6/bin/ld: cannot find -lstdc++: No such file or directory
+      /usr/local/software/spack/csd3/opt-2024-06-01/linux-rocky8-cascadelake/gcc-13.3.0/binutils-2.42-y33xj6rqcsxaa6c457snjnvebbrtrtg6/bin/ld: cannot find -latomic: No such file or directory
+      ninja: build stopped: subcommand failed.
+  
+  
+  
+  
+  
+    CMake will not be able to correctly generate this project.
+  Call Stack (most recent call first):
+    CMakeLists.txt:14 (project)
+  
+  
+  -- Configuring incomplete, errors occurred!
+  
+  *** CMake configuration failed
+  [end of output]
+  
+  note: This error originates from a subprocess, and is likely not a problem with pip.
+  ERROR: Failed building wheel for jaxdecomp
+Failed to build jaxdecomp
+error: failed-wheel-build-for-install
+
+× Failed to build installable wheels for some pyproject.toml based projects
+╰─> jaxdecomp
+```
+I am not sure if I am doing something wrong here, or if there is something wrong with the nvc++ compiler. Note that I am able to use jaxdecomp without the cuDecomp backend, however without the cuDecomp backend, communication between GPUs is slow.
+Any help would be appreciated.
+Kind regards
+Tom
+
+
+[CONVERSATION]
+<MESSAGE id=0001 role=TICKET_CREATOR>
+My details:
+Name: Thomas Stopford
+Username: ts958
+</MESSAGE>
+
+<MESSAGE id=0002 role=OTHER>
+Hello Thomas,
+Thank you for submitting a ticket, I will see if we can assist you.
+If you have any further information, please let me know, otherwise I will get back to you soon,
+Best regards,
+Elisabeth Reeve 
+HPC Support
+</MESSAGE>
+
+<MESSAGE id=0003 role=TICKET_CREATOR>
+Hello Elizabeth,
+Thank you for getting back to me. I think this is all the relevant information I can provide. Let me know if you need any further details.
+Kind regards
+Tom
+</MESSAGE>
+
+<MESSAGE id=0004 role=HELPDESK_ASSIGNEE>
+Hi Tom,
+I see that you’re using quite an old version of the Nvidia HPC SDK (NVHPC). Would you be able to load a newer one by doing the following:
+```
+module purge
+module load rhel8/ampere/base
+module load nvhpc/25.3/gcc/nv5pif7f
+```
+Sorry about the confusing state of our module collections.
+Please let me know how you get on.
+Miren Radia
+Research Software Engineer
+</MESSAGE>
+
+<MESSAGE id=0005 role=TICKET_CREATOR>
+Hi Miren,
+Thank you! With this it seems to have successfully installed.
+Tom
+</MESSAGE>
+
+<MESSAGE id=0006 role=HELPDESK_ASSIGNEE>
+Hi Tom,
+I'm glad we were able to resolve your issue.
+I will now close this ticket. If you need further support, please feel free to open a new support ticket by emailing support@hpc.cam.ac.uk.
+Best wishes,
+Miren
+</MESSAGE>
+
+<END_TICKET>
+
+
+----------
+
+<BEGIN_TICKET>
+[TICKET_KEY] HPCSSUP-99896
+[STATUS] RESOLVED
+[CREATED] 2026-02-26T11:03:02.816+0000
+[SUMMARY] Problem installing AlphaFold3 Singularity container
+
+[INITIAL_DESCRIPTION]
+Dear HPC support team,
+My name is Daniel Temko. I am a Research Associate in Prof. Jamie Blundell's group. I am currently trying to install a Singularity container to run AlphaFold3 on the HPC by using the attached Slurm script which I received from a recent CSD3-AI/ML clinic I attended. I am running into a problem (described below) and would be grateful for your help with trying to fix this.
+Issue:
+The script seems to have run successfully to install the container to /home/dpht2/rds/hpc-work/Alphafold3. However, when I navigate to this directory and try to run the container by calling "./run_alphafold3" I get the following error message:
+FATAL: permission denied
+I was wondering whether you have a sense of why this might be happening and what I would need to do to get this working without the error.
+Many thanks and kind regards,
+Daniel
+
+
+[CONVERSATION]
+<MESSAGE id=0001 role=TICKET_CREATOR>
+[FILE ATTACHMENT]
+ (4 kB)
+</MESSAGE>
+
+<MESSAGE id=0002 role=HELPDESK_ASSIGNEE>
+Hi Daniel,
+This is because in that script, we have 
+```
+# Generate run macro run_alphafold3
+cat <<EOF> run_alphafold3
+#!/bin/bash
+SIMAGE=$INSTALL_DIR/alphafold3_3.0.1.sif 
+DATA=/datasets/public/AlphaFold/3
+
+singularity run --env \\
+  TF_FORCE_UNIFIED_MEMORY=1,XLA_PYTHON_CLIENT_MEM_FRACTION=4.0,OPENMM_CPU_THREADS=32 \\
+  -B \$DATA:/data \\
+  -B .:/etc \\
+  --pwd /app/alphafold \\
+  --nv \${SIMAGE} \\
+  --data_dir /data/ \\
+  --uniref90_database_path /data/uniref90_2022_05.fa \\
+  --mgnify_database_path /data/mgy_clusters_2022_05.fa \\
+  --template_mmcif_dir /data/mmcif_files \\
+  "\$@"
+EOF 
+```
+But this should actually be 
+```
+# Generate run macro run_alphafold3
+cat <<EOF> run_alphafold3
+#!/bin/bash
+SIMAGE=$INSTALL_DIR/alphafold3_3.0.1.sif 
+DATA=/datasets/public/AlphaFold/3
+
+singularity exec --env \\
+  TF_FORCE_UNIFIED_MEMORY=1,XLA_PYTHON_CLIENT_MEM_FRACTION=4.0,OPENMM_CPU_THREADS=32 \\
+  -B \$DATA:/data \\
+  -B .:/etc
+  --pwd /app/alphafold \\
+  --nv \${SIMAGE} \\
+  python run_alphafold.py \\
+  --db_dir=/data
+  "\$@"
+EOF
+```
+I’ve attached the latest script here.  
+[FILE ATTACHMENT]
+Best wishes, 
+Henry
+HPC Support
+</MESSAGE>
+
+<MESSAGE id=0003 role=TICKET_CREATOR>
+Hello Henry,
+Thanks so much. That is very helpful. I will rerun with the new script now.
+Best wishes,
+Daniel
+</MESSAGE>
+
+<MESSAGE id=0004 role=TICKET_CREATOR>
+Hello Henry,
+Just wondering whether the below copied code is possibly missing "
+" at the end of the "-B .:/etc" line? I was not able to access the attachment for some reason (I saw a permissions error message when I tried the link after logging in) so I have pasting in this snippet directly.
+Many thanks,
+Daniel
+</MESSAGE>
+
+<MESSAGE id=0005 role=HELPDESK_ASSIGNEE>
+Hi Daniel, 
+No problem, I’ve pasted the entire snippet below and re-attached the file 
+```
+# Generate run macro run_alphafold3
+cat <<EOF> run_alphafold3
+#!/bin/bash
+SIMAGE=$INSTALL_DIR/alphafold3_3.0.1.sif 
+DATA=/datasets/public/AlphaFold/3
+
+singularity exec --env \\
+  TF_FORCE_UNIFIED_MEMORY=1,XLA_PYTHON_CLIENT_MEM_FRACTION=4.0,OPENMM_CPU_THREADS=32 \\
+  -B \$DATA:/data \\
+  -B .:/etc
+  --pwd /app/alphafold \\
+  --nv \${SIMAGE} \\
+  python run_alphafold.py \\
+  --db_dir=/data
+  "\$@"
+EOF
+
+chmod +x run_alphafold3
+# Use as is: ./run_alphafold3
+# with only alphafold3 option flags not described in the script body above.
+```
+If this doesn’t work then you can create a file called `run_alphafold3`, make it executable with `chmod +x run_alphafold3` and paste the following inside 
+```
+#!/bin/bash
+SIMAGE=/alphafold3_3.0.1.sif
+DATA=/datasets/public/AlphaFold/3
+
+singularity exec --env \
+  TF_FORCE_UNIFIED_MEMORY=1,XLA_PYTHON_CLIENT_MEM_FRACTION=4.0,OPENMM_CPU_THREADS=32 \
+  -B $DATA:/data \
+  -B .:/etc
+  --pwd /app/alphafold \
+  --nv ${SIMAGE} \
+  python run_alphafold.py \
+  --db_dir=/data
+  "$@"
+
+```
+
+ 
+Best wishes, 
+Henry
+HPC Support
+</MESSAGE>
+
+<MESSAGE id=0006 role=TICKET_CREATOR>
+Thanks very much Henry,
+Just wondering if there a missing "
+" at the end of this line "-B .:/etc" in the new code?
+Many thanks,
+Daniel
+</MESSAGE>
+
+<MESSAGE id=0007 role=HELPDESK_ASSIGNEE>
+Hello Daniel, 
+Apologies, yes youare right: there is a missing backslash (`\`) at the end of that line. I think this 
+```
+# Generate run macro run_alphafold3
+cat <<EOF> run_alphafold3
+#!/bin/bash
+SIMAGE=\$INSTALL_DIR/alphafold3_3.0.1.sif 
+DATA=/datasets/public/AlphaFold/3
+
+singularity exec --env \
+  TF_FORCE_UNIFIED_MEMORY=1,XLA_PYTHON_CLIENT_MEM_FRACTION=4.0,OPENMM_CPU_THREADS=32 \
+  -B \$DATA:/data \
+  -B .:/etc \
+  --pwd /app/alphafold \
+  --nv \${SIMAGE} \
+  python run_alphafold.py \
+  --db_dir=/data \
+  "\$@"
+EOF
+
+# then run chmod +x run_alphafold3
+```
+Should work
+Best wishes, 
+Henry
+HPC Support
+</MESSAGE>
+
+<MESSAGE id=0008 role=TICKET_CREATOR>
+Thank you very much. I will try that.
+Best wishes,
+Daniel
+</MESSAGE>
+
+<MESSAGE id=0009 role=HELPDESK_ASSIGNEE>
+waiting4customer
+</MESSAGE>
+
+<MESSAGE id=0010 role=TICKET_CREATOR>
+Hello Henry,
+Thanks very much. I think I have now got this working, but had a few further questions if that's OK.
+1.
+I am still unable to access the attachments. When I follow the links after logging into [https://ucam-rcs.atlassian.net<https://ucam-rcs.atlassian.net/](https://ucam-rcs.atlassian.net%3Chttps://ucam-rcs.atlassian.net/)> I get the message
+{"errors":[{"errorMessage":"You do not have permission to view this request."}],"reasonKey":"sd.portal.error.issue.not.authorized","reasonCode":"403"}
+Do you know what the reason for this might be?
+1.
+I now have the following in the slurm_install_alphafold3-2 script
+1. Generate run macro run_alphafold3
+cat <<EOF> run_alphafold3
+#!/bin/bash
+SIMAGE=$INSTALL_DIR/alphafold3_3.0.1.sif
+DATA=/datasets/public/AlphaFold/3
+singularity exec --env 
+
+TF_FORCE_UNIFIED_MEMORY=1,XLA_PYTHON_CLIENT_MEM_FRACTION=4.0,OPENMM_CPU_THREADS=32 
+
+-B \$DATA:/data 
+
+-B .:/etc 
+
+--pwd /app/alphafold 
+
+--nv \${SIMAGE} 
+
+python run_alphafold.py 
+
+--db_dir=/data 
+
+"\$@"
+EOF
+Compared to the original updated version from the first email in this chain the changes are :info: Addition of "
+" at the end of the "B .:/etc" line and (ii) Addition of "
+" at the end of the "-db_dir=/data" line. Could I please double check whether this is now correct?
+1.
+A binary file called "localtime" has appeared in the directory in which I installed the container (/home/dpht2/rds/hpc-work/Alphafold3). I think this must have been created when I tried running ./run_alphafold3 to test the install. Do you know whether or not this indicates a problem?
+Many thanks,
+Daniel
+</MESSAGE>
+
+<MESSAGE id=0011 role=HELPDESK_ASSIGNEE>
+Hello Daniel 
+Can I check please if you have a large file (>20GB) labelled `alphafold3_3.0.1.sif` ? If you do, then can you please cut and paste the contents of the `run_alphafold3` file in the body of the email?. The `localtime`  folder might be coming from the execution of the command `python run_alphafold`  in the script. Can you also confirm if you’ve applied via Google for access to the parameters and/or weights? Thanks 
+Best wishes, 
+Henry
+HPC Support
+</MESSAGE>
+
+<MESSAGE id=0012 role=TICKET_CREATOR>
+Hello Henry,
+*
+I have 3.6GB file called alphafold3_3.0.1.sif in the install directory
+*
+Here is the contents of run_alphafold3 from that directory:
+#!/bin/bash
+SIMAGE=/home/dpht2/rds/hpc-work/Alphafold3/alphafold3_3.0.1.sif
+DATA=/datasets/public/AlphaFold/3
+singularity exec --env \
+  TF_FORCE_UNIFIED_MEMORY=1,XLA_PYTHON_CLIENT_MEM_FRACTION=4.0,OPENMM_CPU_THREADS=32 \
+  -B $DATA:/data \
+  -B .:/etc \
+  --pwd /app/alphafold \
+  --nv ${SIMAGE} \
+  python run_alphafold.py \
+  --db_dir=/data \
+  "$@"
+*
+Yes, I confirm that I have applied to Google for the weights/parameters. In fact, I have just received notification that my request was approved.
+Many thanks,
+Daniel
+</MESSAGE>
+
+<MESSAGE id=0013 role=HELPDESK_ASSIGNEE>
+Hi Daniel,
+Great thanks, it looks like everything is in place. You’ll just need to map the container to the weights/parameters.  
+Best wishes, 
+Henry
+HPC Support
+</MESSAGE>
+
+<END_TICKET>
+
+
+----------
+
+<BEGIN_TICKET>
+[TICKET_KEY] HPCSSUP-99559
+[STATUS] RESOLVED
+[CREATED] 2026-02-19T14:35:04.989+0000
+[SUMMARY] Compiling BerkeleyGW on CSD3
+
+[INITIAL_DESCRIPTION]
+Dear Sir/Madam,
+I hope this email finds you well. I was trying to use BerkeleyGW on exciton calculations. It was very difficult because I have no experience with compilation BerkeleyGW on nvidia nodes before. Therefore, I am seeking your expertise on compilation BerkeleyGW on CSD3.
+Thanks a lot!
+Best wishes,
+Bingcan
+
+
+[CONVERSATION]
+<MESSAGE id=0001 role=HELPDESK_ASSIGNEE>
+Hello Bingcan,
+I’m afraid that we will need more information here. Can you please let us know what this software is, where it can be sourced as well as any steps that you have taken to compile it? Thanks 
+Best wishes, 
+Henry
+HPC Support
+</MESSAGE>
+
+<MESSAGE id=0002 role=TICKET_CREATOR>
+Dear Henry,
+I want to compile BerkeleyGW4.0: [http://manual.berkeleygw.org/2.0/compilation/](http://manual.berkeleygw.org/2.0/compilation/). You can download from here [https://berkeleygw.org/download/](https://berkeleygw.org/download/). I have a cpu version (see attached) compiled by a colleagued but we’ve never done this with gpu nor I have experience in compilation…
+Sorry for the inconvenience.
+Thanks.
+Best wishes,
+Bingcan
+[FILE ATTACHMENT]
+ (2 kB)
+</MESSAGE>
+
+<MESSAGE id=0003 role=OTHER>
+Hi Henry,
+I have actually create a module for berkeleygw as there is an existing recipe for it in spack. The user needs to run commands:
+module purge
+module load rhel8/ampere/base
+module load berkeleygw/4.0/gcc/openmpi/dj6azdqv
+Best wishes,
+Kacper
+</MESSAGE>
+
+<MESSAGE id=0004 role=HELPDESK_ASSIGNEE>
+Hi Bingcan,
+Our RSE team has compiled this for you as a central module. Please run the following commands to access the new build, thanks
+```
+module purge
+module load rhel8/ampere/base
+module load berkeleygw/4.0/gcc/openmpi/dj6azdqv 
+```
+Best wishes, 
+Henry
+HPC Support
+</MESSAGE>
+
+<MESSAGE id=0005 role=TICKET_CREATOR>
+Thanks a lot!
+</MESSAGE>
+
+<MESSAGE id=0006 role=HELPDESK_ASSIGNEE>
+Great, 
+Please let me know if you have any further questions on this item for us.  
+Best wishes, 
+Henry
+HPC Support
+</MESSAGE>
+
+<END_TICKET>
+
+
+----------
+
+<BEGIN_TICKET>
+[TICKET_KEY] HPCSSUP-98917
+[STATUS] RESOLVED
+[CREATED] 2026-02-06T15:36:01.672+0000
+[SUMMARY] Installing Dedalus (Python package) to run a python script on HPC
+
+[INITIAL_DESCRIPTION]
+Dear Sir/Madam,
+My name is Guillaume Alexis, id : grfa2. My working directory is /rds/user/grfa2/hpc-work/
+For now, I don't have a job submission script. I'm solely trying to install a package named Dedalus ([https://dedalus-project.readthedocs.io/en/latest/pages/installation.html](https://dedalus-project.readthedocs.io/en/latest/pages/installation.html)) and its dependancies, in order to run my script.
+My main question is : How should I do it ? I tried in a conda environment, but I'm unsure about the intel/intel-mpi/fftw/hdf5 versions I should load, in order to build Dedalus correctly with these modules.
+Thank you for your help,
+Best wishes,
+Guillaume Alexis
+
+
+[CONVERSATION]
+<MESSAGE id=0001 role=HELPDESK_ASSIGNEE>
+Hello Guillaume Alexis,
+Thank you for submitting a ticket, I will see if we can assist you.
+If you have any further information, please let me know, otherwise I will get back to you soon,
+Best regards,
+Elisabeth Reeve 
+HPC Support
+</MESSAGE>
+
+<MESSAGE id=0002 role=HELPDESK_ASSIGNEE>
+Hello Guillaume,
+Are you using the cluster’s conda module? If so, please install your own instance of conda, via miniconda or miniforge, to your /hpc-work area. This will allow you to have control over the version you wish to run.
+Once you have done this, you should be able to install this package.
+Best regards,
+Elisabeth
+</MESSAGE>
+
+<MESSAGE id=0003 role=TICKET_CREATOR>
+Hello Elisabeth,
+Thank you for your help !
+Yes I’m using the conda module. My questions was more about the other modules, notably intel mpi and fftw that have a lot of different versions available. I don’t know which ones I should use (because I have to specify them for the Dedalus install).
+
+Best wishes,
+Guillaume
+</MESSAGE>
+
+<MESSAGE id=0004 role=HELPDESK_ASSIGNEE>
+Hello Guillaume,
+If you install the module following the guidance in the link you shared, you shouldn't need to specify the version as it will install all of it’s dependencies.
+I have done this myself and it appears to install and run appropriately. Please let me know if you have further issues.
+Best regards,
+Elisabeth
+</MESSAGE>
+
+<MESSAGE id=0005 role=TICKET_CREATOR>
+Hello,
+
+When I’m trying with the command  conda install -c conda-forge dedalus, I have the error : 
+Solving environment: failed with initial frozen solve. Retrying with flexible solve.
+Solving environment: failed with repodata from current_repodata.json, will retry with next repodata source.
+Collecting package metadata (repodata.json): done
+
+And then the solving environment is running forever.
+
+Is there something I did wrong ?
+</MESSAGE>
+
+<MESSAGE id=0006 role=HELPDESK_ASSIGNEE>
+Hello Guillaume,
+Are you using your own installation of conda?
+Best regards,
+Elisabeth
+</MESSAGE>
+
+<MESSAGE id=0007 role=TICKET_CREATOR>
+I’m guessing not then. But how do I remove the conda installation that I already have, and install another one ?
+</MESSAGE>
+
+<MESSAGE id=0008 role=HELPDESK_ASSIGNEE>
+Hello Guillaume,
+As I advised before, you need to install conda via either miniconda or condaforge, in your /hpc-work area and not use the module that is on the cluster already.
+Best regards,
+Elisabeth
+</MESSAGE>
+
+<MESSAGE id=0009 role=TICKET_CREATOR>
+Okay I understood and made it work finally. Thank you !
+In order to run a program, I should use SLURM as usual ?
+</MESSAGE>
+
+<MESSAGE id=0010 role=HELPDESK_ASSIGNEE>
+Hello Guillaume,
+Yes, you can use SLURM to run jobs using it, if you wish to engage with it directly, you will want to use an interactive job [Interactive use — CSD3 1.0 documentation](https://docs.hpc.cam.ac.uk/hpc/user-guide/interactive.html)
+Best regards,
+Elisabeth
+</MESSAGE>
+
+<END_TICKET>
+
+
+----------
+
+<BEGIN_TICKET>
+[TICKET_KEY] HPCSSUP-98460
+[STATUS] RESOLVED
+[CREATED] 2026-01-29T15:00:02.479+0000
+[SUMMARY] Installing abaqus 2024 on HPC
+
+[INITIAL_DESCRIPTION]
+Good afternoon,
+A student from CEB would like to use abaqus 2024 on the HPC cluster. The student mentioned that they contacted you and you advised that this version is not compatible.
+I wanted to confirm if this is the case or did the end user misunderstand.
+Kind regards,
+Zac
+------------------------------------------------------
+Zac Iskander (he/him)
+IT Support Team Leader
+University of Cambridge
+Department of Engineering
+Trumpington Street
+Cambridge, CB2 1PZ, UK
+01223760591
+
+
+[CONVERSATION]
+<MESSAGE id=0001 role=HELPDESK_ASSIGNEE>
+Hello Zac, 
+That is correct yes. The most recent version we support is `abaqus/2022`. 
+Best wishes, 
+Henry
+HPC Support
+</MESSAGE>
+
+<MESSAGE id=0002 role=TICKET_CREATOR>
+Hi Henry,
+Thank you so much for the quick response. One last question 😊When will you support a newer version, or what are the steps required to be able to support it?
+Kind regards,
+Zac
+</MESSAGE>
+
+<MESSAGE id=0003 role=HELPDESK_ASSIGNEE>
+Hi Zac
+I can raise this internally with my colleagues but I’m unfortunately not able to give a timeline of when we might be able to support abaqus2024 centrally, apologies.  
+Best wishes, 
+Henry
+HPC Support
+</MESSAGE>
+
+<MESSAGE id=0004 role=TICKET_CREATOR>
+Thank you so much! There is not rush. It would be good to understand what the criteria are to allow the new version to be installed so we can communicate this with our end users, and to provide support if we can help.
+Kind regards,
+Zac
+</MESSAGE>
+
+<MESSAGE id=0005 role=HELPDESK_ASSIGNEE>
+Hi Zac,
+The licence is controlled by the department of engineering so you would need to raise this with them and investigate if it would be possible to licence a centrally available install of that particular version of the software:
+https://help.eng.cam.ac.uk/software/abaqus/  
+Best wishes, 
+Henry
+HPC Support
+</MESSAGE>
+
+<MESSAGE id=0006 role=TICKET_CREATOR>
+Hi Henry,
+Thank you so much, I'm the IT support team leader in the department of engineering. We offer the licence to any one from the university who is willing to contribute to the cost, we are happy for the newer version to be installed on HPC for existing users to utilise.
+Kind regards,
+Zac
+</MESSAGE>
+
+<MESSAGE id=0007 role=HELPDESK_ASSIGNEE>
+Hello Zac,
+In that case you can raise a request with us to have the new version of this software built. To make sure it’s sent to the appropriate colleague, please send it in as a new ticket to [support@hpc.cam.ac.uk](mailto:support@hpc.cam.ac.uk) and we can certainly look into installing this for you. 
+Best wishes, 
+Henry
+HPC Support
+</MESSAGE>
+
+<END_TICKET>
+
+
+----------
+
+<BEGIN_TICKET>
+[TICKET_KEY] HPCSSUP-97418
+[STATUS] RESOLVED
+[CREATED] 2026-01-13T11:58:31.930+0000
+[SUMMARY] Change interactive Rstudio R version to 4.5.1
+
+[INITIAL_DESCRIPTION]
+Dear HPC support,
+I would like to use the interactive Rstudio (via [https://login-web.hpc.cam.ac.uk<https://login-web.hpc.cam.ac.uk/](https://login-web.hpc.cam.ac.uk%3Chttps://login-web.hpc.cam.ac.uk/)>), but I need a newer R version. The version that it loads is 4.3.1, whereas I would like 4.5.1. Is it possible to get the interactive Rstudio to load this R version?
+Thank you!
+Best,
+Heather
+–
+Heather Machado
+Group Leader
+CRUK Career Development Fellow
+Department of Pathology
+Department of Genetics
+University of Cambridge
+Cambridge, UK
+
+
+[CONVERSATION]
+<MESSAGE id=0001 role=HELPDESK_ASSIGNEE>
+Hello Heather,
+After investigating this it does not appear as if we can readily change the version of Rstudio for login-web.  I will discuss this internally and see if a viable solution can be found for you.
+Best wishes, 
+Henry
+HPC Support
+</MESSAGE>
+
+<MESSAGE id=0002 role=TICKET_CREATOR>
+Hi Henry,
+I take it there’s little hope in changing the version of Rstudio for login-web?
+Best,
+Heather
+</MESSAGE>
+
+<MESSAGE id=0003 role=HELPDESK_ASSIGNEE>
+Hi @Kacper Kornet I’m just checking if in the end it was possible to do this? I haven’t been able to get it working since the version of R they want is too new.
+</MESSAGE>
+
+<MESSAGE id=0004 role=HELPDESK_ASSIGNEE>
+Dear Heather,
+I’ve discussed this internally and I’m afraid it doesn’t look like this will be possible due to how login-web is configured. Apologies. 
+Best wishes, 
+Henry
+HPC Support
+</MESSAGE>
+
+<MESSAGE id=0005 role=TICKET_CREATOR>
+Hi Henry,
+No worries. Thanks for looking into it!
+Best,
+Heather
+</MESSAGE>
+
+<MESSAGE id=0006 role=HELPDESK_ASSIGNEE>
+Thank you for the update,
+I will go ahead and mark this issue as closed for you. If you wish to re-open it, please reply to this email.
+Alternatively if you need further support on a different item then please open a new ticket by emailing (not forwarded or a reply to this) support@hpc.cam.ac.uk. Thank you
+</MESSAGE>
+
+<END_TICKET>
+
+
+----------
+
+<BEGIN_TICKET>
+[TICKET_KEY] HPCSSUP-95724
+[STATUS] RESOLVED
+[CREATED] 2025-11-20T18:57:38.088+0000
+[SUMMARY] Installing level-zero for multi-xpu training with Intel XPU
+
+[INITIAL_DESCRIPTION]
+Hi,
+I am trying to run multi-xpu fine-tuning on the DAWN intel XPUs. I almost succeeded but there is an error raised.
+According to Google, I have to install `sudo apt install level-zero-dev` to fix it.
+[https://git.ayo.run/ayo/ipex-llm/commit/499100daf1ced16202d9f238b76d4f00ed2c7cb9](https://git.ayo.run/ayo/ipex-llm/commit/499100daf1ced16202d9f238b76d4f00ed2c7cb9)
+The problem is that I do not have the sudo authentication.
+Could you please help me install this package?
+Thank you 
+Best wishes,
+Jiangnan
+
+
+[CONVERSATION]
+<MESSAGE id=0001 role=OTHER>
+Hi @Simon Hartley I’ve seen this come up a couple of times in the past and I wasn’t sure what the solution was, do you have some steps I could send? Thanks
+</MESSAGE>
+
+<MESSAGE id=0002 role=HELPDESK_ASSIGNEE>
+Hi Jiangnan,
+You should not need to install intel level-zero drivers as they are on each node. How are you running this? Are you trying to build a Apptainer container ? Are you trying to install in a Virtual Env?
+regards
+
+SimonH
+</MESSAGE>
+
+<MESSAGE id=0003 role=HELPDESK_ASSIGNEE>
+Hi Jiangnan,
+I also meant to ask which modules are you loading?
+Have you tried:
+```
+module load oneapi-level-zero/1.14/gcc/czctrcfw
+```
+regards
+ 
+SimonH
+</MESSAGE>
+
+<MESSAGE id=0004 role=HELPDESK_ASSIGNEE>
+Hi Jiangnan,
+  did you try the suggestions?  
+  Can I close this ticket Now? if you have any issues please open a new ticket.
+regards
+
+Simon
+</MESSAGE>
+
+<MESSAGE id=0005 role=TICKET_CREATOR>
+HI Simon,
+Sorry for the late response. You can close the issue now. I found that  level-zero can be installed through Conda.
+Thank you!
+Best wishes,
+Jiangnan
+</MESSAGE>
+
+<END_TICKET>
+
+
+----------
+
+<BEGIN_TICKET>
+[TICKET_KEY] HPCSSUP-98241
+[STATUS] RESOLVED
+[CREATED] 2026-01-26T16:48:42.300+0000
+[SUMMARY] Install Toast++ software
+
+[INITIAL_DESCRIPTION]
+Hello HPC support team,
+
+Name: Liam Collins-Jones, Account: lc984, PI: Gemma Bale
+I would like to install Toast++ software (http://web4.cs.ucl.ac.uk/research/vis/toast/download_src.html ). I attempted doing this myself towards the start of 2025 but was unsuccessful. Would anyone on your end be able to install this on my account? Happy to provide more details etc.
+Thanks! Liam.
+
+
+[CONVERSATION]
+<MESSAGE id=0001 role=HELPDESK_ASSIGNEE>
+Hello Liam,
+Can you please provide the commands you used as well as any specific build settings? Can you also please provide information on the errors you’re seeing? Thanks  
+Best wishes, 
+Henry
+HPC Support
+</MESSAGE>
+
+<MESSAGE id=0002 role=TICKET_CREATOR>
+Hello Henry,
+Thanks for following this up. I am running the following commands:-
+export CC=/usr/bin/gcc
+export CXX=/usr/bin/g++
+export F77=/usr/bin/gfortran
+cd /home/lc984/rds/hpc-work/Documents/MATLAB/toast
+export TOASTDIR=$PWD
+./configure
+source toastenv.sh
+make
+I am getting error messages after running make. I have attached a text edit file with the full output.
+Thanks,
+Liam.
+----------------------------------------------------------
+Liam Collins-Jones, PhD
+Blue Sky Research Fellow
+Cambridge NeuroWorks
+(pronouns: he, him)
+[FILE ATTACHMENT]
+ (132 kB)
+</MESSAGE>
+
+<MESSAGE id=0003 role=HELPDESK_ASSIGNEE>
+Hi Liam,
+I was able to build this by doing the following. 
+1. I made a directory called HPCSSUP98241 then cd’d into it
+2. I ran `git clone https://github.com/toastpp/toastpp.git` then `cd toastpp`
+3. I then ran `export TOASTDIR=$PWD` and built the software with 
+```
+./configure
+source toast.sh
+make numerics
+make toast
+```
+This should take a little while but it eventually builds with no errors. Ina job script, I then ran 
+```
+export TOAST_ROOT=/home/hc682/rds/hpc-work/HPCSSUP-98241/toastpp
+export PATH=$TOAST_ROOT/bin:$TOAST_ROOT/script:$PATH
+export LD_LIBRARY_PATH=$TOAST_ROOT/gcc8.5.0_shared_smp/lib:$LD_LIBRARY_PATH
+```
+To add the binaries etc. to my environment.
+Best wishes, 
+Henry
+HPC Support
+</MESSAGE>
+
+<MESSAGE id=0004 role=HELPDESK_ASSIGNEE>
+Hello,
+I have not had any updates on this ticket so I will go ahead and close it for you. If you wish to re-open it, please reply to this email.
+Alternatively if you need further support on a different item then please open a new ticket by emailing (not forwarded or a reply to this) [support@hpc.cam.ac.uk](mailto:support@hpc.cam.ac.uk). Thank you
+</MESSAGE>
+
+<END_TICKET>
+
+
+----------
+
+<BEGIN_TICKET>
+[TICKET_KEY] HPCSSUP-97411
+[STATUS] RESOLVED
+[CREATED] 2026-01-13T11:39:31.090+0000
+[SUMMARY] Module for blast 2.17
+
+[INITIAL_DESCRIPTION]
+Hello,
+Is there any chance we can add a module for the last version of blast? I think the last one available is 2.11, and it is not complete (for example blastp is missing)
+Thanks.
+
+
+[CONVERSATION]
+<MESSAGE id=0001 role=HELPDESK_ASSIGNEE>
+Hello Pio,
+I can investigate this for you. Please can you provide a link to the software? Thanks  
+Best wishes, 
+Henry
+HPC Support
+</MESSAGE>
+
+<MESSAGE id=0002 role=TICKET_CREATOR>
+Thanks, sorry, I thought I had copied the link
+[https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/](https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/)
+</MESSAGE>
+
+<MESSAGE id=0003 role=HELPDESK_ASSIGNEE>
+This seems quite easy to do. Any objections @Stuart Rankin ? Thanks If not I’ll do this
+</MESSAGE>
+
+<MESSAGE id=0004 role=HELPDESK_ASSIGNEE>
+Hello,
+I’ve installed this for you. Please run 
+```
+module load blast/2.17 
+```
+To access this software. 
+Best wishes, 
+Henry
+HPC Support
+</MESSAGE>
+
+<MESSAGE id=0005 role=TICKET_CREATOR>
+That was fast. Thanks a lot!
+</MESSAGE>
+
+<MESSAGE id=0006 role=HELPDESK_ASSIGNEE>
+No problem, do you have any further questions on this item for us? Thanks 
+Best wishes, 
+Henry
+HPC Support
+</MESSAGE>
+
+<MESSAGE id=0007 role=TICKET_CREATOR>
+No, I tested it and it seems  to work just fine. Thanks!
+</MESSAGE>
+
+<MESSAGE id=0008 role=HELPDESK_ASSIGNEE>
+Thank you for the update,
+I will go ahead and mark this issue as closed for you. If you wish to re-open it, please reply to this email.
+Alternatively if you need further support on a different item then please open a new ticket by emailing (not forwarded or a reply to this) support@hpc.cam.ac.uk. Thank you
+</MESSAGE>
+
+<END_TICKET>
+
+
+----------
+
+<BEGIN_TICKET>
+[TICKET_KEY] HPCSSUP-99428
+[STATUS] RESOLVED
+[CREATED] 2026-02-17T14:54:04.530+0000
+[SUMMARY] Urgent: Request to Install SNPolisher R Package on SRCP Environment (Platform ID: kjtcs2jvzw7)
+
+[INITIAL_DESCRIPTION]
+Hi Team,
+I’m getting in touch regarding an issue on the SRCP platform, which I’ve attached for reference. We urgently need the SNPolisher R package installed into the environment associated with the following platform ID: kjtcs2jvzw7.
+This is time‑critical, as the NHSBT Genomics Programme is currently unable to carry out essential clinical work without this package being available.
+Could you please prioritise this installation at your earliest opportunity and confirm once it has been completed?
+Grateful
+[cid:b9547aa4-5bed-4828-8cca-804065ce11a4]
+Many thanks,
+Justin Ofosu-Dankwa, PhD
+
+
+[CONVERSATION]
+<MESSAGE id=0001 role=TICKET_CREATOR>
+[FILE ATTACHMENT]
+</MESSAGE>
+
+<MESSAGE id=0002 role=OTHER>
+Hello Justin,
+Thank you for submitting a ticket, I will pass this along to the SRCP team.
+If you have any further information, please let me know, otherwise I will get back to you soon,
+Best regards,
+Elisabeth Reeve 
+HPC Support
+</MESSAGE>
+
+<MESSAGE id=0003 role=OTHER>
+Hi @Frederic Brochu This is a request from the platform manager to install SNPolisher R Package on vHPC kjtcs2jvzw7
+</MESSAGE>
+
+<MESSAGE id=0004 role=HELPDESK_ASSIGNEE>
+Dear Justin,
+The R package SNPolisher has been deployed on vHPC.
+You can access it with the command:
+`module load r-snpolisher`
+This command will also set up R.
+To try it from R command line (this should work with R Studio as well, but I haven’t tested it):
+
+```
+R
+>>> library(SNPolisher)
+>>>
+
+```
+Let me know if there is any problem with this module.
+
+Best regards,
+
+Frederic
+</MESSAGE>
+
+<MESSAGE id=0005 role=TICKET_CREATOR>
+Hi Frederic,
+Thanks for the above.
+Unfortunately, even after accessing the R package via the command line (module load r-snpolisher), we still get the error below when we run our IAP tool on the SRCP.
+[cid:66367676-1b4e-496f-b659-67e4c0cef9ac]
+[FILE ATTACHMENT]
+</MESSAGE>
+
+<MESSAGE id=0006 role=HELPDESK_ASSIGNEE>
+Hi Justin,
+Can you tell me which version of R is accessed by your IAP tool, or better yet the path to R used by your IAP tool? 
+Best regards,
+Frederic
+</MESSAGE>
+
+<MESSAGE id=0007 role=HELPDESK_ASSIGNEE>
+Hi Justin,
+
+Can you tell me the name of your IAP tool? Does it have a R prompt? Can it list environment variables in use ? If yes, can you send me a list of the environment variables set by your tool?
+
+Best regards,
+Frederic
+</MESSAGE>
+
+<MESSAGE id=0008 role=OTHER>
+Hi Frederic,
+I have copied in Olga, a Bioinformatician who's team is responsible for the IAP tool, she could help clarify/correct some of the answers below.
+Name of IAP: integrated_analysis_package.v1_2 (IAP v1.2);
+IAP Tool is found in: ~/shared/users/ng384/testing/
+[cid:3c329b93-5909-49c7-96c2-baaf73d9668a]
+@Olga Shamardina<[os360@cam.ac.uk](mailto:os360@cam.ac.uk)> could you please help us with the answers to these : Can it list environment variables in use ? If yes, can you send me a list of the environment variables set by your tool?
+Kind regards,
+Justin Ofosu-Dankwa, Ph.D O-
+Bioinformatician
+NHS Blood and Transplant
+Twitter @NHSBT
+Visit nhsbt.nhs.uk
+[FILE ATTACHMENT]
+</MESSAGE>
+
+<MESSAGE id=0009 role=OTHER>
+Hi Fredric,
+I have just tested the IAP again, the issue seems to have been resolved and it's now working again.
+Many thanks to you & Olga.
+Kind regards,
+Justin Ofosu-Dankwa, Ph.D O-
+Bioinformatician
+NHS Blood and Transplant
+Twitter @NHSBT
+Visit nhsbt.nhs.uk
+[FILE ATTACHMENT]
+</MESSAGE>
+
+<MESSAGE id=0010 role=HELPDESK_ASSIGNEE>
+Installation done and validated by customer
+</MESSAGE>
+
+<END_TICKET>
+
+
+----------
+
+<BEGIN_TICKET>
+[TICKET_KEY] HPCSSUP-99092
+[STATUS] RESOLVED
+[CREATED] 2026-02-11T03:34:02.660+0000
+[SUMMARY] Conda environment not activating correctly in Slurm jobs (uses base Python instead of env)
+
+[INITIAL_DESCRIPTION]
+Dear Support Team,
+I’m encountering an issue with Conda environment activation inside Slurm batch jobs on the cluster.
+I have a Conda environment named ml that contains its own Python installation (Python 3.10). When I activate it interactively on the login node, it behaves correctly:
+- conda activate ml
+- which python → points to the env’s interpreter under .../envs/ml/bin/python
+- python --version → Python 3.10.4
+However, when I submit a Slurm batch job, the job still uses the base Conda Python:
+Slurm job:
+#!/bin/bash
+#SBATCH --job-name=conda-test
+#SBATCH --output=conda_test.out
+#SBATCH --error=conda_test.err
+#SBATCH --time=00:05:00
+#SBATCH -A KOURTZI-SL2-CPU
+#SBATCH -p icelake
+1. Load your cluster's Anaconda/Miniconda module
+2. (adjust to whatever your cluster uses)
+module load miniconda
+source .bashrc
+1. Activate the environment
+conda activate ml
+1. Print the active environment name
+echo "Active conda environment: $(conda info --envs | grep '*' | awk '{print $1}')"
+1. Alternatively:
+2. echo "Active environment via \$CONDA_DEFAULT_ENV: $CONDA_DEFAULT_ENV"
+1. Test Python activation
+python -c "import sys; print('Using Python from:', sys.executable)"
+Output:
+Active conda environment: ml
+Using Python from: /usr/local/software/master/miniconda/3/bin/python
+What am I doing wrong here?
+Kind regards,
+Stefanos
+
+
+[CONVERSATION]
+<MESSAGE id=0001 role=HELPDESK_ASSIGNEE>
+Hello Stefanos,
+Ideally I would need to see all of the commands you’re using in full however as a starting point, our main suggestion presently is to install your own Conda into `hpc-work` by following https://www.anaconda.com/docs/getting-started/miniconda/install#linux-terminal-installer . This is because the cluster’s install is quite old now and may not function as intended. 
+Best wishes, 
+Henry
+HPC Support
+</MESSAGE>
+
+<MESSAGE id=0002 role=TICKET_CREATOR>
+Thank you Henry,
+What do you mean, into hpc-work? Is there documentation on this?
+Kind regards
+Stefanos
+</MESSAGE>
+
+<MESSAGE id=0003 role=HELPDESK_ASSIGNEE>
+Yes, please consult https://docs.hpc.cam.ac.uk/hpc/user-guide/io_management.html  for guidance on file system management. Please install miniconda into `~/rds/hpc-work` then set up your venvs accordingly. This is because the presently installed module is outdated and will not offer the same functionality as a personal install. 
+Best wishes, 
+Henry
+HPC Support
+</MESSAGE>
+
+<MESSAGE id=0004 role=OTHER>
+Send them the link to the user docs [File and I/O Management — CSD3 1.0 documentation](https://docs.hpc.cam.ac.uk/hpc/user-guide/io_management.html)
+</MESSAGE>
+
+<END_TICKET>
+
+
+----------
+
+<BEGIN_TICKET>
+[TICKET_KEY] HPCSSUP-95709
+[STATUS] RESOLVED
+[CREATED] 2025-11-20T13:57:31.584+0000
+[SUMMARY] CUDA-capable devices unavailable error on ampere
+
+[INITIAL_DESCRIPTION]
+Hi
+I've been getting an error on Ampere jobs recently where it fails immediately, stating that the CUDA-capable devices aren't available. I've had this error occur when using submission scripts for running turbostream 3.6.10 which has worked for years, and using a separate script running turbostream 4.2.127 recently. I've attached an example slurm.out file I've had from a turbostream4 job. This error seems to happen whenever I get assigned gpu-q-29, though I've heard colleagues mention getting something similar recently on different nodes. I'm aware I can exclude gpu-q-29 in my sbatch, but if it happens on other nodes and I lose all the time I waited in the queue, it's frustrating. Are there any sbatch instructions I can add to avoid this happening, or a fix for the route problem?
+Many Thanks,
+Dom
+Example slurm.out file
+_______________________________________________________________________
+Loading rhel8/default-amp
+Loading requirement: rhel8/slurm singularity/current rhel8/global cuda/11.4
+libpciaccess/0.16/gcc-9.4.0-6fonbj6 libiconv/1.16/gcc-9.4.0-ahebbov
+libxml2/2.9.12/gcc-9.4.0-gnknt5e ncurses/6.2/gcc-9.4.0-aiirok7
+hwloc/2.5.0/gcc-9.4.0-7sqomga libevent/2.1.12/gcc-9.4.0-hgny7cm
+numactl/2.0.14/gcc-9.4.0-52dwc6n cuda/11.4.0/gcc-9.4.0-3hnxhjt
+gdrcopy/2.2/gcc-9.4.0-e4igtfp knem/1.1.4/gcc-9.4.0-bpbxgva
+libnl/3.3.0/gcc-9.4.0-whwhrwb rdma-core/34.0/gcc-9.4.0-5eo5n2u
+ucx/1.11.1/gcc-9.4.0-lktqyl4 openmpi/4.1.1/gcc-9.4.0-epagguv
+Changed directory to /home/drc60/rds/hpc-work/Liftfan/TURBOSTREAM4.
+JobID: 17907836
+======
+Time: Thu 20 Nov 13:39:09 GMT 2025
+Running on master node: gpu-q-26
+Current directory: /home/drc60/rds/hpc-work/Liftfan/TURBOSTREAM4
+Nodes allocated:
+================
+gpu-q-[26 29]
+numprocs=8, numnodes=2, ppn=4 (OMP_NUM_THREADS=1)
+Executing command:
+==================
+mpirun -npernode 4 -np 8 python /usr/local/software/turbostream/ts42127/a100/turbostream_4/bin/turbostream.py config_initial.ofp lf_exp_sig1p15_l0p037_ns2_ULJSAAAJB51TSS77LLNE_nac_V1_thic_hover_input.hdf5 lf_exp_sig1p15_l0p037_ns2_ULJSAAAJB51TSS77LLNE_nac_V1_thic_hover_input.hdf5 lf_exp_sig1p15_l0p037_ns2_ULJSAAAJB51TSS77LLNE_nac_V1_thic_hover_input.hdf5 lf_exp_sig1p15_l0p037_ns2_ULJSAAAJB51TSS77LLNE_nac_V1_thic_hover_laminar 4
+Cuda error in file 'src/sbd/cuda/sbd_cuda.cu' in line 2002 : all CUDA-capable devices are busy or unavailable.
+Cuda error in file 'src/sbd/cuda/sbd_cuda.cu' in line 2002 : all CUDA-capable devices are busy or unavailable.
+--------------------------------------------------------------------------
+Primary job  terminated normally, but 1 process returned
+a non-zero exit code. Per user-direction, the job has been aborted.
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+mpirun detected that one or more processes exited with non-zero status, thus causing
+the job to be terminated. The first process to do so was:
+Process name: [[55555,1],7]
+Exit code:    1
+--------------------------------------------------------------------------
+
+
+[CONVERSATION]
+<MESSAGE id=0001 role=HELPDESK_ASSIGNEE>
+Hi Dom,
+Can you please provide your submission script for me? Thanks  
+Best wishes, 
+Henry
+HPC Support
+</MESSAGE>
+
+<MESSAGE id=0002 role=TICKET_CREATOR>
+Hi Henry
+I've attached example submission scripts for turbostream 3.6.10 and turbostream 4.2.127. The turbostream 3 script has worked for years for many users, the only change I've made recently is to add the #SBATCH --exclude=gpu-q-29 line. The ts4 script I've generated recently, but have been able to run jobs successfully the majority of the time, until I get to this CUDA issue.
+Best Wishes,
+Dom
+[FILE ATTACHMENT]
+ (4 kB)
+[FILE ATTACHMENT]
+ (4 kB)
+</MESSAGE>
+
+<MESSAGE id=0003 role=HELPDESK_ASSIGNEE>
+Hi Dom, 
+Can you try replacing 
+```
+#! Load modules
+. /etc/profile.d/modules.sh                # Leave this line (enables the module command)
+module purge                               # Removes all modules loaded by ~/.bashrc
+source /usr/local/software/turbostream/ts42127/bashrc_module_ts42127_a100 
+```
+with 
+```
+#! Load modules
+. /etc/profile.d/modules.sh                # Leave this line (enables the module command)
+module purge                               # Removes all modules loaded by ~/.bashrc
+module load rhel8/default-amp
+source /usr/local/software/turbostream/ts42127/bashrc_module_ts42127_a100
+```
+For me please? The rhel8/default-amp directive should add cuda and it’s associated runtimes to your environment.
+Best wishes, 
+Henry
+HPC Support
+</MESSAGE>
+
+<MESSAGE id=0004 role=TICKET_CREATOR>
+Yes, I can try adding those in. Is there a way to force testing it on gpu-q-29 and skip the queue with interactive priority or similar?
+Is there a reason why the submission scripts works fine on the majority of GPU nodes and I only have an issue with this specific one?
+Best Wishes,
+Dom
+</MESSAGE>
+
+<MESSAGE id=0005 role=HELPDESK_ASSIGNEE>
+Hi Dom, 
+My advice would be to avoid running your job on that node until we identify if there’s an issue. You can use an option like this to route around it 
+```
+#SBATCH --exclude=gpu-q-29 
+```
+Upon closer review of your error, I think there may be another cause as well in the arguments passed to `mpirun`. Please try removing `-npernode 4 -np 8` and let Open MPI infer from SLURM. It might be better to replace
+```
+#SBATCH --nodes=2
+#SBATCH --ntasks=8
+```
+with
+```
+#SBATCH --nodes=2
+#SBATCH --tasks-per-node=4
+```
+in the submission script- Open MPI is integrated into SLURM so will infer the correct number of tasks on each node.
+Best wishes, 
+Henry
+HPC Support
+</MESSAGE>
+
+<MESSAGE id=0006 role=HELPDESK_ASSIGNEE>
+Hello Dom,
+Further to this, we have rebooted the faulty node and it has passed all diagnostics so should be safe to use again. 
+Best wishes, 
+Henry
+HPC Support
+</MESSAGE>
+
+<MESSAGE id=0007 role=TICKET_CREATOR>
+Hi Henry, that's great - thanks for your help
+Best Wishes,
+Dom
+</MESSAGE>
+
+<MESSAGE id=0008 role=HELPDESK_ASSIGNEE>
+No problem
+I will go ahead and mark this issue as closed for you. If you wish to re-open it, please reply to this email.
+Alternatively if you need further support on a different item then please open a new ticket by emailing (not forwarded or a reply to this) support@hpc.cam.ac.uk. Thank you
+</MESSAGE>
+
+<END_TICKET>
+
+
+----------
+
+<BEGIN_TICKET>
+[TICKET_KEY] HPCSSUP-100181
+[STATUS] RESOLVED
+[CREATED] 2026-03-04T11:26:00.002+0000
+[SUMMARY] CSD3 Python environment setup issues
+
+[INITIAL_DESCRIPTION]
+Good morning,
+I’d like to request your support as I’ve had issues setting up and using Python environments on CSD3.
+Normally I used my own installation of micromamba and had set up environments with numpy, pytorch, etc. However, as of recently, launching python and running `import torch` freezes completely. I submitted a job consisting only of `python -c import torch` and it took over an hour to complete.
+I cleaned up my local environment and completely uninstalled micromamba and cleared all caches.
+Then, I attempted to follow the steps here: [https://docs.hpc.cam.ac.uk/software-packages/pytorch.html](https://docs.hpc.cam.ac.uk/software-packages/pytorch.html). However, the simple step of `python -m venv` took over 3 minutes to complete, indicating the problem is to do with python in general. I checked `which python` and it was using `/usr/local/software/spack/csd3/opt-2024-06-01/linux-rocky8-cascadelake/gcc-13.3.0/python-3.11.9-nptrdpllnmurec6o5hvu7iwyca5qgajy/bin/python`
+Finally, I attempted to use the pre-installed miniconda3 per the instructions here: [https://docs.hpc.cam.ac.uk/software-tools/python.html](https://docs.hpc.cam.ac.uk/software-tools/python.html). However setting up a simple environment with pandas and pytorch has been running for several hours as of this email.
+Can you help me figure out why it’s being so slow and what to do?
+Could it be that the problem is with the file system? I attempted `python -m venv` both in my home directory and on hpc-work and it took very long in both cases.
+Thanks for your help,
+Stelios Boulitsakis Logothetis
+
+
+[CONVERSATION]
+<MESSAGE id=0001 role=HELPDESK_ASSIGNEE>
+Hello Stelios,
+Can you please confirm the following points so we can try and investigate the issue:
+- How are you accessing the cluster?
+- Which directory are you working out of?
+- Which modules are you running and what commands do you use to complete this?
+- Which login node are you landing on that you notice this issue?
+Best regards,
+Elisabeth Reeve
+HPC Support
+</MESSAGE>
+
+<MESSAGE id=0002 role=TICKET_CREATOR>
+- I access the cluster by `ssh login-icelake.hpc.cam.ac.uk`
+- I’m working out of ~/rds/hpc-work
+- I normally don’t load any modules at all. Except the debugging steps I mentioned in my email.
+- This has occurred on login-q-2 and login-q-3 on different days.
+BW
+Stelios
+</MESSAGE>
+
+<MESSAGE id=0003 role=HELPDESK_ASSIGNEE>
+Hello Stelios,
+We are currently investigating an issue that may be affecting your problem. We believe this has been resolved but may take some time for service to return to normal.
+Please let me know if you continue to experience this problem.
+Best regards,
+Elisabeth
+</MESSAGE>
+
+<MESSAGE id=0004 role=TICKET_CREATOR>
+Hi Elisabeth,
+I just tried again and everything installed smoothly, so your fix worked.
+Can you share what it was, out of curiosity?
+And assuming it keeps working we can close this ticket.
+Best,
+Stelios
+</MESSAGE>
+
+<MESSAGE id=0005 role=HELPDESK_ASSIGNEE>
+Hello Stelios,
+It was a job that was running a very old module that was seemingly causing issues with the filesystem! Hopefully, it won’t occur again but do let me know if it returns this week. I will close the ticket for now.
+Best regards,
+Elisabeth
+</MESSAGE>
+
+<END_TICKET>
+
+
+----------
+
+<BEGIN_TICKET>
+[TICKET_KEY] HPCSSUP-99961
+[STATUS] RESOLVED
+[CREATED] 2026-02-27T11:47:04.398+0000
+[SUMMARY] Python modules slow to import
+
+[INITIAL_DESCRIPTION]
+Hi,
+I am having an issue when debugging my Python code on the gfx nodes: when I try to run simple scripts which should finish in less than 1 second, they sometimes take 10s of seconds or even minutes in some cases to run.
+When interrupting one of these scripts (with CTRL-C) the python traceback shows that the process was terminated when trying to import various modules.
+The below terminal output from a very simple script where only a single module is imported is shown below:
+[cid:a6653bb8-3762-4b4a-9dc4-5d29b74c798f]
+As you can see, I ran the exact same command 3 times, with one of them taking substantially longer than the other two.
+This issue seems to happen when more than a few minutes has passed since I last ran a script and is starting to become a real pain to my workflow as I when I make changes to code and want to test them I sometimes have to wait minutes for the script to run when it should take ~1 second.
+To give some extra details as to my setup; I am using uv package manager with python 3.12.12. UV sets up a python virtual environment (venv) and installs dependencies there as is best practise.
+If I had to guess as to what is going on, it seems to be some kind of file system latency where the venv files are normally in some kind of cache so are fast but after a while has passed they are removed and must be retrieved from somewhere much slower. Note that all of the python files and modules are stored in my RDS hpc-work folder.
+Would you be able to look into this please? Perhaps there is some quirk of/issue with the lustre filesystem that is causing this?
+Many thanks,
+Leo
+
+
+[CONVERSATION]
+<MESSAGE id=0001 role=TICKET_CREATOR>
+[FILE ATTACHMENT]
+</MESSAGE>
+
+<MESSAGE id=0002 role=HELPDESK_ASSIGNEE>
+Hello Leo,
+We aren’t aware of any ongoing issues which could be causing this other than the general fact that since RDS is a shared file system, you will unfortunately witness slowdowns or unwanted interruptions to your work if the system is being taxed by heavy load. This is the most likely cause since your venvs are stored in `hpc-work` which is RDS based.  
+Best wishes, 
+Henry
+HPC Support
+</MESSAGE>
+
+<END_TICKET>
+
+
+----------
+
+<BEGIN_TICKET>
+[TICKET_KEY] HPCSSUP-100372
+[STATUS] RESOLVED
+[CREATED] 2026-03-08T08:59:07.368+0000
+[SUMMARY] RCS, Access denied
+
+[INITIAL_DESCRIPTION]
+Dear support team,
+I am trying to log in to my RCS storage (rcs-cez22-zielinski) using FileZilla. I am following the instructions given in "Reseach Storage Documentation”. Unfortunately, I am denied access after entering my password and the TOTP verification code (see screenshot).
+I can succesfully log in to [https://login-web.hpc.cam.ac.uk/](https://login-web.hpc.cam.ac.uk/), so I assume I have the correct password. I have also succesfully set up MFA/TOTP for CSD3 (see screenshot), and I am correctly entering the code when prompted to do so.
+Maybe I need a different password that is specific for this service?
+Kind regards
+Christina
+Prof. Dr. med. Christina Zielinski
+Professor of Infection and Immunity
+Department of Pathology
+University of Cambridge
+Tennis Court Road
+Cambridge CB2 1QP
+cez22@cam.ac.uk
+s[Screenshot 2026-03-08 at 09.42.33.png]
+[IMG_5398.PNG]
+
+
+[CONVERSATION]
+<MESSAGE id=0001 role=TICKET_CREATOR>
+[FILE ATTACHMENT]
+[FILE ATTACHMENT]
+</MESSAGE>
+
+<MESSAGE id=0002 role=HELPDESK_ASSIGNEE>
+Hi Christina, 
+Apologies, our automation missed off adding you to the correct groups. I’ve corrected this now. You will however need to create a totp that works with RCS. To do that you will need to visit 
+```
+ssh cez22@multi.hpc.cam.ac.uk
+```
+And follow the on-screen instructions. Please see https://docs.hpc.cam.ac.uk/hpc/user-guide/mfa.html#walkthrough-ssh-to-multi-hpc-cam-ac-uk  for more information.
+Note that you have a CSD3 account so you should then be able to log into a login node with 
+```
+ssh cez22@login-icelake.hpc.cam.ac.uk
+```
+And access the storage at 
+```
+/home/cez22/rcs/rcs-cez22-zielinski/
+```
+Best wishes, 
+Henry
+HPC Support
+</MESSAGE>
+
+<END_TICKET>
+
+
+----------
+
+<BEGIN_TICKET>
+[TICKET_KEY] HPCSSUP-100576
+[STATUS] RESOLVED
+[CREATED] 2026-03-11T21:14:00.072+0000
+[SUMMARY] Re: CSD3 systems at Cambridge (ms3242)
+
+[INITIAL_DESCRIPTION]
+Good evening,
+I have recently been trying to connect to the CSD3 to start working in the cluster for the first time. I have Two-Factor Authentication on my account already enabled (please see image attached).
+When I try to connect to the login node (login.hpc.cam.ac.uk) through ssh I am being requested to provide the TOTP Verification Code. Unfortunately, I did not retain the QR code when connecting for the first time to multi.hpc.cam.ac.uk.
+Would it be possible to reset this multi.hpc.cam.ac.uk QR code so I can scan it with Google Authenticator to set the login for my account?
+Many thanks for your assistance on this matter.
+Martin
+________________________________
+From: support@hpc.cam.ac.uk <support@hpc.cam.ac.uk>
+Sent: 27 January 2026 14:44
+To: Martin Santamarina Garcia <ms3242@cam.ac.uk>
+Subject: CSD3 systems at Cambridge (ms3242)
+Welcome to the Cambridge Service for Data Driven Discovery (CSD3)
+facility. CSD3 is comprised of distinct CPU and GPU systems:
+CSD3-CPU      - Intel Cascade Lake, Ice Lake and Sapphire Rapids
+HDR InfiniBand CPU clusters
+Wilkes3-GPU   - NVIDIA A100/Mellanox HDR InfiniBand GPU cluster.
+The O/S on CSD3 nodes is Rocky Linux 8, a rebuild of RHEL8,
+where RHEL=Red Hat Enterprise Linux which is compatible
+with CentOS, Scientific Linux and others but NOT Ubuntu.
+For more information on the service please see:
+docs.hpc.cam.ac.uk
+Connecting
+==========
+Firstly, if you are an external user, please email a RSA SSH public
+key to support@hpc.cam.ac.uk (please use at least 2048 bits and don't
+forget to set a passphrase). The id of the user account is as given
+on the Subject line to this email.
+Internal Cambridge users, please use your Cambridge CRSid and
+UIS password.
+Before you login for the first time, please SSH to
+multi.hpc.cam.ac.uk
+to generate a TOTP MFA secret for your phone. multi.hpc has
+the same host keys as the login nodes (see below). For more
+information about MFA on CSD3 please see
+[https://docs.hpc.cam.ac.uk/hpc/user-guide/mfa.html](https://docs.hpc.cam.ac.uk/hpc/user-guide/mfa.html) .
+All users should login via SSH to:
+login.hpc.cam.ac.uk
+This destination will take you to one of a set of login nodes which
+may have either Cascade Lake or Ice Lake CPUs. If you prefer a
+particular CPU type (e.g. because you are developing code to run on
+that type) you may alternatively SSH to
+login-cascadelake.hpc.cam.ac.uk or login-icelake.hpc.cam.ac.uk to
+reach nodes of that type.
+We allow unrestricted SSH access to the CSD3 login nodes,
+but have protected them with Fail2Ban. This means that after
+repeated failed login attempts from the same origin, that origin
+will be blocked from further access for 20 minutes.
+The SSH host keys used by all login nodes have the following
+fingerprints (which of these hashes you see will depend on your
+client):
+RSA
+MD5:fd:5c:6b:7d:49:95:2f:da:7f:5c:50:9a:bb:ef:3f:24
+SHA256:2rl+MXd9rsrDzFZwEItmhhiHTlLTIqN0d3TSGLTgjTI
+ED25519
+MD5:eb:e3:a1:f0:64:68:cf:9c:63:da:84:db:2e:ee:15:83
+SHA256:nFVSXK+VRGCaUupQEdhXzO6kp01m2fzzmbgPr0sc2so
+As well as SSH login, connection is possible via x2go and VNC (the
+latter needs to be tunnelled over SSH).
+Storage
+=======
+Each user has a hard quota of 50GiB on their home directory. This is
+provided over NFS and hourly/daily/weekly snapshots are made
+automatically which can be searched by the user. E.g. if you delete a
+file by accident look in the hidden .snapshot directory and browse the
+best snapshot for the file (which can be copied back to your home
+directory).
+The working/scratch storage has been implemented as part of the
+Cambridge Research Data Storage (RDS) service. Please look under
+~/rds/ for your personal "work" directory (it will have the name
+hpc-work). There is currently a 1TB per user quota enforced on this
+directory. Please note that it is possible to buy additional, larger
+RDS areas, these are also visible on CSD3 under the ~/rds directory.
+Data to be read by jobs (including software installations) and output
+files from jobs should be placed in RDS areas, NOT the home
+directory. This is because /home is NFS-based and lacks the
+scalability of the lustre-based RDS. I/O to /home by jobs can create
+global system issues.
+User environment
+================
+CSD3 nodes currently run a common RHEL8-compatible operating system
+but present additional development packages tuned to the node
+hardware. We recommend that all optimised application binaries be
+compiled on login nodes matching the target nodes as closely as
+possible.
+For development on cclake* partitions, the best choice is
+login-cascadelake.hpc.cam.ac.uk .
+On icelake* and sapphire* partitions, the best choice is
+login-icelake.hpc.cam.ac.uk .
+Note that the login-icelake nodes do not have GPUs and have a different
+(Intel) CPU type to the (AMD) ampere GPU nodes, so ampere development may
+require interactive use of a GPU node (see
+[https://docs.hpc.cam.ac.uk/hpc/user-guide/interactive.html#sintr](https://docs.hpc.cam.ac.uk/hpc/user-guide/interactive.html#sintr)
+).
+Environment modules loading additional software packages are now
+being generated by spack. There are different spack package trees
+for each node hardware type.
+The module names contain hashes uniquely identifying the build options
+and dependencies but the modules can be searched and located using the
+spack command. E.g. to search for modules providing HDF5 1.10.1
+compiled using GCC, search for existing builds using
+spack find -v hdf5@1.10.1%gcc
+which will list matching builds and also show which configure options
+were on :plus: or off (~) . Less version information will show more
+choices, e.g. one might start off with just spack find hdf5%gcc.
+Full details of any matching builds including dependencies (e.g. which
+MPI was used) can be extracted with
+spack find -dvl hdf5@1.10.1%gcc@5.4.0
+Existing builds have modules which can be identified with a command
+such as
+spack module find hdf5@1.10.1+mpi %gcc@5.4.0 ^openmpi@1.10.7
+which returns the name of the corresponding module
+(hdf5-1.10.1-gcc-5.4.0-i52euam). Note that it is sometimes convenient
+to search using the short hash form identifying each build (printed at
+the start of line of output by the spack find -dvl command). E.g.
+spack module find /i52euam
+(notice the / introducing the hash).
+Missing builds can be requested. (For more information about spack
+see [https://eur03.safelinks.protection.outlook.com/?url=http%3A%2F%2Fspack.readthedocs.io%2Fen%2Flatest%2Findex.html&data=05%7C02%7Cms3242%40universityofcambridgecloud.onmicrosoft.com%7C9ffee2c674c742b2c17608de5db28853%7C49a50445bdfa4b79ade3547b4f3986e9%7C1%7C0%7C639051218545595340%7CUnknown%7CTWFpbGZsb3d8eyJFbXB0eU1hcGkiOnRydWUsIlYiOiIwLjAuMDAwMCIsIlAiOiJXaW4zMiIsIkFOIjoiTWFpbCIsIldUIjoyfQ%3D%3D%7C0%7C%7C%7C&sdata=cM%2FDapcmf08FOqIdc0YID9mKhRhD%2BD4VW61nuNHb8Eg%3D&reserved=0.)<http://spack.readthedocs.io/en/latest/index.html](https://eur03.safelinks.protection.outlook.com/?url=http%3A%2F%2Fspack.readthedocs.io%2Fen%2Flatest%2Findex.html&data=05%7C02%7Cms3242%40universityofcambridgecloud.onmicrosoft.com%7C9ffee2c674c742b2c17608de5db28853%7C49a50445bdfa4b79ade3547b4f3986e9%7C1%7C0%7C639051218545595340%7CUnknown%7CTWFpbGZsb3d8eyJFbXB0eU1hcGkiOnRydWUsIlYiOiIwLjAuMDAwMCIsIlAiOiJXaW4zMiIsIkFOIjoiTWFpbCIsIldUIjoyfQ%3D%3D%7C0%7C%7C%7C&sdata=cM%2FDapcmf08FOqIdc0YID9mKhRhD%2BD4VW61nuNHb8Eg%3D&reserved=0.)%3Chttp://spack.readthedocs.io/en/latest/index.html)>
+Submitting jobs
+===============
+CSD3 uses Slurm for job scheduling. Please use the command
+mybalance
+to show your project, your current usage and the remaining balance in
+compute unit hours.
+On CSD3 the type of unit hour represented in mybalance output depends
+on whether the project controls resources on a CPU partition (-CPU
+projects) or a GPU partition (-GPU projects), i.e.
+- projects ending in -CPU use CPU core hours
+- projects ending in -GPU use GPU hours
+The projects listed by mybalance are the projects you should specify in
+Slurm submissions either through
+#SBATCH -A YOUR_PROJECT
+in the job submission script or equivalently on the command line with
+sbatch -A YOUR_PROJECT ...
+Cascade Lake
+------------
+Cascade Lake jobs require the partitions cclake or cclake-himem, i.e.
+#SBATCH -p cclake
+or
+#SBATCH -p cclake-himem
+and will be allocated the number of cpus required for the number of
+tasks requested and a corresponding amount of memory. By default, the
+cclake partition provides 1 cpu and 3410MiB of RAM per task, and the
+cclake-himem partition provides 1 cpu and 6840MiB per task.
+Requesting more cpus per task, or more memory per task, may both
+increase the number of cpus allocated (and hence the charge). It is
+more cost efficient to submit jobs requiring more than 3410MiB per task
+to the -himem partition since more memory per cpu is available
+there. Hyperthreading is disabled on the CPU nodes so there is no
+distinction between cpus and cores - each node has 56 cores in total.
+Ice Lake and Sapphire Rapids
+----------------------------
+Ice Lake and Sapphire Rapids partitions work in a similar way with the
+following differences:
+The icelake partition provides 1 cpu and 3370MiB per task by default.
+The icelake-himem partition provides 1 cpu and 6760MiB per task by default.
+Each node has 76 cpus.
+The sapphire partition provides 1 cpu and 4580MiB per task by default.
+Each node has 112 cpus.
+Wilkes3-GPU
+-----------
+GPU jobs require the partition ampere (#SBATCH -p ampere) and may
+request any number of GPUs per node from the range 1 to 4, which is
+done via the directive
+#SBATCH --gres=gpu:N
+where 1 <=  N <= 4.
+Each GPU node contains 4 NVIDIA A100-SXM-80GB GPUs, with 1000GiB RAM and
+two AMD EPYC 7763 64-Core processors.
+Any jobs requesting more than one node must request 4 GPUs per
+node. Jobs less than one node in size will be prevented from
+requesting more than 32 CPUs per GPU. The enforcement is performed by
+a job submission filter which will produce an explanatory message if
+it rejects a job outright.
+The service levels defined for jobs are currently:
+SL2:
+4256 CPU cores per user maximum for a maximum of 36 hours of wallclock time per job
+64 GPUs per user maximum for a maximum of 36 hours of wallclock time per job
+SL3:
+448 CPU cores per user maximum for a maximum of 12 hours of wallclock time per job
+32 GPUs per user maximum for a maximum of 12 hours of wallclock time per job
+In addition it is possible to submit low priority jobs of no more than
+12 hours duration to a special project project-sl4-type (where
+type=cpu or gpu) which allows a limited number of jobs to run when the
+alternative is leaving nodes idle.
+Please email support@hpc.cam.ac.uk if any problems are encountered.
+Kind regards,
+Research Computing Services
+
+
+[CONVERSATION]
+<MESSAGE id=0001 role=TICKET_CREATOR>
+[FILE ATTACHMENT]
+[FILE ATTACHMENT]
+</MESSAGE>
+
+<MESSAGE id=0002 role=HELPDESK_ASSIGNEE>
+Hello Martin,
+We can reset your MFA. In order to do so we will need to have a quick video call, no more than 5 minutes, where you can present your photo ID for verification.
+Please let me know a time and date that is suitable for you and I can send an MS Teams meeting invite. Service Desk hours are 9am - 5pm, Mon- Fri, excl. holidays.
+Best regards,
+Elisabeth Reeve 
+HPC Support
+</MESSAGE>
+
+<MESSAGE id=0003 role=TICKET_CREATOR>
+Hi Elisabeth,
+Would it be possible to have this call tomorrow morning at 11am? Or alternatively, any time in the afternoon after 3pm. Many thanks for your assistance on this matter
+Best,
+Martín
+</MESSAGE>
+
+<MESSAGE id=0004 role=HELPDESK_ASSIGNEE>
+userid ms3242 CSD3 MFA reset
+</MESSAGE>
+
+<MESSAGE id=0005 role=HELPDESK_ASSIGNEE>
+Hello Martin, 
+This is just to confirm that your MFA for the cluster has been reset. To get your new TOTP please put the following into your terminal:
+`ssh ms3242@multi.hpc.cam.ac.uk`
+It will then ask for a password, this should be your University of Cambridge password, and then a QR code will appear for you to scan into your authenticator app. If all goes well, you should have a TOTP labelled “CSD3:SSH Login” or something similar to that.
+If you use the web interface, all you will need to do is login as normal and a QR code will appear for you to scan too. This TOTP should be labelled “CSD3:ms3242”
+We do also have our user documentation that highlights the process as well, that you may find helpful: [https://docs.hpc.cam.ac.uk/hpc/user-guide/mfa.html](https://docs.hpc.cam.ac.uk/hpc/user-guide/mfa.html)
+Please do let me know if you have any issues,
+Best regards,
+Elisabeth
+</MESSAGE>
+
+<END_TICKET>
+
+
+----------
+
+<BEGIN_TICKET>
+[TICKET_KEY] HPCSSUP-100381
+[STATUS] RESOLVED
+[CREATED] 2026-03-08T15:45:54.588+0000
+[SUMMARY] Unable to log back into R Studio during interactive Session
+
+[INITIAL_DESCRIPTION]
+During my interactive session with RStudio, I noticed that if I am not active on the page while my model is running, I am logged out of the RStudio server, but the login I use for the HPC does not work to log back into the RStudio server. I have attempted to refresh the HPC main page, log out and back in, and then relaunch my RStudio session that is currently running. However, when I try to relaunch it, I am redirected to an RStudio login page that displays the message: “Temporary server error, please try again.”  When I attempt to log in using the same credentials I use for the HPC, it does not allow me to log back in. I have also tried Chrome and Safari, and seem to run into the same login page. My models still run, but I would like to be able to access the R page while they are running so I can see its progress. Thank you! 
+
+
+
+
+[CONVERSATION]
+<MESSAGE id=0001 role=HELPDESK_ASSIGNEE>
+Hi Julia, 
+Please try following the steps below to retrieve your session password: 
+1. Click the session ID hyperlink 
+[FILE ATTACHMENT]
+2. Click on `Connection.yml` 
+[FILE ATTACHMENT]
+3. Copy and paste the password as shown below 
+[FILE ATTACHMENT]
+Best wishes, 
+Henry
+HPC Support
+</MESSAGE>
+
+<END_TICKET>
+
+
+----------
+
+<BEGIN_TICKET>
+[TICKET_KEY] HPCSSUP-100608
+[STATUS] RESOLVED
+[CREATED] 2026-03-12T11:17:04.530+0000
+[SUMMARY] Problems connecting to RFS network - token password required.
+
+[INITIAL_DESCRIPTION]
+Dear support team
+I am having trouble accessing the RFS service for my lab group (TP group, Condensed Matter Physics, Maxwell Centre). It has already been mapped, and it was working fine, but today it asked me for the password of my username (of the computer I was using). As you know, those are generated tokens. So, I generated a new one for the computer I am using, but it does not accept it. How can we fix that? It is urgent that I have access to my data.
+Best regards
+Patricia N. Lazo Paravicini
+Pilizota Lab
+Department of Physics
+University of Cambridge
+
+
+[CONVERSATION]
+<MESSAGE id=0001 role=HELPDESK_ASSIGNEE>
+Hello Patricia,
+Can you please provide a screenshot of the error you are receiving.
+Best regards,
+Elisabeth Reeve
+HPC Support
+</MESSAGE>
+
+<MESSAGE id=0002 role=TICKET_CREATOR>
+Dear Elisabeth
+Actually, windows security does not let me take a screenshot directly. A photograph of my screen is as good as it will get. See attached. I know the password for the device is correct, I recently generated the new token for it.
+Let me know what else is needed
+Best
+Patricia
+[FILE ATTACHMENT]
+</MESSAGE>
+
+<MESSAGE id=0003 role=HELPDESK_ASSIGNEE>
+Hello Patricia,
+Please ensure that you are connected to the Cambridge VPN or the network directly, and ensure that you are following the steps noted here: [Windows 10 — Research Storage Documentation documentation](https://docs.hpc.cam.ac.uk/storage/rfs/accessing-rfs/windows-10.html)
+The credentials you are using would be for the Cambridge VPN and not for access BLUE, this uses your regular UIS credentials.
+Best regards,
+Elisabeth
+</MESSAGE>
+
+<MESSAGE id=0004 role=TICKET_CREATOR>
+Dear Elisabeth
+I tried my UIS credentials and it is working just fine. I do not know why the credentials of the VPN were preset. I will keep this in mind. The problem has been resolved.
+Thanks for your kind help,
+Best regards
+Patricia
+</MESSAGE>
+
+<END_TICKET>
+
+
+----------
+
+<BEGIN_TICKET>
+[TICKET_KEY] HPCSSUP-100516
+[STATUS] RESOLVED
+[CREATED] 2026-03-11T10:44:59.913+0000
+[SUMMARY] Fw: Purchase order for Service Level 2 and simulation hours
+
+[INITIAL_DESCRIPTION]
+Dear HPC team,
+Please find attached a purchase order for 2,000 CPU hours of service level 2 , to be credited to Emily Lines.
+Best wishes,
+Anne Baranger
+
+
+[CONVERSATION]
+<MESSAGE id=0001 role=TICKET_CREATOR>
+[FILE ATTACHMENT]
+ (15 kB)
+</MESSAGE>
+
+<MESSAGE id=0002 role=HELPDESK_ASSIGNEE>
+Hello Anne,
+Are these CPU credits for a new SL2 project account or an existing one? If it is for a new project account, can you please also let me know which users to add to the project account when I create it.
+If it’s an existing one, please provide the SL2-CPU project account that these credits need to be applied to.
+Best regards,
+Elisabeth Reeve
+HPC Support
+</MESSAGE>
+
+<MESSAGE id=0003 role=TICKET_CREATOR>
+Dear Elisabeth,
+I am not sure whether I completely understand the question.
+It would be to add on Emily Lines account which only has at the moment service level 3. I'd like to be able to use it, so maybe it is easier to add it directly to my account I don't know.
+Her CRSId is erl27, mine is amob2.
+Best,
+Anne Baranger
+</MESSAGE>
+
+<MESSAGE id=0004 role=HELPDESK_ASSIGNEE>
+Hello Anne,
+If Emily Lines is the PI and there are no other SL2-CPU project accounts, then we would need to created LINES-SL2-CPU and add any users who require the use of these paid SL2 computing hours to the account.
+We need PI approval for this.
+Best regards,
+Elisabeth
+</MESSAGE>
+
+<MESSAGE id=0005 role=HELPDESK_PRINCIPAL_INVESTIGATOR>
+Hi ,
+That sounds fine - I don't think I have an account (certainly not for this project).
+Best wishes,
+Emily
+</MESSAGE>
+
+<MESSAGE id=0006 role=TICKET_CREATOR>
+Hello Elisabeth,
+Ok can you do that then, and add me to the account?
+Best,
+Anne Baranger
+</MESSAGE>
+
+<MESSAGE id=0007 role=HELPDESK_ASSIGNEE>
+Hello,
+LINES-SL2-CPU has been created and I have added these computing hours onto the account. The PO has been sent to our finance department for processing.
+Best regards,
+Elisabeth
+</MESSAGE>
+
+<MESSAGE id=0008 role=HELPDESK_ASSIGNEE>
+Records Updated
+</MESSAGE>
+
+<END_TICKET>
+
+
+----------
+
+<BEGIN_TICKET>
+[TICKET_KEY] HPCSSUP-100411
+[STATUS] RESOLVED
+[CREATED] 2026-03-09T13:04:00.842+0000
+[SUMMARY] Extension of project storage 
+
+[INITIAL_DESCRIPTION]
+Hi there,
+I manage a Research Data store for the “kstarkstar” project:
+Directory: rds-mk652-kstarkstar
+Project ID: bUoO2gzww9Q
+It is about to expire. I want to extend the license for another year (for all 5TB) with all of the same permissions. I raised a PO have requested a new data store but think I may have made a mistake here. I don’t want a new storage area, I just want to extend the existing one.
+Please can you resolve my mistake?
+The PO for the extension is attached.
+Many thanks,
+Matt
+
+
+[CONVERSATION]
+<MESSAGE id=0001 role=TICKET_CREATOR>
+[FILE ATTACHMENT]
+ (35 kB)
+</MESSAGE>
+
+<MESSAGE id=0002 role=HELPDESK_ASSIGNEE>
+Hi Matt,
+Can you please provide a link to the storage projects involved here and refrain from activating any storage projects until we check this out on our end please 
+Best wishes, 
+Henry
+HPC Support
+</MESSAGE>
+
+<MESSAGE id=0003 role=TICKET_CREATOR>
+This is the one I want to extend:
+Directory: rds-mk652-kstarkstar
+Project ID: bUoO2gzww9Q
+There is another project but it’s listed as unallocated (see screenshot) and I don’t know whether to allocate or to leave for you to sort out to transfer to an extension of the one I want to keep.
+Thanks,
+Matt
+[Screenshot 2026-03-09 at 13.56.01.png]
+There is another
+On 9 Mar 2026, at 13:07, Henry Carr <support@hpc.cam.ac.uk> wrote:
+[FILE ATTACHMENT]
+</MESSAGE>
+
+<MESSAGE id=0004 role=HELPDESK_ASSIGNEE>
+Hi Matt,
+Yes please- leave them as they are whilst we investigate this. Can you please provide a link to the “unallocated one” for me? Thanks 
+Best wishes, 
+Henry
+HPC Support
+</MESSAGE>
+
+<MESSAGE id=0005 role=TICKET_CREATOR>
+This is where I’m asked to allocate:
+<[https://selfservice.uis.cam.ac.uk/storage/account/1539/new](https://selfservice.uis.cam.ac.uk/storage/account/1539/new)>
+Sign in - Google Accounts<[https://selfservice.uis.cam.ac.uk/storage/account/1539/new](https://selfservice.uis.cam.ac.uk/storage/account/1539/new)>
+uis.cam.ac.uk<[https://selfservice.uis.cam.ac.uk/storage/account/1539/new](https://selfservice.uis.cam.ac.uk/storage/account/1539/new)>
+[X]<[https://selfservice.uis.cam.ac.uk/storage/account/1539/new](https://selfservice.uis.cam.ac.uk/storage/account/1539/new)>
+On 9 Mar 2026, at 14:05, Henry Carr <support@hpc.cam.ac.uk> wrote:
+</MESSAGE>
+
+<MESSAGE id=0006 role=HELPDESK_ASSIGNEE>
+Hi Matt,
+In this case, my colleagues in the storage department will need to delete this unactivated, empty project. On your end you will need to contact UIS finance to have the PO cancelled. Once this is done I can guide you on the next steps. Before I do, can you please confirm the series of actions you were attempting?  I.e., were you extending the duration or storage quota (or indeed, both)? Thanks 
+Best wishes, 
+Henry
+HPC Support
+</MESSAGE>
+
+<MESSAGE id=0007 role=TICKET_CREATOR>
+Just want to extend the storage license by a year. Please don’t make me request a new PO, I’ve been trying to do this for the last few days. Can you please contact your storage colleagues and try to resolve it?
+Matt
+On 9 Mar 2026, at 14:21, Henry Carr <support@hpc.cam.ac.uk> wrote:
+</MESSAGE>
+
+<MESSAGE id=0008 role=HELPDESK_ASSIGNEE>
+Hello Matt,
+I’m afraid that this is usually what has to be done but it looks like the amounts match here so we might be able to re-use the PO. When it comes to extending the duration of the licence, please follow the steps below. 
+1. Visit the account page of the original project:  [https://selfservice.uis.cam.ac.uk/storage/account/1342/](https://selfservice.uis.cam.ac.uk/storage/account/1342/)
+2. Click the `Extend My Storage Duration` button and select the duration
+3. This should generate a quote which at the time of writing this comes to `£270.00`
+4. Check the amounts match and upload a PO against this quote for this account and click the `Purchase order not raised using the Cambridge University Finance System (CUFS):` checkbox.
+It’s important you carry this out against the account page I linked in step one to avoid triggering the accidental purchase of unwanted storage. 
+Best wishes, 
+Henry
+HPC Support
+</MESSAGE>
+
+<MESSAGE id=0009 role=TICKET_CREATOR>
+Thanks for the instructions. Seems like this doesn’t work. I have asked for a new PO. Can you please contact the storage team to get the other PO cancelled and the storage removed.
+Thanks,
+Matt
+On 9 Mar 2026, at 14:45, Henry Carr <support@hpc.cam.ac.uk> wrote:
+</MESSAGE>
+
+<MESSAGE id=0010 role=HELPDESK_ASSIGNEE>
+Hello Matt,
+No problem, my colleague will remove that project you accidentally purchased from the portal. When it comes to cancelling the PO, you will need to email UIS finance directly and ask that the PO be cancelled. Thank you 
+Best wishes, 
+Henry
+HPC Support
+</MESSAGE>
+
+<MESSAGE id=0011 role=TICKET_CREATOR>
+Hi Henry,
+Please can you help arrange that? I’m not sure who to contact.
+Matt
+On 10 Mar 2026, at 15:00, Henry Carr <support@hpc.cam.ac.uk> wrote:
+</MESSAGE>
+
+<MESSAGE id=0012 role=HELPDESK_ASSIGNEE>
+Hi Matt,
+No problem, for this you will need to contact whoever issued the PO for you e.g., your departmental administrator. They should be able to request finance cancels the PO for you. Apologies I can’t provide more assistance here: we don’t look after that side of the operation I’m afraid.  
+Best wishes, 
+Henry
+HPC Support
+</MESSAGE>
+
+<END_TICKET>
+
+
+----------
+
+<BEGIN_TICKET>
+[TICKET_KEY] HPCSSUP-100355
+[STATUS] RESOLVED
+[CREATED] 2026-03-06T14:43:00.789+0000
+[SUMMARY] Remote Desktop Issue
+
+[INITIAL_DESCRIPTION]
+To Whom It May Concern,
+For context, I have been using the Remote Desktop interactive sessions via the web interface for about a year.  As of this morning, requesting a desktop no longer provides the “Launch Remote Desktop” button.  Please see the attached screenshot. I expected to see the “Launch Remote Desktop” button as shown in the second screenshot. I would appreciate any insights or support. Thank you.
+-Pete
+
+
+[CONVERSATION]
+<MESSAGE id=0001 role=TICKET_CREATOR>
+[FILE ATTACHMENT]
+[FILE ATTACHMENT]
+</MESSAGE>
+
+<MESSAGE id=0002 role=HELPDESK_ASSIGNEE>
+Hello Pete,
+Can you please share a full screenshot of the settings you use to launch the session.
+Best Regards,
+Elisabeth Reeve
+HPC Support
+</MESSAGE>
+
+<MESSAGE id=0003 role=TICKET_CREATOR>
+Does this help?
+</MESSAGE>
+
+<MESSAGE id=0004 role=TICKET_CREATOR>
+[FILE ATTACHMENT]
+</MESSAGE>
+
+<MESSAGE id=0005 role=TICKET_CREATOR>
+Thanks for your support, Elizabeth!
+-Pete
+</MESSAGE>
+
+<MESSAGE id=0006 role=TICKET_CREATOR>
+Hi Elisabeth,
+Thanks for your support. Please find a screenshot added to the JIRA ticket. Also attached here for easier access.
+Thanks,
+-Pete
+[FILE ATTACHMENT]
+</MESSAGE>
+
+<MESSAGE id=0007 role=TICKET_CREATOR>
+Hi Elizabeth,
+The Remote Desktop now works. I thought I would drop you a note. Not sure why but thank you for support.
+-Pete
+</MESSAGE>
+
+<MESSAGE id=0008 role=TICKET_CREATOR>
+HI Elisabeth,
+The Remote Desktop Launch button has disappeared again. I would appreciate your help.
+Thanks,
+-Pete
+</MESSAGE>
+
+<MESSAGE id=0009 role=HELPDESK_ASSIGNEE>
+Hello Pete,
+You need to specify the project account, the default project may not be appropriate.
+Best regards,
+Elisabeth
+</MESSAGE>
+
+<MESSAGE id=0010 role=HELPDESK_ASSIGNEE>
+Hello Pete,
+Do you require support on this still? If not, I will close this ticket.
+Best regards,
+Elisabeth Reeve
+</MESSAGE>
+
+<END_TICKET>
+
+
+----------
+
+<BEGIN_TICKET>
+[TICKET_KEY] HPCSSUP-100352
+[STATUS] RESOLVED
+[CREATED] 2026-03-06T14:31:02.600+0000
+[SUMMARY] Access error - misclick in authentication
+
+[INITIAL_DESCRIPTION]
+Hello,
+I hope you're well.
+I'm a current PhD student and was just made a Data user on the Research Data Store for the Genetics_HPC partition by a collaborator. Upon opening the authentication link, I completely mistakenly clicked "Do not agree", rather than "Agree". The latter was certainly my intention, and now cannot access the drive.
+Would there be any way to reverse this and reauthenticate?
+Thank you,
+Maria
+Maria Jelen<[https://www.mrc-cbu.cam.ac.uk/people/maria.jelen/](https://www.mrc-cbu.cam.ac.uk/people/maria.jelen/)> (she/her)
+Second-Year PhD Student at 4D Lab<[https://www.astlelab.com/](https://www.astlelab.com/)>
+Medical Research Council Cognition and Brain Sciences Unit
+mbj26@<[maria.jelen@](mailto:maria.jelen@)>cam.ac.uk
+[cid:478d2978-d5c5-41c0-97e4-1b8771985808]
+
+
+[CONVERSATION]
+<MESSAGE id=0001 role=TICKET_CREATOR>
+[FILE ATTACHMENT]
+[FILE ATTACHMENT]
+</MESSAGE>
+
+<MESSAGE id=0002 role=HELPDESK_ASSIGNEE>
+Hello Maria,
+You will need to speak with Data Manager that added you to the storage to readd you.
+Best regards,
+Elisabeth Reeve
+HPC Support
+</MESSAGE>
+
+<END_TICKET>
+
+
+----------
+
+<BEGIN_TICKET>
+[TICKET_KEY] HPCSSUP-100647
+[STATUS] RESOLVED
+[CREATED] 2026-03-13T09:57:02.559+0000
+[SUMMARY] Request info to schedule job on DAWN (AIRR-P67-DAWN-GPU) project
+
+[INITIAL_DESCRIPTION]
+Dear HPC cam support,
+I am a new user that has been added to the project and i already set up my
+MFA auth with MyAccessID and can access the dashboard of the project.
+I have linked my ssh public key through the dashboard, although the mail
+that i received says to send the public also to this email address. Thus, i
+attach it just in case is needed.
+ssh-ed25519
+AAAAC3NzaC1lZDI1NTE5AAAAIACYZwByA+c+iUfw7IQIy0u9my6yGu/FdXd1hnahrjYz
+matteo.baldan.7@studenti.unipd.it
+I got the message to "Select “Interactive Apps/Remote Desktop” and launch a
+job on the pvc9 partition, requesting at least one GPU on one node, using
+the above project.", but it seems that I am not able to find such
+interactive apps and remote desktop..
+I wanted to login with ssh access but I do not know which password would be
+my credentials for the ssh access.
+Thanks in advance, best regards,
+Matteo
+
+
+[CONVERSATION]
+<MESSAGE id=0001 role=TICKET_CREATOR>
+my username should be: dn-bald1 and SLURM project should be AIRR-P67-DAWN-GPU
+</MESSAGE>
+
+<MESSAGE id=0002 role=HELPDESK_ASSIGNEE>
+Hello Matteo,
+Your SSH public key has been appended to your DAWN user account.
+Please proceed to setup your MFA for SSH access, note that this is a separate code to how you access the web interface or the dashboard. Follow this guide: https://docs.hpc.cam.ac.uk/hpc/user-guide/mfa.html#walkthrough-ssh-to-multi-hpc-cam-ac-uk 
+Once you have MFA setup, you can proceed to access DAWN by using the following:
+`ssh dn-bald1@login-dawn.hpc.cam.ac.uk`
+If you require further support, please email [support@hpc.cam.ac.uk](mailto:support@hpc.cam.ac.uk)
+Online documentation can be found at https://docs.hpc.cam.ac.uk/hpc/user-guide/pvc.html.
+Best regards,
+Elisabeth Reeve
+HPC Support
+</MESSAGE>
+
+<MESSAGE id=0003 role=TICKET_CREATOR>
+Dear Elisabeth,
+If i am prompted with a password and I should be an external user what
+should i write?
+[https://docs.hpc.cam.ac.uk/hpc/user-guide/mfa.html#walkthrough-ssh-to-multi-hpc-cam-ac-uk:~:text=External%20users%3A%20You%20will%20need%20to%20use%20your%20SSH%20key%20or%20your%20password%2C%20depending%20on%20how%20your%20account%20was%20created](https://docs.hpc.cam.ac.uk/hpc/user-guide/mfa.html#walkthrough-ssh-to-multi-hpc-cam-ac-uk:~:text=External%20users%3A%20You%20will%20need%20to%20use%20your%20SSH%20key%20or%20your%20password%2C%20depending%20on%20how%20your%20account%20was%20created)
+[image: image.png]
+The docs says to use a ssh key or a password. I have logged in to the web
+login with myaccessid for reference.
+Best,
+Matteo
+Il giorno ven 13 mar 2026 alle ore 13:36 Elisabeth Reeve <
+support@hpc.cam.ac.uk> ha scritto:
+[FILE ATTACHMENT]
+</MESSAGE>
+
+<MESSAGE id=0004 role=HELPDESK_ASSIGNEE>
+Hello Matteo,
+Please ensure that your ssh command is pointing to your private key that is paired with the public key that you have sent us.
+Best regards,
+Elisabeth
+</MESSAGE>
+
+<MESSAGE id=0005 role=TICKET_CREATOR>
+Hello,
+Makes perfectly sense. Got it now, thank you so much Elisabeth.
+Have a great day and weekend.
+Best wishes,
+Matteo
+Il giorno ven 13 mar 2026 alle ore 14:22 Elisabeth Reeve <
+support@hpc.cam.ac.uk> ha scritto:
+</MESSAGE>
+
+<END_TICKET>
+

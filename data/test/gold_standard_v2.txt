@@ -289,7 +289,6 @@ User requests:
 - Reduction from 700TB to 400TB
 - Rebase of licence expiry date
 - Confirmation of cost calculation
-- Later: deletion of specific directories
 
 Self Service cannot generate this quote; Storage Services must issue a formal quotation and reference.
 
@@ -327,7 +326,7 @@ ACTION
    - Update storage licence in portal (capacity + duration)
    - Apply corresponding filesystem quota changes.
 
-EXAMPLE CUSTOMER REPLY (PROVISIONAL ESTIMATE)
+EXAMPLE CUSTOMER REPLY
 
 Hi Yasin,
 
@@ -345,26 +344,6 @@ Please note this is an estimate based on published pricing. A formal quotation w
 
 Kind regards,
 HPC Support
-
-EXAMPLE CUSTOMER REPLY (FORMAL QUOTE)
-
-Hi Yasin,
-
-Many thanks for getting in touch. Please find the formal quotation below:
-
-[Quote block with reference number and confirmed totals]
-
-Kind regards,
-Storage Services Team
-
-EXAMPLE CUSTOMER REPLY (POST-PO)
-
-Hi Yasin,
-
-Many thanks. I have updated your project in the portal and on the filesystem.
-
-Kind regards,
-RCS Team
 
 ----------
 
@@ -435,7 +414,7 @@ ACTION
 
 4) Provide official MFA documentation link
 
-EXAMPLE CUSTOMER REPLY (INITIAL)
+EXAMPLE CUSTOMER REPLY
 
 Hello Bart,
 
@@ -444,24 +423,6 @@ Have you still got your old phone? If so, you may be able to transfer the authen
 - Google Authenticator: https://support.google.com/accounts/answer/1066447?hl=en&co=GENIE.Platform%3DAndroid
 
 If you can’t transfer the codes over, we can reset your MFA. To do so we’ll need a quick video call (no more than 5 minutes) where you can present photo ID for verification. Please let me know a suitable time and date (Service Desk hours are 9am–5pm, Mon–Fri, excluding holidays) and I can send an MS Teams invite.
-
-Best regards,
-HPC Support
-
-EXAMPLE CUSTOMER REPLY (POST-RESET INSTRUCTIONS)
-
-Hello Bart,
-
-This is to confirm that your MFA has been reset. To enrol a new TOTP via SSH, please run:
-
-ssh <CRSid>@multi.hpc.cam.ac.uk
-
-You will be prompted for your UIS/Raven password and then shown a QR code to scan into your authenticator app. If all goes well, you should see a token labelled “CSD3:SSH Login” (or similar).
-
-If you use the web interface, log in as normal and a QR code will appear for you to scan. This token is typically labelled “CSD3:<CRSid>”.
-
-Documentation:
-https://docs.hpc.cam.ac.uk/hpc/user-guide/mfa.html
 
 Best regards,
 HPC Support
@@ -571,18 +532,15 @@ User is trying to submit a Dawn GPU job and receives:
 
   sbatch: error: Batch job submission failed: Invalid account or account/partition combination specified
 
-From the ticket resolution, the problem is that the job should be charged to the Slurm project account, not to the user's personal login name. The user's Dawn username is `dn-he1`, but the Slurm project account to use for charging is `AIRR-P57-DAWN-GPU`.
+On Dawn, this error usually means that the `#SBATCH -A` line is using the wrong Slurm charging account or that the account/partition combination is invalid. The safe guidance is to tell the user to use their project charging account rather than their personal login name and to ask for the relevant `#SBATCH` lines if the account name is still unclear.
 
 ACTION
 
-1) Confirm the script uses the project account in the `#SBATCH -A` line:
-   `#SBATCH -A AIRR-P57-DAWN-GPU`
-
+1) Ask the user to send the exact `#SBATCH -A` and partition lines from the script if they are not already visible in the ticket.
 2) Clarify the distinction:
-   - Login username: `dn-he1`
-   - Slurm account/project to charge: `AIRR-P57-DAWN-GPU`
-
-3) If the error persists, ask the user to send the exact `#SBATCH -A` and partition lines from the script.
+   - Login username is not the same thing as the Slurm charging account.
+   - `#SBATCH -A` must use the Dawn project/account code associated with the user's access.
+3) If the user already knows their project account from the DAWN portal or onboarding information, tell them to use that exact project code in `#SBATCH -A`.
 
 4) Do NOT:
    - Tell the user to put their username in `#SBATCH -A`.
@@ -592,21 +550,9 @@ EXAMPLE CUSTOMER REPLY
 
 Hello Ruitian,
 
-The submission error is because Slurm expects the project account in the job script, not your personal username.
+The submission error is most likely because Slurm expects the Dawn project charging account in the job script, not your personal login username.
 
-For your Dawn access, your login username is:
-
-  dn-he1
-
-but the Slurm project account to charge against is:
-
-  AIRR-P57-DAWN-GPU
-
-Please make sure your script uses:
-
-  #SBATCH -A AIRR-P57-DAWN-GPU
-
-If you still see the same error after updating that line, please send us the `#SBATCH -A` and partition lines from the script and we can check them.
+Please check that your script uses the correct project account in the `#SBATCH -A` line. If you are not sure which project code to use, please send us the `#SBATCH -A` and partition lines from the script and we can check them.
 
 Best regards,
 HPC Support
@@ -705,7 +651,7 @@ These errors normally indicate that:
 - The module environment was not initialised properly, or
 - The underlying filesystem/environment (e.g. RDS) was unavailable at session start.
 
-From the ticket resolution, there was an active RDS filesystem disruption at the time. Therefore this was a service-side incident, not a user misconfiguration.
+Because multiple core commands are missing inside an OnDemand-generated script, helpdesk should first check for an active service incident before asking the user to debug their own notebook configuration.
 
 ACTION (HELPDESK)
 
@@ -718,10 +664,9 @@ ACTION (HELPDESK)
    - The presence of multiple `module: command not found` entries in an OnDemand-generated script strongly suggests an environment failure rather than a user error.
    - Avoid requesting script changes unless no incident exists.
 
-3) Confirm disruption (if applicable)
-   - If RDS or environment disruption is confirmed:
-     - Inform user that a service issue is ongoing.
-     - Provide reassurance that notebooks should function once resolved.
+3) If a disruption is confirmed
+   - Inform the user that a service issue is being investigated.
+   - Provide reassurance that notebooks should function again once the service issue is cleared.
 
 4) If no incident is active (alternate branch)
    - Check:
@@ -732,15 +677,15 @@ ACTION (HELPDESK)
    - Confirm correct partition/environment in OnDemand form.
    - Escalate to platform admins if environment initialisation is broken.
 
-EXAMPLE CUSTOMER REPLY (SERVICE INCIDENT CONFIRMED)
+EXAMPLE CUSTOMER REPLY
 
 Subject: Re: Interactive Jupyter Notebooks crashing
 
 Hello Tim,
 
-We were experiencing some disruption on the RDS filesystem at the time you attempted to start the notebook, which would explain the environment failing to initialise.
+The log suggests that the OnDemand environment failed to initialise correctly rather than that there is a notebook configuration error on your side.
 
-This should hopefully be resolved soon. 
+We are checking whether there is a current service issue affecting the shared environment or filesystem. We will update you as soon as we have confirmed that.
 
 Best wishes,  
 HPC Support
@@ -1095,9 +1040,7 @@ User is requesting access to DAWN and has provided name, email, and SSH key.
 Correct process for DAWN access:
 1) User must be invited to the DAWN project by the PI via Waldur.
 2) User must accept the invitation in the DAWN access portal.
-3) Once accepted, provisioning is triggered and a local DAWN account is created.
-4) User receives an email to set up their password.
-5) User logs into the DAWN portal and accepts the project invitation.
+3) Once accepted, provisioning can be checked and the local DAWN account can then be created through the approved workflow.
 
 Helpdesk should NOT:
 - Manually create accounts before invitation is accepted.
@@ -1114,17 +1057,11 @@ ACTION STEPS (HELPDESK)
    - If invited but not accepted → instruct user to log into portal and accept invitation.
    - Provide documentation link.
 
-3) Confirm provisioning state
-   - If invitation accepted and provisioning ticket exists → confirm local account creation.
-   - Ensure password setup email has been sent.
+3) If the user says they have already accepted the invitation
+   - Check whether provisioning has started or whether a provisioning ticket exists.
+   - Escalate internally if the invitation has been accepted but no account-provisioning progress is visible.
 
-4) Post-provisioning guidance
-   - Inform user that:
-       • A local DAWN account has been created.
-       • They should set their password via the email received.
-       • They must log into the DAWN access portal and accept the project invitation.
-
-5) Do NOT:
+4) Do NOT:
    - Accept SSH keys via email.
    - Manually append SSH keys.
    - Share temporary credentials.
@@ -1134,25 +1071,14 @@ IF USER PROVIDES SSH KEY
 - Acknowledge receipt but do not install manually.
 - Once account exists, user can install key themselves after first login.
 
-EXAMPLE CUSTOMER REPLY (PRE-INVITATION)
+EXAMPLE CUSTOMER REPLY
 
 Hello Jun,
 
-You need to be invited to the DAWN project by the PI via Waldur. Once this has been done, you will receive an invitation which you must accept before we can create your DAWN login account.
+You need to be invited to the DAWN project by the PI via Waldur. Once you have received the invitation, please accept it in the DAWN access portal before we can proceed with checking your login-account provisioning.
 
 Please see this guidance:
 https://docs.hpc.cam.ac.uk/hpc/user-guide/pvc.html#users-accessing-open-on-demand-via-the-portal
-
-Best wishes,
-HPC Support
-
-EXAMPLE CUSTOMER REPLY (POST-PROVISIONING)
-
-Hello Jun,
-
-We have created your local DAWN account, and you should have received an email to set up your password.
-
-Using the email and password, please log in to the DAWN access portal and accept the project invitation.
 
 Best wishes,
 HPC Support
@@ -1316,7 +1242,7 @@ Escalation Required: No
 Urgency: Low
 
 QUICK ASSESSMENT
-User reports that a short GPU job has been waiting much longer than usual. From the ticket resolution, there was no account or script fault; queue time had increased because demand varies and queued jobs gain priority over time.
+User reports that a short GPU job has been waiting much longer than usual. This does not by itself indicate an account or script fault; queue time can increase when demand is high, and queued jobs gain priority over time.
 
 Cancelling and resubmitting is counterproductive because it removes the job's accumulated queue priority.
 
@@ -1333,7 +1259,7 @@ EXAMPLE CUSTOMER REPLY
 
 Dear Kai,
 
-There does not appear to be anything wrong with your job submission. Queue times can change significantly depending on current demand, so a job that usually starts quickly may occasionally wait much longer.
+From the information provided, there does not appear to be anything obviously wrong with your job submission. Queue times can change significantly depending on current demand, so a job that usually starts quickly may occasionally wait much longer.
 
 Please avoid cancelling and resubmitting the job unless necessary, as that resets its place in the queue and removes any priority it has accumulated while waiting.
 
@@ -1668,7 +1594,7 @@ Subject: Re: CSD3 login issue
 
 Dear Vijay,
 
-It appears that your account has been temporarily locked due to multiple unsuccessful login attempts. This lock will clear automatically after approximately 30 minutes.
+Your symptoms are consistent with a temporary account lock caused by multiple unsuccessful login attempts. If that is the case, the lock should clear automatically after approximately 30 minutes.
 
 Once it has cleared, please ensure that you are entering your current UIS/Raven password when prompted in the terminal, followed by your CSD3 MFA code.
 
@@ -2427,8 +2353,8 @@ ACTION STEPS (HELPDESK)
    - Trigger password setup email.
    - Ensure account is linked to the appropriate realm.
 
-4) Notify user
-   - Inform them they will receive a password setup email.
+4) Notify user once action is underway
+   - Explain that once the local account has been created, they will receive a password setup email.
    - Advise checking spam/junk folders.
    - Instruct them to:
        a) Set password,
@@ -2455,9 +2381,9 @@ Subject: Re: UKAEA Early Adopters – AIRR Access
 
 Hi Waqar,
 
-Your local Keycloak account has now been set up. You should shortly receive an email to set your password (please check your spam/junk folder if it does not appear).
+We will arrange creation of the local Keycloak account needed for this AIRR invitation.
 
-Once your password is set, please visit the invitation link and select “Sign in with Keycloak”, then log in using your new credentials.
+Once the account has been created, you should receive an email to set your password. After that, please visit the invitation link, select “Sign in with Keycloak”, and log in using those credentials.
 
 For reference, please see:
 https://docs.hpc.cam.ac.uk/hpc/user-guide/pvc.html#accessing-without-myaccessid-last-resort
@@ -2536,7 +2462,7 @@ Subject: Re: HPC Job Scheduling Delay
 
 Dear Amogh,
 
-There is nothing wrong with your account or submission script. Your job is running under an SL3 (non-paying) GPU account, and at times there can be significant demand from higher-priority paying accounts.
+From the information provided, there is no obvious sign of a problem with your account or submission script. Your job is running under an SL3 (non-paying) GPU account, and at times there can be significant demand from higher-priority paying accounts.
 
 Please note that each paying job can occupy its allocated GPUs for up to 36 hours. Jobs steadily increase in priority the longer they wait, so cancelling and resubmitting would be counterproductive as it resets that priority.
 
@@ -2815,6 +2741,19 @@ Request:
       ldd <lammps_binary>
       ompi_info | head
 
+EXAMPLE CUSTOMER REPLY
+
+Subject: Re: Issues with GPU compilation of a package
+
+Hello,
+
+The runtime failure is most likely due to a mixed or incompatible CUDA/MPI/compiler stack rather than the package source itself. Please rebuild the code using a clean environment and the current Ampere test software stack, making sure that the same modules are used consistently for both build and run.
+
+In particular, please avoid carrying over older OpenMPI or compiler modules, and disable native CPU-targeting flags when configuring the build on a login node. If the problem persists after rebuilding, please send the full build log, your submission script, the exact runtime command, and the outputs of `module list`, `ldd <lammps_binary>`, and `ompi_info | head`.
+
+Best wishes,
+HPC Support
+
 SAFETY / POLICY NOTES
 - Do not recommend installing custom system-level CUDA drivers.
 - Avoid mixing MPI modules from different OS/compiler stacks.
@@ -3032,7 +2971,7 @@ User reports:
 - When attempting to SSH to gpu-r-4, the connection closes immediately after entering their password:
     "Connection closed by 10.43.79.4 port 22"
 
-This suggests gpu-r-4 is not currently usable for their session (e.g. node-specific issue). The quickest mitigation is to start a new session on a different r node.
+This may indicate a node-specific issue with gpu-r-4 or with the existing session on that node. The quickest mitigation is to start a new session on a different r node.
 
 ACTION STEPS (HELPDESK)
 
@@ -3051,7 +2990,7 @@ EXAMPLE CUSTOMER REPLY
 
 Hello Iryna,
 
-It looks like gpu-r-4 is not currently usable for starting or managing your VNC session.
+It may be that gpu-r-4 is the problem for this session, so the quickest next step is to try a different r node.
 
 Please set up a new session on a different r node (for example gpu-r-5). If you still cannot start a session, please send a full screenshot of the steps you are taking in the terminal (including the command and output) and any error messages from the VNC viewer.
 
@@ -3343,7 +3282,7 @@ Hello Iryna,
 
 Please create your TurboVNC session on an interactive GPU node (`*-r-gpu`) rather than a login node. That should resolve the forwarding issue you’re seeing.
 
-Please follow the attached guide and let us know if you run into further issues.
+Please follow the documented TurboVNC workflow for interactive GPU nodes, and let us know if you run into further issues.
 
 Best regards,
 HPC Support
@@ -3363,19 +3302,21 @@ Escalation Required: No
 Urgency: Medium (access blocked)
 
 QUICK ASSESSMENT
-User lost private key after reinstall and needs replacement key registered. Later issue was device-specific key mismatch: each client device requires its own valid key pair, and the corresponding public key must be appended server-side.
+User lost the private key after reinstall and needs a replacement key registered. Each client device requires its own valid key pair, and the corresponding public key must be appended server-side.
 
 ACTION
 1) Append new public key for replacement laptop key.
 2) Clarify per-device key model (one key pair per device).
 3) If attachments fail, request public key pasted as plain text in email body.
-4) Append second device key and confirm access restored.
+4) If the user later needs access from another device, repeat the same process for that device's public key.
 
 EXAMPLE CUSTOMER REPLY
 
 Hello Alejo,
 
-You will need a valid SSH key pair on each device you connect from. Please send the public key for your office machine (you can paste it directly as plain text in the email body), and we will append it to your account.
+You will need a new valid SSH key pair on the laptop you reinstalled. Please send the replacement public key for that device (you can paste it directly as plain text in the email body), and we can append it to your account.
+
+If you also connect from other devices, each device will need its own key pair and public-key registration.
 
 Best regards,
 HPC Support
@@ -3969,7 +3910,7 @@ Urgency: Medium
 QUICK ASSESSMENT
 User asks whether the Microsoft Authenticator app on their phone can be used for HPC login TOTP and reports that the current code does not work.
 
-The full ticket shows the key issue was that the user was not yet a provisioned CSD3 user. The same authenticator app can be used, but CSD3 requires its own separate MFA enrolment/token; a University token will not work for CSD3 SSH or web login. If the user has no CSD3 account yet, they must apply first.
+The same authenticator app can be used, but CSD3 requires its own separate MFA enrolment/token; a University token will not work for CSD3 SSH or web login. If the user does not yet have an active CSD3 account, account provisioning must be completed before MFA enrolment can work.
 
 ACTION
 1) Confirm whether the user already has an active CSD3 account.
@@ -3988,11 +3929,11 @@ Dear Claudio,
 
 Yes, you can use the same Microsoft Authenticator app on your phone for HPC login, but CSD3 needs its own separate token. The existing University token will not work for CSD3.
 
-We checked your account and it appears you do not currently have a provisioned CSD3 user account, so please first apply here:
+Before troubleshooting the token further, we first need to confirm whether you already have an active CSD3 account. If not, please apply here:
 
 https://www.hpc.cam.ac.uk/rcs-application
 
-Once your account has been created, please follow the MFA setup guide and connect to:
+Once your account is active, please follow the MFA setup guide and connect to:
 
   ssh cc726@multi.hpc.cam.ac.uk
 
@@ -4089,18 +4030,20 @@ Escalation Required: No
 Urgency: Medium
 
 QUICK ASSESSMENT
-User added DiRAC project in SAFE but account not yet visible in `mybalance`. Provisioning is not immediate; staff completed provisioning and issue resolved.
+User added a DiRAC project in SAFE but it is not yet visible in `mybalance`. Provisioning is not immediate, so the next step is to check whether the account association is still pending and complete the internal provisioning workflow if required.
 
 ACTION
 1) Check provisioning status for requested project association.
 2) Complete pending provisioning.
-3) Confirm account now visible/usable.
+3) Once provisioning has completed, confirm that the account is visible and usable.
 
 EXAMPLE CUSTOMER REPLY
 
 Hello Richard,
 
-Provisioning for this project is not automatic. I have now completed the required provisioning step, so the account should be available.
+Provisioning for this project is not automatic. We will check whether the project association is still pending on our side and complete the required provisioning step if necessary.
+
+We will update you once that has been checked.
 
 Best regards,
 HPC Support
@@ -4131,7 +4074,7 @@ EXAMPLE CUSTOMER REPLY
 
 Dear Hongyu,
 
-There is nothing wrong with your account or submission. Your jobs are on the non-paying SL3 service level, and paid activity is prioritised ahead of it.
+From the information provided, there is no obvious sign of a problem with your account or submission. Your jobs are on the non-paying SL3 service level, and paid activity is prioritised ahead of it.
 
 Queue time can vary significantly. Please avoid cancelling/resubmitting, as that can lose accrued priority.
 
@@ -4237,7 +4180,7 @@ Escalation Required: No
 Urgency: Low
 
 QUICK ASSESSMENT
-User saw scheduler reason text and assumed post-maintenance fault. Actual job state was normal pending by priority. Additional optimisation: explicit `--mem` is redundant for cclake in this case.
+User saw scheduler reason text and assumed there was a post-maintenance fault. From the script provided, there is no obvious submission syntax problem, and this kind of reason string can still appear while a job is simply pending under normal scheduler priority. Additional optimisation: explicit `--mem` is redundant for cclake in this case.
 
 ACTION
 1) Check live job state and reason (`squeue`, `scontrol`).
@@ -4248,7 +4191,7 @@ EXAMPLE CUSTOMER REPLY
 
 Dear Hamish,
 
-Your job has submitted correctly and is pending under normal scheduler priority.
+From the script you sent, the job appears to have submitted correctly and may simply be pending under normal scheduler priority.
 
 For this script, `--mem=27360M` is redundant if you already request the corresponding CPU count on `cclake`; removing it can simplify scheduling requests.
 
@@ -4709,28 +4652,21 @@ Escalation Required: No
 Urgency: Medium
 
 QUICK ASSESSMENT
-The user wanted BerkeleyGW 4.0 on Ampere GPU nodes. Support identified an existing Spack recipe and provisioned a central module, so the correct answer is to direct the user to the supported module stack instead of asking them to continue a manual GPU build.
+The user wants help running BerkeleyGW 4.0 on Ampere GPU nodes but does not have experience building it there. The best initial support path is to check whether a supported central build/module already exists and, if not, gather the exact build requirements and escalate to the software/RSE team rather than relying on the user to complete a complex manual GPU build unaided.
 
 ACTION
-1) Confirm that a central BerkeleyGW module is now available.
-2) Instruct the user to load:
-   `module purge`
-   `module load rhel8/ampere/base`
-   `module load berkeleygw/4.0/gcc/openmpi/dj6azdqv`
-3) If they still need a custom build, request a new ticket with the exact build requirements.
+1) Confirm the exact version/variant required.
+2) Check whether a supported central BerkeleyGW module already exists for Ampere.
+3) If a supported module exists, send the user the relevant module-load instructions.
+4) If no module exists, gather the exact build requirements and escalate to the software/RSE team.
 
 EXAMPLE CUSTOMER REPLY
 
 Hello Bingcan,
 
-Our RSE team has provided a central BerkeleyGW build for Ampere.
+We will check whether there is already a supported BerkeleyGW build/module available for Ampere.
 
-Please use:
-`module purge`
-`module load rhel8/ampere/base`
-`module load berkeleygw/4.0/gcc/openmpi/dj6azdqv`
-
-If you need a different build or variant after testing this module, please let us know with the exact requirements.
+If there is, we will send you the exact load commands. If not, we will need the precise version and build requirements so that we can advise on the next step or escalate appropriately.
 
 Best wishes,
 HPC Support
@@ -4813,7 +4749,7 @@ Escalation Required: No
 Urgency: Low
 
 QUICK ASSESSMENT
-The user wants Login-Web RStudio to use R 4.5.1 instead of the currently configured 4.3.1. Support investigated and confirmed this is not currently possible because of how Login-Web is configured. The safest answer is to say it cannot presently be changed and to recommend alternative workflows where appropriate.
+The user wants Login-Web RStudio to use R 4.5.1 instead of the currently configured 4.3.1. The safest answer is to say that this is not currently possible with the Login-Web RStudio service as configured and to recommend alternative workflows where appropriate.
 
 ACTION
 1) Confirm that Login-Web RStudio cannot presently be switched to R 4.5.1.
@@ -4824,7 +4760,7 @@ EXAMPLE CUSTOMER REPLY
 
 Dear Heather,
 
-We have checked this internally and it is not currently possible to make the Login-Web RStudio service use R 4.5.1. The service is constrained by the way it is configured.
+It is not currently possible to make the Login-Web RStudio service use R 4.5.1. The service is constrained by the way it is configured.
 
 If you need that newer R version immediately, please use an alternative workflow such as a different interactive environment rather than Login-Web RStudio.
 
@@ -4878,35 +4814,21 @@ Escalation Required: No
 Urgency: Medium
 
 QUICK ASSESSMENT
-The user wanted to build Toast++ in their own workspace. Support reproduced a working build from source and provided the exact environment setup and path exports needed to use the resulting binaries.
+The user wants help installing Toast++ in their own workspace after an earlier unsuccessful attempt. This looks like a user-space source-build request rather than a request for a central software install. The best initial helpdesk response is to gather any previous build errors and, if needed, attempt a clean user-space build internally before sending tested instructions.
 
 ACTION
-1) Build from a clean working directory in `hpc-work`.
-2) Clone the source repository.
-3) Set `TOASTDIR`, then run:
-   `./configure`
-   `source toast.sh`
-   `make numerics`
-   `make toast`
-4) Export `TOAST_ROOT`, update `PATH`, and extend `LD_LIBRARY_PATH` to the built shared libraries before use.
+1) Confirm the source/version the user is trying to build.
+2) Ask for any error output from the user's earlier build attempt if available.
+3) If needed, attempt a clean user-space build in `hpc-work` and return tested instructions.
+4) Prefer a user-space install unless there is evidence of wider demand for a central package.
 
 EXAMPLE CUSTOMER REPLY
 
 Hello Liam,
 
-We were able to build Toast++ successfully from source in a user workspace. The working sequence was:
-`git clone https://github.com/toastpp/toastpp.git`
-`cd toastpp`
-`export TOASTDIR=$PWD`
-`./configure`
-`source toast.sh`
-`make numerics`
-`make toast`
+This looks like a user-space source-build request rather than a central software installation.
 
-Then set the runtime environment, for example:
-`export TOAST_ROOT=/path/to/toastpp`
-`export PATH=$TOAST_ROOT/bin:$TOAST_ROOT/script:$PATH`
-`export LD_LIBRARY_PATH=$TOAST_ROOT/gcc8.5.0_shared_smp/lib:$LD_LIBRARY_PATH`
+If you still have the output from your previous build attempt, please send it to us. If needed, we can also try a clean build internally and then send you tested instructions for building Toast++ in your workspace.
 
 Best wishes,
 HPC Support
@@ -4923,20 +4845,20 @@ Escalation Required: No
 Urgency: Low
 
 QUICK ASSESSMENT
-The user requested a newer BLAST module because the currently visible version was incomplete. Support installed a newer central module and confirmed the correct load command.
+The user is requesting a newer BLAST module because the currently visible version appears incomplete. The correct initial helpdesk response is to treat this as a software request: check whether a newer supported module already exists and, if not, investigate whether one can be added.
 
 ACTION
-1) Confirm that the newer BLAST module is now available.
-2) Direct the user to load:
-   `module load blast/2.17`
-3) If they need other missing versions in future, ask them to open a new software request.
+1) Check whether a newer supported BLAST module already exists.
+2) If not, investigate the request as a software-installation/update request.
+3) If a newer module becomes available, send the exact module name and load command to the user.
 
 EXAMPLE CUSTOMER REPLY
 
 Hello,
 
-We have installed the newer BLAST module for you. Please run:
-`module load blast/2.17`
+We can investigate whether a newer BLAST module can be provided.
+
+If we are able to add a newer supported version, we will send you the exact module name and load command.
 
 Best wishes,
 HPC Support
@@ -4953,25 +4875,21 @@ Escalation Required: No
 Urgency: High
 
 QUICK ASSESSMENT
-The package was deployed as an SRCP module (`r-snpolisher`), but the user’s integrated analysis tool initially continued to fail. The correct support path is to first confirm the module works in a plain R session, then identify which R binary/path the IAP tool actually uses so that the tool runs against the deployed module environment.
+This is an urgent request to make the SNPolisher package available on a specific SRCP platform. The correct initial support path is to prioritise escalation to the SRCP/platform team for package installation. Once availability is confirmed, the next step is to validate the package in a plain R session before troubleshooting any surrounding workflow/tool integration.
 
 ACTION
-1) Confirm the package is available with:
-   `module load r-snpolisher`
-   `R`
-   `library(SNPolisher)`
-2) If the workflow still fails, identify the R path used by the external tool.
-3) Ask for the tool name and any environment variables it sets.
-4) Validate once the tool is running against the correct SRCP R environment.
+1) Escalate the request to the SRCP/platform team as a priority package-installation request.
+2) Once the package is reported available, validate it in a plain R session.
+3) If the user's external tool still fails after installation, identify the tool name and R path/environment it uses.
+4) Update the user once installation status has been confirmed.
 
 EXAMPLE CUSTOMER REPLY
 
 Dear Justin,
 
-The SNPolisher package has been deployed and is available via:
-`module load r-snpolisher`
+We are treating this as a priority request and are arranging installation of SNPolisher with the SRCP/platform team.
 
-Please first confirm that `library(SNPolisher)` works in a plain R session. If your IAP workflow still fails, we need to identify which R binary/path that tool is actually using so that it picks up the deployed module environment correctly.
+Once the package is available, we will send you the relevant load instructions and, if needed, follow up with checks to make sure your workflow is using the correct R environment.
 
 Best regards,
 HPC Support
@@ -5022,7 +4940,7 @@ Escalation Required: No
 Urgency: Medium
 
 QUICK ASSESSMENT
-The job was intermittently failing on a specific GPU node with CUDA device availability errors. Support identified two useful mitigations: ensure the correct Ampere base module stack is loaded, and let Open MPI infer task placement from Slurm instead of forcing `-npernode` and `-np`. The faulty node was also rebooted and passed diagnostics.
+The job is intermittently failing on a specific GPU node with CUDA device availability errors. Two grounded mitigations from the submitted command/output are to ensure the correct Ampere base module stack is loaded and to let Open MPI infer task placement from Slurm instead of forcing `-npernode` and `-np`.
 
 ACTION
 1) Load the correct base stack:
@@ -5032,7 +4950,7 @@ ACTION
 3) Prefer `--tasks-per-node=4` rather than only `--ntasks=8` for the reported two-node case.
 4) As a temporary workaround, route around the bad node with:
    `#SBATCH --exclude=gpu-q-29`
-5) Confirm whether the issue persists after node maintenance.
+5) If the issue persists after these changes or starts affecting other nodes, escalate for node-health investigation.
 
 EXAMPLE CUSTOMER REPLY
 
@@ -5055,25 +4973,26 @@ HPC Support
 
 CLASSIFICATION
 Category: Platform Incident / Filesystem Performance
-Technical Action Required: Yes (incident confirmation)
+Technical Action Required: Yes (investigate possible service-side performance issue)
 Escalation Required: No
 Urgency: Medium
 
 QUICK ASSESSMENT
-The user’s slow Python setup and `import torch` freezes were not caused by a bad personal environment. Support confirmed there was a platform-side issue affecting the filesystem, and after remediation the user’s environment setup worked normally again.
+The user’s slow Python setup and `import torch` freezes may indicate a broader platform/filesystem performance issue rather than only a bad personal environment. The correct initial response is to check for an active service-side problem before concluding that the issue is confined to the user's own setup.
 
 ACTION
-1) Confirm the issue was caused by a service-side filesystem problem rather than by the user’s Python commands.
-2) Ask the user to retest after the fix.
-3) If the behaviour returns, collect node/path details and reopen as an incident.
+1) Check whether there is a broader service issue affecting Python environment creation or shared filesystems.
+2) Ask the user to confirm the login node and working path they are using.
+3) If no active incident is found, collect the exact commands and timings needed to separate user-environment issues from platform performance issues.
+4) Ask the user to retry once those checks have been completed.
 
 EXAMPLE CUSTOMER REPLY
 
 Hello Stelios,
 
-This turned out to be related to a platform-side filesystem issue rather than a mistake in your Python environment setup. We have addressed the problem, and your retest shows the setup is working normally again.
+The symptoms you describe may indicate a broader platform performance issue rather than only a mistake in your Python environment setup.
 
-If the behaviour returns, please let us know which login node and path you are using so we can investigate further.
+We are checking this on our side. In the meantime, please confirm which login node and working path you are using so that we can investigate further if needed.
 
 Best regards,
 HPC Support
@@ -5102,7 +5021,7 @@ EXAMPLE CUSTOMER REPLY
 
 Hello Leo,
 
-We are not aware of a separate cluster-wide fault from the information provided. The most likely cause is normal variability on the shared RDS filesystem, since your virtual environment is stored in `hpc-work`.
+From the information provided, the most likely cause is normal variability on the shared RDS filesystem, since your virtual environment is stored in `hpc-work`.
 
 That means imports can sometimes be much slower when the shared storage is under heavy load.
 
@@ -5123,20 +5042,20 @@ Escalation Required: No
 Urgency: Medium
 
 QUICK ASSESSMENT
-The access failure was not caused by the user entering the wrong password. Support found that the account had not been added to the correct access groups, then advised the user to generate the appropriate MFA token for RCS/CSD3 access via `multi.hpc.cam.ac.uk`.
+The access failure is unlikely to be explained by a separate service-specific password, especially since the user can log in elsewhere successfully. The most likely next steps are to check whether there is an access-control/group-membership problem and to confirm that the user has generated the correct MFA token for RCS/CSD3 access via `multi.hpc.cam.ac.uk`.
 
 ACTION
-1) Correct any missing group membership on the account.
+1) Check whether the account has the correct storage/access-group membership.
 2) Instruct the user to create the correct TOTP via:
    `ssh <crsid>@multi.hpc.cam.ac.uk`
 3) Share the MFA documentation.
-4) Remind the user of the normal login path and the resulting storage path once access is fixed.
+4) Remind the user of the normal login path and storage path once access has been confirmed.
 
 EXAMPLE CUSTOMER REPLY
 
 Hi Christina,
 
-We found that your account was missing the correct access-group membership, and that has now been corrected.
+You should not need a separate password for this service. We will check your storage access permissions on our side.
 
 You will also need to create the MFA token that works with RCS/CSD3 access. Please run:
 `ssh cez22@multi.hpc.cam.ac.uk`
@@ -5320,7 +5239,7 @@ Escalation Required: No
 Urgency: Medium
 
 QUICK ASSESSMENT
-The missing “Launch Remote Desktop” button was caused by the session being launched without the appropriate project account. The correct fix is to review the launch settings and ensure the proper project is selected instead of relying on a default account.
+The missing “Launch Remote Desktop” button can be caused by launch-form settings such as project/account selection, but from the ticket text alone the exact cause is not confirmed. The safest next step is to review the full launch settings and confirm which project/account is selected.
 
 ACTION
 1) Ask the user for a full screenshot of the launch settings if not already available.
@@ -5331,9 +5250,9 @@ EXAMPLE CUSTOMER REPLY
 
 Hello Pete,
 
-Please make sure you specify the correct project account when launching the Remote Desktop session. The default project may not be appropriate, which can prevent the expected launch option from appearing.
+Please send us the full launch settings for the Remote Desktop session, including the selected project/account, so that we can confirm what is preventing the expected button from appearing.
 
-If needed, send us a full screenshot of the launch settings and we can confirm the exact values.
+If the current screenshot does not show the full launch form, please send one that includes the relevant project/account fields.
 
 Best regards,
 HPC Support
@@ -5378,10 +5297,10 @@ Escalation Required: No
 Urgency: Medium
 
 QUICK ASSESSMENT
-The user had been added to a DAWN project but was unsure how to access the service and what credentials to use. The correct onboarding path is to append the public key to the DAWN account, complete the separate SSH MFA setup, then connect using the corresponding private key and the DAWN login host.
+The user has been added to a DAWN project but is unsure how to access the service and what credentials to use. The correct onboarding path is to confirm whether the submitted public key has been linked to the DAWN account, complete the separate SSH MFA setup, then connect using the corresponding private key and the DAWN login host.
 
 ACTION
-1) Confirm the public key has been added to the DAWN account.
+1) Confirm whether the public key submitted via the dashboard/email has been linked to the DAWN account.
 2) Direct the user to the SSH MFA guide:
    https://docs.hpc.cam.ac.uk/hpc/user-guide/mfa.html#walkthrough-ssh-to-multi-hpc-cam-ac-uk
 3) Provide the DAWN login command:
@@ -5394,7 +5313,7 @@ EXAMPLE CUSTOMER REPLY
 
 Hello Matteo,
 
-Your public key has been added to your DAWN account. The next step is to complete the separate SSH MFA setup, then connect using:
+If your public key has already been linked to the DAWN account, the next step is to complete the separate SSH MFA setup and then connect using:
 `ssh dn-bald1@login-dawn.hpc.cam.ac.uk`
 
 If your SSH client asks for authentication, make sure it is using the private key that matches the public key you sent us.

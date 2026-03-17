@@ -15,7 +15,9 @@
     "HPCSSUP-81680",
     "HPCSSUP-98532",
     "HPCSSUP-89520",
-    "HPCSSUP-95541"
+    "HPCSSUP-95541",
+    "HPCSSUP-95724",
+    "HPCSSUP-100647"
   ],
   "Schedulers and Runtime": [
     "HPCSSUP-96168",
@@ -31,7 +33,17 @@
     "HPCSSUP-93979",
     "HPCSSUP-95197",
     "HPCSSUP-98114",
-    "HPCSSUP-88966"
+    "HPCSSUP-88966",
+    "HPCSSUP-100615",
+    "HPCSSUP-99896",
+    "HPCSSUP-99559",
+    "HPCSSUP-98917",
+    "HPCSSUP-98460",
+    "HPCSSUP-97418",
+    "HPCSSUP-95709",
+    "HPCSSUP-98241",
+    "HPCSSUP-97411",
+    "HPCSSUP-99092"
   ],
   "Storage, Filesystems, and Data Services": [
     "HPCSSUP-96609",
@@ -47,7 +59,13 @@
     "HPCSSUP-95411",
     "HPCSSUP-92485",
     "HPCSSUP-98575",
-    "HPCSSUP-88843"
+    "HPCSSUP-88843",
+    "HPCSSUP-100181",
+    "HPCSSUP-99961",
+    "HPCSSUP-100372",
+    "HPCSSUP-100608",
+    "HPCSSUP-100411",
+    "HPCSSUP-100352"
   ],
   "Access, Authentication, and Identity": [
     "HPCSSUP-98814",
@@ -65,12 +83,16 @@
     "HPCSSUP-98497",
     "HPCSSUP-97477",
     "HPCSSUP-82248",
-    "HPCSSUP-89172"
+    "HPCSSUP-89172",
+    "HPCSSUP-100576",
+    "HPCSSUP-100381",
+    "HPCSSUP-100355"
   ],
   "Secure and Trusted Computing": [
     "HPCSSUP-98799",
     "HPCSSUP-97675",
-    "HPCSSUP-97622"
+    "HPCSSUP-97622",
+    "HPCSSUP-99428"
   ],
   "Operations, Reliability, and Incidents": [
     "HPCSSUP-98277",
@@ -90,6 +112,7 @@
     "HPCSSUP-98750",
     "HPCSSUP-98754",
     "HPCSSUP-97991",
-    "HPCSSUP-94925"
+    "HPCSSUP-94925",
+    "HPCSSUP-100516"
   ]
 }

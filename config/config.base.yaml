@@ -99,8 +99,9 @@ evaluation:
   output_dir: "data/eval_runs/latest"
 
   dataset:
-    input_path: "data/test/ragas_one_hop_eval_dataset_v1.jsonl"
-    prepared_path: "data/test/prepared_eval_dataset.json"
+    input_path: "data/test/ragas_one_hop_eval_dataset_final.jsonl"
+    annotations_path: null
+    prepared_path: "data/test/prepared_eval_dataset_final.json"
     reuse_prepared: false
     query_field: "query"
     reference_field: "expected_answer"
