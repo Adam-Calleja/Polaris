@@ -721,7 +721,7 @@ The scheduler is configured so that:
 - If himem jobs are queued, the scheduler will prioritise them appropriately.
 - Nodes may therefore be busy with general jobs even if the himem queue is empty at that moment.
 
-This mirrors the configuration used on Cambridge icelake/icelake-himem and cclake/cclake-himem partitions.
+This kind of overlap is used to improve utilisation rather than leaving higher-memory nodes idle.
 
 ACTION
 
@@ -1026,7 +1026,7 @@ SAFETY / POLICY NOTES
 ----------
 
 [TICKET_KEY] HPCSSUP-98292
-[SUMMARY] DAWN Access Assistance
+[SUMMARY] Fw: DAWN Access Assistance
 
 CLASSIFICATION
 Category: Account Provisioning / DAWN / Project Access
@@ -1443,7 +1443,7 @@ SAFETY / POLICY NOTES
 ----------
 
 [TICKET_KEY] HPCSSUP-97859
-[SUMMARY] Running TensorFlow on Ampere: "module load python/3.8.11/gcc-9.4.0-yb6rzr6" not found
+[SUMMARY] Running TensorFlow on ampere: "module load python/3.8.11/gcc-9.4.0-yb6rzr6" not found.
 
 CLASSIFICATION
 Category: Software / TensorFlow / Ampere GPU / Modules
@@ -1553,9 +1553,9 @@ User reports:
 - After entering password and MFA, system prompts for password again.
 - Appears as though password is incorrect.
 
-This pattern is consistent with an account lock due to multiple unsuccessful login attempts. On CSD3, repeated failed authentication attempts (including incorrect password or expired credentials) will trigger a temporary lock. The lock clears automatically after a defined timeout period.
+This pattern is consistent with an account lock due to multiple unsuccessful login attempts. On CSD3, repeated failed authentication attempts can trigger a temporary lock, which then clears automatically after a timeout period.
 
-A common contributing factor is recent UIS/Raven password changes, which automatically propagate to CSD3 authentication.
+A possible contributing factor is that the user may be entering an outdated UIS/Raven password; if they recently changed it, the new one should be used on CSD3 as well.
 
 ACTION STEPS (HELPDESK)
 
@@ -1673,7 +1673,7 @@ SAFETY / POLICY NOTES
 ----------
 
 [TICKET_KEY] HPCSSUP-97675
-[SUMMARY] SRCP Epi platform - storage query (follow-up on storage architecture and cost model)
+[SUMMARY] SRCP Epi platform - storage query
 
 CLASSIFICATION
 Category: SRCP / Storage Architecture / RFS
@@ -1903,101 +1903,38 @@ Escalation Required: No
 Urgency: Low–Medium (environment setup blocked)
 
 QUICK ASSESSMENT
-User attempted to create a conda environment with:
-
-  conda create -n gnn-crn -c conda-forge python=3.12
-  conda activate gnn-crn
-  conda install -c conda-forge numpy=2.3.5
-
-and encountered an UnsatisfiableError involving Python 3.12, NumPy 2.3.5, and multiple core libraries.
-
-The conflict is caused by incompatible package constraints — specifically NumPy 2.x binary compatibility changes combined with packages in the user’s requirements that depend on NumPy <2. This is not specific to CSD3; it is a dependency resolution issue.
-
-Additionally, users should avoid relying on any centrally provided miniconda installation if outdated, and instead install their own Miniconda in their `hpc-work` space.
+User attempted to create a conda environment with Python 3.12 and NumPy 2.3.5 and hit an `UnsatisfiableError`. From the visible commands, this is most likely a dependency-resolution conflict rather than a CSD3-specific failure. The safest guidance is to avoid forcing incompatible version pins, start from a clean user-managed environment, and inspect any additional requirements file if one is involved.
 
 ACTION STEPS (HELPDESK)
+1) Recommend a clean user-managed Conda install if not already using one
+   - Install Miniconda in `hpc-work` rather than relying on an outdated shared install.
 
-1) Recommend personal Miniconda installation (if not already done)
+2) Create a fresh environment with an explicit Python version, e.g.:
+   - `conda create -n myenv python=3.12 -y`
+   - `conda activate myenv`
 
-   Install Miniconda into hpc-work following:
-     https://www.anaconda.com/docs/getting-started/miniconda/install#linux-terminal-installer
+3) Avoid forcing strict NumPy 2.x pins until compatibility is confirmed
+   - Let Conda resolve NumPy automatically, or inspect any requirements file for packages that still expect NumPy 1.x.
 
-   Install into:
-     ~/hpc-work/miniconda3
+4) If a `requirements.txt` is involved, review it for conflicting hard version pins before installing the full stack.
 
-   Then initialise:
-     source ~/hpc-work/miniconda3/bin/activate
-     conda init
-     source ~/.bashrc
-
-2) Create a clean environment with explicit Python version
-
-   Use a specific patch version to reduce solver ambiguity:
-
-     conda create -n HPCSSUP-97621 python=3.12.4 -y
-     conda activate HPCSSUP-97621
-
-3) Avoid forcing NumPy 2.x unless all dependencies support it
-
-   The earlier failure occurred because:
-     - NumPy 2.x introduces binary-breaking changes.
-     - Some common packages (e.g. matplotlib 3.8.x) require numpy<2.
-     - Explicitly installing numpy=2.3.5 makes the environment logically unsatisfiable.
-
-   Therefore:
-     - Do NOT pin NumPy 2.x unless required.
-     - Let conda resolve NumPy automatically.
-
-4) Install special packages from conda-forge if required
-
-   For example (if rdkit needed):
-
-     conda install -c conda-forge rdkit=2025.09.2 -y
-
-5) Install remaining requirements via pip
-
-     pip install -r requirements.txt
-
-   (This assumes no incompatible hard pins inside requirements.txt.)
-
-6) Best Practice on CSD3
-
-   - Install Miniconda in hpc-work (not /home).
-   - Avoid using outdated central conda modules.
-   - Avoid mixing incompatible major-version pins (e.g. numpy==2.x with legacy stack).
-   - Build environments on login nodes (lightweight), not compute nodes.
-
-IF PROBLEM PERSISTS
-
-Ask for:
-  - Full requirements.txt
-  - Exact conda commands used
-  - Output of:
-      conda info
-      conda list
+5) If the problem persists, ask for:
+   - the full `requirements.txt`
+   - the exact Conda commands used
+   - output of `conda info` and `conda list`
 
 EXAMPLE CUSTOMER REPLY
-
 Subject: Re: Conda environment conflicts on CSD3
 
 Hi Nico,
 
-The error you’re seeing is due to incompatible package constraints rather than anything specific to CSD3. In particular, NumPy 2.x introduces binary changes and some packages (e.g. matplotlib 3.8.x) require `numpy<2`, which makes the environment logically impossible to solve when you explicitly request `numpy==2.3.5`.
+The error you’re seeing looks like a dependency-resolution conflict rather than a problem specific to CSD3.
 
-We recommend installing your own Miniconda into your `hpc-work` area and creating a clean environment, for example:
+We recommend creating a clean user-managed Conda environment and avoiding strict NumPy 2.x pins until the rest of the package set has been checked for compatibility. If you are using a `requirements.txt`, please review that file for conflicting version pins as well.
 
-  conda create -n myenv python=3.12.4 -y
-  conda activate myenv
+If the issue continues, please send us the full `requirements.txt`, the exact commands you used, and the outputs of `conda info` and `conda list`.
 
-Then allow conda to resolve NumPy automatically rather than forcing version 2.x. After that, you can install your remaining requirements using:
-
-  pip install -r requirements.txt
-
-This approach should resolve the dependency conflict.
-
-Please let us know if you continue to experience issues.
-
-Best wishes,  
+Best wishes,
 HPC Support
 
 SAFETY / POLICY NOTES
@@ -2402,7 +2339,7 @@ SAFETY / POLICY NOTES
 ----------
 
 [TICKET_KEY] HPCSSUP-96168
-[SUMMARY] HPC Job Scheduling Delay
+[SUMMARY] HPC Job Scheduling Error
 
 CLASSIFICATION
 Category: Slurm / Scheduling / Service Level Priority
@@ -2480,7 +2417,7 @@ SAFETY / POLICY NOTES
 ----------
 
 [TICKET_KEY] HPCSSUP-95566
-[SUMMARY] Support for job submissions
+[SUMMARY] Support for job submisions.
 
 CLASSIFICATION
 Category: Slurm / GPU Scheduling / Walltime Limits
@@ -2489,17 +2426,13 @@ Escalation Required: No
 Urgency: Medium (jobs being cancelled due to time limit)
 
 QUICK ASSESSMENT
-User reports GPU jobs being cancelled after ~36 hours with error:
-
-  *** JOB <jobid> CANCELLED DUE TO TIME LIMIT ***
-
-They would like to run jobs longer than 3 days and maximise GPU allocation usage.
+User is concerned that GPU jobs cannot exceed the 36-hour walltime limit and asks how to make best use of the allocation.
 
 Key principles:
 - GPU partitions enforce a maximum walltime limit (e.g. 36 hours).
 - This is a scheduler policy limit, not a configuration error.
 - The limit applies regardless of remaining budgeted GPU hours.
-- Allocated GPU hours (account balance) ≠ maximum walltime per job.
+- Allocated GPU hours (account balance) are separate from maximum walltime per job.
 - Long-running workflows should use checkpointing and job chaining.
 
 ACTION STEPS (HELPDESK)
@@ -2644,7 +2577,7 @@ SAFETY / POLICY NOTES
 ----------
 
 [TICKET_KEY] HPCSSUP-95504
-[SUMMARY] Issues with GPU compilation of a package (LAMMPS + symmetrix, CUDA ≥12)
+[SUMMARY] Issues with GPU compilation of a package
 
 CLASSIFICATION
 Category: Software / Compilation / GPU (Ampere, ukaea-amp)
@@ -2763,7 +2696,7 @@ SAFETY / POLICY NOTES
 ----------
 
 [TICKET_KEY] HPCSSUP-95411
-[SUMMARY] Path to my RFS storage
+[SUMMARY] Path to my rfs storage
 
 CLASSIFICATION
 Category: Storage / RFS / Access Method
@@ -2853,7 +2786,7 @@ SAFETY / POLICY NOTES
 ----------
 
 [TICKET_KEY] HPCSSUP-95370
-[SUMMARY] MPI-related runtime error on pvc9 (gmx_mpi / gromacs/2024.5)
+[SUMMARY] MPI-related runtime error
 
 CLASSIFICATION
 Category: MPI / Slurm Environment / Dawn (PVC9)
@@ -3061,50 +2994,30 @@ SAFETY / POLICY NOTES
 [SUMMARY] Quota exceeded with no apparent reason
 
 CLASSIFICATION
-Category: Storage / RDS / Quota (Inode Limit)
+Category: Storage / RDS / Quota Diagnosis
 Technical Action Required: No (user action required to reduce file count)
 Escalation Required: No
 Urgency: Medium (job failing due to quota)
 
 QUICK ASSESSMENT
-The user reports “Disk quota exceeded” errors while writing files to their RDS project directory:
-
-  /home/lz307/rds/rds-vlamemory-R8GV8V7LHCg/...
-
-Although the project has a 2 TB storage quota and is only using ~614 GB, the `quota` output shows:
-
-  rds-R8GV8V7LHCg   files: 1024000*   quota: 1024000   limit: 1024000
-
-The asterisk (*) indicates that the inode (file count) quota has been reached.
-
-On RDS, inode quotas are proportional to storage allocation:
-  512,000 inodes per TiB
-
-For a 2 TiB allocation:
-  2 × 512,000 = 1,024,000 inodes
-
-The project has reached this inode limit, which prevents creation of additional files, even though space (GB/TB) remains available.
-
-This explains:
-- “[Errno 122] Disk quota exceeded” when writing new files
-- Bash errors such as:
-  “cannot create temp file for here-document: Disk quota exceeded”
+User reports `Disk quota exceeded` errors while writing files to an RDS project, despite not obviously expecting the project to be full. On RDS, this can happen either because the space quota is exhausted or because the inode/file-count quota has been reached. From the initial report alone, inode exhaustion is a strong possibility, especially given the shell errors creating temporary files, but `quota` output is needed to confirm whether the problem is space usage or file count.
 
 ACTION STEPS (HELPDESK)
-
-1) Confirm inode exhaustion
-   Ask user to run:
+1) Confirm which quota has been exhausted
+   Ask the user to run:
      quota
-   and check for an asterisk (*) in the “files” column for the relevant RDS project.
+   and check the relevant RDS project entry.
+   - If the GB column is at or above the limit, this is a space-quota problem.
+   - If the files column is at the limit or marked with an asterisk (*), this is an inode/file-count problem.
 
-2) Explain distinction between storage quota and inode quota
+2) Explain the distinction between storage quota and inode quota
    - Storage quota = total disk space (GB/TB)
    - Inode quota = total number of files
    - Hitting either limit blocks new file creation
 
 3) Provide remediation options
 
-   Option A — Reduce file count (recommended)
+   Option A — Reduce file count (recommended if inode limit reached)
    - Delete unnecessary small files
    - Consolidate many small files into archives (e.g. tar)
    - Combine image files into fewer container formats if possible
@@ -3121,43 +3034,28 @@ ACTION STEPS (HELPDESK)
    - Inode quotas are fixed per TiB.
    - They cannot be increased independently of storage allocation.
 
-5) Close once user confirms understanding.
-
-QUESTIONS TO ASK (ONLY IF NEEDED)
-- Approximately how many files are being generated?
-- Are these many small image files that could be batched/archived?
-- Would you like guidance on estimating file counts (e.g. using `find | wc -l`)?
+5) Close once the user understands which limit was hit and how to proceed.
 
 EXAMPLE CUSTOMER REPLY
-
 Subject: Re: Quota exceeded on RDS project
 
 Hello Liyou,
 
-Although your project has a 2 TB storage allocation and is not near the space limit, the RDS project has reached its inode (file count) quota.
+The `Disk quota exceeded` message can be caused either by running out of space or by reaching the inode/file-count limit on the RDS project.
 
-From your `quota` output:
+Please run:
 
-  rds-R8GV8V7LHCg   1024000* files used (limit 1024000)
+  quota
 
-The asterisk indicates the inode limit has been reached. On RDS, inode quotas are set at 512,000 files per TiB of storage. For a 2 TiB allocation, this gives a maximum of 1,024,000 files.
+and send us the output for the affected RDS project. If the limit has been hit in the `files` column rather than the GB column, that would indicate an inode quota issue rather than lack of storage space.
 
-Once this file-count limit is reached, new files cannot be created, even if disk space remains available.
+If it is an inode limit, the usual remedies are to remove or consolidate many small files or to increase the total storage allocation.
 
-To proceed, you will need to either:
-- Remove or consolidate a significant number of small files, or
-- Increase the total RDS storage allocation (which would proportionally increase the inode quota).
-
-You can find more details here:
-https://docs.hpc.cam.ac.uk/storage/rds/details.html#usage-quotas
-
-Please let us know if you would like advice on consolidating files or estimating file counts.
-
-Best wishes,  
+Best wishes,
 HPC Support
 
 SAFETY / POLICY NOTES
-- Do not imply a filesystem fault; this is expected quota behaviour.
+- Do not imply a filesystem fault without first confirming whether space or inode quota has been reached.
 - Do not suggest modifying system quota settings directly.
 - Inode quotas are proportional to purchased storage and are not adjustable independently.
 - Avoid recommending unsafe bulk deletion commands.
@@ -3165,7 +3063,7 @@ SAFETY / POLICY NOTES
 ----------
 
 [TICKET_KEY] HPCSSUP-94925
-[SUMMARY] Quote request for Cumulus CPU hours and RDS storage
+[SUMMARY] Quote
 
 CLASSIFICATION
 Category: Procurement / Pricing Information
@@ -3375,82 +3273,43 @@ Escalation Required: Yes (Ceph/storage administrators + network)
 Urgency: High (filesystem hangs across multiple instances)
 
 QUICK ASSESSMENT
-User reports widespread CephFS mount and access hangs across multiple Arcus cloud instances, with client session state showing MDS-related reconnect/closing behaviour, repeatedly implicating mds.1:
-
-- mds.1 reconnecting
-- mds.1 closing
-- Some shares using mds.0 remain open/working while those on mds.1 are unavailable.
-- Mount attempts can time out (mount error 110 = Connection timed out).
-
-Because the issue affects multiple instances and is correlated with one MDS, this is likely a service-side CephFS/MDS or network path issue rather than a per-instance client misconfiguration. Rebooting instances may temporarily clear symptoms but does not address underlying cause.
-
-IMMEDIATE OBJECTIVE
-Restore stable CephFS access (especially for shares served by mds.1) and prevent recurrence.
+User reports Ceph shares on Arcus cloud hanging across multiple instances, with client session state showing repeated MDS reconnecting behaviour and filesystem access hanging. Because the issue affects multiple shares and instances, this is more consistent with a service-side CephFS/MDS or network-path problem than a single-instance misconfiguration. Rebooting instances may temporarily clear symptoms but should not be treated as the primary fix.
 
 ACTION STEPS (HELPDESK)
+1) Acknowledge and treat as a service incident
+   - Confirm the issue affects multiple instances/shares.
+   - Prioritise service-side checks over detailed user-side debugging.
 
-1) Acknowledge and treat as service incident
-   - Confirm the issue affects multiple instances and is correlated with mds.1 session state.
-   - Prioritise service-side checks over user-side troubleshooting.
-
-2) Collect minimal high-signal diagnostics from user (non-disruptive)
+2) Collect minimal high-signal diagnostics from the user
    Ask for:
-   - Example affected instance name(s)
-   - Exact mount command(s) used
-   - Timestamp(s) of failures
-   - One example of:
-       mount output / error
-       and any relevant Ceph mount logs if readily available
-
-   Do NOT request extensive debugging from user while service appears degraded.
+   - example affected instance name(s)
+   - approximate timestamps of failures
+   - exact mount command(s) or error output if readily available
 
 3) Service-side investigation (storage/admin)
-   Check CephFS health and MDS status, focusing on mds.1:
+   Check:
    - Ceph cluster health summary and recent warnings
    - CephFS filesystem status and active/standby MDS state
    - MDS daemon logs around the failure window
-   - Client session counts, reconnect/eviction activity, and caps issues
-   - Any ongoing rebalancing/recovery that could impact metadata latency
+   - client session reconnect/eviction behaviour
+   - any ongoing rebalancing or recovery that could affect metadata availability
 
 4) Network path verification (admin)
-   Because symptoms include timeouts and MDS reconnecting/closing, verify:
-   - Routing and interface configuration on the MDS host(s)
-   - Any recent network changes affecting the MDS VLAN/overlay
-   - That any required additional routes are present and persistent
+   Verify routing/interface configuration and any recent changes affecting CephFS traffic.
 
-5) Mitigation
-   If mds.1 is unhealthy or unreachable:
-   - Correct the underlying MDS connectivity issue (preferred)
-   - If needed, fail over / restart MDS appropriately per operational runbooks
-   - Confirm clients can re-establish sessions without repeated reconnect/closing
-
-6) Communicate workaround (optional, cautious)
-   Rebooting instances can re-establish mounts in some cases, but it may be disruptive.
-   Only suggest rebooting as a workaround if:
-   - The user confirms it is operationally acceptable, and
-   - Service stability has been restored on the backend.
-
-7) Confirm resolution
-   - Ask user to retry mounting an affected share and confirm responsiveness.
-   - Monitor for recurrence over a short window.
-
-DO NOT
-- State that the issue is definitively caused by the client or by instance configuration without evidence.
-- Advise changes to client mount options as the primary fix when service-side MDS correlation is strong.
-- Rely on instance reboots as the only resolution.
+5) Ask users to retry only after backend checks or remediation have been completed.
 
 EXAMPLE CUSTOMER REPLY
-
 Hello Patrick,
 
-Thanks for the detailed report — the repeated “mds.1 reconnecting/closing” messages and the fact that this is affecting multiple instances suggests a service-side CephFS/MDS connectivity issue rather than a per-instance configuration problem.
+Thanks for the detailed report. Because the hangs are affecting multiple instances and shares, this looks more like a service-side CephFS issue than a single-instance configuration problem.
 
-We’re investigating the CephFS state now, focusing on mds.1. In the meantime, could you please share:
+We’re investigating the backend now. In the meantime, could you please share:
 - the names of one or two affected instances,
-- the approximate timestamps of the most recent timeouts,
-- and the exact mount command/output (e.g. the “Connection timed out” example)?
+- the approximate timestamps of the most recent failures,
+- and one example of the mount command or error output you are seeing?
 
-Once we’ve stabilised the backend, we can discuss whether rebooting affected instances is worthwhile for clean remount on startup (only if it won’t be disruptive for you).
+Once we have checked the backend state, we can advise whether any instance-side action is still needed.
 
 Cheers,
 HPC Support
@@ -3474,39 +3333,28 @@ Escalation Required: No
 Urgency: Medium
 
 QUICK ASSESSMENT
-User requests pricing for 10,000 additional GPU hours and "20 GB" of extra RDS space on `QAKG-SL2-GPU`. The ticket history shows that the storage figure was a typo and had to be clarified before a valid quote could be produced. It later became clear that the real request was for a larger storage change and that existing storage licensing also needed to be accounted for.
-
-An ideal first response should therefore not assume the storage quantity. It should confirm the intended extra capacity and whether the current RDS allocation also needs renewing before issuing a quote.
+User is requesting pricing for 10,000 additional GPU hours and additional RDS storage on `QAKG-SL2-GPU`. Because the message says `20 GB`, which is unusually small in this procurement context, the safest response is to confirm the intended storage amount and whether the quote should cover only new storage or also any existing storage renewal/extension before issuing a final figure.
 
 ACTION STEPS (HELPDESK)
-
 1) Clarify the storage request before quoting
    - Confirm whether `20 GB` is correct or a typo.
    - Confirm whether the user means additional capacity on top of the current licensed storage.
-   - Confirm whether existing storage licence arrears/renewal need to be included in the quote.
+   - Confirm whether the quote should cover only extra storage or also renewal/extension of existing storage.
 
-2) Quote the GPU hours separately
-   - 10,000 GPU hours at £0.55/hour = £5,500 + VAT.
+2) Quote the GPU hours separately using the current applicable rate.
 
-3) Once storage details are confirmed, issue a written email quote covering both:
-   - the GPU hours, and
-   - the corrected storage/licence amount.
+3) Once the storage details are confirmed, issue a written email quote covering both the GPU hours and the corrected storage amount.
 
 4) Ask the user to send the PO to the ticket once ready.
 
 5) Keep any later account-creation request separate from the pricing calculation.
 
 EXAMPLE CUSTOMER REPLY
-
 Dear Wenyu,
 
-Before I finalise the storage part of the quote, could you please confirm whether `20 GB` is correct? That is unusually small for this service, and we need to make sure we are quoting the right storage amount and whether your existing licensed storage also needs renewing.
+Before I finalise the storage part of the quote, could you please confirm whether `20 GB` is correct? That is unusually small for this service, so I want to make sure we quote the right storage amount and whether this is additional capacity or an extension of your current storage.
 
-For the compute part, 10,000 additional GPU hours would cost:
-
-  10,000 x £0.55 = £5,500 + VAT
-
-Once you confirm the storage quantity and whether this is an extension of your current storage allocation, I can provide the full written quote.
+Once you confirm the intended storage quantity and scope, I can provide the full written quote for both storage and GPU hours.
 
 Best regards,
 HPC Support
@@ -3514,7 +3362,7 @@ HPC Support
 SAFETY / POLICY NOTES
 - Do not silently convert user-supplied units.
 - If the storage quantity looks implausible, ask before quoting.
-- Keep quote assumptions explicit, especially where existing licensed storage affects cost.
+- Keep quote assumptions explicit, especially if renewal or extension of existing storage affects cost.
 
 ----------
 
@@ -3830,33 +3678,30 @@ SAFETY / POLICY NOTES
 [SUMMARY] Unable to connect to rcs.uis.cam.ac.uk
 
 CLASSIFICATION
-Category: Access / RCS SSH-MFA
+Category: Access / RCS Connectivity / SSH-MFA
 Technical Action Required: No (user onboarding guidance)
 Escalation Required: No
 Urgency: Medium
 
 QUICK ASSESSMENT
-Follow-up query: one user can log in to login-web with MFA, but still gets “Access Denied” on `rcs.uis.cam.ac.uk`. In this scenario, the most likely cause is missing SSH/storage MFA enrollment. The web MFA token and SSH/storage MFA token are separate.
+User reports that multiple people are unable to connect to `rcs.uis.cam.ac.uk` over SFTP/SSH, raising the possibility of either a broader service problem or account-specific access changes. The correct first response is to confirm whether there is an active service incident and, if not, gather examples from affected users to determine whether the problem is shared or user-specific.
 
 ACTION
-1) Clarify token separation:
-   - login-web MFA token is for web access only.
-   - SSH/storage services require the SSH TOTP token configured via `multi.hpc.cam.ac.uk`.
-2) Instruct affected users to complete SSH MFA setup using official documentation.
-3) Ask each affected user to raise their own ticket for account-specific checks if issue persists.
+1) Check whether there is an active service issue affecting RCS SSH/SFTP access.
+2) Ask for example usernames, client/method used, and the exact error messages seen by affected users.
+3) If the service is healthy, distinguish between users who cannot access RCS at all and users with account-specific denial errors.
+4) For individual users, confirm SSH/storage MFA enrolment if relevant and ask them to raise their own tickets for account-specific checks.
 
 EXAMPLE CUSTOMER REPLY
-
 Hello Shaun,
 
-If a user can access login-web but still gets “Access Denied” on `rcs.uis.cam.ac.uk`, this usually means SSH MFA is not yet set up for storage access.
+We’re first checking whether there is any broader issue affecting RCS SSH/SFTP access.
 
-The web MFA token and SSH/storage MFA token are separate.
+If the service itself is healthy, we’ll need the affected usernames, the client or method being used, and the exact error messages so we can tell whether this is a shared problem or an account-specific one.
 
-For users seeing access denied on `rcs.uis.cam.ac.uk`, please ensure they complete SSH MFA setup using the documented process (via `multi.hpc.cam.ac.uk`):
-https://docs.hpc.cam.ac.uk/hpc/user-guide/mfa.html
+For users who can access the web portal but not SSH/SFTP services, we may also need to confirm that SSH/storage MFA has been set up separately.
 
-If any user still has issues after setup, please ask them to raise their own ticket so we can verify account-specific details directly.
+If any individual user continues to have problems, please ask them to raise their own ticket so we can check their account details directly.
 
 Best regards,
 HPC Support
@@ -3996,12 +3841,12 @@ Escalation Required: No
 Urgency: Medium
 
 QUICK ASSESSMENT
-User on VPN unable to login via Citrix Workspace app. Initial diagnostic should verify web launch path through `anywhere.cam.ac.uk` and whether SRCP desktop launches from browser. Ticket auto-closed due no response.
+User on VPN is unable to log in via the Citrix Workspace app. The appropriate first diagnostic is to verify whether browser-based launch through `anywhere.cam.ac.uk` works and whether the SRCP desktop can be started there, which helps separate a Citrix client problem from a broader access issue.
 
 ACTION
-1) Ask user to test web launch via `https://anywhere.cam.ac.uk/`.
-2) Verify SRCP desktop visibility and app handoff behavior.
-3) If no response, close with reopen guidance.
+1) Ask the user to test web launch via `https://anywhere.cam.ac.uk/`.
+2) Verify whether the SRCP desktop is visible there and whether launching from the browser hands off to Citrix correctly.
+3) If browser launch works, focus on the local Citrix Workspace client configuration or version.
 
 EXAMPLE CUSTOMER REPLY
 
@@ -4249,40 +4094,35 @@ Escalation Required: No
 Urgency: Medium
 
 QUICK ASSESSMENT
-User loaded `freesurfer/8.0.0` but runtime failed with `FREESURFER: Undefined variable`, then later license-related failure and temporary modulefile regression during live edits. Working path required explicit environment setup and user license variable.
+User loaded `freesurfer/8.0.0` and received `FREESURFER: Undefined variable`. From the original query, the most likely issue is incomplete environment setup after loading the module rather than the software being absent. The next step is to reproduce the module load, check the exact command or script the user is running, and then handle any further setup requirements such as the FreeSurfer setup script or licence configuration if they arise.
 
 ACTION
-1) Reproduce issue and validate module behavior.
-2) Instruct explicit setup sequence:
+1) Reproduce the issue and validate module behaviour.
+2) Ask the user to show the exact commands or job script they are using.
+3) Instruct the standard setup sequence:
    - `module load freesurfer/8.0.0`
    - `source $FREESURFER_HOME/SetUpFreeSurfer.sh`
-3) Handle license requirement:
-   - user obtains license file
-   - user exports `FS_LICENSE=/path/to/license.txt`
-4) If modulefile error introduced during updates, fix and ask user to retry.
-5) Confirm successful execution.
+4) If a subsequent error indicates a missing licence file, instruct the user to obtain a valid licence and set `FS_LICENSE=/path/to/license.txt`.
+5) Confirm successful execution after the environment is set correctly.
 
 EXAMPLE CUSTOMER REPLY
-
 Hi Marialena,
 
-Please run:
+Please first try the standard setup sequence:
 
 module load freesurfer/8.0.0
 source $FREESURFER_HOME/SetUpFreeSurfer.sh
 
-For FreeSurfer 8, also set your license path in your environment, e.g.:
+Then retry the command that is failing.
 
-export FS_LICENSE=/path/to/license.txt
-
-Then retry `recon-all`.
+If you then receive a separate licence-file error, please send that exact message and we can advise on setting `FS_LICENSE` correctly.
 
 Best wishes,
 HPC Support
 
 SAFETY / POLICY NOTES
-- Do not request users place license file in protected system directories.
-- Avoid modifying live module files without caution and rollback plan.
+- Do not request users place the licence file in protected system directories.
+- Do not assume the initial undefined-variable error proves the software is missing or broken.
 
 ----------
 
@@ -4453,7 +4293,7 @@ SAFETY / POLICY NOTES
 ----------
 
 [TICKET_KEY] HPCSSUP-81206
-[SUMMARY] Can't compile code: /tmp is full warning
+[SUMMARY] Can't compile code: error: icc: warning #10352: The directory '/tmp' is full.  Please check disk space.
 
 CLASSIFICATION
 Category: Login Node Health / Temporary Filesystem
@@ -4612,26 +4452,31 @@ Escalation Required: No
 Urgency: Medium
 
 QUICK ASSESSMENT
-The container install itself appears to have succeeded. The immediate problem is the generated `run_alphafold3` wrapper script, which used the wrong execution form and was missing the final corrected line continuations. The safe fix is to regenerate the wrapper using `singularity exec`, make it executable, and then bind the approved AlphaFold data and model weights correctly.
+The AlphaFold3 container appears to have been created, but the user gets `FATAL: permission denied` when running `./run_alphafold3`. From the visible query alone, the safest interpretation is that the generated launcher script, its execute permissions, or the way it invokes the container needs checking. The next step is to inspect the wrapper script, confirm it is executable, and verify the image/data paths being used.
 
 ACTION
-1) Recreate `run_alphafold3` with the corrected wrapper body.
-2) Ensure the script is executable with `chmod +x run_alphafold3`.
-3) Confirm the container image exists in the install directory.
-4) Verify the user has obtained the Google model weights and has mapped them when running.
+1) Ask the user to show the generated launcher script and its permissions, e.g.:
+   - `ls -l run_alphafold3`
+   - `head -n 40 run_alphafold3`
+2) Confirm the container image exists in the install directory and is readable.
+3) If the launcher is not executable, instruct the user to run `chmod +x run_alphafold3`.
+4) Review whether the launcher is invoking Singularity correctly for the local installation.
+5) Confirm the required AlphaFold data/model weights are available and mapped as documented.
 
 EXAMPLE CUSTOMER REPLY
-
 Hello Daniel,
 
-The `permission denied` error is coming from the generated wrapper script rather than from the container image itself.
+The `permission denied` error suggests the generated launcher script or the way it is being invoked needs checking.
 
-Please recreate `run_alphafold3` using the corrected `singularity exec` version below, then run:
+Please send us:
+- the output of `ls -l run_alphafold3`
+- the first part of the script (`head -n 40 run_alphafold3`)
+- confirmation that the AlphaFold image file exists in the install directory
+
+If the launcher is not executable, please also try:
 `chmod +x run_alphafold3`
 
-Also make sure the file `alphafold3_3.0.1.sif` exists in the install directory and that you have the approved weights/parameters available to bind when running the container.
-
-If you still have trouble after that, please send the exact contents of `run_alphafold3` and confirm the `.sif` file path.
+Once we can see the wrapper contents and permissions, we can confirm the correct Singularity invocation.
 
 Best wishes,
 HPC Support
@@ -4719,20 +4564,19 @@ Escalation Required: Yes (new build request if required)
 Urgency: Low
 
 QUICK ASSESSMENT
-The currently supported centrally available version is `abaqus/2022`. `abaqus/2024` is not presently available. Because licensing is controlled by the Department of Engineering, the correct path is to coordinate licensing there and then submit a separate new build/install request if a newer centrally available version is required.
+The immediate answer is that `abaqus/2024` is not currently available as a centrally supported version on the cluster; the latest supported central version is `abaqus/2022`. If there is a requirement for a newer version, licensing and a separate build or install request would need to be coordinated.
 
 ACTION
 1) Confirm that `abaqus/2022` is the latest supported central version.
 2) Explain that no timeline can be promised for `abaqus/2024`.
-3) If Engineering is willing to support the newer licensed version, ask them to submit a fresh build/install request to HPC support.
+3) If the relevant licence owner wants a newer centrally available version, ask them to submit a fresh build or install request to HPC support.
 
 EXAMPLE CUSTOMER REPLY
-
 Hello Zac,
 
 At present the newest centrally supported version on the cluster is `abaqus/2022`, so the user did not misunderstand.
 
-If the Department of Engineering is able to support licensing for a newer centrally available version, please send a new request to `support@hpc.cam.ac.uk` and we can look into building and providing that version.
+If the relevant licence owner wants a newer centrally available version, please send a new request to `support@hpc.cam.ac.uk` and we can look into building and providing that version.
 
 Best wishes,
 HPC Support
@@ -4978,7 +4822,7 @@ Escalation Required: No
 Urgency: Medium
 
 QUICK ASSESSMENT
-The user’s slow Python setup and `import torch` freezes may indicate a broader platform/filesystem performance issue rather than only a bad personal environment. The correct initial response is to check for an active service-side problem before concluding that the issue is confined to the user's own setup.
+The user’s slow Python setup and `import torch` freezes could reflect either a problem in the user environment or a broader shared-filesystem or service issue. Because the slowdown affects multiple environment-creation methods and both home and `hpc-work`, the first response should check for any active service-side problem before focusing only on the user’s setup.
 
 ACTION
 1) Check whether there is a broader service issue affecting Python environment creation or shared filesystems.
@@ -5009,23 +4853,22 @@ Escalation Required: No
 Urgency: Medium
 
 QUICK ASSESSMENT
-The user is seeing slow Python imports from a virtual environment stored on `hpc-work`. The most likely explanation given in the ticket is shared filesystem load rather than a software bug. The correct guidance is to explain that RDS-backed environments can show variable latency under heavy load.
+The user is seeing slow Python imports from a virtual environment stored on `hpc-work`. A likely explanation is latency on the shared RDS-backed filesystem rather than a Python bug, but support should first confirm there is no known wider incident before treating it as normal shared-storage behaviour.
 
 ACTION
 1) Explain that `hpc-work` is a shared RDS filesystem and can slow down when heavily loaded.
-2) Confirm that no cluster-wide incident is currently known.
+2) Check whether any cluster-wide incident is currently known.
 3) Advise the user that environments on shared storage may show intermittent latency.
 4) If the slowdown becomes persistent or widespread, request timings and node details for escalation.
 
 EXAMPLE CUSTOMER REPLY
-
 Hello Leo,
 
-From the information provided, the most likely cause is normal variability on the shared RDS filesystem, since your virtual environment is stored in `hpc-work`.
+A likely cause is latency on the shared RDS-backed filesystem, since your virtual environment is stored in `hpc-work`, but we would first want to rule out any broader service issue.
 
-That means imports can sometimes be much slower when the shared storage is under heavy load.
+If no wider incident is present, imports can sometimes be slower when the shared storage is under heavy load.
 
-If this becomes persistent or starts affecting many commands consistently, please send timings and the exact node/location you are testing from and we can investigate further.
+If this becomes persistent or starts affecting many commands consistently, please send timings and the exact node and location you are testing from and we can investigate further.
 
 Best wishes,
 HPC Support
@@ -5072,27 +4915,26 @@ HPC Support
 [SUMMARY] Re: CSD3 systems at Cambridge (ms3242)
 
 CLASSIFICATION
-Category: MFA Reset / Identity Verification
+Category: MFA Reset / SSH Re-enrolment
 Technical Action Required: Yes
 Escalation Required: No
 Urgency: Medium
 
 QUICK ASSESSMENT
-The user had lost access to the MFA QR/TOTP setup and needed the cluster MFA reset. This requires a brief identity-verification call, followed by a new MFA enrolment through `multi.hpc.cam.ac.uk`.
+The user has lost access to the TOTP setup previously generated for cluster SSH login and needs the standard cluster MFA reset/re-enrolment path. After reset, they should SSH to `multi.hpc.cam.ac.uk` again to obtain a new QR code for cluster login.
 
 ACTION
-1) Arrange a short identity-verification call with photo ID.
-2) Reset the user’s cluster MFA.
+1) Confirm whether the user can transfer the existing authenticator setup from the old device; if not, follow the standard cluster MFA reset workflow.
+2) Reset the user’s cluster MFA using the normal support process.
 3) Instruct them to run:
    `ssh ms3242@multi.hpc.cam.ac.uk`
-   using their Cambridge password to obtain the new QR code.
-4) Clarify that the web interface will prompt for its own QR code separately if needed.
+   using their Cambridge password to obtain a new QR code.
+4) Clarify that the web interface may prompt separately if web MFA also needs re-enrolment.
 
 EXAMPLE CUSTOMER REPLY
-
 Hello Martin,
 
-We can reset the MFA for your cluster account, but first we need a brief identity-verification call where you present photo ID.
+We can reset the MFA for your cluster account and then you can re-enrol it.
 
 Once the reset has been completed, please run:
 `ssh ms3242@multi.hpc.cam.ac.uk`
@@ -5114,21 +4956,21 @@ Escalation Required: No
 Urgency: Medium
 
 QUICK ASSESSMENT
-The user was trying to log back into an already running RStudio session with their normal HPC credentials. For these interactive sessions, the correct password must be read from the session’s `Connection.yml` file via the session hyperlink.
+The user is trying to reconnect to an already running RStudio interactive session after the web page timed out. In this situation, the RStudio login prompt may require session-specific connection credentials rather than the user’s normal HPC password. The next step is to retrieve the connection details from the running session page and use the session password shown there.
 
 ACTION
-1) Direct the user to the running session’s ID hyperlink.
-2) Ask them to open `Connection.yml`.
-3) Copy the session password from there and use it for the RStudio login prompt.
+1) Direct the user to the page for the running session.
+2) Retrieve the session-specific connection details shown there, including the password.
+3) Use that session password at the RStudio login prompt instead of the normal HPC password.
 
 EXAMPLE CUSTOMER REPLY
-
 Hi Julia,
 
-Please retrieve the session-specific RStudio password from your running session:
-1) Click the session ID hyperlink.
-2) Open `Connection.yml`.
-3) Copy the password shown there and use that at the RStudio login page.
+Please open the page for the running RStudio session and retrieve the session-specific connection details shown there.
+
+Use the password provided on that session page at the RStudio login prompt rather than your normal HPC password.
+
+If you still cannot reconnect, please send us a screenshot of the session page and the login prompt.
 
 Best wishes,
 HPC Support
@@ -5177,21 +5019,20 @@ Escalation Required: No
 Urgency: Low
 
 QUICK ASSESSMENT
-The requester provided a purchase order for SL2 CPU hours but did not know whether the hours should be applied to an existing project or a new one. The correct support path is to establish whether a new SL2 project account is needed, and if so obtain PI approval before creating the project and adding users.
+The requester has sent a PO for SL2 CPU hours to be credited for Emily Lines. From the initial message alone, it is not clear whether these hours should go onto an existing SL2 project or whether a new project account is needed. The correct next step is to confirm the target SL2 account and, if none exists, follow the normal project-creation and approval path.
 
 ACTION
 1) Ask whether the credits are for an existing SL2 project or a new one.
-2) If the PI has no existing SL2 CPU project, create a new project account once PI approval is confirmed.
-3) Add the required users to that new project.
+2) If no suitable existing SL2 CPU project exists, follow the normal approval process to create one.
+3) Add the required users to the target project once the account path is confirmed.
 4) If an existing account is intended instead, request the exact target project code.
 
 EXAMPLE CUSTOMER REPLY
-
 Hello Anne,
 
 Before we can apply the purchased CPU hours, we need to confirm whether they are for an existing SL2 CPU project or whether a new project needs to be created.
 
-If Emily Lines does not already have an SL2 CPU project, we would need to create one and obtain PI approval before applying the hours and adding the relevant users.
+If there is no suitable existing SL2 CPU project for this work, we would need to follow the normal approval process before creating one and applying the hours.
 
 Best regards,
 HPC Support
@@ -5208,21 +5049,20 @@ Escalation Required: No
 Urgency: Medium
 
 QUICK ASSESSMENT
-The user wanted to extend an existing storage project but accidentally raised a new storage purchase instead. The correct handling is to prevent them from activating the mistaken purchase, remove the accidental new project on the service side, and direct PO cancellation back to the departmental purchasing/finance contact.
+The user wants to extend an existing storage project but believes they may have accidentally requested a new storage purchase instead. The safe handling is to stop them from activating anything new until support has verified which service record should be extended and whether the mistaken request can be corrected or needs to be cancelled or reissued.
 
 ACTION
 1) Ask the user not to activate the mistaken newly purchased storage project.
 2) Confirm which existing project is the one that should be extended.
-3) Arrange internal removal of the accidental storage project if needed.
-4) Explain that PO cancellation must be requested via the departmental administrator or finance contact who raised it.
+3) Check internally whether the mistaken request can be removed or converted.
+4) If cancellation or reissue is required, direct the user to the appropriate purchasing or finance route.
 
 EXAMPLE CUSTOMER REPLY
-
 Hi Matt,
 
-Please leave the accidentally purchased storage project unallocated while we sort out the service-side correction.
+Please leave the accidentally purchased storage project unallocated while we verify whether the mistaken request can be corrected or whether it needs to be cancelled and reissued.
 
-We can remove the mistaken project on our side, but the purchase order itself must be cancelled through the person or department that raised it, for example your departmental administrator or finance contact.
+Once we confirm the correct path, we will tell you whether any purchasing or finance action is needed on your side.
 
 Best wishes,
 HPC Support
@@ -5239,12 +5079,12 @@ Escalation Required: No
 Urgency: Medium
 
 QUICK ASSESSMENT
-The missing “Launch Remote Desktop” button can be caused by launch-form settings such as project/account selection, but from the ticket text alone the exact cause is not confirmed. The safest next step is to review the full launch settings and confirm which project/account is selected.
+The missing “Launch Remote Desktop” button can be caused by launch-form settings such as project or account selection, but the screenshots are needed to confirm the exact cause. The safest next step is to review the full launch settings and confirm which project or account is selected.
 
 ACTION
 1) Ask the user for a full screenshot of the launch settings if not already available.
-2) Confirm that the correct project/account is selected in the Remote Desktop form.
-3) Explain that the default project may not be appropriate.
+2) Confirm that the correct project or account is selected in the Remote Desktop form.
+3) If project selection is wrong, explain that the default project may not be appropriate.
 
 EXAMPLE CUSTOMER REPLY
 
