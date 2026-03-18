@@ -1,0 +1,269 @@
+{
+  "dev_ids": [
+    "HPCSSUP-99134",
+    "HPCSSUP-98836",
+    "HPCSSUP-98820",
+    "HPCSSUP-98814",
+    "HPCSSUP-98799",
+    "HPCSSUP-98754",
+    "HPCSSUP-98750",
+    "HPCSSUP-98706",
+    "HPCSSUP-98611",
+    "HPCSSUP-98532",
+    "HPCSSUP-98497",
+    "HPCSSUP-98324",
+    "HPCSSUP-98296",
+    "HPCSSUP-98039",
+    "HPCSSUP-97991",
+    "HPCSSUP-97962",
+    "HPCSSUP-97859",
+    "HPCSSUP-97741",
+    "HPCSSUP-97622",
+    "HPCSSUP-97621",
+    "HPCSSUP-96933",
+    "HPCSSUP-96776",
+    "HPCSSUP-96609",
+    "HPCSSUP-96250",
+    "HPCSSUP-95566",
+    "HPCSSUP-95541",
+    "HPCSSUP-95411",
+    "HPCSSUP-95370",
+    "HPCSSUP-94974",
+    "HPCSSUP-94925",
+    "HPCSSUP-94250",
+    "HPCSSUP-93979",
+    "HPCSSUP-93204",
+    "HPCSSUP-93140",
+    "HPCSSUP-93090",
+    "HPCSSUP-92750",
+    "HPCSSUP-92485",
+    "HPCSSUP-91750",
+    "HPCSSUP-91551",
+    "HPCSSUP-90029",
+    "HPCSSUP-89520",
+    "HPCSSUP-89172",
+    "HPCSSUP-89057",
+    "HPCSSUP-88843",
+    "HPCSSUP-88772",
+    "HPCSSUP-87559",
+    "HPCSSUP-85932",
+    "HPCSSUP-83106",
+    "HPCSSUP-82270",
+    "HPCSSUP-82248",
+    "HPCSSUP-81680",
+    "HPCSSUP-81010",
+    "HPCSSUP-65611",
+    "HPCSSUP-100615",
+    "HPCSSUP-99896",
+    "HPCSSUP-99559",
+    "HPCSSUP-97418",
+    "HPCSSUP-95724",
+    "HPCSSUP-98241",
+    "HPCSSUP-97411",
+    "HPCSSUP-99092",
+    "HPCSSUP-100181",
+    "HPCSSUP-99961",
+    "HPCSSUP-100372",
+    "HPCSSUP-100576",
+    "HPCSSUP-100381",
+    "HPCSSUP-100608",
+    "HPCSSUP-100355",
+    "HPCSSUP-100352",
+    "HPCSSUP-100647"
+  ],
+  "feature_target_counts": {
+    "attachment_dependent=no": 28,
+    "attachment_dependent=yes": 2,
+    "docs_scope_bucket=external_involved": 5,
+    "docs_scope_bucket=local_official": 17,
+    "docs_scope_bucket=none": 8,
+    "query_type=general_how_to": 3,
+    "query_type=local_operational": 20,
+    "query_type=software_version": 6,
+    "source_needed=both": 8,
+    "source_needed=docs": 15,
+    "source_needed=tickets": 8,
+    "system_scope_required=no": 3,
+    "system_scope_required=yes": 27,
+    "validity_sensitive=no": 2,
+    "validity_sensitive=yes": 28,
+    "version_sensitive=no": 24,
+    "version_sensitive=yes": 6
+  },
+  "feature_test_counts": {
+    "attachment_dependent=no": 28,
+    "attachment_dependent=yes": 2,
+    "docs_scope_bucket=external_involved": 5,
+    "docs_scope_bucket=local_official": 17,
+    "docs_scope_bucket=none": 8,
+    "query_type=general_how_to": 3,
+    "query_type=local_operational": 21,
+    "query_type=software_version": 6,
+    "source_needed=both": 8,
+    "source_needed=docs": 14,
+    "source_needed=tickets": 8,
+    "system_scope_required=no": 3,
+    "system_scope_required=yes": 27,
+    "validity_sensitive=no": 2,
+    "validity_sensitive=yes": 28,
+    "version_sensitive=no": 24,
+    "version_sensitive=yes": 6
+  },
+  "feature_totals": {
+    "attachment_dependent=no": 95,
+    "attachment_dependent=yes": 5,
+    "docs_scope_bucket=external_involved": 18,
+    "docs_scope_bucket=local_official": 56,
+    "docs_scope_bucket=none": 26,
+    "query_type=general_how_to": 11,
+    "query_type=local_operational": 68,
+    "query_type=software_version": 21,
+    "source_needed=both": 25,
+    "source_needed=docs": 49,
+    "source_needed=tickets": 26,
+    "system_scope_required=no": 9,
+    "system_scope_required=yes": 91,
+    "validity_sensitive=no": 8,
+    "validity_sensitive=yes": 92,
+    "version_sensitive=no": 80,
+    "version_sensitive=yes": 20
+  },
+  "field_distributions": {
+    "all": {
+      "attachment_dependent": {
+        "no": 95,
+        "yes": 5
+      },
+      "docs_scope_bucket": {
+        "external_involved": 18,
+        "local_official": 56,
+        "none": 26
+      },
+      "query_type": {
+        "general_how_to": 11,
+        "local_operational": 68,
+        "software_version": 21
+      },
+      "source_needed": {
+        "both": 25,
+        "docs": 49,
+        "tickets": 26
+      },
+      "system_scope_required": {
+        "no": 9,
+        "yes": 91
+      },
+      "validity_sensitive": {
+        "no": 8,
+        "yes": 92
+      },
+      "version_sensitive": {
+        "no": 80,
+        "yes": 20
+      }
+    },
+    "dev": {
+      "attachment_dependent": {
+        "no": 67,
+        "yes": 3
+      },
+      "docs_scope_bucket": {
+        "external_involved": 13,
+        "local_official": 39,
+        "none": 18
+      },
+      "query_type": {
+        "general_how_to": 8,
+        "local_operational": 47,
+        "software_version": 15
+      },
+      "source_needed": {
+        "both": 17,
+        "docs": 35,
+        "tickets": 18
+      },
+      "system_scope_required": {
+        "no": 6,
+        "yes": 64
+      },
+      "validity_sensitive": {
+        "no": 6,
+        "yes": 64
+      },
+      "version_sensitive": {
+        "no": 56,
+        "yes": 14
+      }
+    },
+    "test": {
+      "attachment_dependent": {
+        "no": 28,
+        "yes": 2
+      },
+      "docs_scope_bucket": {
+        "external_involved": 5,
+        "local_official": 17,
+        "none": 8
+      },
+      "query_type": {
+        "general_how_to": 3,
+        "local_operational": 21,
+        "software_version": 6
+      },
+      "source_needed": {
+        "both": 8,
+        "docs": 14,
+        "tickets": 8
+      },
+      "system_scope_required": {
+        "no": 3,
+        "yes": 27
+      },
+      "validity_sensitive": {
+        "no": 2,
+        "yes": 28
+      },
+      "version_sensitive": {
+        "no": 24,
+        "yes": 6
+      }
+    }
+  },
+  "random_state": 42,
+  "selection_score": 0.0351140456182473,
+  "strategy": "annotation_multilabel",
+  "test_fraction": 0.3,
+  "test_ids": [
+    "HPCSSUP-98608",
+    "HPCSSUP-98575",
+    "HPCSSUP-98537",
+    "HPCSSUP-98311",
+    "HPCSSUP-98292",
+    "HPCSSUP-98278",
+    "HPCSSUP-98277",
+    "HPCSSUP-98114",
+    "HPCSSUP-97739",
+    "HPCSSUP-97675",
+    "HPCSSUP-97660",
+    "HPCSSUP-97477",
+    "HPCSSUP-96168",
+    "HPCSSUP-95504",
+    "HPCSSUP-95197",
+    "HPCSSUP-95016",
+    "HPCSSUP-93947",
+    "HPCSSUP-92768",
+    "HPCSSUP-91107",
+    "HPCSSUP-89914",
+    "HPCSSUP-89749",
+    "HPCSSUP-88966",
+    "HPCSSUP-85626",
+    "HPCSSUP-81206",
+    "HPCSSUP-98917",
+    "HPCSSUP-98460",
+    "HPCSSUP-99428",
+    "HPCSSUP-95709",
+    "HPCSSUP-100516",
+    "HPCSSUP-100411"
+  ],
+  "test_size": 30
+}
