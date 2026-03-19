@@ -1,0 +1,87 @@
+\documentclass[12pt,Bsc,wordcount,twoside,anon]{muthesis}
+% The regulations say that 12pt should be used
+% Change the MSc option to MPhil, MRes or PhD if appropriate
+
+\usepackage{verbatim}
+\usepackage{graphicx}
+\usepackage{url} % typeset URL's reasonably
+\usepackage{cite}
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks,
+    citecolor=blue,
+    linkcolor=blue,
+    urlcolor=blue
+}
+\usepackage{listings}
+
+\usepackage{pslatex} % Use Postscript fonts
+
+% Uncomment the next line if you want subsubsections to be numbered
+%\setcounter{secnumdepth}{3}
+% Uncomment the next line if you want subsubsections to be appear in
+% the table of contents
+%\setcounter{tocdepth}{3}
+
+% Uncomment the following lines if you want to include the date as a
+% header in draft versions
+%\usepackage{fancyhdr}
+%\pagestyle{fancy}
+%\lhead{}  % left head
+%\chead{Draft: \today} % centre head
+%\lfoot{}
+%\cfoot{\thepage}
+%\rfoot{}
+
+\begin{document}
+% Uncomment the following lines to leave out list of figures, tables
+% and copyright until final printing
+%\figurespagefalse
+%\tablespagefalse
+%\copyrightfalse
+
+% \title{Authority- and Validity-Aware Retrieval for High-Performance Computing Support: An Empirical Study over Documentation and Ticket Corpora}
+\title{Retrieval-Augmented Generation for High-Performance Computing Support}
+\author{Adam Calleja}
+\stuid{11006713}
+\principaladviser{Jiaoyan Chen}
+
+\beforeabstract
+
+\prefacesection{Abstract}
+\input{abstract}
+
+\afterabstract
+
+\prefacesection{Acknowledgements}
+
+\afterpreface
+
+% These include the actual text
+\include{chapter1}
+\include{chapter2}
+\include{chapter3}
+\include{chapter4}
+\include{chapter5}
+\include{chapter6}
+\include{chapter7}
+\include{chapter8}
+
+  \bibliography{refs}    % this causes the references to be listed
+
+\bibliographystyle{IEEEtranS}
+%% the bibliography style determines the format  in which both citations and references are printed,
+%% other possible values are plain and abbrv
+%%
+%% If you want more control of the format of your citations you might want to take a look at
+%% natbib.sty, which should be part of any standard LaTeX installation
+%%
+%% University regulations simply require that your citation style be consistent, so see what style
+%% your supervisor recommends.
+
+% Appendices start here
+
+\appendix
+\include{appendix1}
+
+\end{document}
