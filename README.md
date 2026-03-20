@@ -89,6 +89,27 @@ docker compose run --rm rag-api polaris-ingest-jira \
 For repo-local development, the matching files under `scripts/` remain available
 as thin compatibility wrappers around the packaged CLI entrypoints.
 
+## Build Authority Registry
+Stage 1 authority extraction is an offline artifact-generation step over the
+local official docs corpus. It reuses the HTML loader, HTML preprocessing, and
+Markdown conversion pipeline, but does not require Qdrant or the doc store.
+
+```bash
+python scripts/build_authority_registry.py \
+  -c config/config.yaml \
+  -p https://docs.hpc.cam.ac.uk/hpc/index.html \
+  --ingest-internal-links
+```
+
+By default this writes:
+- `data/authority/registry.local_official.v1.json`
+- `data/authority/review_queue.local_official.v1.csv`
+
+The JSON artifact contains the extracted authority entities, build metadata,
+source URL list, extraction version, and summary counts. The CSV contains only
+the rows that need manual audit, such as conflicting lifecycle statuses or
+alias ambiguity. This stage does not yet change runtime retrieval behavior.
+
 ## Configuration
 Configuration is split into shared and environment-specific files:
 - `config/config.base.yaml`: shared retrieval, ingestion, evaluation, and MLflow settings.
