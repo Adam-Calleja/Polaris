@@ -58,10 +58,13 @@ def _ticket_chunk_id(parent_id: str, chunk_index: int) -> str:
 
 def _ticket_chunk_metadata(ticket: Document, **chunk_metadata: Any) -> dict[str, Any]:
     """Merge chunk-local metadata with selected ticket-level metadata."""
-    metadata = dict(chunk_metadata)
-    metadata["resolved_at"] = ticket.metadata.get("resolved_at")
-    metadata["time_to_resolution"] = ticket.metadata.get("time_to_resolution")
+    metadata = dict(ticket.metadata or {})
+    metadata.update(chunk_metadata)
     return metadata
+
+
+def _ticket_document_type(ticket: Document) -> str:
+    return str(ticket.metadata.get("document_type") or ticket.document_type)
 
 class HTMLHeirarchicalSplitter(HTMLNodeParser):
     """HTML splitter that groups text under the same heading.
@@ -557,7 +560,7 @@ class JIRATicketChunker:
             prev_id=None,
             next_id=None,
             text=initial_chunk_text,
-            document_type=ticket.metadata['document_type'],
+            document_type=_ticket_document_type(ticket),
             id=_ticket_chunk_id(ticket.id, chunk_index),
             metadata=metadata,
             source_node=ticket,
@@ -775,7 +778,7 @@ class JIRATicketChunker:
                     prev_id=chunks[-1].id,
                     next_id=None,
                     text=chunk_text,
-                    document_type=ticket.metadata["document_type"],
+                    document_type=_ticket_document_type(ticket),
                     id=_ticket_chunk_id(ticket.id, chunk_index),
                     metadata=metadata,
                     source_node=ticket,

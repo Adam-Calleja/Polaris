@@ -39,6 +39,10 @@ from polaris_rag.retrieval.ingestion_settings import (
     resolve_chunking_settings,
     resolve_conversion_settings,
 )
+from polaris_rag.retrieval.metadata_enricher import (
+    enrich_documents_with_authority_metadata,
+    resolve_authority_registry_artifact_path,
+)
 from polaris_rag.retrieval.markdown_chunker import get_chunks_from_markdown_documents
 from polaris_rag.retrieval.markdown_converter import convert_tickets_to_markdown
 
@@ -376,6 +380,7 @@ def main() -> None:
         source=args.source,
         engine_override=args.conversion_engine,
     )
+    registry_artifact_path = resolve_authority_registry_artifact_path(cfg)
 
     print(f"Loaded {len(tickets)} tickets. Preprocessing...")
     if chunking_settings.strategy == MARKDOWN_TOKEN_CHUNKING_STRATEGY:
@@ -383,6 +388,11 @@ def main() -> None:
             tickets,
             engine=conversion_settings.engine,
             options=conversion_settings.options,
+        )
+        processed_tickets = enrich_documents_with_authority_metadata(
+            processed_tickets,
+            registry_artifact_path=registry_artifact_path,
+            source_name=args.source,
         )
         chunks = get_chunks_from_markdown_documents(
             processed_tickets,
@@ -392,6 +402,11 @@ def main() -> None:
         )
     elif chunking_settings.strategy == JIRA_TURNS_TOKEN_CHUNKING_STRATEGY:
         processed_tickets = preprocess_jira_tickets(tickets)
+        processed_tickets = enrich_documents_with_authority_metadata(
+            processed_tickets,
+            registry_artifact_path=registry_artifact_path,
+            source_name=args.source,
+        )
         chunks = get_chunks_from_jira_tickets(
             tickets=processed_tickets,
             token_counter=container.token_counter,

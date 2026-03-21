@@ -162,6 +162,16 @@ def test_main_markdown_chunking_path_persists_markdown_tickets(monkeypatch):
     monkeypatch.setattr(ingest_jira_tickets, "_resolve_exclude_keys", lambda cfg, cli_value: [])
     monkeypatch.setattr(ingest_jira_tickets, "_resolve_persist_dir", lambda cfg, cli_value: "data/storage/local")
     monkeypatch.setattr(
+        ingest_jira_tickets,
+        "enrich_documents_with_authority_metadata",
+        lambda documents, registry_artifact_path, source_name: documents,
+    )
+    monkeypatch.setattr(
+        ingest_jira_tickets,
+        "resolve_authority_registry_artifact_path",
+        lambda cfg: "data/authority/registry.local_official.v1.json",
+    )
+    monkeypatch.setattr(
         sys,
         "argv",
         [

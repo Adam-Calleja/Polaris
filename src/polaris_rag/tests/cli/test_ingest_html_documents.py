@@ -144,6 +144,16 @@ def test_main_markdown_chunking_path_replaces_existing_docs(monkeypatch):
     monkeypatch.setattr(ingest_html_documents, "load_website_docs", lambda links: html_documents)
     monkeypatch.setattr(ingest_html_documents, "preprocess_html_documents", lambda documents, tags, conditions: documents)
     monkeypatch.setattr(ingest_html_documents, "convert_documents_to_markdown", lambda documents, engine, options: markdown_documents)
+    monkeypatch.setattr(
+        ingest_html_documents,
+        "enrich_documents_with_authority_metadata",
+        lambda documents, registry_artifact_path, source_name: documents,
+    )
+    monkeypatch.setattr(
+        ingest_html_documents,
+        "resolve_authority_registry_artifact_path",
+        lambda cfg: "data/authority/registry.local_official.v1.json",
+    )
     monkeypatch.setattr(ingest_html_documents, "get_chunks_from_markdown_documents", lambda documents, token_counter, chunk_size, overlap: chunks)
     monkeypatch.setattr(ingest_html_documents, "add_chunks_to_docstore", lambda storage, chunks: len(chunks))
     monkeypatch.setattr(ingest_html_documents, "delete_ref_docs_from_docstore", lambda docstore, ids: deleted_from_docstore.extend(ids))

@@ -35,6 +35,10 @@ from polaris_rag.retrieval.ingestion_settings import (
     resolve_chunking_settings,
     resolve_conversion_settings,
 )
+from polaris_rag.retrieval.metadata_enricher import (
+    enrich_documents_with_authority_metadata,
+    resolve_authority_registry_artifact_path,
+)
 from polaris_rag.retrieval.markdown_chunker import get_chunks_from_markdown_documents
 from polaris_rag.retrieval.markdown_converter import convert_documents_to_markdown
 from polaris_rag.retrieval.text_splitter import get_chunks_from_documents
@@ -257,12 +261,18 @@ def main() -> None:
         source=args.source,
         engine_override=args.conversion_engine,
     )
+    registry_artifact_path = resolve_authority_registry_artifact_path(cfg)
 
     if chunking_settings.strategy == MARKDOWN_TOKEN_CHUNKING_STRATEGY:
         markdown_documents = convert_documents_to_markdown(
             processed_documents,
             engine=conversion_settings.engine,
             options=conversion_settings.options,
+        )
+        markdown_documents = enrich_documents_with_authority_metadata(
+            markdown_documents,
+            registry_artifact_path=registry_artifact_path,
+            source_name=args.source,
         )
         chunks = get_chunks_from_markdown_documents(
             markdown_documents,
@@ -272,6 +282,11 @@ def main() -> None:
         )
         document_ids = [str(document.id) for document in markdown_documents if getattr(document, "id", None)]
     elif chunking_settings.strategy == HTML_HIERARCHICAL_CHUNKING_STRATEGY:
+        processed_documents = enrich_documents_with_authority_metadata(
+            processed_documents,
+            registry_artifact_path=registry_artifact_path,
+            source_name=args.source,
+        )
         chunks = get_chunks_from_documents(
             processed_documents,
             link_classes=link_classes,
