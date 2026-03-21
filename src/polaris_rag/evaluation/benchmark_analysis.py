@@ -245,7 +245,7 @@ def plot_composition_figure(*, count_records: list[Mapping[str, Any]], output_pn
 
     handles, labels = axes_list[0].get_legend_handles_labels()
     if handles:
-        figure.legend(handles, labels, loc="upper center", ncol=3, frameon=False)
+        figure.legend(handles, labels, loc="lower right", ncol=3, frameon=False)
 
     output_png.parent.mkdir(parents=True, exist_ok=True)
     figure.savefig(output_png, dpi=200)

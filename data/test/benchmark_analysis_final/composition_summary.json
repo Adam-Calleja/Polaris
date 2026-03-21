@@ -1,0 +1,137 @@
+{
+  "totals": {
+    "all": 100,
+    "dev": 70,
+    "test": 30
+  },
+  "label_counts": {
+    "all": {
+      "source_needed": {
+        "docs": 49,
+        "tickets": 26,
+        "both": 25
+      },
+      "docs_scope_needed": {
+        "local_official": 56,
+        "external_official": 0,
+        "local_and_external": 18,
+        "none": 26
+      },
+      "validity_sensitive": {
+        "yes": 92,
+        "no": 8
+      },
+      "attachment_dependent": {
+        "yes": 5,
+        "no": 95
+      },
+      "query_type": {
+        "local_operational": 68,
+        "software_version": 21,
+        "general_how_to": 11
+      },
+      "version_sensitive": {
+        "yes": 20,
+        "no": 80
+      },
+      "system_scope_required": {
+        "yes": 91,
+        "no": 9
+      }
+    },
+    "dev": {
+      "source_needed": {
+        "docs": 35,
+        "tickets": 18,
+        "both": 17
+      },
+      "docs_scope_needed": {
+        "local_official": 39,
+        "external_official": 0,
+        "local_and_external": 13,
+        "none": 18
+      },
+      "validity_sensitive": {
+        "yes": 64,
+        "no": 6
+      },
+      "attachment_dependent": {
+        "yes": 3,
+        "no": 67
+      },
+      "query_type": {
+        "local_operational": 47,
+        "software_version": 15,
+        "general_how_to": 8
+      },
+      "version_sensitive": {
+        "yes": 14,
+        "no": 56
+      },
+      "system_scope_required": {
+        "yes": 64,
+        "no": 6
+      }
+    },
+    "test": {
+      "source_needed": {
+        "docs": 14,
+        "tickets": 8,
+        "both": 8
+      },
+      "docs_scope_needed": {
+        "local_official": 17,
+        "external_official": 0,
+        "local_and_external": 5,
+        "none": 8
+      },
+      "validity_sensitive": {
+        "yes": 28,
+        "no": 2
+      },
+      "attachment_dependent": {
+        "yes": 2,
+        "no": 28
+      },
+      "query_type": {
+        "local_operational": 21,
+        "software_version": 6,
+        "general_how_to": 3
+      },
+      "version_sensitive": {
+        "yes": 6,
+        "no": 24
+      },
+      "system_scope_required": {
+        "yes": 27,
+        "no": 3
+      }
+    }
+  },
+  "targeted_subsets": {
+    "all": {
+      "validity_sensitive": 92,
+      "attachment_dependent": 5,
+      "local_official_docs": 56,
+      "external_official_docs": 0,
+      "local_and_external_docs": 18,
+      "query_type_software_version": 21
+    },
+    "dev": {
+      "validity_sensitive": 64,
+      "attachment_dependent": 3,
+      "local_official_docs": 39,
+      "external_official_docs": 0,
+      "local_and_external_docs": 13,
+      "query_type_software_version": 15
+    },
+    "test": {
+      "validity_sensitive": 28,
+      "attachment_dependent": 2,
+      "local_official_docs": 17,
+      "external_official_docs": 0,
+      "local_and_external_docs": 5,
+      "query_type_software_version": 6
+    }
+  }
+}
