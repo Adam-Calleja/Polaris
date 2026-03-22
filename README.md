@@ -91,8 +91,9 @@ as thin compatibility wrappers around the packaged CLI entrypoints.
 
 ## Build Authority Registry
 Stage 1 authority extraction is an offline artifact-generation step over the
-local official docs corpus. It reuses the HTML loader, HTML preprocessing, and
-Markdown conversion pipeline, but does not require Qdrant or the doc store.
+local official docs corpus plus the official RCS services catalog. It reuses
+the HTML loader, HTML preprocessing, and Markdown conversion pipeline, but does
+not require Qdrant or the doc store.
 
 ```bash
 python scripts/build_authority_registry.py \
@@ -109,6 +110,34 @@ The JSON artifact contains the extracted authority entities, build metadata,
 source URL list, extraction version, and summary counts. The CSV contains only
 the rows that need manual audit, such as conflicting lifecycle statuses or
 alias ambiguity. This stage does not yet change runtime retrieval behavior.
+
+By default the build now combines:
+- docs-derived entities from `docs.hpc.cam.ac.uk/hpc/...` with `source_scope=local_official`
+- service-catalog entities from `https://www.hpc.cam.ac.uk/services` and its
+  first-level service pages with `source_scope=local_official_services`
+
+You can override the services landing page or opt out of the service-catalog
+augmentation:
+
+```bash
+python scripts/build_authority_registry.py \
+  -c config/config.yaml \
+  -p https://docs.hpc.cam.ac.uk/hpc/index.html \
+  --services-homepage https://www.hpc.cam.ac.uk/services \
+  --ingest-internal-links
+
+python scripts/build_authority_registry.py \
+  -c config/config.yaml \
+  -p https://docs.hpc.cam.ac.uk/hpc/index.html \
+  --ingest-internal-links \
+  --skip-services-catalog
+```
+
+The build metadata now records:
+- `build.homepage` and `build.docs_homepage` for the docs corpus
+- `build.services_homepage` for the service catalog
+- `build.service_catalog_included`
+- summary counts by entity type, status, and source scope
 
 ## Configuration
 Configuration is split into shared and environment-specific files:

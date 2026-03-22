@@ -1,7 +1,10 @@
 {
   "build": {
+    "docs_homepage": "https://docs.hpc.cam.ac.uk/hpc/index.html",
     "extraction_version": "authority_registry_v1",
     "homepage": "https://docs.hpc.cam.ac.uk/hpc/index.html",
+    "service_catalog_included": true,
+    "services_homepage": "https://www.hpc.cam.ac.uk/services",
     "source_scope": "local_official"
   },
   "entities": [
@@ -2409,6 +2412,238 @@
     },
     {
       "aliases": [
+        "AI & Data Analysis",
+        "ai data analysis",
+        "ai-data-analysis"
+      ],
+      "canonical_name": "AI & Data Analysis",
+      "doc_id": "https://www.hpc.cam.ac.uk/",
+      "doc_title": "Research Computing Services",
+      "entity_id": "d9a43174081283fd",
+      "entity_type": "service",
+      "evidence_spans": [
+        {
+          "doc_id": "https://www.hpc.cam.ac.uk/",
+          "doc_title": "Research Computing Services",
+          "evidence_text": "[Skip to main content](#main-content)\n\nView menu\n[![Home](/themes/custom/rcs/assets/img/cam-logo.png)](https://www.cam.ac.uk/ \"Home\")\n\n* [Open Study at Cambridge submenu](#study-at-cambridge)\n* [Open About the University submenu](#about-the-university)\n* [Research at Cambridge](https://www.cam.ac.uk/research?ucam-ref=global-header)\n\nQuick links\n\n* [For staff](https://www.cam.ac.uk/for-staff?ucam-r",
+          "extraction_method": "service_catalog_landing",
+          "heading_path": [
+            "Research Computing Services"
+          ]
+        },
+        {
+          "doc_id": "https://www.hpc.cam.ac.uk/ai-data-analysis",
+          "doc_title": "AI & Data Analysis",
+          "evidence_text": "[Skip to main content](#main-content)\n\nView menu\n[![Home](/themes/custom/rcs/assets/img/cam-logo.png)](https://www.cam.ac.uk/ \"Home\")\n\n* [Open Study at Cambridge submenu](#study-at-cambridge)\n* [Open About the University submenu](#about-the-university)\n* [Research at Cambridge](https://www.cam.ac.uk/research?ucam-ref=global-header)\n\nQuick links\n\n* [For staff](https://www.cam.ac.uk/for-staff?ucam-r",
+          "extraction_method": "service_catalog_page",
+          "heading_path": [
+            "AI & Data Analysis"
+          ]
+        },
+        {
+          "doc_id": "https://www.hpc.cam.ac.uk/index.php/services",
+          "doc_title": "Services",
+          "evidence_text": "[Skip to main content](#main-content)\n\nView menu\n[![Home](/themes/custom/rcs/assets/img/cam-logo.png)](https://www.cam.ac.uk/ \"Home\")\n\n* [Open Study at Cambridge submenu](#study-at-cambridge)\n* [Open About the University submenu](#about-the-university)\n* [Research at Cambridge](https://www.cam.ac.uk/research?ucam-ref=global-header)\n\nQuick links\n\n* [For staff](https://www.cam.ac.uk/for-staff?ucam-r",
+          "extraction_method": "service_catalog_landing",
+          "heading_path": [
+            "Services"
+          ]
+        },
+        {
+          "doc_id": "https://www.hpc.cam.ac.uk/services",
+          "doc_title": "Services",
+          "evidence_text": "[Skip to main content](#main-content)\n\nView menu\n[![Home](/themes/custom/rcs/assets/img/cam-logo.png)](https://www.cam.ac.uk/ \"Home\")\n\n* [Open Study at Cambridge submenu](#study-at-cambridge)\n* [Open About the University submenu](#about-the-university)\n* [Research at Cambridge](https://www.cam.ac.uk/research?ucam-ref=global-header)\n\nQuick links\n\n* [For staff](https://www.cam.ac.uk/for-staff?ucam-r",
+          "extraction_method": "service_catalog_landing",
+          "heading_path": [
+            "Services"
+          ]
+        }
+      ],
+      "extraction_method": "merged",
+      "heading_path": [
+        "Research Computing Services"
+      ],
+      "known_versions": [],
+      "review_state": "auto_verified",
+      "source_scope": "local_official_services",
+      "status": "current"
+    },
+    {
+      "aliases": [
+        "Cambridge Research Cloud",
+        "cambridge research cloud",
+        "cambridge-research-cloud"
+      ],
+      "canonical_name": "Cambridge Research Cloud",
+      "doc_id": "https://www.hpc.cam.ac.uk/",
+      "doc_title": "Research Computing Services",
+      "entity_id": "41dbf8086523fafe",
+      "entity_type": "service",
+      "evidence_spans": [
+        {
+          "doc_id": "https://www.hpc.cam.ac.uk/",
+          "doc_title": "Research Computing Services",
+          "evidence_text": "[Skip to main content](#main-content)\n\nView menu\n[![Home](/themes/custom/rcs/assets/img/cam-logo.png)](https://www.cam.ac.uk/ \"Home\")\n\n* [Open Study at Cambridge submenu](#study-at-cambridge)\n* [Open About the University submenu](#about-the-university)\n* [Research at Cambridge](https://www.cam.ac.uk/research?ucam-ref=global-header)\n\nQuick links\n\n* [For staff](https://www.cam.ac.uk/for-staff?ucam-r",
+          "extraction_method": "service_catalog_landing",
+          "heading_path": [
+            "Research Computing Services"
+          ]
+        },
+        {
+          "doc_id": "https://www.hpc.cam.ac.uk/cambridge-research-cloud",
+          "doc_title": "Cambridge Research Cloud",
+          "evidence_text": "[Skip to main content](#main-content)\n\nView menu\n[![Home](/themes/custom/rcs/assets/img/cam-logo.png)](https://www.cam.ac.uk/ \"Home\")\n\n* [Open Study at Cambridge submenu](#study-at-cambridge)\n* [Open About the University submenu](#about-the-university)\n* [Research at Cambridge](https://www.cam.ac.uk/research?ucam-ref=global-header)\n\nQuick links\n\n* [For staff](https://www.cam.ac.uk/for-staff?ucam-r",
+          "extraction_method": "service_catalog_page",
+          "heading_path": [
+            "Cambridge Research Cloud"
+          ]
+        },
+        {
+          "doc_id": "https://www.hpc.cam.ac.uk/index.php/services",
+          "doc_title": "Services",
+          "evidence_text": "[Skip to main content](#main-content)\n\nView menu\n[![Home](/themes/custom/rcs/assets/img/cam-logo.png)](https://www.cam.ac.uk/ \"Home\")\n\n* [Open Study at Cambridge submenu](#study-at-cambridge)\n* [Open About the University submenu](#about-the-university)\n* [Research at Cambridge](https://www.cam.ac.uk/research?ucam-ref=global-header)\n\nQuick links\n\n* [For staff](https://www.cam.ac.uk/for-staff?ucam-r",
+          "extraction_method": "service_catalog_landing",
+          "heading_path": [
+            "Services"
+          ]
+        },
+        {
+          "doc_id": "https://www.hpc.cam.ac.uk/services",
+          "doc_title": "Services",
+          "evidence_text": "[Skip to main content](#main-content)\n\nView menu\n[![Home](/themes/custom/rcs/assets/img/cam-logo.png)](https://www.cam.ac.uk/ \"Home\")\n\n* [Open Study at Cambridge submenu](#study-at-cambridge)\n* [Open About the University submenu](#about-the-university)\n* [Research at Cambridge](https://www.cam.ac.uk/research?ucam-ref=global-header)\n\nQuick links\n\n* [For staff](https://www.cam.ac.uk/for-staff?ucam-r",
+          "extraction_method": "service_catalog_landing",
+          "heading_path": [
+            "Services"
+          ]
+        }
+      ],
+      "extraction_method": "merged",
+      "heading_path": [
+        "Research Computing Services"
+      ],
+      "known_versions": [],
+      "review_state": "auto_verified",
+      "source_scope": "local_official_services",
+      "status": "current"
+    },
+    {
+      "aliases": [
+        "Data Storage",
+        "data storage",
+        "data-storage"
+      ],
+      "canonical_name": "Data Storage",
+      "doc_id": "https://www.hpc.cam.ac.uk/",
+      "doc_title": "Research Computing Services",
+      "entity_id": "0d2e9f291bf52dd8",
+      "entity_type": "service",
+      "evidence_spans": [
+        {
+          "doc_id": "https://www.hpc.cam.ac.uk/",
+          "doc_title": "Research Computing Services",
+          "evidence_text": "[Skip to main content](#main-content)\n\nView menu\n[![Home](/themes/custom/rcs/assets/img/cam-logo.png)](https://www.cam.ac.uk/ \"Home\")\n\n* [Open Study at Cambridge submenu](#study-at-cambridge)\n* [Open About the University submenu](#about-the-university)\n* [Research at Cambridge](https://www.cam.ac.uk/research?ucam-ref=global-header)\n\nQuick links\n\n* [For staff](https://www.cam.ac.uk/for-staff?ucam-r",
+          "extraction_method": "service_catalog_landing",
+          "heading_path": [
+            "Research Computing Services"
+          ]
+        },
+        {
+          "doc_id": "https://www.hpc.cam.ac.uk/data-storage",
+          "doc_title": "Data Storage",
+          "evidence_text": "[Skip to main content](#main-content)\n\nView menu\n[![Home](/themes/custom/rcs/assets/img/cam-logo.png)](https://www.cam.ac.uk/ \"Home\")\n\n* [Open Study at Cambridge submenu](#study-at-cambridge)\n* [Open About the University submenu](#about-the-university)\n* [Research at Cambridge](https://www.cam.ac.uk/research?ucam-ref=global-header)\n\nQuick links\n\n* [For staff](https://www.cam.ac.uk/for-staff?ucam-r",
+          "extraction_method": "service_catalog_page",
+          "heading_path": [
+            "Data Storage"
+          ]
+        },
+        {
+          "doc_id": "https://www.hpc.cam.ac.uk/index.php/services",
+          "doc_title": "Services",
+          "evidence_text": "[Skip to main content](#main-content)\n\nView menu\n[![Home](/themes/custom/rcs/assets/img/cam-logo.png)](https://www.cam.ac.uk/ \"Home\")\n\n* [Open Study at Cambridge submenu](#study-at-cambridge)\n* [Open About the University submenu](#about-the-university)\n* [Research at Cambridge](https://www.cam.ac.uk/research?ucam-ref=global-header)\n\nQuick links\n\n* [For staff](https://www.cam.ac.uk/for-staff?ucam-r",
+          "extraction_method": "service_catalog_landing",
+          "heading_path": [
+            "Services"
+          ]
+        },
+        {
+          "doc_id": "https://www.hpc.cam.ac.uk/services",
+          "doc_title": "Services",
+          "evidence_text": "[Skip to main content](#main-content)\n\nView menu\n[![Home](/themes/custom/rcs/assets/img/cam-logo.png)](https://www.cam.ac.uk/ \"Home\")\n\n* [Open Study at Cambridge submenu](#study-at-cambridge)\n* [Open About the University submenu](#about-the-university)\n* [Research at Cambridge](https://www.cam.ac.uk/research?ucam-ref=global-header)\n\nQuick links\n\n* [For staff](https://www.cam.ac.uk/for-staff?ucam-r",
+          "extraction_method": "service_catalog_landing",
+          "heading_path": [
+            "Services"
+          ]
+        }
+      ],
+      "extraction_method": "merged",
+      "heading_path": [
+        "Research Computing Services"
+      ],
+      "known_versions": [],
+      "review_state": "auto_verified",
+      "source_scope": "local_official_services",
+      "status": "current"
+    },
+    {
+      "aliases": [
+        "High Performance Computing",
+        "high performance computing",
+        "high-performance-computing"
+      ],
+      "canonical_name": "High Performance Computing",
+      "doc_id": "https://www.hpc.cam.ac.uk/",
+      "doc_title": "Research Computing Services",
+      "entity_id": "0f3de6959a4dabb2",
+      "entity_type": "service",
+      "evidence_spans": [
+        {
+          "doc_id": "https://www.hpc.cam.ac.uk/",
+          "doc_title": "Research Computing Services",
+          "evidence_text": "[Skip to main content](#main-content)\n\nView menu\n[![Home](/themes/custom/rcs/assets/img/cam-logo.png)](https://www.cam.ac.uk/ \"Home\")\n\n* [Open Study at Cambridge submenu](#study-at-cambridge)\n* [Open About the University submenu](#about-the-university)\n* [Research at Cambridge](https://www.cam.ac.uk/research?ucam-ref=global-header)\n\nQuick links\n\n* [For staff](https://www.cam.ac.uk/for-staff?ucam-r",
+          "extraction_method": "service_catalog_landing",
+          "heading_path": [
+            "Research Computing Services"
+          ]
+        },
+        {
+          "doc_id": "https://www.hpc.cam.ac.uk/high-performance-computing",
+          "doc_title": "High Performance Computing",
+          "evidence_text": "[Skip to main content](#main-content)\n\nView menu\n[![Home](/themes/custom/rcs/assets/img/cam-logo.png)](https://www.cam.ac.uk/ \"Home\")\n\n* [Open Study at Cambridge submenu](#study-at-cambridge)\n* [Open About the University submenu](#about-the-university)\n* [Research at Cambridge](https://www.cam.ac.uk/research?ucam-ref=global-header)\n\nQuick links\n\n* [For staff](https://www.cam.ac.uk/for-staff?ucam-r",
+          "extraction_method": "service_catalog_page",
+          "heading_path": [
+            "High Performance Computing"
+          ]
+        },
+        {
+          "doc_id": "https://www.hpc.cam.ac.uk/index.php/services",
+          "doc_title": "Services",
+          "evidence_text": "[Skip to main content](#main-content)\n\nView menu\n[![Home](/themes/custom/rcs/assets/img/cam-logo.png)](https://www.cam.ac.uk/ \"Home\")\n\n* [Open Study at Cambridge submenu](#study-at-cambridge)\n* [Open About the University submenu](#about-the-university)\n* [Research at Cambridge](https://www.cam.ac.uk/research?ucam-ref=global-header)\n\nQuick links\n\n* [For staff](https://www.cam.ac.uk/for-staff?ucam-r",
+          "extraction_method": "service_catalog_landing",
+          "heading_path": [
+            "Services"
+          ]
+        },
+        {
+          "doc_id": "https://www.hpc.cam.ac.uk/services",
+          "doc_title": "Services",
+          "evidence_text": "[Skip to main content](#main-content)\n\nView menu\n[![Home](/themes/custom/rcs/assets/img/cam-logo.png)](https://www.cam.ac.uk/ \"Home\")\n\n* [Open Study at Cambridge submenu](#study-at-cambridge)\n* [Open About the University submenu](#about-the-university)\n* [Research at Cambridge](https://www.cam.ac.uk/research?ucam-ref=global-header)\n\nQuick links\n\n* [For staff](https://www.cam.ac.uk/for-staff?ucam-r",
+          "extraction_method": "service_catalog_landing",
+          "heading_path": [
+            "Services"
+          ]
+        }
+      ],
+      "extraction_method": "merged",
+      "heading_path": [
+        "Research Computing Services"
+      ],
+      "known_versions": [],
+      "review_state": "auto_verified",
+      "source_scope": "local_official_services",
+      "status": "current"
+    },
+    {
+      "aliases": [
         "Login-Web Interface",
         "login web",
         "login-web"
@@ -2466,6 +2701,392 @@
       "known_versions": [],
       "review_state": "auto_verified",
       "source_scope": "local_official",
+      "status": "current"
+    },
+    {
+      "aliases": [
+        "RCS",
+        "Research Cold Store",
+        "Research Cold Store (RCS)",
+        "research cold store",
+        "research-cold-store"
+      ],
+      "canonical_name": "Research Cold Store",
+      "doc_id": "https://www.hpc.cam.ac.uk/data-storage",
+      "doc_title": "Data Storage",
+      "entity_id": "4957f1d5e4724282",
+      "entity_type": "service",
+      "evidence_spans": [
+        {
+          "doc_id": "https://www.hpc.cam.ac.uk/data-storage",
+          "doc_title": "Data Storage",
+          "evidence_text": "[Skip to main content](#main-content)\n\nView menu\n[![Home](/themes/custom/rcs/assets/img/cam-logo.png)](https://www.cam.ac.uk/ \"Home\")\n\n* [Open Study at Cambridge submenu](#study-at-cambridge)\n* [Open About the University submenu](#about-the-university)\n* [Research at Cambridge](https://www.cam.ac.uk/research?ucam-ref=global-header)\n\nQuick links\n\n* [For staff](https://www.cam.ac.uk/for-staff?ucam-r",
+          "extraction_method": "service_catalog_page",
+          "heading_path": [
+            "Data Storage"
+          ]
+        },
+        {
+          "doc_id": "https://www.hpc.cam.ac.uk/data-storage",
+          "doc_title": "Data Storage",
+          "evidence_text": "[Skip to main content](#main-content)\n\nView menu\n[![Home](/themes/custom/rcs/assets/img/cam-logo.png)](https://www.cam.ac.uk/ \"Home\")\n\n* [Open Study at Cambridge submenu](#study-at-cambridge)\n* [Open About the University submenu](#about-the-university)\n* [Research at Cambridge](https://www.cam.ac.uk/research?ucam-ref=global-header)\n\nQuick links\n\n* [For staff](https://www.cam.ac.uk/for-staff?ucam-r",
+          "extraction_method": "service_catalog_page",
+          "heading_path": [
+            "Data Storage"
+          ]
+        },
+        {
+          "doc_id": "https://www.hpc.cam.ac.uk/research-cold-store",
+          "doc_title": "Research Cold Store",
+          "evidence_text": "[Skip to main content](#main-content)\n\nView menu\n[![Home](/themes/custom/rcs/assets/img/cam-logo.png)](https://www.cam.ac.uk/ \"Home\")\n\n* [Open Study at Cambridge submenu](#study-at-cambridge)\n* [Open About the University submenu](#about-the-university)\n* [Research at Cambridge](https://www.cam.ac.uk/research?ucam-ref=global-header)\n\nQuick links\n\n* [For staff](https://www.cam.ac.uk/for-staff?ucam-r",
+          "extraction_method": "service_catalog_page",
+          "heading_path": [
+            "Research Cold Store"
+          ]
+        }
+      ],
+      "extraction_method": "service_catalog_page",
+      "heading_path": [
+        "Data Storage"
+      ],
+      "known_versions": [],
+      "review_state": "auto_verified",
+      "source_scope": "local_official_services",
+      "status": "current"
+    },
+    {
+      "aliases": [
+        "RDS",
+        "Research Data Store",
+        "Research Data Store (RDS)",
+        "research data store",
+        "research-data-store"
+      ],
+      "canonical_name": "Research Data Store",
+      "doc_id": "https://www.hpc.cam.ac.uk/data-storage",
+      "doc_title": "Data Storage",
+      "entity_id": "d320320d7173c522",
+      "entity_type": "service",
+      "evidence_spans": [
+        {
+          "doc_id": "https://www.hpc.cam.ac.uk/data-storage",
+          "doc_title": "Data Storage",
+          "evidence_text": "[Skip to main content](#main-content)\n\nView menu\n[![Home](/themes/custom/rcs/assets/img/cam-logo.png)](https://www.cam.ac.uk/ \"Home\")\n\n* [Open Study at Cambridge submenu](#study-at-cambridge)\n* [Open About the University submenu](#about-the-university)\n* [Research at Cambridge](https://www.cam.ac.uk/research?ucam-ref=global-header)\n\nQuick links\n\n* [For staff](https://www.cam.ac.uk/for-staff?ucam-r",
+          "extraction_method": "service_catalog_page",
+          "heading_path": [
+            "Data Storage"
+          ]
+        },
+        {
+          "doc_id": "https://www.hpc.cam.ac.uk/data-storage",
+          "doc_title": "Data Storage",
+          "evidence_text": "[Skip to main content](#main-content)\n\nView menu\n[![Home](/themes/custom/rcs/assets/img/cam-logo.png)](https://www.cam.ac.uk/ \"Home\")\n\n* [Open Study at Cambridge submenu](#study-at-cambridge)\n* [Open About the University submenu](#about-the-university)\n* [Research at Cambridge](https://www.cam.ac.uk/research?ucam-ref=global-header)\n\nQuick links\n\n* [For staff](https://www.cam.ac.uk/for-staff?ucam-r",
+          "extraction_method": "service_catalog_page",
+          "heading_path": [
+            "Data Storage"
+          ]
+        },
+        {
+          "doc_id": "https://www.hpc.cam.ac.uk/research-data-store",
+          "doc_title": "Research Data Store",
+          "evidence_text": "[Skip to main content](#main-content)\n\nView menu\n[![Home](/themes/custom/rcs/assets/img/cam-logo.png)](https://www.cam.ac.uk/ \"Home\")\n\n* [Open Study at Cambridge submenu](#study-at-cambridge)\n* [Open About the University submenu](#about-the-university)\n* [Research at Cambridge](https://www.cam.ac.uk/research?ucam-ref=global-header)\n\nQuick links\n\n* [For staff](https://www.cam.ac.uk/for-staff?ucam-r",
+          "extraction_method": "service_catalog_page",
+          "heading_path": [
+            "Research Data Store"
+          ]
+        }
+      ],
+      "extraction_method": "service_catalog_page",
+      "heading_path": [
+        "Data Storage"
+      ],
+      "known_versions": [],
+      "review_state": "auto_verified",
+      "source_scope": "local_official_services",
+      "status": "current"
+    },
+    {
+      "aliases": [
+        "RFS",
+        "Research File Share",
+        "Research File Share (RFS)",
+        "research file share",
+        "research-file-share"
+      ],
+      "canonical_name": "Research File Share",
+      "doc_id": "https://www.hpc.cam.ac.uk/data-storage",
+      "doc_title": "Data Storage",
+      "entity_id": "a40c7f6d9d7c786e",
+      "entity_type": "service",
+      "evidence_spans": [
+        {
+          "doc_id": "https://www.hpc.cam.ac.uk/data-storage",
+          "doc_title": "Data Storage",
+          "evidence_text": "[Skip to main content](#main-content)\n\nView menu\n[![Home](/themes/custom/rcs/assets/img/cam-logo.png)](https://www.cam.ac.uk/ \"Home\")\n\n* [Open Study at Cambridge submenu](#study-at-cambridge)\n* [Open About the University submenu](#about-the-university)\n* [Research at Cambridge](https://www.cam.ac.uk/research?ucam-ref=global-header)\n\nQuick links\n\n* [For staff](https://www.cam.ac.uk/for-staff?ucam-r",
+          "extraction_method": "service_catalog_page",
+          "heading_path": [
+            "Data Storage"
+          ]
+        },
+        {
+          "doc_id": "https://www.hpc.cam.ac.uk/data-storage",
+          "doc_title": "Data Storage",
+          "evidence_text": "[Skip to main content](#main-content)\n\nView menu\n[![Home](/themes/custom/rcs/assets/img/cam-logo.png)](https://www.cam.ac.uk/ \"Home\")\n\n* [Open Study at Cambridge submenu](#study-at-cambridge)\n* [Open About the University submenu](#about-the-university)\n* [Research at Cambridge](https://www.cam.ac.uk/research?ucam-ref=global-header)\n\nQuick links\n\n* [For staff](https://www.cam.ac.uk/for-staff?ucam-r",
+          "extraction_method": "service_catalog_page",
+          "heading_path": [
+            "Data Storage"
+          ]
+        },
+        {
+          "doc_id": "https://www.hpc.cam.ac.uk/research-file-share",
+          "doc_title": "Research File Share",
+          "evidence_text": "[Skip to main content](#main-content)\n\nView menu\n[![Home](/themes/custom/rcs/assets/img/cam-logo.png)](https://www.cam.ac.uk/ \"Home\")\n\n* [Open Study at Cambridge submenu](#study-at-cambridge)\n* [Open About the University submenu](#about-the-university)\n* [Research at Cambridge](https://www.cam.ac.uk/research?ucam-ref=global-header)\n\nQuick links\n\n* [For staff](https://www.cam.ac.uk/for-staff?ucam-r",
+          "extraction_method": "service_catalog_page",
+          "heading_path": [
+            "Research File Share"
+          ]
+        }
+      ],
+      "extraction_method": "service_catalog_page",
+      "heading_path": [
+        "Data Storage"
+      ],
+      "known_versions": [],
+      "review_state": "auto_verified",
+      "source_scope": "local_official_services",
+      "status": "current"
+    },
+    {
+      "aliases": [
+        "Research Software Engineering",
+        "research software engineering",
+        "research-software-engineering"
+      ],
+      "canonical_name": "Research Software Engineering",
+      "doc_id": "https://www.hpc.cam.ac.uk/",
+      "doc_title": "Research Computing Services",
+      "entity_id": "cd5892a2e7f24f23",
+      "entity_type": "service",
+      "evidence_spans": [
+        {
+          "doc_id": "https://www.hpc.cam.ac.uk/",
+          "doc_title": "Research Computing Services",
+          "evidence_text": "[Skip to main content](#main-content)\n\nView menu\n[![Home](/themes/custom/rcs/assets/img/cam-logo.png)](https://www.cam.ac.uk/ \"Home\")\n\n* [Open Study at Cambridge submenu](#study-at-cambridge)\n* [Open About the University submenu](#about-the-university)\n* [Research at Cambridge](https://www.cam.ac.uk/research?ucam-ref=global-header)\n\nQuick links\n\n* [For staff](https://www.cam.ac.uk/for-staff?ucam-r",
+          "extraction_method": "service_catalog_landing",
+          "heading_path": [
+            "Research Computing Services"
+          ]
+        },
+        {
+          "doc_id": "https://www.hpc.cam.ac.uk/index.php/services",
+          "doc_title": "Services",
+          "evidence_text": "[Skip to main content](#main-content)\n\nView menu\n[![Home](/themes/custom/rcs/assets/img/cam-logo.png)](https://www.cam.ac.uk/ \"Home\")\n\n* [Open Study at Cambridge submenu](#study-at-cambridge)\n* [Open About the University submenu](#about-the-university)\n* [Research at Cambridge](https://www.cam.ac.uk/research?ucam-ref=global-header)\n\nQuick links\n\n* [For staff](https://www.cam.ac.uk/for-staff?ucam-r",
+          "extraction_method": "service_catalog_landing",
+          "heading_path": [
+            "Services"
+          ]
+        },
+        {
+          "doc_id": "https://www.hpc.cam.ac.uk/research-software-engineering",
+          "doc_title": "Research Software Engineering",
+          "evidence_text": "[Skip to main content](#main-content)\n\nView menu\n[![Home](/themes/custom/rcs/assets/img/cam-logo.png)](https://www.cam.ac.uk/ \"Home\")\n\n* [Open Study at Cambridge submenu](#study-at-cambridge)\n* [Open About the University submenu](#about-the-university)\n* [Research at Cambridge](https://www.cam.ac.uk/research?ucam-ref=global-header)\n\nQuick links\n\n* [For staff](https://www.cam.ac.uk/for-staff?ucam-r",
+          "extraction_method": "service_catalog_page",
+          "heading_path": [
+            "Research Software Engineering"
+          ]
+        },
+        {
+          "doc_id": "https://www.hpc.cam.ac.uk/services",
+          "doc_title": "Services",
+          "evidence_text": "[Skip to main content](#main-content)\n\nView menu\n[![Home](/themes/custom/rcs/assets/img/cam-logo.png)](https://www.cam.ac.uk/ \"Home\")\n\n* [Open Study at Cambridge submenu](#study-at-cambridge)\n* [Open About the University submenu](#about-the-university)\n* [Research at Cambridge](https://www.cam.ac.uk/research?ucam-ref=global-header)\n\nQuick links\n\n* [For staff](https://www.cam.ac.uk/for-staff?ucam-r",
+          "extraction_method": "service_catalog_landing",
+          "heading_path": [
+            "Services"
+          ]
+        }
+      ],
+      "extraction_method": "merged",
+      "heading_path": [
+        "Research Computing Services"
+      ],
+      "known_versions": [],
+      "review_state": "auto_verified",
+      "source_scope": "local_official_services",
+      "status": "current"
+    },
+    {
+      "aliases": [
+        "SRCP",
+        "Secure Research Computing",
+        "Secure Research Computing Platform (SRCP)",
+        "secure research computing",
+        "secure-research-computing"
+      ],
+      "canonical_name": "Secure Research Computing",
+      "doc_id": "https://www.hpc.cam.ac.uk/",
+      "doc_title": "Research Computing Services",
+      "entity_id": "727ff65cb7043995",
+      "entity_type": "service",
+      "evidence_spans": [
+        {
+          "doc_id": "https://www.hpc.cam.ac.uk/",
+          "doc_title": "Research Computing Services",
+          "evidence_text": "[Skip to main content](#main-content)\n\nView menu\n[![Home](/themes/custom/rcs/assets/img/cam-logo.png)](https://www.cam.ac.uk/ \"Home\")\n\n* [Open Study at Cambridge submenu](#study-at-cambridge)\n* [Open About the University submenu](#about-the-university)\n* [Research at Cambridge](https://www.cam.ac.uk/research?ucam-ref=global-header)\n\nQuick links\n\n* [For staff](https://www.cam.ac.uk/for-staff?ucam-r",
+          "extraction_method": "service_catalog_landing",
+          "heading_path": [
+            "Research Computing Services"
+          ]
+        },
+        {
+          "doc_id": "https://www.hpc.cam.ac.uk/index.php/services",
+          "doc_title": "Services",
+          "evidence_text": "[Skip to main content](#main-content)\n\nView menu\n[![Home](/themes/custom/rcs/assets/img/cam-logo.png)](https://www.cam.ac.uk/ \"Home\")\n\n* [Open Study at Cambridge submenu](#study-at-cambridge)\n* [Open About the University submenu](#about-the-university)\n* [Research at Cambridge](https://www.cam.ac.uk/research?ucam-ref=global-header)\n\nQuick links\n\n* [For staff](https://www.cam.ac.uk/for-staff?ucam-r",
+          "extraction_method": "service_catalog_landing",
+          "heading_path": [
+            "Services"
+          ]
+        },
+        {
+          "doc_id": "https://www.hpc.cam.ac.uk/secure-research-computing",
+          "doc_title": "Secure Research Computing",
+          "evidence_text": "[Skip to main content](#main-content)\n\nView menu\n[![Home](/themes/custom/rcs/assets/img/cam-logo.png)](https://www.cam.ac.uk/ \"Home\")\n\n* [Open Study at Cambridge submenu](#study-at-cambridge)\n* [Open About the University submenu](#about-the-university)\n* [Research at Cambridge](https://www.cam.ac.uk/research?ucam-ref=global-header)\n\nQuick links\n\n* [For staff](https://www.cam.ac.uk/for-staff?ucam-r",
+          "extraction_method": "service_catalog_page",
+          "heading_path": [
+            "Secure Research Computing"
+          ]
+        },
+        {
+          "doc_id": "https://www.hpc.cam.ac.uk/services",
+          "doc_title": "Services",
+          "evidence_text": "[Skip to main content](#main-content)\n\nView menu\n[![Home](/themes/custom/rcs/assets/img/cam-logo.png)](https://www.cam.ac.uk/ \"Home\")\n\n* [Open Study at Cambridge submenu](#study-at-cambridge)\n* [Open About the University submenu](#about-the-university)\n* [Research at Cambridge](https://www.cam.ac.uk/research?ucam-ref=global-header)\n\nQuick links\n\n* [For staff](https://www.cam.ac.uk/for-staff?ucam-r",
+          "extraction_method": "service_catalog_landing",
+          "heading_path": [
+            "Services"
+          ]
+        }
+      ],
+      "extraction_method": "merged",
+      "heading_path": [
+        "Research Computing Services"
+      ],
+      "known_versions": [],
+      "review_state": "auto_verified",
+      "source_scope": "local_official_services",
+      "status": "current"
+    },
+    {
+      "aliases": [
+        "Training & Consultancy",
+        "training consultancy",
+        "training-consultancy"
+      ],
+      "canonical_name": "Training & Consultancy",
+      "doc_id": "https://www.hpc.cam.ac.uk/",
+      "doc_title": "Research Computing Services",
+      "entity_id": "729da045af7d7007",
+      "entity_type": "service",
+      "evidence_spans": [
+        {
+          "doc_id": "https://www.hpc.cam.ac.uk/",
+          "doc_title": "Research Computing Services",
+          "evidence_text": "[Skip to main content](#main-content)\n\nView menu\n[![Home](/themes/custom/rcs/assets/img/cam-logo.png)](https://www.cam.ac.uk/ \"Home\")\n\n* [Open Study at Cambridge submenu](#study-at-cambridge)\n* [Open About the University submenu](#about-the-university)\n* [Research at Cambridge](https://www.cam.ac.uk/research?ucam-ref=global-header)\n\nQuick links\n\n* [For staff](https://www.cam.ac.uk/for-staff?ucam-r",
+          "extraction_method": "service_catalog_landing",
+          "heading_path": [
+            "Research Computing Services"
+          ]
+        },
+        {
+          "doc_id": "https://www.hpc.cam.ac.uk/index.php/services",
+          "doc_title": "Services",
+          "evidence_text": "[Skip to main content](#main-content)\n\nView menu\n[![Home](/themes/custom/rcs/assets/img/cam-logo.png)](https://www.cam.ac.uk/ \"Home\")\n\n* [Open Study at Cambridge submenu](#study-at-cambridge)\n* [Open About the University submenu](#about-the-university)\n* [Research at Cambridge](https://www.cam.ac.uk/research?ucam-ref=global-header)\n\nQuick links\n\n* [For staff](https://www.cam.ac.uk/for-staff?ucam-r",
+          "extraction_method": "service_catalog_landing",
+          "heading_path": [
+            "Services"
+          ]
+        },
+        {
+          "doc_id": "https://www.hpc.cam.ac.uk/services",
+          "doc_title": "Services",
+          "evidence_text": "[Skip to main content](#main-content)\n\nView menu\n[![Home](/themes/custom/rcs/assets/img/cam-logo.png)](https://www.cam.ac.uk/ \"Home\")\n\n* [Open Study at Cambridge submenu](#study-at-cambridge)\n* [Open About the University submenu](#about-the-university)\n* [Research at Cambridge](https://www.cam.ac.uk/research?ucam-ref=global-header)\n\nQuick links\n\n* [For staff](https://www.cam.ac.uk/for-staff?ucam-r",
+          "extraction_method": "service_catalog_landing",
+          "heading_path": [
+            "Services"
+          ]
+        },
+        {
+          "doc_id": "https://www.hpc.cam.ac.uk/training-consultancy",
+          "doc_title": "Training & Consultancy",
+          "evidence_text": "[Skip to main content](#main-content)\n\nView menu\n[![Home](/themes/custom/rcs/assets/img/cam-logo.png)](https://www.cam.ac.uk/ \"Home\")\n\n* [Open Study at Cambridge submenu](#study-at-cambridge)\n* [Open About the University submenu](#about-the-university)\n* [Research at Cambridge](https://www.cam.ac.uk/research?ucam-ref=global-header)\n\nQuick links\n\n* [For staff](https://www.cam.ac.uk/for-staff?ucam-r",
+          "extraction_method": "service_catalog_page",
+          "heading_path": [
+            "Training & Consultancy"
+          ]
+        }
+      ],
+      "extraction_method": "merged",
+      "heading_path": [
+        "Research Computing Services"
+      ],
+      "known_versions": [],
+      "review_state": "auto_verified",
+      "source_scope": "local_official_services",
+      "status": "current"
+    },
+    {
+      "aliases": [
+        "Visualisation",
+        "visualisation"
+      ],
+      "canonical_name": "Visualisation",
+      "doc_id": "https://www.hpc.cam.ac.uk/",
+      "doc_title": "Research Computing Services",
+      "entity_id": "3de4a3d803d4b716",
+      "entity_type": "service",
+      "evidence_spans": [
+        {
+          "doc_id": "https://www.hpc.cam.ac.uk/",
+          "doc_title": "Research Computing Services",
+          "evidence_text": "[Skip to main content](#main-content)\n\nView menu\n[![Home](/themes/custom/rcs/assets/img/cam-logo.png)](https://www.cam.ac.uk/ \"Home\")\n\n* [Open Study at Cambridge submenu](#study-at-cambridge)\n* [Open About the University submenu](#about-the-university)\n* [Research at Cambridge](https://www.cam.ac.uk/research?ucam-ref=global-header)\n\nQuick links\n\n* [For staff](https://www.cam.ac.uk/for-staff?ucam-r",
+          "extraction_method": "service_catalog_landing",
+          "heading_path": [
+            "Research Computing Services"
+          ]
+        },
+        {
+          "doc_id": "https://www.hpc.cam.ac.uk/index.php/services",
+          "doc_title": "Services",
+          "evidence_text": "[Skip to main content](#main-content)\n\nView menu\n[![Home](/themes/custom/rcs/assets/img/cam-logo.png)](https://www.cam.ac.uk/ \"Home\")\n\n* [Open Study at Cambridge submenu](#study-at-cambridge)\n* [Open About the University submenu](#about-the-university)\n* [Research at Cambridge](https://www.cam.ac.uk/research?ucam-ref=global-header)\n\nQuick links\n\n* [For staff](https://www.cam.ac.uk/for-staff?ucam-r",
+          "extraction_method": "service_catalog_landing",
+          "heading_path": [
+            "Services"
+          ]
+        },
+        {
+          "doc_id": "https://www.hpc.cam.ac.uk/services",
+          "doc_title": "Services",
+          "evidence_text": "[Skip to main content](#main-content)\n\nView menu\n[![Home](/themes/custom/rcs/assets/img/cam-logo.png)](https://www.cam.ac.uk/ \"Home\")\n\n* [Open Study at Cambridge submenu](#study-at-cambridge)\n* [Open About the University submenu](#about-the-university)\n* [Research at Cambridge](https://www.cam.ac.uk/research?ucam-ref=global-header)\n\nQuick links\n\n* [For staff](https://www.cam.ac.uk/for-staff?ucam-r",
+          "extraction_method": "service_catalog_landing",
+          "heading_path": [
+            "Services"
+          ]
+        },
+        {
+          "doc_id": "https://www.hpc.cam.ac.uk/visualisation",
+          "doc_title": "Visualisation",
+          "evidence_text": "[Skip to main content](#main-content)\n\nView menu\n[![Home](/themes/custom/rcs/assets/img/cam-logo.png)](https://www.cam.ac.uk/ \"Home\")\n\n* [Open Study at Cambridge submenu](#study-at-cambridge)\n* [Open About the University submenu](#about-the-university)\n* [Research at Cambridge](https://www.cam.ac.uk/research?ucam-ref=global-header)\n\nQuick links\n\n* [For staff](https://www.cam.ac.uk/for-staff?ucam-r",
+          "extraction_method": "service_catalog_page",
+          "heading_path": [
+            "Visualisation"
+          ]
+        }
+      ],
+      "extraction_method": "merged",
+      "heading_path": [
+        "Research Computing Services"
+      ],
+      "known_versions": [],
+      "review_state": "auto_verified",
+      "source_scope": "local_official_services",
       "status": "current"
     },
     {
@@ -2940,7 +3561,10 @@
     },
     {
       "aliases": [
+        "Dawn",
         "Dawn - Intel GPU (PVC) Nodes",
+        "d w n",
+        "d-w-n",
         "pvc"
       ],
       "canonical_name": "Dawn - Intel GPU (PVC) Nodes",
@@ -2957,9 +3581,45 @@
           "heading_path": [
             "Dawn - Intel GPU (PVC) Nodes"
           ]
+        },
+        {
+          "doc_id": "https://www.hpc.cam.ac.uk/",
+          "doc_title": "Research Computing Services",
+          "evidence_text": "[Skip to main content](#main-content)\n\nView menu\n[![Home](/themes/custom/rcs/assets/img/cam-logo.png)](https://www.cam.ac.uk/ \"Home\")\n\n* [Open Study at Cambridge submenu](#study-at-cambridge)\n* [Open About the University submenu](#about-the-university)\n* [Research at Cambridge](https://www.cam.ac.uk/research?ucam-ref=global-header)\n\nQuick links\n\n* [For staff](https://www.cam.ac.uk/for-staff?ucam-r",
+          "extraction_method": "service_catalog_landing",
+          "heading_path": [
+            "Research Computing Services"
+          ]
+        },
+        {
+          "doc_id": "https://www.hpc.cam.ac.uk/d-w-n",
+          "doc_title": "Dawn",
+          "evidence_text": "[Skip to main content](#main-content)\n\nView menu\n[![Home](/themes/custom/rcs/assets/img/cam-logo.png)](https://www.cam.ac.uk/ \"Home\")\n\n* [Open Study at Cambridge submenu](#study-at-cambridge)\n* [Open About the University submenu](#about-the-university)\n* [Research at Cambridge](https://www.cam.ac.uk/research?ucam-ref=global-header)\n\nQuick links\n\n* [For staff](https://www.cam.ac.uk/for-staff?ucam-r",
+          "extraction_method": "service_catalog_page",
+          "heading_path": [
+            "Dawn"
+          ]
+        },
+        {
+          "doc_id": "https://www.hpc.cam.ac.uk/index.php/services",
+          "doc_title": "Services",
+          "evidence_text": "[Skip to main content](#main-content)\n\nView menu\n[![Home](/themes/custom/rcs/assets/img/cam-logo.png)](https://www.cam.ac.uk/ \"Home\")\n\n* [Open Study at Cambridge submenu](#study-at-cambridge)\n* [Open About the University submenu](#about-the-university)\n* [Research at Cambridge](https://www.cam.ac.uk/research?ucam-ref=global-header)\n\nQuick links\n\n* [For staff](https://www.cam.ac.uk/for-staff?ucam-r",
+          "extraction_method": "service_catalog_landing",
+          "heading_path": [
+            "Services"
+          ]
+        },
+        {
+          "doc_id": "https://www.hpc.cam.ac.uk/services",
+          "doc_title": "Services",
+          "evidence_text": "[Skip to main content](#main-content)\n\nView menu\n[![Home](/themes/custom/rcs/assets/img/cam-logo.png)](https://www.cam.ac.uk/ \"Home\")\n\n* [Open Study at Cambridge submenu](#study-at-cambridge)\n* [Open About the University submenu](#about-the-university)\n* [Research at Cambridge](https://www.cam.ac.uk/research?ucam-ref=global-header)\n\nQuick links\n\n* [For staff](https://www.cam.ac.uk/for-staff?ucam-r",
+          "extraction_method": "service_catalog_landing",
+          "heading_path": [
+            "Services"
+          ]
         }
       ],
-      "extraction_method": "title_path_heuristic",
+      "extraction_method": "merged",
       "heading_path": [
         "Dawn - Intel GPU (PVC) Nodes"
       ],
@@ -3995,25 +4655,44 @@
     "https://docs.hpc.cam.ac.uk/hpc/user-guide/sbs.html",
     "https://docs.hpc.cam.ac.uk/hpc/user-guide/transfer.html",
     "https://docs.hpc.cam.ac.uk/hpc/user-guide/turbovnc.html",
-    "https://docs.hpc.cam.ac.uk/hpc/user-guide/wbic.html"
+    "https://docs.hpc.cam.ac.uk/hpc/user-guide/wbic.html",
+    "https://www.hpc.cam.ac.uk/",
+    "https://www.hpc.cam.ac.uk/ai-data-analysis",
+    "https://www.hpc.cam.ac.uk/cambridge-research-cloud",
+    "https://www.hpc.cam.ac.uk/d-w-n",
+    "https://www.hpc.cam.ac.uk/data-storage",
+    "https://www.hpc.cam.ac.uk/high-performance-computing",
+    "https://www.hpc.cam.ac.uk/index.php/services",
+    "https://www.hpc.cam.ac.uk/research-cold-store",
+    "https://www.hpc.cam.ac.uk/research-data-store",
+    "https://www.hpc.cam.ac.uk/research-file-share",
+    "https://www.hpc.cam.ac.uk/research-software-engineering",
+    "https://www.hpc.cam.ac.uk/secure-research-computing",
+    "https://www.hpc.cam.ac.uk/services",
+    "https://www.hpc.cam.ac.uk/training-consultancy",
+    "https://www.hpc.cam.ac.uk/visualisation"
   ],
   "summary": {
     "counts_by_entity_type": {
       "module": 45,
       "partition": 12,
-      "service": 2,
+      "service": 13,
       "software": 13,
       "system": 7,
       "toolchain": 20
     },
     "counts_by_review_reason": {},
+    "counts_by_source_scope": {
+      "local_official": 99,
+      "local_official_services": 11
+    },
     "counts_by_status": {
-      "current": 54,
+      "current": 65,
       "eol": 1,
       "legacy": 6,
       "unknown": 38
     },
-    "entity_count": 99,
+    "entity_count": 110,
     "review_count": 0
   }
 }

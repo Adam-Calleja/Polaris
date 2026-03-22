@@ -15,6 +15,7 @@ from urllib.parse import urlsplit
 from polaris_rag.common import MarkdownDocument
 
 SOURCE_SCOPE_LOCAL_OFFICIAL = "local_official"
+SOURCE_SCOPE_LOCAL_OFFICIAL_SERVICES = "local_official_services"
 REGISTRY_ENTITY_TYPES: tuple[str, ...] = (
     "system",
     "partition",
@@ -980,10 +981,16 @@ def _make_entity_id(source_scope: str, entity_type: str, canonical_name: str) ->
     return hashlib.sha1(payload.encode("utf-8")).hexdigest()[:16]
 
 
+def _source_scope_priority(source_scope: str) -> tuple[int, str]:
+    if source_scope == SOURCE_SCOPE_LOCAL_OFFICIAL:
+        return (0, source_scope)
+    if source_scope == SOURCE_SCOPE_LOCAL_OFFICIAL_SERVICES:
+        return (1, source_scope)
+    return (9, source_scope)
+
+
 def _merge_candidates(
     candidates: Iterable[_Candidate],
-    *,
-    source_scope: str,
 ) -> tuple[list[RegistryEntity], list[ReviewQueueRow]]:
     grouped: dict[tuple[str, str], list[_Candidate]] = defaultdict(list)
     for candidate in candidates:
@@ -997,6 +1004,7 @@ def _merge_candidates(
         group_sorted = sorted(
             group,
             key=lambda item: (
+                _source_scope_priority(item.source_scope),
                 item.canonical_name.lower(),
                 item.doc_id,
                 item.heading_path,
@@ -1019,6 +1027,7 @@ def _merge_candidates(
         ]
 
         status = statuses[0] if len(statuses) == 1 else "unknown"
+        entity_source_scope = primary.source_scope
         review_state = REVIEW_STATE_AUTO_VERIFIED
         if len(statuses) > 1:
             review_state = REVIEW_STATE_NEEDS_REVIEW
@@ -1027,7 +1036,7 @@ def _merge_candidates(
                     reason="conflicting_status",
                     entity_type=entity_type,
                     canonical_name=primary.canonical_name,
-                    source_scope=source_scope,
+                    source_scope=entity_source_scope,
                     candidate_count=len(group_sorted),
                     status_values=statuses,
                     aliases=aliases,
@@ -1038,11 +1047,11 @@ def _merge_candidates(
 
         entities.append(
             RegistryEntity(
-                entity_id=_make_entity_id(source_scope, entity_type, primary.canonical_name),
+                entity_id=_make_entity_id(entity_source_scope, entity_type, primary.canonical_name),
                 entity_type=entity_type,
                 canonical_name=primary.canonical_name,
                 aliases=aliases,
-                source_scope=source_scope,
+                source_scope=entity_source_scope,
                 status=status,
                 known_versions=versions,
                 doc_id=primary.doc_id,
@@ -1067,12 +1076,13 @@ def _merge_candidates(
             continue
         for entity in alias_entities:
             needs_review_ids.add(entity.entity_id)
+        review_source_scope = sorted(alias_entities, key=lambda entity: _source_scope_priority(entity.source_scope))[0].source_scope
         review_rows.append(
             ReviewQueueRow(
                 reason="alias_ambiguity",
                 entity_type=entity_type,
                 canonical_name=" / ".join(sorted(entity.canonical_name for entity in alias_entities)),
-                source_scope=source_scope,
+                source_scope=review_source_scope,
                 candidate_count=len(alias_entities),
                 aliases=_sorted_unique(alias for entity in alias_entities for alias in entity.aliases),
                 doc_ids=_sorted_unique(entity.doc_id for entity in alias_entities),
@@ -1118,12 +1128,14 @@ def _merge_candidates(
 def _build_summary(entities: Sequence[RegistryEntity], review_rows: Sequence[ReviewQueueRow]) -> dict[str, object]:
     type_counts = Counter(entity.entity_type for entity in entities)
     status_counts = Counter(entity.status for entity in entities)
+    source_scope_counts = Counter(entity.source_scope for entity in entities)
     review_counts = Counter(row.reason for row in review_rows)
     return {
         "entity_count": len(entities),
         "review_count": len(review_rows),
         "counts_by_entity_type": dict(sorted(type_counts.items())),
         "counts_by_status": dict(sorted(status_counts.items())),
+        "counts_by_source_scope": dict(sorted(source_scope_counts.items())),
         "counts_by_review_reason": dict(sorted(review_counts.items())),
     }
 
@@ -1135,6 +1147,10 @@ def build_registry_artifact(
     source_urls: Sequence[str],
     source_scope: str = SOURCE_SCOPE_LOCAL_OFFICIAL,
     extraction_version: str = EXTRACTION_VERSION,
+    additional_candidates: Iterable[_Candidate] = (),
+    additional_review_rows: Sequence[ReviewQueueRow] = (),
+    additional_source_urls: Sequence[str] = (),
+    build_metadata: dict[str, object] | None = None,
 ) -> tuple[RegistryArtifact, list[ReviewQueueRow]]:
     """Build a deterministic registry artifact from local official markdown docs."""
 
@@ -1147,9 +1163,9 @@ def build_registry_artifact(
         markdown_documents,
         source_scope=source_scope,
     )
-    entities, merge_review_rows = _merge_candidates(candidates, source_scope=source_scope)
+    entities, merge_review_rows = _merge_candidates([*candidates, *list(additional_candidates)])
     review_rows = sorted(
-        [*extraction_review_rows, *merge_review_rows],
+        [*extraction_review_rows, *additional_review_rows, *merge_review_rows],
         key=lambda row: (
             row.reason,
             row.entity_type,
@@ -1157,13 +1173,22 @@ def build_registry_artifact(
             tuple(row.doc_ids),
         ),
     )
+    build_payload: dict[str, object] = {
+        "homepage": str(homepage),
+        "source_scope": source_scope,
+        "extraction_version": str(extraction_version),
+    }
+    if build_metadata:
+        build_payload.update(build_metadata)
     artifact = RegistryArtifact(
-        build={
-            "homepage": str(homepage),
-            "source_scope": source_scope,
-            "extraction_version": str(extraction_version),
-        },
-        source_urls=sorted({str(url).strip() for url in source_urls if str(url).strip()}),
+        build=build_payload,
+        source_urls=sorted(
+            {
+                str(url).strip()
+                for url in [*source_urls, *additional_source_urls]
+                if str(url).strip()
+            }
+        ),
         entities=entities,
         summary=_build_summary(entities, review_rows),
     )
@@ -1227,6 +1252,7 @@ __all__ = [
     "REVIEW_STATE_AUTO_VERIFIED",
     "REVIEW_STATE_NEEDS_REVIEW",
     "SOURCE_SCOPE_LOCAL_OFFICIAL",
+    "SOURCE_SCOPE_LOCAL_OFFICIAL_SERVICES",
     "STATUS_VALUES",
     "RegistryArtifact",
     "RegistryEntity",

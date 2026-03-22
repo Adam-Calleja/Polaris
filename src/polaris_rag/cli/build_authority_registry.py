@@ -42,6 +42,12 @@ from polaris_rag.authority import (
     persist_registry_artifact,
     persist_review_rows,
 )
+from polaris_rag.authority.service_catalog import (
+    SERVICE_CATALOG_DEFAULT_HOMEPAGE,
+    SERVICE_CATALOG_MAX_DEPTH,
+    extract_service_catalog_candidates,
+    is_allowed_service_catalog_url,
+)
 from polaris_rag.config import GlobalConfig
 from polaris_rag.retrieval.document_preprocessor import preprocess_html_documents
 from polaris_rag.retrieval.ingestion_settings import resolve_conversion_settings
@@ -78,13 +84,18 @@ def _is_allowed_authority_url(homepage: str, url: str) -> bool:
     return True
 
 
-def get_internal_links(homepage: str) -> list[str]:
-    queue: list[str] = [homepage]
+def _crawl_internal_links(
+    homepage: str,
+    *,
+    is_allowed_url,
+    max_depth: int | None = None,
+) -> list[str]:
+    queue: list[tuple[str, int]] = [(homepage, 0)]
     seen: set[str] = set()
     ordered: list[str] = []
 
     while queue and len(seen) < MAX_INTERNAL_LINKS:
-        current = queue.pop(0)
+        current, depth = queue.pop(0)
         if current in seen:
             continue
         seen.add(current)
@@ -94,22 +105,56 @@ def get_internal_links(homepage: str) -> list[str]:
             discovered = [current]
 
         for link in discovered:
-            if not _is_allowed_authority_url(homepage, link):
+            if not is_allowed_url(homepage, link):
                 continue
             if link not in ordered:
                 ordered.append(link)
-            if link not in seen and link not in queue and len(seen) + len(queue) < MAX_INTERNAL_LINKS:
-                queue.append(link)
+            if max_depth is not None and depth + 1 > max_depth:
+                continue
+            if link not in seen and link not in [candidate for candidate, _ in queue] and len(seen) + len(queue) < MAX_INTERNAL_LINKS:
+                queue.append((link, depth + 1))
 
-    if homepage not in ordered and _is_allowed_authority_url(homepage, homepage):
+    if homepage not in ordered and is_allowed_url(homepage, homepage):
         ordered.insert(0, homepage)
     return ordered
+
+
+def get_internal_links(homepage: str) -> list[str]:
+    return _crawl_internal_links(
+        homepage,
+        is_allowed_url=_is_allowed_authority_url,
+    )
+
+
+def get_service_catalog_links(homepage: str) -> list[str]:
+    return _crawl_internal_links(
+        homepage,
+        is_allowed_url=is_allowed_service_catalog_url,
+        max_depth=SERVICE_CATALOG_MAX_DEPTH,
+    )
 
 
 def load_website_docs(links: list[str]):
     from polaris_rag.retrieval.document_loader import load_website_docs as _load_website_docs
 
     return _load_website_docs(links)
+
+
+def _load_markdown_documents(cfg: GlobalConfig, links: list[str]) -> list:
+    conditions = cfg.document_preprocess_html_conditions
+    tags = cfg.document_preprocess_html_tags
+    documents = load_website_docs(links)
+    processed_documents = preprocess_html_documents(
+        documents,
+        tags=tags,
+        conditions=conditions,
+    )
+    conversion_settings = resolve_conversion_settings(cfg, source="docs")
+    return convert_documents_to_markdown(
+        processed_documents,
+        engine=conversion_settings.engine,
+        options=conversion_settings.options,
+    )
 
 
 def parse_args() -> argparse.Namespace:
@@ -155,6 +200,18 @@ def parse_args() -> argparse.Namespace:
         default=SOURCE_SCOPE_LOCAL_OFFICIAL,
         help="Authority source scope for this build. Stage 1 only supports local_official.",
     )
+    parser.add_argument(
+        "--services-homepage",
+        required=False,
+        type=str,
+        default=SERVICE_CATALOG_DEFAULT_HOMEPAGE,
+        help="Homepage URL for the official RCS services catalog.",
+    )
+    parser.add_argument(
+        "--skip-services-catalog",
+        action="store_true",
+        help="If set, skip crawling and merging the official RCS services catalog.",
+    )
     return parser.parse_args()
 
 
@@ -164,28 +221,43 @@ def main() -> None:
 
     discovered_links = get_internal_links(args.homepage) if args.ingest_internal_links else [args.homepage]
     links = [link for link in discovered_links if _is_allowed_authority_url(args.homepage, link)]
-    print(f"Loading authority source pages: {len(links)} URL(s)")
 
-    conditions = cfg.document_preprocess_html_conditions
-    tags = cfg.document_preprocess_html_tags
-    documents = load_website_docs(links)
-    processed_documents = preprocess_html_documents(
-        documents,
-        tags=tags,
-        conditions=conditions,
-    )
-    conversion_settings = resolve_conversion_settings(cfg, source="docs")
-    markdown_documents = convert_documents_to_markdown(
-        processed_documents,
-        engine=conversion_settings.engine,
-        options=conversion_settings.options,
-    )
+    service_links: list[str] = []
+    service_candidates = []
+    service_review_rows = []
+    if not args.skip_services_catalog:
+        discovered_service_links = (
+            get_service_catalog_links(args.services_homepage)
+            if args.ingest_internal_links
+            else [args.services_homepage]
+        )
+        service_links = [
+            link
+            for link in discovered_service_links
+            if is_allowed_service_catalog_url(args.services_homepage, link)
+        ]
+
+    all_link_count = len(links) + len(service_links)
+    print(f"Loading authority source pages: {all_link_count} URL(s)")
+
+    markdown_documents = _load_markdown_documents(cfg, links)
+    if service_links:
+        service_markdown_documents = _load_markdown_documents(cfg, service_links)
+        service_candidates, service_review_rows = extract_service_catalog_candidates(service_markdown_documents)
 
     artifact, review_rows = build_registry_artifact(
         markdown_documents,
         homepage=args.homepage,
         source_urls=links,
         source_scope=args.source_scope,
+        additional_candidates=service_candidates,
+        additional_review_rows=service_review_rows,
+        additional_source_urls=service_links,
+        build_metadata={
+            "docs_homepage": str(args.homepage),
+            "services_homepage": str(args.services_homepage),
+            "service_catalog_included": not args.skip_services_catalog,
+        },
     )
     output_path = persist_registry_artifact(artifact, args.output_file)
     review_path = persist_review_rows(review_rows, args.review_file)

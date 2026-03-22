@@ -145,6 +145,43 @@ def test_markdown_docs_propagate_enriched_authority_metadata_to_chunks(tmp_path:
     assert len(chunks[0].metadata["official_doc_matches"]) == 2
 
 
+def test_service_catalog_docs_still_enrich_as_local_official(tmp_path: Path) -> None:
+    doc_id = "https://www.example.org/secure-research-computing"
+    registry_path = _write_registry(
+        tmp_path,
+        entities=[
+            {
+                **_entity(
+                    entity_id="service-secure-research-computing",
+                    entity_type="service",
+                    canonical_name="Secure Research Computing",
+                    aliases=["Secure Research Computing"],
+                    status="current",
+                    doc_id=doc_id,
+                ),
+                "source_scope": "local_official_services",
+            }
+        ],
+        source_urls=[doc_id],
+    )
+    document = MarkdownDocument(
+        id=doc_id,
+        document_type="html",
+        text="# Secure Research Computing\n\nSecure Research Computing is available.",
+        metadata={"source": doc_id, "title": "Secure Research Computing"},
+    )
+
+    [enriched_document] = enrich_documents_with_authority_metadata(
+        [document],
+        registry_artifact_path=registry_path,
+    )
+
+    assert enriched_document.metadata["source_authority"] == "local_official"
+    assert enriched_document.metadata["authority_tier"] == 3
+    assert enriched_document.metadata["service_names"] == ["Secure Research Computing"]
+    assert len(enriched_document.metadata["official_doc_matches"]) == 1
+
+
 def test_ticket_metadata_extraction_populates_authority_versions_and_privacy_flags(tmp_path: Path) -> None:
     doc_id = "https://docs.example.org/hpc/gromacs.html"
     registry_path = _write_registry(
