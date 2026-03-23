@@ -25,6 +25,7 @@ from polaris_rag.common.request_budget import (
     normalize_evaluation_policy,
     resolve_evaluation_deadlines,
 )
+from polaris_rag.retrieval.query_constraints import serialize_query_constraints
 from polaris_rag.observability.mlflow_tracking import (
     TRACE_CHILD_RUN_HEADER,
     TRACE_PARENT_RUN_HEADER,
@@ -43,6 +44,20 @@ class QueryRequest(BaseModel):
     query: str
 
 
+class QueryConstraintsPayload(BaseModel):
+    query_type: str | None = None
+    system_names: list[str] = Field(default_factory=list)
+    partition_names: list[str] = Field(default_factory=list)
+    service_names: list[str] = Field(default_factory=list)
+    software_names: list[str] = Field(default_factory=list)
+    software_versions: list[str] = Field(default_factory=list)
+    module_names: list[str] = Field(default_factory=list)
+    toolchain_names: list[str] = Field(default_factory=list)
+    toolchain_versions: list[str] = Field(default_factory=list)
+    scope_required: bool | None = None
+    version_sensitive_guess: bool | None = None
+
+
 class RetrievedContextChunk(BaseModel):
     rank: int
     doc_id: str
@@ -54,6 +69,7 @@ class RetrievedContextChunk(BaseModel):
 class QueryResponse(BaseModel):
     answer: str
     context: list[RetrievedContextChunk] = Field(default_factory=list)
+    query_constraints: QueryConstraintsPayload | None = None
 
 
 def _extract_doc_id(node: Any) -> str:
@@ -116,6 +132,13 @@ def _as_mapping(value: Any) -> Mapping[str, Any]:
     if hasattr(value, "__dict__"):
         return dict(vars(value))
     return {}
+
+
+def _coerce_query_constraints(value: Any) -> QueryConstraintsPayload | None:
+    payload = serialize_query_constraints(value)
+    if payload is None:
+        return None
+    return QueryConstraintsPayload(**payload)
 
 
 def _resolve_request_budget(request: Request) -> RequestBudget | None:
@@ -199,6 +222,7 @@ def query(req: QueryRequest, request: Request):
             result = app.state.container.pipeline.run(req.query, request_budget=request_budget)
             answer = str(result.get("response", ""))
             context = _serialize_context(result.get("source_nodes", []))
+            query_constraints = _coerce_query_constraints(result.get("query_constraints"))
             timings = _as_mapping(result.get("timings", {}))
             response_status = "ok" if answer.strip() else "empty_response"
             context_payload = [
@@ -219,11 +243,20 @@ def query(req: QueryRequest, request: Request):
                 {
                     "answer": answer,
                     "context": context_payload,
+                    "query_constraints": (
+                        query_constraints.model_dump()
+                        if query_constraints is not None and hasattr(query_constraints, "model_dump")
+                        else query_constraints.dict() if query_constraints is not None else None
+                    ),
                     "timings": timings,
                     "policy": policy,
                 },
             )
-            return QueryResponse(answer=answer, context=context)
+            return QueryResponse(
+                answer=answer,
+                context=context,
+                query_constraints=query_constraints,
+            )
     except (RetrievalTimeoutError, GenerationTimeoutError, RequestBudgetExceededError) as e:
         elapsed_ms = max(0, int(round((time.perf_counter() - request_started_at) * 1000.0)))
         detail = build_failure_detail(

@@ -4,6 +4,7 @@ from contextlib import contextmanager
 
 from polaris_rag.common.request_budget import RequestBudget
 from polaris_rag.pipelines.rag_pipeline import RAGPipeline
+from polaris_rag.retrieval.query_constraints import QueryConstraints
 
 
 class _FakeNode:
@@ -52,6 +53,16 @@ class _FakeResolver:
     def resolve(self, source_nodes):  # noqa: ANN001
         self.calls.append(list(source_nodes))
         return [_FakeSource(_FakeNode("ticket-1", "FULL-TICKET"))]
+
+
+class _FakeQueryConstraintParser:
+    def parse(self, query: str) -> QueryConstraints:
+        return QueryConstraints(
+            query_type="software_version",
+            software_names=["GROMACS"],
+            software_versions=["2024.4"],
+            version_sensitive_guess=True,
+        )
 
 
 class _Span:
@@ -147,3 +158,36 @@ def test_pipeline_uses_resolved_contexts_for_prompt_and_output() -> None:
     assert docs[0].node.text == "FULL-TICKET"
     assert result["source_nodes"][0].node.id_ == "ticket-1"
     assert result["raw_source_nodes"][0].node.id_ == "doc-1"
+
+
+def test_pipeline_includes_and_forwards_query_constraints() -> None:
+    retriever = _FakeRetriever()
+    prompt_builder = _FakePromptBuilder()
+    llm = _FakeLLM()
+
+    pipeline = RAGPipeline(
+        retriever=retriever,
+        prompt_builder=prompt_builder,
+        prompt_name="hpc_prompt",
+        llm=llm,
+        query_constraint_parser=_FakeQueryConstraintParser(),
+    )
+
+    result = pipeline.run("How do I run GROMACS 2024.4?")
+
+    forwarded = retriever.calls[0]["kwargs"]["query_constraints"]
+    assert isinstance(forwarded, QueryConstraints)
+    assert forwarded.software_names == ["GROMACS"]
+    assert result["query_constraints"] == {
+        "query_type": "software_version",
+        "system_names": [],
+        "partition_names": [],
+        "service_names": [],
+        "software_names": ["GROMACS"],
+        "software_versions": ["2024.4"],
+        "module_names": [],
+        "toolchain_names": [],
+        "toolchain_versions": [],
+        "scope_required": None,
+        "version_sensitive_guess": True,
+    }

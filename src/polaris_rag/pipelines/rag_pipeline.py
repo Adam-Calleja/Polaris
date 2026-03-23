@@ -27,6 +27,7 @@ from polaris_rag.common.request_budget import (
     RequestBudgetExceededError,
     RetrievalTimeoutError,
 )
+from polaris_rag.retrieval.query_constraints import QueryConstraints, serialize_query_constraints
 from polaris_rag.retrieval.types import Retriever
 from polaris_rag.generation.prompt_builder import PromptBuilder
 from polaris_rag.observability.mlflow_tracking import (
@@ -70,6 +71,7 @@ class RAGPipeline:
                  prompt_name: str,
                  llm: "BaseLLM",
                  context_resolver: Any | None = None,
+                 query_constraint_parser: Any | None = None,
                  llm_generate_defaults: dict | None = None,
         ):
         """Initialise the RAG pipeline.
@@ -94,6 +96,7 @@ class RAGPipeline:
         self.prompt_name = prompt_name
         self.llm = llm
         self.context_resolver = context_resolver
+        self.query_constraint_parser = query_constraint_parser
         self.llm_generate_defaults = llm_generate_defaults or {
             'stop': ['\nUser:', '\n\nUser:'],
             'temperature': 0.2,
@@ -132,6 +135,13 @@ class RAGPipeline:
 
         call_overrides = kwargs.pop("llm_generate", None) or {}
         retriever_kwargs = dict(kwargs)
+        query_constraints = self._resolve_query_constraints(
+            query=query,
+            provided=retriever_kwargs.pop("query_constraints", None),
+        )
+        serialized_query_constraints = serialize_query_constraints(query_constraints)
+        if query_constraints is not None:
+            retriever_kwargs["query_constraints"] = query_constraints
 
         with start_span(
             "rag.pipeline.run",
@@ -142,7 +152,15 @@ class RAGPipeline:
                 set_span_attributes(pipeline_span, request_budget.to_attributes())
             with start_span(
                 "rag.pipeline.retrieve",
-                inputs={"query": query, "kwargs": retriever_kwargs},
+                inputs={
+                    "query": query,
+                    "kwargs": {
+                        key: value
+                        for key, value in retriever_kwargs.items()
+                        if key != "query_constraints"
+                    },
+                    "query_constraints": serialized_query_constraints,
+                },
             ) as retrieval_span:
                 if request_budget is not None:
                     set_span_attributes(retrieval_span, request_budget.to_attributes())
@@ -219,6 +237,7 @@ class RAGPipeline:
                         "retrieved_count": len(retrieved_chunks),
                         "retrieved_contexts": self._serialize_nodes(retrieved_chunks),
                         "retrieval_elapsed_ms": retrieval_elapsed_ms,
+                        "query_constraints": serialized_query_constraints,
                     },
                 )
 
@@ -333,6 +352,7 @@ class RAGPipeline:
                     "response": raw_output,
                     "retrieved_contexts": self._serialize_nodes(resolved_contexts),
                     "raw_retrieved_contexts": self._serialize_nodes(retrieved_chunks),
+                    "query_constraints": serialized_query_constraints,
                     "timings": {
                         "retrieval_elapsed_ms": retrieval_elapsed_ms,
                         "generation_elapsed_ms": generation_elapsed_ms,
@@ -354,6 +374,7 @@ class RAGPipeline:
             "response": raw_output,
             "source_nodes": resolved_contexts,
             "raw_source_nodes": retrieved_chunks,
+            "query_constraints": serialized_query_constraints,
             "timings": {
                 "retrieval_elapsed_ms": retrieval_elapsed_ms,
                 "generation_elapsed_ms": generation_elapsed_ms,
@@ -384,6 +405,19 @@ class RAGPipeline:
         if self.context_resolver is None:
             return source_nodes
         return list(self.context_resolver.resolve(source_nodes))
+
+    def _resolve_query_constraints(
+        self,
+        *,
+        query: str,
+        provided: Any,
+    ) -> QueryConstraints | None:
+        normalized = QueryConstraints.from_value(provided)
+        if normalized is not None:
+            return normalized
+        if self.query_constraint_parser is None:
+            return None
+        return QueryConstraints.from_value(self.query_constraint_parser.parse(query))
 
     @staticmethod
     def _serialize_nodes(source_nodes: list[Any]) -> list[dict[str, Any]]:

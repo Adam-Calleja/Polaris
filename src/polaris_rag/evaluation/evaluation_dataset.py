@@ -40,6 +40,7 @@ from polaris_rag.common.request_budget import (
     is_timeout_exception,
     normalize_evaluation_policy,
 )
+from polaris_rag.retrieval.query_constraints import serialize_query_constraints
 
 if TYPE_CHECKING:
     from ragas import EvaluationDataset
@@ -997,6 +998,7 @@ def _prepare_one(
         response = str(result.get("response", "") or "")
         source_nodes = result.get("source_nodes", []) or []
         retrieved_contexts, retrieved_context_ids = _normalise_source_nodes(source_nodes)
+        query_constraints = serialize_query_constraints(result.get("query_constraints"))
         timings = result.get("timings", {})
         elapsed_ms = _to_int(
             _as_metadata_dict(timings).get("retrieval_elapsed_ms"),
@@ -1008,6 +1010,16 @@ def _prepare_one(
         if elapsed_ms < 0:
             elapsed_ms = max(0, int(round((time.perf_counter() - started_at) * 1000.0)))
 
+        row_metadata = _build_row_metadata(
+            base_metadata,
+            elapsed_ms=elapsed_ms,
+            policy=policy,
+            budget_ms=budget_ms,
+            response_status="ok" if response.strip() else "empty_response",
+        )
+        if query_constraints is not None:
+            row_metadata["query_constraints"] = query_constraints
+
         row = {
             "id": sample_id,
             "user_input": query,
@@ -1015,13 +1027,7 @@ def _prepare_one(
             "response": response,
             "retrieved_contexts": retrieved_contexts,
             "retrieved_context_ids": retrieved_context_ids,
-            "metadata": _build_row_metadata(
-                base_metadata,
-                elapsed_ms=elapsed_ms,
-                policy=policy,
-                budget_ms=budget_ms,
-                response_status="ok" if response.strip() else "empty_response",
-            ),
+            "metadata": row_metadata,
         }
         return index, row
 
@@ -1189,7 +1195,19 @@ def _prepare_one_via_api(
         retrieved_contexts, retrieved_context_ids = _extract_api_context_chunks(
             result.get("context", [])
         )
+        query_constraints = serialize_query_constraints(result.get("query_constraints"))
         elapsed_ms = max(0, int(round((time.perf_counter() - started_at) * 1000.0)))
+
+        row_metadata = _build_row_metadata(
+            base_metadata,
+            http_status=200,
+            elapsed_ms=elapsed_ms,
+            policy=policy,
+            budget_ms=budget_ms,
+            response_status="ok" if response.strip() else "empty_response",
+        )
+        if query_constraints is not None:
+            row_metadata["query_constraints"] = query_constraints
 
         row = {
             "id": sample_id,
@@ -1198,14 +1216,7 @@ def _prepare_one_via_api(
             "response": response,
             "retrieved_contexts": retrieved_contexts,
             "retrieved_context_ids": retrieved_context_ids,
-            "metadata": _build_row_metadata(
-                base_metadata,
-                http_status=200,
-                elapsed_ms=elapsed_ms,
-                policy=policy,
-                budget_ms=budget_ms,
-                response_status="ok" if response.strip() else "empty_response",
-            ),
+            "metadata": row_metadata,
         }
         return index, row
 
@@ -1262,6 +1273,7 @@ def _row_trace_outputs(row: Mapping[str, Any]) -> dict[str, Any]:
         "response": str(row.get("response", "") or ""),
         "retrieved_context_ids": list(row.get("retrieved_context_ids", []) or []),
         "retrieved_contexts": list(row.get("retrieved_contexts", []) or []),
+        "query_constraints": metadata.get("query_constraints") if isinstance(metadata, Mapping) else None,
         "source_error": source_error,
         "failure_class": failure_class,
         "failure_stage": failure_stage,

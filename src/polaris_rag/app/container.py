@@ -420,6 +420,15 @@ class PolarisContainer:
         return SupportTicketContextResolver(source_document_store=self.source_document_store)
 
     @cached_property
+    def query_constraint_parser(self) -> Any:
+        """Return the registry-backed runtime query parser."""
+        from polaris_rag.retrieval.metadata_enricher import resolve_authority_registry_artifact_path
+        from polaris_rag.retrieval.query_constraints import AuthorityQueryConstraintParser
+
+        registry_artifact_path = resolve_authority_registry_artifact_path(self.config)
+        return AuthorityQueryConstraintParser.from_registry_artifact(registry_artifact_path)
+
+    @cached_property
     def retriever_source_settings(self) -> dict[str, dict[str, Any]]:
         """Return validated per-source retriever settings.
 
@@ -627,6 +636,7 @@ class PolarisContainer:
                 prompt_name=self.prompt_name,
                 llm=self.generator_llm,
                 context_resolver=self.context_resolver,
+                query_constraint_parser=self.query_constraint_parser,
             )
 
 

@@ -94,6 +94,7 @@ class VectorIndexRetriever:
             query: str,
             *,
             timeout_seconds: float | None = None,
+            query_constraints: Any | None = None,
             **kwargs,
         ) -> list[NodeWithScore]:
         """Retrieve nodes for a query.
@@ -108,6 +109,7 @@ class VectorIndexRetriever:
         list[NodeWithScore]
             Retrieved nodes with associated similarity scores.
         """
+        _ = query_constraints
         if self._vector_store_wrapper is not None:
             return self._vector_store_wrapper.query_nodes(
                 query,
@@ -196,6 +198,7 @@ class HybridRetriever:
             query: str,
             *,
             timeout_seconds: float | None = None,
+            query_constraints: Any | None = None,
             **kwargs,
         ) -> list[NodeWithScore]:
         """Retrieve nodes for a query.
@@ -210,6 +213,7 @@ class HybridRetriever:
         list[NodeWithScore]
             Retrieved nodes with associated scores.
         """
+        _ = query_constraints
         if timeout_seconds is None:
             return self._retriever.retrieve(query)
 
@@ -293,12 +297,14 @@ class MultiCollectionRetriever:
             query: str,
             *,
             timeout_seconds: float | None = None,
+            query_constraints: Any | None = None,
             **kwargs,
         ) -> list[NodeWithScore]:
         """Retrieve and rerank nodes for a query."""
         candidates = self._collect_candidates(
             query,
             timeout_seconds=timeout_seconds,
+            query_constraints=query_constraints,
             **kwargs,
         )
         if not candidates:
@@ -318,6 +324,7 @@ class MultiCollectionRetriever:
             query: str,
             *,
             timeout_seconds: float | None = None,
+            query_constraints: Any | None = None,
             **kwargs,
         ) -> list[MergedCandidate]:
         """Collect and deduplicate candidates returned by each source retriever."""
@@ -332,6 +339,7 @@ class MultiCollectionRetriever:
                 source_results = retriever.retrieve(
                     query,
                     timeout_seconds=remaining_timeout,
+                    query_constraints=query_constraints,
                     **kwargs,
                 )
             except Exception as exc:

@@ -37,3 +37,15 @@ Retriever
 Reranker
     Optional second-stage ranker.
 """
+
+from .query_constraints import (
+    AuthorityQueryConstraintParser,
+    QueryConstraints,
+    serialize_query_constraints,
+)
+
+__all__ = [
+    "AuthorityQueryConstraintParser",
+    "QueryConstraints",
+    "serialize_query_constraints",
+]

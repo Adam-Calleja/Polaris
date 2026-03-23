@@ -57,6 +57,27 @@ class _ResolvedContextPipeline:
         }
 
 
+class _ConstraintPipeline:
+    def run(self, query: str, **kwargs):  # noqa: ANN001
+        return {
+            "response": f"resp::{query}",
+            "source_nodes": [_Source(_Node("doc-1", "ctx-1"))],
+            "query_constraints": {
+                "query_type": "software_version",
+                "system_names": [],
+                "partition_names": [],
+                "service_names": [],
+                "software_names": ["GROMACS"],
+                "software_versions": ["2024.4"],
+                "module_names": [],
+                "toolchain_names": [],
+                "toolchain_versions": [],
+                "scope_required": None,
+                "version_sensitive_guess": True,
+            },
+        }
+
+
 def _ok_requester(
     api_url: str, query: str, timeout_seconds: float, headers  # noqa: ANN001
 ) -> dict[str, object]:
@@ -74,6 +95,30 @@ def _flaky_requester(
     if query == "boom":
         raise RuntimeError("simulated api failure")
     return _ok_requester(api_url, query, timeout_seconds, headers)
+
+
+def _constraint_requester(
+    api_url: str, query: str, timeout_seconds: float, headers  # noqa: ANN001
+) -> dict[str, object]:
+    return {
+        "answer": f"answer::{query}",
+        "context": [
+            {"doc_id": f"doc::{query}", "text": f"ctx::{query}"},
+        ],
+        "query_constraints": {
+            "query_type": "software_version",
+            "system_names": [],
+            "partition_names": [],
+            "service_names": [],
+            "software_names": ["GROMACS"],
+            "software_versions": ["2024.4"],
+            "module_names": [],
+            "toolchain_names": [],
+            "toolchain_versions": [],
+            "scope_required": None,
+            "version_sensitive_guess": True,
+        },
+    }
 
 
 def test_load_raw_examples_supports_json_array_in_jsonl_suffix(tmp_path) -> None:
@@ -414,6 +459,19 @@ def test_build_prepared_rows_uses_resolved_source_nodes_not_raw_source_nodes() -
     assert rows[0]["retrieved_context_ids"] == ["ticket-1"]
 
 
+def test_build_prepared_rows_persists_query_constraints_in_metadata() -> None:
+    raw_examples = [{"id": "ex-1", "query": "Q1", "expected_answer": "A1"}]
+
+    rows = build_prepared_rows(
+        raw_examples=raw_examples,
+        pipeline=_ConstraintPipeline(),
+        generation_workers=1,
+    )
+
+    assert rows[0]["metadata"]["query_constraints"]["query_type"] == "software_version"
+    assert rows[0]["metadata"]["query_constraints"]["software_names"] == ["GROMACS"]
+
+
 def test_build_prepared_rows_from_api_fail_soft_captures_source_error() -> None:
     raw_examples = [{"id": "ex-1", "query": "Q1", "expected_answer": "A1"}]
 
@@ -434,6 +492,20 @@ def test_build_prepared_rows_from_api_fail_soft_captures_source_error() -> None:
     assert "source_error" in rows[0]["metadata"]
     assert "boom" in rows[0]["metadata"]["source_error"]
     assert rows[0]["metadata"]["failure_class"] == "api_internal_error"
+
+
+def test_build_prepared_rows_from_api_persists_query_constraints_in_metadata() -> None:
+    raw_examples = [{"id": "ex-1", "query": "Q1", "expected_answer": "A1"}]
+
+    rows = build_prepared_rows_from_api(
+        raw_examples=raw_examples,
+        api_url="http://unused.local/v1/query",
+        generation_workers=1,
+        requester=_constraint_requester,
+    )
+
+    assert rows[0]["metadata"]["query_constraints"]["query_type"] == "software_version"
+    assert rows[0]["metadata"]["query_constraints"]["software_versions"] == ["2024.4"]
 
 
 def test_build_prepared_rows_emits_monotonic_progress_events() -> None:

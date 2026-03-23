@@ -36,6 +36,27 @@ class _ContextPipeline:
         }
 
 
+class _QueryConstraintPipeline:
+    def run(self, query: str, **kwargs):
+        return {
+            "response": f"resp::{query}",
+            "source_nodes": [],
+            "query_constraints": {
+                "query_type": "software_version",
+                "system_names": [],
+                "partition_names": [],
+                "service_names": [],
+                "software_names": ["GROMACS"],
+                "software_versions": ["2024.4"],
+                "module_names": [],
+                "toolchain_names": [],
+                "toolchain_versions": [],
+                "scope_required": None,
+                "version_sensitive_guess": True,
+            },
+        }
+
+
 class _FakeContainer:
     def __init__(self):
         self.pipeline = _FakePipeline()
@@ -138,6 +159,27 @@ def test_query_returns_resolved_context_not_raw_chunks(monkeypatch) -> None:
 
     assert response.context[0].doc_id == "ticket-1"
     assert response.context[0].text == "FULL-TICKET"
+
+
+def test_query_returns_query_constraints_when_present() -> None:
+    api.app.state.container = _FakeContainer()
+    api.app.state.container.pipeline = _QueryConstraintPipeline()
+
+    request = Request(
+        {
+            "type": "http",
+            "method": "POST",
+            "path": "/v1/query",
+            "headers": [],
+        }
+    )
+
+    response = api.query(api.QueryRequest(query="hello"), request)
+
+    assert response.answer == "resp::hello"
+    assert response.query_constraints is not None
+    assert response.query_constraints.query_type == "software_version"
+    assert response.query_constraints.software_names == ["GROMACS"]
 
 
 def test_query_maps_generation_timeout_to_504(monkeypatch) -> None:

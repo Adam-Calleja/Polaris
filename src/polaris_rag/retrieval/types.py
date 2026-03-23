@@ -11,7 +11,7 @@ Retriever
     Protocol defining the minimal retriever interface.
 """
 
-from typing import Protocol, List
+from typing import Any, Protocol, List
 from llama_index.core.schema import NodeWithScore
 
 class Retriever(Protocol):
@@ -27,7 +27,14 @@ class Retriever(Protocol):
     retrieve
         Retrieve nodes relevant to a query.
     """
-    def retrieve(self, query: str, *, timeout_seconds: float | None = None, **kwargs) -> List[NodeWithScore]:
+    def retrieve(
+        self,
+        query: str,
+        *,
+        timeout_seconds: float | None = None,
+        query_constraints: Any | None = None,
+        **kwargs,
+    ) -> List[NodeWithScore]:
         """Retrieve nodes for a query.
 
         Parameters
@@ -36,6 +43,9 @@ class Retriever(Protocol):
             Natural-language query string.
         timeout_seconds : float or None, optional
             Per-request retrieval timeout when supported by the implementation.
+        query_constraints : Any or None, optional
+            Optional parsed query-constraint payload. Current retrievers accept
+            this for forward compatibility even when they do not yet use it.
 
         Returns
         -------
