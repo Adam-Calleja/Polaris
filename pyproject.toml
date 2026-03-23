@@ -92,6 +92,7 @@ polaris-build-authority-registry = "polaris_rag.cli.build_authority_registry:mai
 polaris-ingest-html = "polaris_rag.cli.ingest_html_documents:main"
 polaris-ingest-jira = "polaris_rag.cli.ingest_jira_tickets:main"
 polaris-eval = "polaris_rag.cli.evaluate_rag:main"
+polaris-tune-validity-reranker = "polaris_rag.cli.tune_validity_reranker:main"
 polaris-register-prompts-mlflow = "polaris_rag.cli.register_prompts_mlflow:main"
 polaris-create-dev-test-sets = "polaris_rag.cli.create_dev_test_sets:main"
 

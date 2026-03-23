@@ -18,6 +18,7 @@ MultiCollectionRetriever
     Orchestrates retrieval from multiple source retrievers, then reranks.
 """
 
+from pathlib import Path
 from queue import Queue
 import threading
 import time
@@ -277,6 +278,7 @@ class MultiCollectionRetriever:
             source_settings: Mapping[str, Mapping[str, Any]] | None = None,
             final_top_k: int = 10,
             rerank: Mapping[str, Any] | None = None,
+            config_base_dir: str | Path | None = None,
         ):
         if not source_retrievers:
             raise ValueError("'source_retrievers' must define at least one source retriever.")
@@ -290,6 +292,7 @@ class MultiCollectionRetriever:
         self._reranker = create_reranker(
             config=rerank,
             source_settings=self.source_settings,
+            config_base_dir=config_base_dir,
         )
 
     def retrieve(
@@ -316,8 +319,21 @@ class MultiCollectionRetriever:
                 source_ranks=candidate.source_ranks,
             )
 
-        reranked = self._reranker.rerank(candidates)
+        reranked = self._reranker.rerank(
+            candidates,
+            query_constraints=query_constraints,
+        )
         return reranked[: self.final_top_k]
+
+    def reranker_profile(self) -> dict[str, Any]:
+        """Return the active reranker profile."""
+
+        return self._reranker.profile()
+
+    def reranker_fingerprint(self) -> str:
+        """Return the active reranker fingerprint."""
+
+        return self._reranker.fingerprint()
 
     def _collect_candidates(
             self,

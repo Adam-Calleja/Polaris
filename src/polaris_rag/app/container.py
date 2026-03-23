@@ -584,12 +584,24 @@ class PolarisContainer:
         from polaris_rag.retrieval.retriever_factory import create
 
         if kind == "multi_collection":
+            cfg_path = (
+                getattr(self.config, "config_path", None)
+                or getattr(self.config, "_config_path", None)
+                or getattr(self.config, "path", None)
+            )
+            config_base_dir = None
+            if cfg_path:
+                try:
+                    config_base_dir = str(Path(cfg_path).expanduser().resolve().parent)
+                except Exception:
+                    config_base_dir = None
             return create(
                 kind=kind,
                 source_retrievers=self.source_retrievers,
                 source_settings=self.retriever_source_settings,
                 final_top_k=section.get("final_top_k"),
                 rerank=section.get("rerank"),
+                config_base_dir=config_base_dir,
             )
 
         if kind == "hybrid":

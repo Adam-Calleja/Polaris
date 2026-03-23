@@ -87,6 +87,98 @@ def _as_float(value: Any, default: float) -> float:
         return default
 
 
+def _config_base_dir(cfg: Any) -> Path | None:
+    cfg_path = (
+        getattr(cfg, "config_path", None)
+        or getattr(cfg, "_config_path", None)
+        or getattr(cfg, "path", None)
+    )
+    if not cfg_path:
+        return None
+    try:
+        return Path(cfg_path).expanduser().resolve().parent
+    except Exception:
+        return None
+
+
+def _resolve_reranker_metadata(cfg: Any) -> tuple[dict[str, Any] | None, str | None]:
+    raw_retriever_cfg = getattr(cfg, "retriever", None)
+    if raw_retriever_cfg is None:
+        return None, None
+
+    retriever_cfg = _as_mapping(raw_retriever_cfg)
+    if str(retriever_cfg.get("type", "") or "").strip().lower() != "multi_collection":
+        return None, None
+
+    rerank_cfg = _as_mapping(retriever_cfg.get("rerank", {}))
+    if not rerank_cfg:
+        return None, None
+
+    from polaris_rag.retrieval.reranker import create_reranker
+
+    source_settings: Mapping[str, Mapping[str, Any]] | None = None
+    try:
+        container = build_container(cfg)
+        source_settings = getattr(container, "retriever_source_settings", None)
+    except Exception:
+        source_settings = None
+
+    reranker = create_reranker(
+        config=rerank_cfg,
+        source_settings=source_settings,
+        config_base_dir=_config_base_dir(cfg),
+    )
+    return dict(reranker.profile()), str(reranker.fingerprint())
+
+
+def _prepared_rows_reranker_fingerprint(rows: list[dict[str, Any]]) -> tuple[str | None, int]:
+    fingerprints: set[str] = set()
+    missing = 0
+    for row in rows:
+        metadata = _row_metadata(row)
+        value = metadata.get("reranker_fingerprint")
+        text = str(value or "").strip()
+        if text:
+            fingerprints.add(text)
+        else:
+            missing += 1
+
+    if not fingerprints:
+        return None, missing
+    if len(fingerprints) != 1:
+        raise ValueError(
+            "Prepared rows contain multiple reranker fingerprints. Regenerate prepared rows "
+            "before running this evaluation."
+        )
+    return next(iter(fingerprints)), missing
+
+
+def _assert_prepared_rows_match_reranker(
+    rows: list[dict[str, Any]],
+    *,
+    expected_fingerprint: str | None,
+) -> None:
+    if not expected_fingerprint:
+        return
+
+    observed_fingerprint, missing_count = _prepared_rows_reranker_fingerprint(rows)
+    if observed_fingerprint is None:
+        raise ValueError(
+            "Prepared rows do not record a reranker fingerprint. Regenerate prepared rows "
+            "with the current stage-4 pipeline before reuse."
+        )
+    if missing_count > 0:
+        raise ValueError(
+            "Prepared rows are missing reranker fingerprints on some rows. Regenerate prepared rows "
+            "with the current stage-4 pipeline before reuse."
+        )
+    if observed_fingerprint != expected_fingerprint:
+        raise ValueError(
+            "Prepared rows were generated with a different reranker configuration. "
+            "Regenerate prepared rows before running this evaluation."
+        )
+
+
 def _parse_metrics(value: str | None) -> list[str] | None:
     if not value:
         return None
@@ -812,12 +904,12 @@ def _resolve_prepared_rows(
     generation_cfg = _as_mapping(eval_cfg.get("generation", {}))
     replay_failures_from = getattr(args, "replay_failures_from", None)
 
-    dataset_path = args.dataset_path or dataset_cfg.get("input_path")
-    if not dataset_path and not replay_failures_from:
-        raise ValueError("No evaluation dataset path configured. Set evaluation.dataset.input_path or pass --dataset-path.")
-
     prepared_path_raw = args.prepared_path or dataset_cfg.get("prepared_path")
     prepared_path = Path(str(prepared_path_raw)).expanduser().resolve() if prepared_path_raw else None
+    dataset_path = args.dataset_path or dataset_cfg.get("input_path")
+    if not dataset_path and not replay_failures_from and not (prepared_path and (args.reuse_prepared or _as_bool(dataset_cfg.get("reuse_prepared"), False))):
+        raise ValueError("No evaluation dataset path configured. Set evaluation.dataset.input_path or pass --dataset-path.")
+
     annotations_path_raw = getattr(args, "annotations_file", None) or dataset_cfg.get("annotations_path")
     annotations_path = Path(str(annotations_path_raw)).expanduser().resolve() if annotations_path_raw else None
 
@@ -848,6 +940,7 @@ def _resolve_prepared_rows(
         evaluation_policy=evaluation_policy,
         generation_mode=generation_mode,
     )
+    reranker_profile, reranker_fingerprint = _resolve_reranker_metadata(cfg)
 
     manifest: dict[str, Any] = {
         "dataset_path": str(Path(dataset_path).expanduser().resolve()) if dataset_path else None,
@@ -869,6 +962,8 @@ def _resolve_prepared_rows(
             "jitter_seconds": float(retry_policy.jitter_seconds),
             "retry_on_empty_response": bool(retry_policy.retry_on_empty_response),
         },
+        "reranker_profile": reranker_profile,
+        "reranker_fingerprint": reranker_fingerprint,
     }
 
     request_trace_factory = None
@@ -903,6 +998,10 @@ def _resolve_prepared_rows(
                 validate_summaries=False,
             )
             manifest["annotation_rows"] = len(rows)
+        _assert_prepared_rows_match_reranker(
+            rows,
+            expected_fingerprint=reranker_fingerprint,
+        )
         manifest.update(
             _prep_stats(
                 rows,
@@ -982,6 +1081,8 @@ def _resolve_prepared_rows(
                 trace_factory=request_trace_factory,
                 policy=evaluation_policy,
                 budget_ms=deadlines.server_total_ms,
+                reranker_profile=reranker_profile,
+                reranker_fingerprint=reranker_fingerprint,
             )
             manifest["query_api_url"] = api_url
             manifest["query_api_timeout"] = timeout_seconds
@@ -1003,6 +1104,8 @@ def _resolve_prepared_rows(
                 trace_factory=request_trace_factory,
                 policy=evaluation_policy,
                 budget_ms=deadlines.server_total_ms,
+                reranker_profile=reranker_profile,
+                reranker_fingerprint=reranker_fingerprint,
             )
     finally:
         if prep_renderer:

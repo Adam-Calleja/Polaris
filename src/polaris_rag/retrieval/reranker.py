@@ -2,20 +2,56 @@
 
 Reranker abstractions and implementations for multi-source retrieval.
 
-This module defines:
+This module provides:
 - a normalized merged-candidate container
 - an abstract reranker interface
-- a concrete reciprocal-rank-fusion (RRF) reranker
-- a small reranker factory for configuration-driven construction
+- a reciprocal-rank-fusion (RRF) reranker
+- a validity-aware reranker built on top of RRF
+- profile/fingerprint helpers for experiment-safe configuration changes
 """
 
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Mapping, Sequence
+from datetime import datetime, timezone
+import hashlib
+import json
+from pathlib import Path
+import re
+from typing import Any, Iterable, Mapping, Sequence
 
+import yaml
 from llama_index.core.schema import NodeWithScore
+
+try:
+    from polaris_rag.retrieval.query_constraints import QueryConstraints
+except Exception:  # pragma: no cover - defensive import for lighter test contexts
+    QueryConstraints = Any  # type: ignore[assignment]
+
+
+_TIMESTAMP_OFFSET_SUFFIX = re.compile(r"([+-]\d{2})(\d{2})$")
+
+_DEFAULT_VALIDITY_WEIGHTS: dict[str, float] = {
+    "authority": 0.04,
+    "scope": 0.04,
+    "version": 0.04,
+    "status": 0.04,
+    "freshness": 0.01,
+}
+_DEFAULT_AUTHORITY_VALUES: dict[str, float] = {
+    "local_official": 1.0,
+    "external_official": 0.5,
+    "ticket_memory": 0.0,
+    "unknown": 0.0,
+}
+_DEFAULT_STATUS_VALUES: dict[str, float] = {
+    "current": 1.0,
+    "maintenance": 0.25,
+    "legacy": -0.5,
+    "eol": -1.0,
+    "unknown": 0.0,
+}
 
 
 @dataclass
@@ -27,84 +63,641 @@ class MergedCandidate:
     source_ranks: dict[str, int]
 
 
+@dataclass(frozen=True)
+class ValidityRerankerConfig:
+    """Resolved validity-aware reranker configuration."""
+
+    trace_enabled: bool
+    semantic_base_type: str
+    rrf_k: int
+    source_weights: dict[str, float]
+    weights: dict[str, float]
+    authority_values: dict[str, float]
+    status_values: dict[str, float]
+    freshness_mode: str
+    weights_source: dict[str, Any]
+
+    def profile(self) -> dict[str, Any]:
+        return {
+            "type": "validity_aware",
+            "trace_enabled": self.trace_enabled,
+            "semantic_base": {
+                "type": self.semantic_base_type,
+                "rrf_k": self.rrf_k,
+                "source_weights": dict(self.source_weights),
+            },
+            "weights": dict(self.weights),
+            "authority_values": dict(self.authority_values),
+            "status_values": dict(self.status_values),
+            "freshness": {"mode": self.freshness_mode},
+            "weights_source": dict(self.weights_source),
+        }
+
+
 class BaseReranker(ABC):
     """Abstract interface for reranking merged multi-source candidates."""
 
     @abstractmethod
-    def rerank(self, candidates: Sequence[MergedCandidate]) -> list[NodeWithScore]:
+    def rerank(
+        self,
+        candidates: Sequence[MergedCandidate],
+        *,
+        query_constraints: QueryConstraints | Mapping[str, Any] | None = None,
+    ) -> list[NodeWithScore]:
         """Return reranked candidates as ``NodeWithScore`` items."""
         raise NotImplementedError
+
+    @abstractmethod
+    def profile(self) -> dict[str, Any]:
+        """Return a stable JSON-serializable reranker profile."""
+        raise NotImplementedError
+
+    def fingerprint(self) -> str:
+        """Return a stable fingerprint for experiment compatibility checks."""
+
+        return reranker_fingerprint(self.profile())
 
 
 class RRFReranker(BaseReranker):
     """Reciprocal-rank-fusion reranker."""
 
     def __init__(
-            self,
-            *,
-            rrf_k: int = 60,
-            source_weights: Mapping[str, float] | None = None,
-        ):
+        self,
+        *,
+        rrf_k: int = 60,
+        source_weights: Mapping[str, float] | None = None,
+        trace_enabled: bool = False,
+    ):
         self.rrf_k = int(rrf_k)
         if self.rrf_k <= 0:
             raise ValueError("'rerank.rrf_k' must be a positive integer.")
-        self.source_weights = dict(source_weights or {})
+        self.source_weights = {
+            str(source_name): _coerce_float(weight_raw, 1.0)
+            for source_name, weight_raw in dict(source_weights or {}).items()
+        }
+        self.trace_enabled = bool(trace_enabled)
 
-    def rerank(self, candidates: Sequence[MergedCandidate]) -> list[NodeWithScore]:
+    def rerank(
+        self,
+        candidates: Sequence[MergedCandidate],
+        *,
+        query_constraints: QueryConstraints | Mapping[str, Any] | None = None,
+    ) -> list[NodeWithScore]:
         """Rerank merged candidates using reciprocal-rank fusion."""
-        scored: list[tuple[float, float, NodeWithScore]] = []
+        _ = query_constraints
+        scored = _score_candidates_with_rrf(
+            candidates,
+            rrf_k=self.rrf_k,
+            source_weights=self.source_weights,
+        )
 
-        for candidate in candidates:
-            rrf_score = 0.0
-            for source_name, rank in candidate.source_ranks.items():
-                weight = self._source_weight(source_name)
-                rrf_score += weight / (self.rrf_k + int(rank))
+        items: list[tuple[float, float, str, NodeWithScore]] = []
+        for score_data in scored:
+            if self.trace_enabled:
+                _stamp_rerank_trace(
+                    score_data.candidate.node,
+                    {
+                        "reranker_type": "rrf",
+                        "rrf_k": self.rrf_k,
+                        "source_weights": dict(self.source_weights),
+                        "source_ranks": dict(score_data.candidate.source_ranks),
+                        "rrf_score": score_data.rrf_score,
+                    },
+                )
 
-            tie_break = candidate.best_score if candidate.best_score is not None else float("-inf")
-            scored.append(
+            items.append(
                 (
-                    rrf_score,
-                    tie_break,
-                    NodeWithScore(node=candidate.node, score=rrf_score),
+                    score_data.rrf_score,
+                    score_data.tie_break,
+                    score_data.node_id,
+                    NodeWithScore(node=score_data.candidate.node, score=score_data.rrf_score),
                 )
             )
 
-        scored.sort(key=lambda item: (item[0], item[1]), reverse=True)
-        return [item[2] for item in scored]
+        items.sort(key=lambda item: (-item[0], -item[1], item[2]))
+        return [item[3] for item in items]
 
-    def _source_weight(self, source_name: str) -> float:
-        weight_raw = self.source_weights.get(source_name, 1.0)
-        try:
-            return float(weight_raw)
-        except Exception:
-            return 1.0
+    def profile(self) -> dict[str, Any]:
+        return {
+            "type": "rrf",
+            "rrf_k": self.rrf_k,
+            "source_weights": dict(self.source_weights),
+            "trace_enabled": self.trace_enabled,
+        }
+
+
+class ValidityAwareReranker(BaseReranker):
+    """Validity-aware reranker using RRF as the semantic base signal."""
+
+    def __init__(self, config: ValidityRerankerConfig) -> None:
+        if config.semantic_base_type != "rrf":
+            raise ValueError(
+                "Unsupported validity-aware semantic base "
+                f"{config.semantic_base_type!r}. Supported semantic bases: ['rrf']."
+            )
+        self.config = config
+
+    def profile(self) -> dict[str, Any]:
+        return self.config.profile()
+
+    def rerank(
+        self,
+        candidates: Sequence[MergedCandidate],
+        *,
+        query_constraints: QueryConstraints | Mapping[str, Any] | None = None,
+    ) -> list[NodeWithScore]:
+        normalized_constraints = _normalize_query_constraints(query_constraints)
+        scored = _score_candidates_with_rrf(
+            candidates,
+            rrf_k=self.config.rrf_k,
+            source_weights=self.config.source_weights,
+        )
+        if not scored:
+            return []
+
+        semantic_base_by_id = _normalized_score_map(
+            (
+                (item.node_id, item.rrf_score)
+                for item in scored
+            ),
+            default_when_uniform=1.0,
+        )
+        freshness_by_id = _freshness_feature_map(scored)
+
+        items: list[tuple[float, float, int, str, NodeWithScore]] = []
+        for base_rank, score_data in enumerate(scored, start=1):
+            candidate = score_data.candidate
+            node = candidate.node
+            metadata = _node_metadata(node)
+            node_id = score_data.node_id
+
+            semantic_base = semantic_base_by_id.get(node_id, 1.0)
+            authority_feature = _authority_feature(metadata, self.config.authority_values)
+            scope_feature = _scope_feature(normalized_constraints, metadata)
+            version_feature = _version_feature(normalized_constraints, metadata)
+            status_feature = _status_feature(metadata, self.config.status_values)
+            freshness_feature = freshness_by_id.get(node_id, 0.0)
+
+            contributions = {
+                "authority_feature": self.config.weights["authority"] * authority_feature,
+                "scope_feature": self.config.weights["scope"] * scope_feature,
+                "version_feature": self.config.weights["version"] * version_feature,
+                "status_feature": self.config.weights["status"] * status_feature,
+                "freshness_feature": self.config.weights["freshness"] * freshness_feature,
+            }
+            final_score = semantic_base + sum(contributions.values())
+
+            trace_payload = {
+                "reranker_type": "validity_aware",
+                "base_rank": base_rank,
+                "base_rrf_score": score_data.rrf_score,
+                "semantic_base": semantic_base,
+                "authority_feature": authority_feature,
+                "scope_feature": scope_feature,
+                "version_feature": version_feature,
+                "status_feature": status_feature,
+                "freshness_feature": freshness_feature,
+                "weighted_contributions": contributions,
+                "final_score": final_score,
+                "source_ranks": dict(candidate.source_ranks),
+                "query_constraints": _stable_json_value(normalized_constraints),
+            }
+
+            if self.config.trace_enabled:
+                _stamp_rerank_trace(node, trace_payload)
+
+            items.append(
+                (
+                    final_score,
+                    semantic_base,
+                    base_rank,
+                    node_id,
+                    NodeWithScore(node=node, score=final_score),
+                )
+            )
+
+        items.sort(key=lambda item: (-item[0], -item[1], item[2], item[3]))
+        return [item[4] for item in items]
+
+
+@dataclass(frozen=True)
+class _RRFScore:
+    candidate: MergedCandidate
+    node_id: str
+    rrf_score: float
+    tie_break: float
+
+
+def reranker_fingerprint(profile: Mapping[str, Any] | None) -> str:
+    """Return a stable SHA256 fingerprint for a reranker profile."""
+
+    payload = json.dumps(_stable_json_value(profile or {}), sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
 def create_reranker(
-        *,
-        config: Mapping[str, Any] | None,
-        source_settings: Mapping[str, Mapping[str, Any]] | None = None,
-    ) -> BaseReranker:
+    *,
+    config: Mapping[str, Any] | None,
+    source_settings: Mapping[str, Mapping[str, Any]] | None = None,
+    config_base_dir: str | Path | None = None,
+) -> BaseReranker:
     """Create a reranker from configuration."""
+
     cfg = dict(config or {})
     kind = str(cfg.get("type", "rrf")).lower().strip()
 
-    if kind == "rrf":
-        source_weights: dict[str, float] = {}
-        for source_name, source_cfg in (source_settings or {}).items():
-            weight_raw = (source_cfg or {}).get("weight", 1.0)
-            try:
-                source_weights[str(source_name)] = float(weight_raw)
-            except Exception:
-                source_weights[str(source_name)] = 1.0
-        return RRFReranker(rrf_k=int(cfg.get("rrf_k", 60)), source_weights=source_weights)
+    source_weights = _source_weights_from_settings(source_settings)
 
-    raise ValueError(f"Unsupported rerank type {kind!r}. Supported rerankers: ['rrf'].")
+    if kind == "rrf":
+        return RRFReranker(
+            rrf_k=int(cfg.get("rrf_k", 60)),
+            source_weights=source_weights,
+            trace_enabled=_coerce_bool(cfg.get("trace_enabled"), False),
+        )
+
+    if kind == "validity_aware":
+        resolved = _resolve_validity_reranker_config(
+            cfg,
+            source_weights=source_weights,
+            config_base_dir=config_base_dir,
+        )
+        return ValidityAwareReranker(resolved)
+
+    raise ValueError(f"Unsupported rerank type {kind!r}. Supported rerankers: ['rrf', 'validity_aware'].")
+
+
+def _resolve_validity_reranker_config(
+    cfg: Mapping[str, Any],
+    *,
+    source_weights: Mapping[str, float],
+    config_base_dir: str | Path | None,
+) -> ValidityRerankerConfig:
+    semantic_base_cfg = _as_mapping(cfg.get("semantic_base"))
+    semantic_base_type = str(semantic_base_cfg.get("type", "rrf")).strip().lower()
+    if semantic_base_type != "rrf":
+        raise ValueError(
+            "Unsupported validity-aware semantic base "
+            f"{semantic_base_type!r}. Supported semantic bases: ['rrf']."
+        )
+
+    rrf_k = int(semantic_base_cfg.get("rrf_k", cfg.get("rrf_k", 60)))
+    if rrf_k <= 0:
+        raise ValueError("'rerank.semantic_base.rrf_k' must be a positive integer.")
+
+    weights_source: dict[str, Any] = {"type": "defaults"}
+    merged_cfg: dict[str, Any] = {}
+
+    weights_path_raw = cfg.get("weights_path")
+    if weights_path_raw is not None and str(weights_path_raw).strip():
+        resolved_path = _resolve_config_relative_path(weights_path_raw, config_base_dir=config_base_dir)
+        if not resolved_path.exists():
+            raise FileNotFoundError(f"Validity reranker weights file not found: {resolved_path}")
+        payload = yaml.safe_load(resolved_path.read_text(encoding="utf-8")) or {}
+        if not isinstance(payload, Mapping):
+            raise TypeError(f"Validity reranker weights file {resolved_path} must contain a mapping.")
+        merged_cfg.update(payload)
+        weights_source = {
+            "type": "file",
+            "path": str(resolved_path),
+            "sha256": _sha256_text(resolved_path.read_text(encoding="utf-8")),
+        }
+
+    merged_cfg.update({key: value for key, value in cfg.items() if key != "weights_path"})
+
+    weights = dict(_DEFAULT_VALIDITY_WEIGHTS)
+    weights.update(
+        {
+            str(name): _coerce_float(value, weights.get(str(name), 0.0))
+            for name, value in _as_mapping(merged_cfg.get("weights")).items()
+        }
+    )
+    authority_values = dict(_DEFAULT_AUTHORITY_VALUES)
+    authority_values.update(
+        {
+            str(name): _coerce_float(value, authority_values.get(str(name), 0.0))
+            for name, value in _as_mapping(merged_cfg.get("authority_values")).items()
+        }
+    )
+    status_values = dict(_DEFAULT_STATUS_VALUES)
+    status_values.update(
+        {
+            str(name): _coerce_float(value, status_values.get(str(name), 0.0))
+            for name, value in _as_mapping(merged_cfg.get("status_values")).items()
+        }
+    )
+    freshness_cfg = _as_mapping(merged_cfg.get("freshness"))
+    freshness_mode = str(freshness_cfg.get("mode", "relative_recency")).strip().lower() or "relative_recency"
+    if freshness_mode != "relative_recency":
+        raise ValueError(
+            f"Unsupported validity reranker freshness mode {freshness_mode!r}. "
+            "Supported freshness modes: ['relative_recency']."
+        )
+
+    return ValidityRerankerConfig(
+        trace_enabled=_coerce_bool(merged_cfg.get("trace_enabled"), True),
+        semantic_base_type=semantic_base_type,
+        rrf_k=rrf_k,
+        source_weights={str(k): _coerce_float(v, 1.0) for k, v in dict(source_weights).items()},
+        weights=weights,
+        authority_values=authority_values,
+        status_values=status_values,
+        freshness_mode=freshness_mode,
+        weights_source=weights_source,
+    )
+
+
+def _score_candidates_with_rrf(
+    candidates: Sequence[MergedCandidate],
+    *,
+    rrf_k: int,
+    source_weights: Mapping[str, float],
+) -> list[_RRFScore]:
+    scored: list[_RRFScore] = []
+    for candidate in candidates:
+        node_id = _node_id(candidate.node)
+        rrf_score = 0.0
+        for source_name, rank in candidate.source_ranks.items():
+            weight = _coerce_float(source_weights.get(source_name), 1.0)
+            rrf_score += weight / (int(rrf_k) + int(rank))
+        tie_break = candidate.best_score if candidate.best_score is not None else float("-inf")
+        scored.append(
+            _RRFScore(
+                candidate=candidate,
+                node_id=node_id,
+                rrf_score=rrf_score,
+                tie_break=tie_break,
+            )
+        )
+
+    scored.sort(key=lambda item: (item.rrf_score, item.tie_break, item.node_id), reverse=True)
+    return scored
+
+
+def _normalized_score_map(
+    items: Iterable[tuple[str, float]],
+    *,
+    default_when_uniform: float,
+) -> dict[str, float]:
+    values = list(items)
+    if not values:
+        return {}
+    raw_scores = [score for _, score in values]
+    min_score = min(raw_scores)
+    max_score = max(raw_scores)
+    if max_score - min_score <= 1e-12:
+        return {key: float(default_when_uniform) for key, _ in values}
+    return {
+        key: (score - min_score) / (max_score - min_score)
+        for key, score in values
+    }
+
+
+def _authority_feature(metadata: Mapping[str, Any], values: Mapping[str, float]) -> float:
+    authority = str(metadata.get("source_authority", "unknown") or "unknown").strip().lower()
+    return _coerce_float(values.get(authority), 0.0)
+
+
+def _scope_feature(
+    constraints: Mapping[str, Any] | None,
+    metadata: Mapping[str, Any],
+) -> float:
+    if not constraints:
+        return 0.0
+
+    fields = ("system_names", "partition_names", "service_names")
+    component_scores: list[float] = []
+    for field in fields:
+        query_values = _normalized_text_set(constraints.get(field))
+        if not query_values:
+            continue
+        candidate_values = _normalized_text_set(metadata.get(field))
+        component_scores.append(_match_component_score(query_values, candidate_values))
+    return _average_or_zero(component_scores)
+
+
+def _version_feature(
+    constraints: Mapping[str, Any] | None,
+    metadata: Mapping[str, Any],
+) -> float:
+    if not constraints:
+        return 0.0
+
+    fields = ("module_names", "software_versions", "toolchain_versions")
+    component_scores: list[float] = []
+    for field in fields:
+        query_values = _normalized_text_set(constraints.get(field))
+        if not query_values:
+            continue
+        candidate_values = _normalized_text_set(metadata.get(field))
+        component_scores.append(_match_component_score(query_values, candidate_values))
+    return _average_or_zero(component_scores)
+
+
+def _status_feature(metadata: Mapping[str, Any], values: Mapping[str, float]) -> float:
+    status = str(metadata.get("validity_status", "unknown") or "unknown").strip().lower()
+    return _coerce_float(values.get(status), 0.0)
+
+
+def _freshness_feature_map(scored_candidates: Sequence[_RRFScore]) -> dict[str, float]:
+    by_authority: dict[str, list[tuple[str, float]]] = {}
+    for item in scored_candidates:
+        metadata = _node_metadata(item.candidate.node)
+        authority = str(metadata.get("source_authority", "unknown") or "unknown").strip().lower()
+        timestamp = _parse_timestamp(metadata.get("freshness_hint"))
+        if timestamp is None:
+            continue
+        by_authority.setdefault(authority, []).append((item.node_id, timestamp))
+
+    feature_map: dict[str, float] = {}
+    for entries in by_authority.values():
+        entries.sort(key=lambda item: (item[1], item[0]), reverse=True)
+        total = len(entries)
+        for index, (node_id, _timestamp) in enumerate(entries):
+            if total <= 1:
+                feature_map[node_id] = 1.0
+            else:
+                feature_map[node_id] = 1.0 - (index / (total - 1))
+    return feature_map
+
+
+def _parse_timestamp(value: Any) -> float | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+
+    normalized = text
+    if normalized.endswith("Z"):
+        normalized = normalized[:-1] + "+00:00"
+    if _TIMESTAMP_OFFSET_SUFFIX.search(normalized):
+        normalized = _TIMESTAMP_OFFSET_SUFFIX.sub(r"\1:\2", normalized)
+
+    for candidate in (normalized, text):
+        try:
+            return datetime.fromisoformat(candidate).astimezone(timezone.utc).timestamp()
+        except Exception:
+            continue
+
+    for fmt in (
+        "%Y-%m-%dT%H:%M:%S.%f%z",
+        "%Y-%m-%dT%H:%M:%S%z",
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%d",
+    ):
+        try:
+            parsed = datetime.strptime(text, fmt)
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=timezone.utc)
+            return parsed.astimezone(timezone.utc).timestamp()
+        except Exception:
+            continue
+
+    return None
+
+
+def _normalized_text_set(value: Any) -> set[str]:
+    if not isinstance(value, (list, tuple, set)):
+        return set()
+    normalized: set[str] = set()
+    for item in value:
+        text = str(item or "").strip().lower()
+        if text:
+            normalized.add(text)
+    return normalized
+
+
+def _match_component_score(query_values: set[str], candidate_values: set[str]) -> float:
+    if not query_values:
+        return 0.0
+    if not candidate_values:
+        return 0.0
+    if query_values & candidate_values:
+        return 1.0
+    return -1.0
+
+
+def _average_or_zero(values: Sequence[float]) -> float:
+    if not values:
+        return 0.0
+    return sum(values) / len(values)
+
+
+def _normalize_query_constraints(
+    value: QueryConstraints | Mapping[str, Any] | None,
+) -> Mapping[str, Any] | None:
+    if value is None:
+        return None
+    from_value = getattr(QueryConstraints, "from_value", None)
+    if callable(from_value):
+        normalized = from_value(value)
+        if normalized is None:
+            return None
+        to_dict = getattr(normalized, "to_dict", None)
+        if callable(to_dict):
+            return dict(to_dict())
+        if isinstance(normalized, Mapping):
+            return dict(normalized)
+    if isinstance(value, Mapping):
+        return dict(value)
+    return None
+
+
+def _stamp_rerank_trace(node: Any, payload: Mapping[str, Any]) -> None:
+    metadata = getattr(node, "metadata", None)
+    if not isinstance(metadata, dict):
+        return
+    metadata["rerank_trace"] = _stable_json_value(payload)
+
+
+def _node_metadata(node: Any) -> dict[str, Any]:
+    metadata = getattr(node, "metadata", None)
+    if isinstance(metadata, Mapping):
+        return dict(metadata)
+    return {}
+
+
+def _node_id(node: Any) -> str:
+    for attr in ("id_", "node_id", "id"):
+        value = getattr(node, attr, None)
+        if isinstance(value, str) and value:
+            return value
+    return f"<anon-node:{id(node)}>"
+
+
+def _source_weights_from_settings(
+    source_settings: Mapping[str, Mapping[str, Any]] | None,
+) -> dict[str, float]:
+    weights: dict[str, float] = {}
+    for source_name, source_cfg in (source_settings or {}).items():
+        weights[str(source_name)] = _coerce_float(_as_mapping(source_cfg).get("weight"), 1.0)
+    return weights
+
+
+def _resolve_config_relative_path(
+    path_value: Any,
+    *,
+    config_base_dir: str | Path | None,
+) -> Path:
+    path = Path(str(path_value)).expanduser()
+    if path.is_absolute():
+        return path.resolve()
+    if config_base_dir is not None:
+        return (Path(config_base_dir).expanduser().resolve() / path).resolve()
+    return path.resolve()
+
+
+def _as_mapping(value: Any) -> Mapping[str, Any]:
+    if isinstance(value, Mapping):
+        return value
+    return {}
+
+
+def _coerce_float(value: Any, default: float) -> float:
+    try:
+        return float(value)
+    except Exception:
+        return float(default)
+
+
+def _coerce_bool(value: Any, default: bool) -> bool:
+    if value is None:
+        return bool(default)
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"1", "true", "yes", "y", "on"}:
+            return True
+        if normalized in {"0", "false", "no", "n", "off"}:
+            return False
+    return bool(value)
+
+
+def _stable_json_value(value: Any) -> Any:
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    if isinstance(value, Mapping):
+        return {
+            str(key): _stable_json_value(val)
+            for key, val in sorted(value.items(), key=lambda item: str(item[0]))
+        }
+    if isinstance(value, (list, tuple, set)):
+        return [_stable_json_value(item) for item in value]
+    if hasattr(value, "to_dict") and callable(value.to_dict):
+        return _stable_json_value(value.to_dict())
+    if hasattr(value, "dict") and callable(value.dict):
+        return _stable_json_value(value.dict())
+    return str(value)
+
+
+def _sha256_text(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
 __all__ = [
     "BaseReranker",
     "MergedCandidate",
     "RRFReranker",
+    "ValidityAwareReranker",
     "create_reranker",
+    "reranker_fingerprint",
 ]

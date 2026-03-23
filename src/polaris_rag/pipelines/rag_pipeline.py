@@ -19,7 +19,7 @@ for prompt rendering.
 """
 
 import time
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Mapping
 
 from polaris_rag.common.request_budget import (
     GenerationTimeoutError,
@@ -238,6 +238,8 @@ class RAGPipeline:
                         "retrieved_contexts": self._serialize_nodes(retrieved_chunks),
                         "retrieval_elapsed_ms": retrieval_elapsed_ms,
                         "query_constraints": serialized_query_constraints,
+                        "reranker_profile": self._reranker_profile(),
+                        "reranker_fingerprint": self._reranker_fingerprint(),
                     },
                 )
 
@@ -353,6 +355,9 @@ class RAGPipeline:
                     "retrieved_contexts": self._serialize_nodes(resolved_contexts),
                     "raw_retrieved_contexts": self._serialize_nodes(retrieved_chunks),
                     "query_constraints": serialized_query_constraints,
+                    "reranker_profile": self._reranker_profile(),
+                    "reranker_fingerprint": self._reranker_fingerprint(),
+                    "retrieval_trace": self._serialize_nodes(retrieved_chunks),
                     "timings": {
                         "retrieval_elapsed_ms": retrieval_elapsed_ms,
                         "generation_elapsed_ms": generation_elapsed_ms,
@@ -375,6 +380,9 @@ class RAGPipeline:
             "source_nodes": resolved_contexts,
             "raw_source_nodes": retrieved_chunks,
             "query_constraints": serialized_query_constraints,
+            "reranker_profile": self._reranker_profile(),
+            "reranker_fingerprint": self._reranker_fingerprint(),
+            "retrieval_trace": self._serialize_nodes(retrieved_chunks),
             "timings": {
                 "retrieval_elapsed_ms": retrieval_elapsed_ms,
                 "generation_elapsed_ms": generation_elapsed_ms,
@@ -419,6 +427,24 @@ class RAGPipeline:
             return None
         return QueryConstraints.from_value(self.query_constraint_parser.parse(query))
 
+    def _reranker_profile(self) -> Mapping[str, Any] | None:
+        getter = getattr(self.retriever, "reranker_profile", None)
+        if callable(getter):
+            try:
+                return getter()
+            except Exception:
+                return None
+        return None
+
+    def _reranker_fingerprint(self) -> str | None:
+        getter = getattr(self.retriever, "reranker_fingerprint", None)
+        if callable(getter):
+            try:
+                return getter()
+            except Exception:
+                return None
+        return None
+
     @staticmethod
     def _serialize_nodes(source_nodes: list[Any]) -> list[dict[str, Any]]:
         items: list[dict[str, Any]] = []
@@ -444,6 +470,16 @@ class RAGPipeline:
 
             score_raw = getattr(source, "score", None)
             score = float(score_raw) if isinstance(score_raw, (int, float)) else None
+            metadata = getattr(node, "metadata", None)
+            source_name = None
+            rerank_trace = None
+            if isinstance(metadata, dict):
+                source_raw = metadata.get("retrieval_source")
+                if isinstance(source_raw, str) and source_raw:
+                    source_name = source_raw
+                trace_raw = metadata.get("rerank_trace")
+                if trace_raw is not None:
+                    rerank_trace = trace_raw
 
             items.append(
                 {
@@ -451,6 +487,8 @@ class RAGPipeline:
                     "doc_id": doc_id or "<unknown-doc-id>",
                     "text": text,
                     "score": score,
+                    "source": source_name,
+                    "rerank_trace": rerank_trace,
                 }
             )
 

@@ -253,6 +253,41 @@ docker compose run --no-deps --rm eval \
   --prepare-only
 ```
 
+### Reranker Switching During Evaluation
+
+Reranker choice is config-driven. Change `retriever.rerank` in the config you
+pass to `polaris-eval` rather than using a one-off CLI override. Stage 4 adds:
+
+```yaml
+retriever:
+  rerank:
+    type: "rrf"  # or "validity_aware"
+    rrf_k: 60
+    trace_enabled: true
+    semantic_base:
+      type: "rrf"
+      rrf_k: 60
+    weights_path: "config/weights/validity_reranker.dev_v1.yaml"
+```
+
+Important:
+- Changing reranker settings changes retrieved context, so prepared rows must
+  be regenerated for each reranker condition.
+- Polaris now stores a reranker fingerprint in prepared rows and will refuse to
+  reuse rows generated with a different reranker configuration.
+- In `api` generation mode, start `rag-api` with the same config file used by
+  `polaris-eval`; the eval client assumes the API is running the matching
+  reranker configuration.
+
+To tune the validity-aware reranker on a dev split:
+
+```bash
+python scripts/tune_validity_reranker.py \
+  -c config/config.yaml \
+  --dataset-path data/test/ragas_one_hop_eval_dataset_final.dev.jsonl \
+  --output-path config/weights/validity_reranker.dev_v1.yaml
+```
+
 To evaluate a split while preserving benchmark subgroup labels in row metadata:
 
 ```bash

@@ -32,6 +32,11 @@ retriever:
   rerank:
     type: "rrf"
     rrf_k: 60
+    trace_enabled: false
+    semantic_base:
+      type: "rrf"
+      rrf_k: 60
+    weights_path: null
   sources:
     - name: "docs"
       top_k: 5

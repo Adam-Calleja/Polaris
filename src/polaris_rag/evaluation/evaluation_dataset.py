@@ -226,6 +226,22 @@ def _build_row_metadata(
     return metadata
 
 
+def _stamp_reranker_metadata(
+    metadata: dict[str, Any],
+    *,
+    reranker_profile: Mapping[str, Any] | None = None,
+    reranker_fingerprint: str | None = None,
+    retrieval_trace: Any | None = None,
+) -> dict[str, Any]:
+    if reranker_profile is not None:
+        metadata["reranker_profile"] = _as_metadata_dict(reranker_profile)
+    if reranker_fingerprint is not None and str(reranker_fingerprint).strip():
+        metadata["reranker_fingerprint"] = str(reranker_fingerprint).strip()
+    if isinstance(retrieval_trace, list):
+        metadata["retrieval_trace"] = list(retrieval_trace)
+    return metadata
+
+
 def _failure_metadata_from_exception(
     exc: BaseException,
     *,
@@ -961,6 +977,8 @@ def _prepare_one(
     raise_exceptions: bool,
     policy: str | None = None,
     budget_ms: int | None = None,
+    default_reranker_profile: Mapping[str, Any] | None = None,
+    default_reranker_fingerprint: str | None = None,
 ) -> tuple[int, dict[str, Any]]:
     query = str(example.get(query_field, "") or "").strip()
     reference = str(example.get(reference_field, "") or "").strip()
@@ -970,7 +988,7 @@ def _prepare_one(
     if not query:
         if raise_exceptions:
             raise ValueError(f"Missing query for example index={index} id={sample_id}")
-        return index, {
+        row = {
             "id": sample_id,
             "user_input": "",
             "reference": reference,
@@ -987,6 +1005,12 @@ def _prepare_one(
                 response_status="invalid_input",
             ),
         }
+        row["metadata"] = _stamp_reranker_metadata(
+            _as_metadata_dict(row.get("metadata", {})),
+            reranker_profile=default_reranker_profile,
+            reranker_fingerprint=default_reranker_fingerprint,
+        )
+        return index, row
 
     started_at = time.perf_counter()
     try:
@@ -1019,6 +1043,12 @@ def _prepare_one(
         )
         if query_constraints is not None:
             row_metadata["query_constraints"] = query_constraints
+        row_metadata = _stamp_reranker_metadata(
+            row_metadata,
+            reranker_profile=_as_metadata_dict(result.get("reranker_profile")) or default_reranker_profile,
+            reranker_fingerprint=str(result.get("reranker_fingerprint") or default_reranker_fingerprint or "").strip() or None,
+            retrieval_trace=result.get("retrieval_trace"),
+        )
 
         row = {
             "id": sample_id,
@@ -1053,6 +1083,11 @@ def _prepare_one(
                 source_error=f"{type(exc).__name__}: {exc} (example index={index} id={sample_id})",
             ),
         }
+        row["metadata"] = _stamp_reranker_metadata(
+            _as_metadata_dict(row.get("metadata", {})),
+            reranker_profile=default_reranker_profile,
+            reranker_fingerprint=default_reranker_fingerprint,
+        )
         return index, row
 
 
@@ -1161,6 +1196,8 @@ def _prepare_one_via_api(
     requester: ApiRequester,
     policy: str | None = None,
     budget_ms: int | None = None,
+    default_reranker_profile: Mapping[str, Any] | None = None,
+    default_reranker_fingerprint: str | None = None,
 ) -> tuple[int, dict[str, Any]]:
     query = str(example.get(query_field, "") or "").strip()
     reference = str(example.get(reference_field, "") or "").strip()
@@ -1170,7 +1207,7 @@ def _prepare_one_via_api(
     if not query:
         if raise_exceptions:
             raise ValueError(f"Missing query for example index={index} id={sample_id}")
-        return index, {
+        row = {
             "id": sample_id,
             "user_input": "",
             "reference": reference,
@@ -1187,6 +1224,12 @@ def _prepare_one_via_api(
                 response_status="invalid_input",
             ),
         }
+        row["metadata"] = _stamp_reranker_metadata(
+            _as_metadata_dict(row.get("metadata", {})),
+            reranker_profile=default_reranker_profile,
+            reranker_fingerprint=default_reranker_fingerprint,
+        )
+        return index, row
 
     started_at = time.perf_counter()
     try:
@@ -1208,6 +1251,12 @@ def _prepare_one_via_api(
         )
         if query_constraints is not None:
             row_metadata["query_constraints"] = query_constraints
+        row_metadata = _stamp_reranker_metadata(
+            row_metadata,
+            reranker_profile=_as_metadata_dict(result.get("reranker_profile")) or default_reranker_profile,
+            reranker_fingerprint=str(result.get("reranker_fingerprint") or default_reranker_fingerprint or "").strip() or None,
+            retrieval_trace=result.get("retrieval_trace"),
+        )
 
         row = {
             "id": sample_id,
@@ -1245,6 +1294,11 @@ def _prepare_one_via_api(
             "retrieved_context_ids": [],
             "metadata": metadata,
         }
+        row["metadata"] = _stamp_reranker_metadata(
+            _as_metadata_dict(row.get("metadata", {})),
+            reranker_profile=default_reranker_profile,
+            reranker_fingerprint=default_reranker_fingerprint,
+        )
         return index, row
 
 
@@ -1274,6 +1328,9 @@ def _row_trace_outputs(row: Mapping[str, Any]) -> dict[str, Any]:
         "retrieved_context_ids": list(row.get("retrieved_context_ids", []) or []),
         "retrieved_contexts": list(row.get("retrieved_contexts", []) or []),
         "query_constraints": metadata.get("query_constraints") if isinstance(metadata, Mapping) else None,
+        "reranker_profile": metadata.get("reranker_profile") if isinstance(metadata, Mapping) else None,
+        "reranker_fingerprint": metadata.get("reranker_fingerprint") if isinstance(metadata, Mapping) else None,
+        "retrieval_trace": metadata.get("retrieval_trace") if isinstance(metadata, Mapping) else None,
         "source_error": source_error,
         "failure_class": failure_class,
         "failure_stage": failure_stage,
@@ -1384,6 +1441,8 @@ def _prepare_one_with_retries(
     trace_factory: PrepAttemptTraceFactory | None = None,
     evaluation_policy: str | None = None,
     budget_ms: int | None = None,
+    default_reranker_profile: Mapping[str, Any] | None = None,
+    default_reranker_fingerprint: str | None = None,
 ) -> tuple[int, dict[str, Any]]:
     policy = PrepRetryPolicy.from_value(retry_policy)
     sample_id = str(example.get(id_field, f"row-{index}"))
@@ -1417,6 +1476,8 @@ def _prepare_one_with_retries(
                     raise_exceptions=raise_exceptions,
                     policy=evaluation_policy,
                     budget_ms=budget_ms,
+                    default_reranker_profile=default_reranker_profile,
+                    default_reranker_fingerprint=default_reranker_fingerprint,
                 )
             except Exception as exc:
                 trace_recorder.set_outputs({"error": _error_text_from_exception(exc)})
@@ -1495,6 +1556,8 @@ def _prepare_one_via_api_with_retries(
     trace_factory: PrepAttemptTraceFactory | None = None,
     evaluation_policy: str | None = None,
     budget_ms: int | None = None,
+    default_reranker_profile: Mapping[str, Any] | None = None,
+    default_reranker_fingerprint: str | None = None,
 ) -> tuple[int, dict[str, Any]]:
     policy = PrepRetryPolicy.from_value(retry_policy)
     sample_id = str(example.get(id_field, f"row-{index}"))
@@ -1533,6 +1596,8 @@ def _prepare_one_via_api_with_retries(
                     requester=requester,
                     policy=evaluation_policy,
                     budget_ms=budget_ms,
+                    default_reranker_profile=default_reranker_profile,
+                    default_reranker_fingerprint=default_reranker_fingerprint,
                 )
             except Exception as exc:
                 trace_recorder.set_outputs({"error": _error_text_from_exception(exc)})
@@ -1634,6 +1699,8 @@ def build_prepared_rows(
     trace_factory: PrepAttemptTraceFactory | None = None,
     policy: str | None = None,
     budget_ms: int | None = None,
+    reranker_profile: Mapping[str, Any] | None = None,
+    reranker_fingerprint: str | None = None,
 ) -> list[dict[str, Any]]:
     """Convert raw examples into rows compatible with ``EvaluationDataset``.
 
@@ -1702,6 +1769,8 @@ def build_prepared_rows(
                     trace_factory=trace_factory,
                     evaluation_policy=policy,
                     budget_ms=budget_ms,
+                    default_reranker_profile=reranker_profile,
+                    default_reranker_fingerprint=reranker_fingerprint,
                 )
             except Exception as exc:
                 _record_progress({}, last_error=_error_text_from_exception(exc))
@@ -1725,6 +1794,8 @@ def build_prepared_rows(
                     trace_factory=trace_factory,
                     evaluation_policy=policy,
                     budget_ms=budget_ms,
+                    default_reranker_profile=reranker_profile,
+                    default_reranker_fingerprint=reranker_fingerprint,
                 )
                 for i, example in enumerate(raw_examples)
             ]
@@ -1758,6 +1829,8 @@ def build_prepared_rows_from_api(
     trace_factory: PrepAttemptTraceFactory | None = None,
     policy: str | None = None,
     budget_ms: int | None = None,
+    reranker_profile: Mapping[str, Any] | None = None,
+    reranker_fingerprint: str | None = None,
 ) -> list[dict[str, Any]]:
     """Convert raw examples into prepared rows by calling Polaris query API."""
 
@@ -1819,6 +1892,8 @@ def build_prepared_rows_from_api(
                     trace_factory=trace_factory,
                     evaluation_policy=policy,
                     budget_ms=budget_ms,
+                    default_reranker_profile=reranker_profile,
+                    default_reranker_fingerprint=reranker_fingerprint,
                 )
             except Exception as exc:
                 _record_progress({}, last_error=_error_text_from_exception(exc))
@@ -1844,6 +1919,8 @@ def build_prepared_rows_from_api(
                     trace_factory=trace_factory,
                     evaluation_policy=policy,
                     budget_ms=budget_ms,
+                    default_reranker_profile=reranker_profile,
+                    default_reranker_fingerprint=reranker_fingerprint,
                 )
                 for i, example in enumerate(raw_examples)
             ]

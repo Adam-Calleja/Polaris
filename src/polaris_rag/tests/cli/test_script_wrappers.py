@@ -49,6 +49,7 @@ def _install_stub_cli_module(monkeypatch, module_name: str, calls: list[dict[str
         ("ingest_html_documents.py", "polaris_rag.cli.ingest_html_documents"),
         ("ingest_jira_tickets.py", "polaris_rag.cli.ingest_jira_tickets"),
         ("register_prompts_mlflow.py", "polaris_rag.cli.register_prompts_mlflow"),
+        ("tune_validity_reranker.py", "polaris_rag.cli.tune_validity_reranker"),
     ],
 )
 def test_script_wrappers_bootstrap_src_and_delegate(monkeypatch, script_name: str, module_name: str) -> None:

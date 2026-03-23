@@ -78,6 +78,29 @@ class _ConstraintPipeline:
         }
 
 
+class _TracePipeline:
+    def run(self, query: str, **kwargs):  # noqa: ANN001
+        return {
+            "response": f"resp::{query}",
+            "source_nodes": [_Source(_Node("doc-1", "ctx-1"))],
+            "retrieval_trace": [
+                {
+                    "rank": 1,
+                    "doc_id": "doc-1",
+                    "text": "ctx-1",
+                    "score": 0.91,
+                    "source": "docs",
+                    "rerank_trace": {
+                        "reranker_type": "validity_aware",
+                        "final_score": 1.23,
+                    },
+                }
+            ],
+            "reranker_profile": {"type": "validity_aware"},
+            "reranker_fingerprint": "fingerprint-123",
+        }
+
+
 def _ok_requester(
     api_url: str, query: str, timeout_seconds: float, headers  # noqa: ANN001
 ) -> dict[str, object]:
@@ -472,6 +495,21 @@ def test_build_prepared_rows_persists_query_constraints_in_metadata() -> None:
     assert rows[0]["metadata"]["query_constraints"]["software_names"] == ["GROMACS"]
 
 
+def test_build_prepared_rows_persists_reranker_metadata_and_trace() -> None:
+    raw_examples = [{"id": "ex-1", "query": "Q1", "expected_answer": "A1"}]
+
+    rows = build_prepared_rows(
+        raw_examples=raw_examples,
+        pipeline=_TracePipeline(),
+        generation_workers=1,
+    )
+
+    assert rows[0]["metadata"]["reranker_profile"] == {"type": "validity_aware"}
+    assert rows[0]["metadata"]["reranker_fingerprint"] == "fingerprint-123"
+    assert rows[0]["metadata"]["retrieval_trace"][0]["doc_id"] == "doc-1"
+    assert rows[0]["metadata"]["retrieval_trace"][0]["rerank_trace"]["final_score"] == 1.23
+
+
 def test_build_prepared_rows_from_api_fail_soft_captures_source_error() -> None:
     raw_examples = [{"id": "ex-1", "query": "Q1", "expected_answer": "A1"}]
 
@@ -506,6 +544,22 @@ def test_build_prepared_rows_from_api_persists_query_constraints_in_metadata() -
 
     assert rows[0]["metadata"]["query_constraints"]["query_type"] == "software_version"
     assert rows[0]["metadata"]["query_constraints"]["software_versions"] == ["2024.4"]
+
+
+def test_build_prepared_rows_from_api_uses_default_reranker_metadata() -> None:
+    raw_examples = [{"id": "ex-1", "query": "Q1", "expected_answer": "A1"}]
+
+    rows = build_prepared_rows_from_api(
+        raw_examples=raw_examples,
+        api_url="http://unused.local/v1/query",
+        generation_workers=1,
+        requester=_ok_requester,
+        reranker_profile={"type": "rrf", "rrf_k": 60},
+        reranker_fingerprint="rrf-fingerprint",
+    )
+
+    assert rows[0]["metadata"]["reranker_profile"] == {"type": "rrf", "rrf_k": 60}
+    assert rows[0]["metadata"]["reranker_fingerprint"] == "rrf-fingerprint"
 
 
 def test_build_prepared_rows_emits_monotonic_progress_events() -> None:
