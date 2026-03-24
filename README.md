@@ -267,7 +267,7 @@ retriever:
     semantic_base:
       type: "rrf"
       rrf_k: 60
-    weights_path: "config/weights/validity_reranker.dev_v2.yaml"
+    weights_path: "config/weights/validity_reranker.dev_v3.yaml"
 ```
 
 Important:
@@ -285,7 +285,7 @@ To tune the validity-aware reranker on a dev split:
 python scripts/tune_validity_reranker.py \
   -c config/config.yaml \
   --dataset-path data/test/ragas_one_hop_eval_dataset_final.dev.jsonl \
-  --output-path config/weights/validity_reranker.dev_v2.yaml
+  --output-path config/weights/validity_reranker.dev_v3.yaml
 ```
 
 To evaluate a split while preserving benchmark subgroup labels in row metadata:

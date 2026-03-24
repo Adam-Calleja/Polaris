@@ -30,6 +30,7 @@ OBJECTIVE_METRICS: tuple[str, ...] = (
 DEFAULT_WEIGHT_GRID: dict[str, tuple[float, ...]] = {
     "authority": (0.00, 0.04, 0.08),
     "scope": (0.00, 0.04, 0.08),
+    "software": (0.00, 0.04, 0.08),
     "scope_family": (0.00, 0.02, 0.04),
     "version": (0.00, 0.04, 0.08),
     "status": (0.00, 0.04, 0.08),
@@ -84,7 +85,7 @@ def _parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--output-path",
-        default="config/weights/validity_reranker.dev_v2.yaml",
+        default="config/weights/validity_reranker.dev_v3.yaml",
         help="Output YAML path for the selected weights.",
     )
     parser.add_argument(
@@ -284,7 +285,7 @@ def _write_weight_file(
 ) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
-        "profile_name": "validity_reranker.dev_v2",
+        "profile_name": "validity_reranker.dev_v3",
         "generated_at": generated_at,
         "dataset_path": str(dataset_path),
         "objective_metrics": list(OBJECTIVE_METRICS),

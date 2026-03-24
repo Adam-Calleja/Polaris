@@ -23,6 +23,7 @@ from typing import Any, Iterable, Mapping, Sequence
 
 import yaml
 from llama_index.core.schema import NodeWithScore
+from polaris_rag.retrieval.scope_family import specialized_families_for_values
 
 try:
     from polaris_rag.retrieval.query_constraints import QueryConstraints
@@ -35,6 +36,7 @@ _TIMESTAMP_OFFSET_SUFFIX = re.compile(r"([+-]\d{2})(\d{2})$")
 _DEFAULT_VALIDITY_WEIGHTS: dict[str, float] = {
     "authority": 0.04,
     "scope": 0.04,
+    "software": 0.0,
     "scope_family": 0.0,
     "version": 0.04,
     "status": 0.04,
@@ -235,7 +237,17 @@ class ValidityAwareReranker(BaseReranker):
             semantic_base = semantic_base_by_id.get(node_id, 1.0)
             authority_feature = _authority_feature(metadata, self.config.authority_values)
             scope_feature = _scope_feature(normalized_constraints, metadata)
+            software_feature = _software_feature(normalized_constraints, metadata)
             scope_family_feature = _scope_family_feature(normalized_constraints, metadata)
+            (
+                scope_family_effective_feature,
+                scope_family_gate_reason,
+            ) = _effective_scope_family_feature(
+                normalized_constraints,
+                metadata,
+                raw_scope_family_feature=scope_family_feature,
+                software_feature=software_feature,
+            )
             version_feature = _version_feature(normalized_constraints, metadata)
             status_feature = _status_feature(metadata, self.config.status_values)
             freshness_feature = freshness_by_id.get(node_id, 0.0)
@@ -243,7 +255,8 @@ class ValidityAwareReranker(BaseReranker):
             contributions = {
                 "authority_feature": self.config.weights["authority"] * authority_feature,
                 "scope_feature": self.config.weights["scope"] * scope_feature,
-                "scope_family_feature": self.config.weights["scope_family"] * scope_family_feature,
+                "software_feature": self.config.weights["software"] * software_feature,
+                "scope_family_feature": self.config.weights["scope_family"] * scope_family_effective_feature,
                 "version_feature": self.config.weights["version"] * version_feature,
                 "status_feature": self.config.weights["status"] * status_feature,
                 "freshness_feature": self.config.weights["freshness"] * freshness_feature,
@@ -257,7 +270,10 @@ class ValidityAwareReranker(BaseReranker):
                 "semantic_base": semantic_base,
                 "authority_feature": authority_feature,
                 "scope_feature": scope_feature,
+                "software_feature": software_feature,
                 "scope_family_feature": scope_family_feature,
+                "scope_family_effective_feature": scope_family_effective_feature,
+                "scope_family_gate_reason": scope_family_gate_reason,
                 "version_feature": version_feature,
                 "status_feature": status_feature,
                 "freshness_feature": freshness_feature,
@@ -493,6 +509,40 @@ def _scope_family_feature(
     return _match_component_score(query_values, candidate_values)
 
 
+def _software_feature(
+    constraints: Mapping[str, Any] | None,
+    metadata: Mapping[str, Any],
+) -> float:
+    if not constraints:
+        return 0.0
+
+    query_values = _normalized_text_set(constraints.get("software_names"))
+    if not query_values:
+        return 0.0
+    candidate_values = _normalized_text_set(metadata.get("software_names"))
+    return _match_component_score(query_values, candidate_values)
+
+
+def _effective_scope_family_feature(
+    constraints: Mapping[str, Any] | None,
+    metadata: Mapping[str, Any],
+    *,
+    raw_scope_family_feature: float,
+    software_feature: float,
+) -> tuple[float, str]:
+    if raw_scope_family_feature <= 0.0:
+        return raw_scope_family_feature, "applied"
+    if not constraints or not _query_is_software_constrained(constraints):
+        return raw_scope_family_feature, "applied"
+    if software_feature <= 0.0:
+        return 0.0, "blocked_no_software_match"
+    if _query_has_exact_scope(constraints):
+        return raw_scope_family_feature, "applied"
+    if _candidate_has_specialized_family_variant(constraints, metadata):
+        return 0.0, "blocked_specialized_variant"
+    return raw_scope_family_feature, "applied"
+
+
 def _version_feature(
     constraints: Mapping[str, Any] | None,
     metadata: Mapping[str, Any],
@@ -583,6 +633,20 @@ def _normalized_text_set(value: Any) -> set[str]:
     return normalized
 
 
+def _normalized_text_list(value: Any) -> list[str]:
+    if not isinstance(value, (list, tuple, set)):
+        return []
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for item in value:
+        text = str(item or "").strip().lower()
+        if not text or text in seen:
+            continue
+        seen.add(text)
+        normalized.append(text)
+    return normalized
+
+
 def _match_component_score(query_values: set[str], candidate_values: set[str]) -> float:
     if not query_values:
         return 0.0
@@ -597,6 +661,40 @@ def _average_or_zero(values: Sequence[float]) -> float:
     if not values:
         return 0.0
     return sum(values) / len(values)
+
+
+def _query_is_software_constrained(constraints: Mapping[str, Any]) -> bool:
+    return bool(_normalized_text_set(constraints.get("software_names")))
+
+
+def _query_has_exact_scope(constraints: Mapping[str, Any]) -> bool:
+    return any(
+        _normalized_text_set(constraints.get(field))
+        for field in ("system_names", "partition_names", "service_names")
+    )
+
+
+def _scope_variant_values(payload: Mapping[str, Any]) -> list[str]:
+    values: list[str] = []
+    for field in ("system_names", "partition_names", "service_names", "module_names"):
+        values.extend(_normalized_text_list(payload.get(field)))
+    return values
+
+
+def _candidate_has_specialized_family_variant(
+    constraints: Mapping[str, Any],
+    metadata: Mapping[str, Any],
+) -> bool:
+    query_families = _normalized_text_set(constraints.get("scope_family_names"))
+    if not query_families:
+        return False
+
+    candidate_specialized_families = set(specialized_families_for_values(_scope_variant_values(metadata)))
+    if not candidate_specialized_families:
+        return False
+
+    query_specialized_families = set(specialized_families_for_values(_scope_variant_values(constraints)))
+    return bool((query_families & candidate_specialized_families) - query_specialized_families)
 
 
 def _normalize_query_constraints(

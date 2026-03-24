@@ -85,6 +85,7 @@ def test_main_markdown_chunking_path_replaces_existing_docs(monkeypatch):
     inserted: dict[str, object] = {}
     deleted_ids: list[str] = []
     deleted_from_docstore: list[str] = []
+    localized_calls: list[dict[str, object]] = []
 
     fake_cfg = SimpleNamespace(
         raw={"vector_stores": {"docs": {"collection_name": "docs"}}},
@@ -155,6 +156,13 @@ def test_main_markdown_chunking_path_replaces_existing_docs(monkeypatch):
         lambda cfg: "data/authority/registry.local_official.v1.json",
     )
     monkeypatch.setattr(ingest_html_documents, "get_chunks_from_markdown_documents", lambda documents, token_counter, chunk_size, overlap: chunks)
+    monkeypatch.setattr(
+        ingest_html_documents,
+        "localize_doc_chunk_scope_family_metadata",
+        lambda chunks, registry_artifact_path: localized_calls.append(
+            {"chunks": chunks, "registry_artifact_path": registry_artifact_path}
+        ) or chunks,
+    )
     monkeypatch.setattr(ingest_html_documents, "add_chunks_to_docstore", lambda storage, chunks: len(chunks))
     monkeypatch.setattr(ingest_html_documents, "delete_ref_docs_from_docstore", lambda docstore, ids: deleted_from_docstore.extend(ids))
     monkeypatch.setattr(ingest_html_documents, "persist_storage", lambda storage, persist_dir: None)
@@ -176,6 +184,12 @@ def test_main_markdown_chunking_path_replaces_existing_docs(monkeypatch):
 
     assert deleted_ids == ["https://docs.example.org/guide"]
     assert deleted_from_docstore == ["https://docs.example.org/guide"]
+    assert localized_calls == [
+        {
+            "chunks": chunks,
+            "registry_artifact_path": "data/authority/registry.local_official.v1.json",
+        }
+    ]
     assert inserted["chunks"] == chunks
     assert inserted["batch_size"] == 16
     assert inserted["use_async"] is False

@@ -382,7 +382,8 @@ class AuthorityMetadataEnricher:
                 observed.add(version_entry.version)
         return _sorted_unique(observed)
 
-    def _extract_module_tokens(self, text: str) -> list[str]:
+    @staticmethod
+    def _extract_module_tokens(text: str) -> list[str]:
         tokens: list[str] = []
         for match in _MODULE_LOAD_PATTERN.finditer(text or ""):
             raw_segment = match.group(1) or ""
@@ -474,6 +475,27 @@ def enrich_documents_with_authority_metadata(
     return enricher.enrich_documents(documents)
 
 
+def localize_doc_chunk_scope_family_metadata(
+    chunks: Sequence[DocumentT],
+    *,
+    registry_artifact_path: str | Path = DEFAULT_REGISTRY_ARTIFACT_PATH,
+) -> list[DocumentT]:
+    registry_index = AuthorityRegistryIndex.load(registry_artifact_path)
+    scope_family_resolver = ScopeFamilyResolver(registry_index.entities)
+
+    localized: list[DocumentT] = []
+    for chunk in chunks:
+        metadata = dict(getattr(chunk, "metadata", {}) or {})
+        text = str(getattr(chunk, "text", "") or "")
+        families = set(scope_family_resolver.families_for_text(text))
+        for module_token in AuthorityMetadataEnricher._extract_module_tokens(text):
+            families.update(scope_family_resolver.families_for_text(module_token))
+        metadata["scope_family_names"] = _sorted_unique(families)
+        localized.append(replace(chunk, metadata=metadata))
+
+    return localized
+
+
 __all__ = [
     "AUTHORITY_TIER_BY_SOURCE_AUTHORITY",
     "AuthorityMetadataEnricher",
@@ -485,5 +507,6 @@ __all__ = [
     "SOURCE_AUTHORITY_TICKET_MEMORY",
     "SOURCE_AUTHORITY_UNKNOWN",
     "enrich_documents_with_authority_metadata",
+    "localize_doc_chunk_scope_family_metadata",
     "resolve_authority_registry_artifact_path",
 ]

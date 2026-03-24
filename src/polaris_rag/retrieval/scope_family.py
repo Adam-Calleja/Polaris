@@ -13,6 +13,7 @@ from polaris_rag.authority import RegistryEntity
 class _ScopeFamilyRule:
     family: str
     patterns: tuple[re.Pattern[str], ...]
+    specialized_patterns: tuple[re.Pattern[str], ...] = ()
 
 
 def _compile_patterns(patterns: Sequence[str]) -> tuple[re.Pattern[str], ...]:
@@ -30,6 +31,11 @@ _SCOPE_FAMILY_RULES: tuple[_ScopeFamilyRule, ...] = (
                 r"\blogin-cascadelake\b",
             )
         ),
+        specialized_patterns=_compile_patterns(
+            (
+                r"\bcclake-(?:himem|long)\b",
+            )
+        ),
     ),
     _ScopeFamilyRule(
         family="icelake",
@@ -42,6 +48,11 @@ _SCOPE_FAMILY_RULES: tuple[_ScopeFamilyRule, ...] = (
                 r"\blogin-icelake\b",
             )
         ),
+        specialized_patterns=_compile_patterns(
+            (
+                r"\bicelake-(?:himem|long)\b",
+            )
+        ),
     ),
     _ScopeFamilyRule(
         family="sapphire",
@@ -52,6 +63,11 @@ _SCOPE_FAMILY_RULES: tuple[_ScopeFamilyRule, ...] = (
                 r"/sapphire/",
             )
         ),
+        specialized_patterns=_compile_patterns(
+            (
+                r"\bsapphire-(?:hbm|long)\b",
+            )
+        ),
     ),
     _ScopeFamilyRule(
         family="ampere",
@@ -60,7 +76,13 @@ _SCOPE_FAMILY_RULES: tuple[_ScopeFamilyRule, ...] = (
                 r"\bampere(?:-long)?\b",
                 r"\ba100\b",
                 r"/ampere/",
+                r"\bdefault-amp\b",
                 r"\bwilkes3\b",
+            )
+        ),
+        specialized_patterns=_compile_patterns(
+            (
+                r"\bampere-long\b",
             )
         ),
     ),
@@ -97,6 +119,29 @@ def _families_for_text(text: str) -> list[str]:
     for rule in _SCOPE_FAMILY_RULES:
         if any(pattern.search(value) for pattern in rule.patterns):
             families.append(rule.family)
+    return _sorted_unique(families)
+
+
+def _specialized_families_for_text(text: str) -> list[str]:
+    value = str(text or "").strip()
+    if not value:
+        return []
+
+    families: list[str] = []
+    for rule in _SCOPE_FAMILY_RULES:
+        if any(pattern.search(value) for pattern in rule.specialized_patterns):
+            families.append(rule.family)
+    return _sorted_unique(families)
+
+
+def specialized_families_for_text(text: str) -> list[str]:
+    return _specialized_families_for_text(text)
+
+
+def specialized_families_for_values(values: Iterable[str]) -> list[str]:
+    families: list[str] = []
+    for value in values:
+        families.extend(_specialized_families_for_text(str(value or "")))
     return _sorted_unique(families)
 
 
@@ -154,5 +199,11 @@ class ScopeFamilyResolver:
     def families_for_text(self, text: str) -> list[str]:
         return _families_for_text(text)
 
+    def specialized_families_for_text(self, text: str) -> list[str]:
+        return specialized_families_for_text(text)
 
-__all__ = ["ScopeFamilyResolver"]
+    def specialized_families_for_values(self, values: Iterable[str]) -> list[str]:
+        return specialized_families_for_values(values)
+
+
+__all__ = ["ScopeFamilyResolver", "specialized_families_for_text", "specialized_families_for_values"]

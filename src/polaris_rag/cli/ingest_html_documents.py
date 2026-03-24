@@ -37,6 +37,7 @@ from polaris_rag.retrieval.ingestion_settings import (
 )
 from polaris_rag.retrieval.metadata_enricher import (
     enrich_documents_with_authority_metadata,
+    localize_doc_chunk_scope_family_metadata,
     resolve_authority_registry_artifact_path,
 )
 from polaris_rag.retrieval.markdown_chunker import get_chunks_from_markdown_documents
@@ -294,6 +295,11 @@ def main() -> None:
         document_ids = [str(document.id) for document in processed_documents if getattr(document, "id", None)]
     else:
         raise ValueError(f"Unsupported docs chunking strategy: {chunking_settings.strategy!r}")
+
+    chunks = localize_doc_chunk_scope_family_metadata(
+        chunks,
+        registry_artifact_path=registry_artifact_path,
+    )
 
     storage_context = _build_source_storage_context(container, args.source)
     if storage_context is None:

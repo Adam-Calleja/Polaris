@@ -10,8 +10,9 @@ from polaris_rag.cli import tune_validity_reranker
 def test_weight_trials_build_expected_default_grid_size() -> None:
     trials = tune_validity_reranker._weight_trials()
 
-    assert len(trials) == 486
+    assert len(trials) == 1458
     assert trials[0]["authority"] == 0.0
+    assert trials[0]["software"] == 0.0
     assert trials[0]["scope_family"] == 0.0
     assert trials[-1]["freshness"] == 0.01
 
@@ -23,6 +24,7 @@ def test_select_best_trial_uses_objective_then_tie_breaks() -> None:
                 weights={
                     "authority": 0.08,
                     "scope": 0.04,
+                    "software": 0.08,
                     "scope_family": 0.02,
                     "version": 0.04,
                     "status": 0.04,
@@ -41,6 +43,7 @@ def test_select_best_trial_uses_objective_then_tie_breaks() -> None:
                 weights={
                     "authority": 0.04,
                     "scope": 0.04,
+                    "software": 0.04,
                     "scope_family": 0.02,
                     "version": 0.04,
                     "status": 0.04,
@@ -62,8 +65,8 @@ def test_select_best_trial_uses_objective_then_tie_breaks() -> None:
 
 
 def test_main_writes_weights_and_manifest(monkeypatch, tmp_path: Path) -> None:
-    output_path = tmp_path / "validity_reranker.dev_v2.yaml"
-    manifest_path = tmp_path / "validity_reranker.dev_v2.manifest.json"
+    output_path = tmp_path / "validity_reranker.dev_v3.yaml"
+    manifest_path = tmp_path / "validity_reranker.dev_v3.manifest.json"
     dataset_path = tmp_path / "dev.jsonl"
     dataset_path.write_text('{"id":"1","query":"Q1","expected_answer":"A1"}\n', encoding="utf-8")
 
@@ -92,8 +95,24 @@ def test_main_writes_weights_and_manifest(monkeypatch, tmp_path: Path) -> None:
         tune_validity_reranker,
         "_weight_trials",
         lambda grid=None: [
-            {"authority": 0.0, "scope": 0.0, "scope_family": 0.0, "version": 0.0, "status": 0.0, "freshness": 0.0},
-            {"authority": 0.08, "scope": 0.04, "scope_family": 0.02, "version": 0.04, "status": 0.04, "freshness": 0.01},
+            {
+                "authority": 0.0,
+                "scope": 0.0,
+                "software": 0.0,
+                "scope_family": 0.0,
+                "version": 0.0,
+                "status": 0.0,
+                "freshness": 0.0,
+            },
+            {
+                "authority": 0.08,
+                "scope": 0.04,
+                "software": 0.08,
+                "scope_family": 0.02,
+                "version": 0.04,
+                "status": 0.04,
+                "freshness": 0.01,
+            },
         ],
     )
 

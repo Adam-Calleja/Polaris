@@ -6,10 +6,13 @@ from pathlib import Path
 from llama_index.core import StorageContext
 from llama_index.core.storage.docstore import SimpleDocumentStore
 
-from polaris_rag.common import Document, MarkdownDocument
+from polaris_rag.common import Document, DocumentChunk, MarkdownDocument
 from polaris_rag.retrieval.document_store_factory import add_chunks_to_docstore, add_documents_to_docstore
 from polaris_rag.retrieval.markdown_chunker import MarkdownTokenChunker
-from polaris_rag.retrieval.metadata_enricher import enrich_documents_with_authority_metadata
+from polaris_rag.retrieval.metadata_enricher import (
+    enrich_documents_with_authority_metadata,
+    localize_doc_chunk_scope_family_metadata,
+)
 from polaris_rag.retrieval.node_utils import chunk_to_text_node
 from polaris_rag.retrieval.text_splitter import get_chunks_from_jira_ticket
 
@@ -342,6 +345,61 @@ def test_jira_turn_chunker_preserves_enriched_ticket_metadata(tmp_path: Path) ->
     assert all(chunk.metadata["software_names"] == ["GROMACS"] for chunk in chunks)
     assert all(chunk.metadata["scope_family_names"] == ["cclake"] for chunk in chunks)
     assert all(chunk.metadata["validity_status"] == "current" for chunk in chunks)
+
+
+def test_doc_chunk_scope_family_localization_uses_chunk_text_not_parent_doc_scope(tmp_path: Path) -> None:
+    doc_id = "https://docs.example.org/hpc/mixed.html"
+    registry_path = _write_registry(
+        tmp_path,
+        entities=[
+            _entity(
+                entity_id="module-rhel8-cclake-base",
+                entity_type="module",
+                canonical_name="rhel8/cclake/base",
+                aliases=["rhel8/cclake/base"],
+                status="current",
+                doc_id=doc_id,
+            ),
+            _entity(
+                entity_id="module-rhel8-default-amp",
+                entity_type="module",
+                canonical_name="rhel8/default-amp",
+                aliases=["rhel8/default-amp"],
+                status="current",
+                doc_id=doc_id,
+            ),
+        ],
+        source_urls=[doc_id],
+    )
+
+    chunks = [
+        DocumentChunk(
+            id=f"{doc_id}::chunk::0000",
+            parent_id=doc_id,
+            prev_id=None,
+            next_id=f"{doc_id}::chunk::0001",
+            text="module load rhel8/cclake/base",
+            document_type="html",
+            metadata={"scope_family_names": ["ampere", "cclake"]},
+        ),
+        DocumentChunk(
+            id=f"{doc_id}::chunk::0001",
+            parent_id=doc_id,
+            prev_id=f"{doc_id}::chunk::0000",
+            next_id=None,
+            text="module load rhel8/default-amp",
+            document_type="html",
+            metadata={"scope_family_names": ["ampere", "cclake"]},
+        ),
+    ]
+
+    localized = localize_doc_chunk_scope_family_metadata(
+        chunks,
+        registry_artifact_path=registry_path,
+    )
+
+    assert localized[0].metadata["scope_family_names"] == ["cclake"]
+    assert localized[1].metadata["scope_family_names"] == ["ampere"]
 
 
 def test_unmatched_ticket_mentions_remain_neutral(tmp_path: Path) -> None:
