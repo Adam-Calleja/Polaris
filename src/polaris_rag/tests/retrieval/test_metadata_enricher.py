@@ -72,7 +72,13 @@ def _entity(
     }
 
 
-def _write_registry(tmp_path: Path, *, entities: list[dict[str, object]], source_urls: list[str]) -> Path:
+def _write_registry(
+    tmp_path: Path,
+    *,
+    entities: list[dict[str, object]],
+    source_urls: list[str],
+    source_documents: list[dict[str, object]] | None = None,
+) -> Path:
     path = tmp_path / "registry.local_official.v1.json"
     payload = {
         "build": {
@@ -81,6 +87,7 @@ def _write_registry(tmp_path: Path, *, entities: list[dict[str, object]], source
             "extraction_version": "authority_registry_v1",
         },
         "source_urls": source_urls,
+        "source_documents": list(source_documents or []),
         "entities": entities,
         "summary": {},
     }
@@ -193,6 +200,51 @@ def test_service_catalog_docs_still_enrich_as_local_official(tmp_path: Path) -> 
     assert enriched_document.metadata["authority_tier"] == 3
     assert enriched_document.metadata["service_names"] == ["Secure Research Computing"]
     assert len(enriched_document.metadata["official_doc_matches"]) == 1
+
+
+def test_external_docs_use_source_document_provenance_for_authority(tmp_path: Path) -> None:
+    doc_id = "https://manual.example.org/gromacs/install.html"
+    registry_path = _write_registry(
+        tmp_path,
+        entities=[
+            {
+                **_entity(
+                    entity_id="software-gromacs-external",
+                    entity_type="software",
+                    canonical_name="GROMACS",
+                    aliases=["GROMACS", "gromacs"],
+                    known_versions=["2025.1"],
+                    status="current",
+                    doc_id=doc_id,
+                ),
+                "source_scope": "external_official",
+            }
+        ],
+        source_urls=[doc_id],
+        source_documents=[
+            {
+                "url": doc_id,
+                "source_scope": "external_official",
+                "source_id": "gromacs",
+            }
+        ],
+    )
+    document = MarkdownDocument(
+        id=doc_id,
+        document_type="html",
+        text="# Installing GROMACS\n\nUse `module load gromacs/2025.1`.",
+        metadata={"source": doc_id, "title": "Installing GROMACS"},
+    )
+
+    [enriched_document] = enrich_documents_with_authority_metadata(
+        [document],
+        registry_artifact_path=registry_path,
+        source_name="external_docs",
+    )
+
+    assert enriched_document.metadata["source_authority"] == "external_official"
+    assert enriched_document.metadata["authority_tier"] == 2
+    assert enriched_document.metadata["software_names"] == ["GROMACS"]
 
 
 def test_ticket_metadata_extraction_populates_authority_versions_and_privacy_flags(tmp_path: Path) -> None:

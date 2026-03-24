@@ -37,7 +37,9 @@ if SRC_DIR.exists() and str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 from polaris_rag.authority import (
+    RegistrySourceDocument,
     SOURCE_SCOPE_LOCAL_OFFICIAL,
+    SOURCE_SCOPE_LOCAL_OFFICIAL_SERVICES,
     build_registry_artifact,
     persist_registry_artifact,
     persist_review_rows,
@@ -253,6 +255,20 @@ def main() -> None:
         additional_candidates=service_candidates,
         additional_review_rows=service_review_rows,
         additional_source_urls=service_links,
+        source_documents=[
+            *[
+                RegistrySourceDocument(url=link, source_scope=SOURCE_SCOPE_LOCAL_OFFICIAL, source_id="local_docs")
+                for link in links
+            ],
+            *[
+                RegistrySourceDocument(
+                    url=link,
+                    source_scope=SOURCE_SCOPE_LOCAL_OFFICIAL_SERVICES,
+                    source_id="local_services_catalog",
+                )
+                for link in service_links
+            ],
+        ],
         build_metadata={
             "docs_homepage": str(args.homepage),
             "services_homepage": str(args.services_homepage),

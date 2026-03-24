@@ -1,0 +1,159 @@
+version: "external_source_register_v1"
+sources:
+  - source_id: "slurm"
+    canonical_name: "Slurm"
+    entity_type: "software"
+    homepage: "https://slurm.schedmd.com/quickstart.html"
+    allowed_domains: ["slurm.schedmd.com"]
+    include_url_prefixes:
+      - "https://slurm.schedmd.com/"
+    exclude_url_patterns:
+      - "/archive/"
+      - "/pdf/"
+    aliases: ["slurm", "Slurm Workload Manager"]
+    relevance_tags: ["software:slurm", "benchmark:software_version", "hpc:scheduler"]
+    crawl:
+      max_depth: 2
+      max_pages: 80
+
+  - source_id: "cuda"
+    canonical_name: "CUDA"
+    entity_type: "toolchain"
+    homepage: "https://docs.nvidia.com/cuda/"
+    allowed_domains: ["docs.nvidia.com"]
+    include_url_prefixes:
+      - "https://docs.nvidia.com/cuda/"
+    exclude_url_patterns:
+      - "/archive/"
+      - "/pdf/"
+    aliases: ["cuda", "NVIDIA CUDA"]
+    relevance_tags: ["toolchain:cuda", "benchmark:software_version", "hpc:gpu"]
+    crawl:
+      max_depth: 2
+      max_pages: 80
+
+  - source_id: "intel_oneapi"
+    canonical_name: "Intel oneAPI"
+    entity_type: "toolchain"
+    homepage: "https://www.intel.com/content/www/us/en/docs/oneapi/programming-guide/current/overview.html"
+    allowed_domains: ["www.intel.com"]
+    include_url_prefixes:
+      - "https://www.intel.com/content/www/us/en/docs/oneapi/"
+    exclude_url_patterns:
+      - "/pdf/"
+      - "/release-notes/"
+    aliases: ["intel", "oneapi", "Intel oneAPI"]
+    relevance_tags: ["toolchain:oneapi", "benchmark:software_version", "hpc:compiler"]
+    crawl:
+      max_depth: 2
+      max_pages: 80
+
+  - source_id: "openmpi"
+    canonical_name: "Open MPI"
+    entity_type: "toolchain"
+    homepage: "https://docs.open-mpi.org/en/main/index.html"
+    allowed_domains: ["docs.open-mpi.org"]
+    include_url_prefixes:
+      - "https://docs.open-mpi.org/en/main/"
+      - "https://docs.open-mpi.org/en/v5.0.x/"
+    exclude_url_patterns:
+      - "/release-notes/"
+    aliases: ["openmpi", "OpenMPI", "Open MPI"]
+    relevance_tags: ["toolchain:openmpi", "benchmark:software_version", "hpc:mpi"]
+    crawl:
+      max_depth: 2
+      max_pages: 80
+
+  - source_id: "pytorch"
+    canonical_name: "PyTorch"
+    entity_type: "software"
+    homepage: "https://docs.pytorch.org/docs/stable/index.html"
+    allowed_domains: ["docs.pytorch.org"]
+    include_url_prefixes:
+      - "https://docs.pytorch.org/docs/stable/"
+    exclude_url_patterns:
+      - "/generated/"
+    aliases: ["pytorch", "torch", "PyTorch"]
+    relevance_tags: ["software:pytorch", "benchmark:software_version", "hpc:ml"]
+    crawl:
+      max_depth: 2
+      max_pages: 80
+
+  - source_id: "tensorflow"
+    canonical_name: "TensorFlow"
+    entity_type: "software"
+    homepage: "https://www.tensorflow.org/api_docs"
+    allowed_domains: ["www.tensorflow.org"]
+    include_url_prefixes:
+      - "https://www.tensorflow.org/api_docs"
+      - "https://www.tensorflow.org/guide"
+    exclude_url_patterns:
+      - "/install/"
+    aliases: ["tensorflow", "TensorFlow"]
+    relevance_tags: ["software:tensorflow", "benchmark:software_version", "hpc:ml"]
+    crawl:
+      max_depth: 2
+      max_pages: 80
+
+  - source_id: "gromacs"
+    canonical_name: "GROMACS"
+    entity_type: "software"
+    homepage: "https://manual.gromacs.org/documentation/current/"
+    allowed_domains: ["manual.gromacs.org"]
+    include_url_prefixes:
+      - "https://manual.gromacs.org/documentation/current/"
+    exclude_url_patterns:
+      - "/release-notes/"
+    aliases: ["gromacs", "GROMACS"]
+    relevance_tags: ["software:gromacs", "benchmark:software_version", "hpc:simulation"]
+    crawl:
+      max_depth: 2
+      max_pages: 80
+
+  - source_id: "lammps"
+    canonical_name: "LAMMPS"
+    entity_type: "software"
+    homepage: "https://docs.lammps.org/stable/"
+    allowed_domains: ["docs.lammps.org"]
+    include_url_prefixes:
+      - "https://docs.lammps.org/stable/"
+    exclude_url_patterns:
+      - "/Howto_github.html"
+    aliases: ["lammps", "LAMMPS"]
+    relevance_tags: ["software:lammps", "benchmark:software_version", "hpc:simulation"]
+    crawl:
+      max_depth: 2
+      max_pages: 80
+
+  - source_id: "alphafold3"
+    canonical_name: "AlphaFold"
+    entity_type: "software"
+    homepage: "https://github.com/google-deepmind/alphafold3/tree/main/docs"
+    allowed_domains: ["github.com"]
+    include_url_prefixes:
+      - "https://github.com/google-deepmind/alphafold3/tree/main/docs"
+      - "https://github.com/google-deepmind/alphafold3/blob/main/docs/"
+    exclude_url_patterns:
+      - "/issues/"
+      - "/pull/"
+      - "/actions"
+    aliases: ["alphafold", "AlphaFold", "AlphaFold 3"]
+    relevance_tags: ["software:alphafold", "benchmark:software_version", "hpc:bioinformatics"]
+    crawl:
+      max_depth: 2
+      max_pages: 40
+
+  - source_id: "spack"
+    canonical_name: "Spack"
+    entity_type: "software"
+    homepage: "https://spack.readthedocs.io/en/latest/index.html"
+    allowed_domains: ["spack.readthedocs.io"]
+    include_url_prefixes:
+      - "https://spack.readthedocs.io/en/latest/"
+    exclude_url_patterns:
+      - "/release-notes/"
+    aliases: ["spack", "Spack"]
+    relevance_tags: ["software:spack", "benchmark:software_version", "hpc:package_manager"]
+    crawl:
+      max_depth: 2
+      max_pages: 80

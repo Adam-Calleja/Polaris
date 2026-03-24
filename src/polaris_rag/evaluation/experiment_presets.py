@@ -156,16 +156,11 @@ def _apply_validity_aware(raw: dict[str, Any], *, config_path: Path | None) -> s
 
 
 def _apply_all_docs_validity_aware(raw: dict[str, Any], *, config_path: Path | None) -> str:
-    configured_names = set(_configured_source_names(raw))
-    external_source_names = sorted(
-        name
-        for name in configured_names
-        if name not in {"docs", "tickets"} and "external" in name.lower()
-    )
+    external_source_names = _configured_external_source_names(raw)
     if not external_source_names:
         raise ValueError(
             "Preset 'all_docs_validity_aware' requires an external official docs retriever source. "
-            "No source name containing 'external' is configured yet."
+            "No vector_stores entry with authority_scope=external_official is configured yet."
         )
     _configure_sources(raw, ["docs", *external_source_names, "tickets"])
     _configure_validity_reranker(raw, weights=None, config_path=config_path)
@@ -205,6 +200,15 @@ def _configured_source_names(raw: Mapping[str, Any]) -> list[str]:
     return names
 
 
+def _configured_external_source_names(raw: Mapping[str, Any]) -> list[str]:
+    vector_stores = _as_mapping(raw.get("vector_stores", {}))
+    return sorted(
+        source_name
+        for source_name, store_cfg in vector_stores.items()
+        if str(_as_mapping(store_cfg).get("authority_scope", "") or "").strip().lower() == "external_official"
+    )
+
+
 def _configure_sources(raw: dict[str, Any], source_names: list[str]) -> None:
     retriever_cfg = _as_mapping(raw.get("retriever", {}))
     existing_sources = retriever_cfg.get("sources")
@@ -216,6 +220,20 @@ def _configure_sources(raw: dict[str, Any], source_names: list[str]) -> None:
         if str(_as_mapping(item).get("name", "") or "").strip()
     }
     missing = [name for name in source_names if name not in existing_by_name]
+    if missing:
+        vector_stores = _as_mapping(raw.get("vector_stores", {}))
+        default_top_k = retriever_cfg.get("top_k")
+        default_filters = retriever_cfg.get("filters")
+        for name in list(missing):
+            if name not in vector_stores:
+                continue
+            existing_by_name[name] = {
+                "name": name,
+                "top_k": default_top_k,
+                "filters": default_filters,
+                "weight": 1.0,
+            }
+            missing.remove(name)
     if missing:
         raise ValueError(
             "evaluation preset resolution references unconfigured retriever sources: "

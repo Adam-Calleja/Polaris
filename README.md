@@ -139,6 +139,38 @@ The build metadata now records:
 - `build.service_catalog_included`
 - summary counts by entity type, status, and source scope
 
+## Build External Authority Registry
+Stage 6 adds a seeded external-official source register plus a dedicated build
+path that preserves local and external authority scopes separately.
+
+```bash
+python scripts/build_external_authority_registry.py \
+  -c config/config.yaml \
+  --source-register-file data/authority/source_register.external_v1.yaml \
+  --local-registry-file data/authority/registry.local_official.v1.json
+```
+
+This writes:
+- `data/authority/registry.external_official.v1.json`
+- `data/authority/review_queue.external_official.v1.csv`
+- `data/authority/registry.official_combined.v1.json`
+- `data/authority/review_queue.official_combined.v1.csv`
+
+The combined registry is now the default runtime metadata-enrichment artifact.
+If the external crawl has not yet been run successfully, the repo may carry a
+local-only placeholder combined registry at the same path until the real
+external build is materialized.
+
+## Ingest External Official Docs
+Registered external docs can be ingested reproducibly into their own vector
+collection without activating them in the default runtime source set.
+
+```bash
+python scripts/ingest_external_docs.py \
+  -c config/config.yaml \
+  --source-register-file data/authority/source_register.external_v1.yaml
+```
+
 ## Configuration
 Configuration is split into shared and environment-specific files:
 - `config/config.base.yaml`: shared retrieval, ingestion, evaluation, and MLflow settings.

@@ -6,12 +6,21 @@ vector_stores:
     host: "qdrant"
     port: 6333
     collection_name: "support_docs"
+    authority_scope: "local_official"
+    token: null
+  external_docs:
+    type: "qdrant"
+    host: "qdrant"
+    port: 6333
+    collection_name: "support_external_docs"
+    authority_scope: "external_official"
     token: null
   tickets:
     type: "qdrant"
     host: "qdrant"
     port: 6333
     collection_name: "support_tickets"
+    authority_scope: "ticket_memory"
     token: null
 
 doc_store:
@@ -78,6 +87,8 @@ ingestion:
     sources:
       docs:
         engine: "markitdown"
+      external_docs:
+        engine: "markitdown"
       tickets:
         engine: "native_jira"
   chunking:
@@ -88,10 +99,12 @@ ingestion:
     sources:
       docs:
         strategy: "markdown_token"
+      external_docs:
+        strategy: "markdown_token"
       tickets:
         strategy: "markdown_token"
   metadata_enrichment:
-    authority_registry_path: "data/authority/registry.local_official.v1.json"
+    authority_registry_path: "data/authority/registry.official_combined.v1.json"
   jira:
     start_date: null
     end_date: null

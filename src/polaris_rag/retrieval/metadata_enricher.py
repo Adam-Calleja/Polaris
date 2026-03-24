@@ -9,7 +9,13 @@ from pathlib import Path
 import re
 from typing import Any, Iterable, Mapping, Sequence, TypeVar
 
-from polaris_rag.authority import RegistryEntity
+from polaris_rag.authority import (
+    RegistryEntity,
+    RegistrySourceDocument,
+    SOURCE_SCOPE_EXTERNAL_OFFICIAL,
+    SOURCE_SCOPE_LOCAL_OFFICIAL,
+    SOURCE_SCOPE_LOCAL_OFFICIAL_SERVICES,
+)
 from polaris_rag.retrieval.scope_family import ScopeFamilyResolver
 
 ENRICHMENT_VERSION = "authority_metadata_v1"
@@ -73,6 +79,8 @@ class AuthorityRegistryIndex:
     artifact_path: str
     build: dict[str, Any]
     source_urls: frozenset[str]
+    source_documents: tuple[RegistrySourceDocument, ...]
+    source_documents_by_url: Mapping[str, tuple[RegistrySourceDocument, ...]]
     entities: tuple[RegistryEntity, ...]
     entities_by_doc_id: Mapping[str, tuple[RegistryEntity, ...]]
     entities_by_alias: Mapping[str, tuple[RegistryEntity, ...]]
@@ -83,6 +91,15 @@ class AuthorityRegistryIndex:
     def load(cls, path: str | Path) -> "AuthorityRegistryIndex":
         resolved = Path(path).expanduser().resolve()
         payload = json.loads(resolved.read_text(encoding="utf-8"))
+        source_documents = tuple(
+            RegistrySourceDocument(
+                url=str(item["url"]),
+                source_scope=str(item["source_scope"]),
+                source_id=str(item.get("source_id", "")),
+            )
+            for item in payload.get("source_documents", [])
+            if str(item.get("url", "")).strip() and str(item.get("source_scope", "")).strip()
+        )
 
         entities = tuple(
             RegistryEntity(
@@ -105,9 +122,21 @@ class AuthorityRegistryIndex:
 
         entities_by_doc_id: dict[str, list[RegistryEntity]] = defaultdict(list)
         entities_by_alias: dict[str, list[RegistryEntity]] = defaultdict(list)
+        source_documents_by_url: dict[str, list[RegistrySourceDocument]] = defaultdict(list)
         alias_entries: list[_AliasEntry] = []
         version_entries: list[_VersionEntry] = []
         seen_versions: set[str] = set()
+
+        if not source_documents:
+            fallback_scope = str(payload.get("build", {}).get("source_scope") or SOURCE_SCOPE_LOCAL_OFFICIAL)
+            source_documents = tuple(
+                RegistrySourceDocument(url=str(url), source_scope=fallback_scope)
+                for url in payload.get("source_urls", [])
+                if str(url).strip()
+            )
+
+        for source_document in source_documents:
+            source_documents_by_url[str(source_document.url)].append(source_document)
 
         for entity in entities:
             entities_by_doc_id[str(entity.doc_id)].append(entity)
@@ -134,6 +163,8 @@ class AuthorityRegistryIndex:
             artifact_path=str(resolved),
             build=dict(payload.get("build", {})),
             source_urls=frozenset(str(url) for url in payload.get("source_urls", [])),
+            source_documents=tuple(source_documents),
+            source_documents_by_url={key: tuple(value) for key, value in source_documents_by_url.items()},
             entities=entities,
             entities_by_doc_id={key: tuple(value) for key, value in entities_by_doc_id.items()},
             entities_by_alias={key: tuple(value) for key, value in entities_by_alias.items()},
@@ -204,14 +235,47 @@ class AuthorityMetadataEnricher:
         document_type = str(getattr(document, "document_type", "") or "")
         if document_type == "helpdesk_ticket" or self.source_name == "tickets":
             return SOURCE_AUTHORITY_TICKET_MEMORY
-        if self.source_name == "docs":
-            return SOURCE_AUTHORITY_LOCAL_OFFICIAL
 
         source = self._document_source(document)
-        if source and (source in self.registry_index.source_urls or source in self.registry_index.entities_by_doc_id):
+        if source:
+            authority = self._authority_for_source_document(source)
+            if authority is not None:
+                return authority
+            authority = self._authority_for_entity_matches(source)
+            if authority is not None:
+                return authority
+            if source in self.registry_index.source_urls:
+                return SOURCE_AUTHORITY_LOCAL_OFFICIAL
+
+        if self.source_name == "docs":
             return SOURCE_AUTHORITY_LOCAL_OFFICIAL
+        if self.source_name == "external_docs":
+            return SOURCE_AUTHORITY_EXTERNAL_OFFICIAL
 
         return SOURCE_AUTHORITY_UNKNOWN
+
+    def _authority_for_source_document(self, source: str) -> str | None:
+        source_documents = self.registry_index.source_documents_by_url.get(source, ())
+        if not source_documents:
+            return None
+        return self._authority_for_scopes(item.source_scope for item in source_documents)
+
+    def _authority_for_entity_matches(self, source: str) -> str | None:
+        entities = self.registry_index.entities_by_doc_id.get(source, ())
+        if not entities:
+            return None
+        return self._authority_for_scopes(entity.source_scope for entity in entities)
+
+    @staticmethod
+    def _authority_for_scopes(scopes: Iterable[str]) -> str | None:
+        authorities = _sorted_unique(_source_authority_from_scope(scope) for scope in scopes)
+        if not authorities:
+            return None
+        if SOURCE_AUTHORITY_LOCAL_OFFICIAL in authorities:
+            return SOURCE_AUTHORITY_LOCAL_OFFICIAL
+        if len(authorities) == 1:
+            return authorities[0]
+        return authorities[0]
 
     def _match_document_entities(self, document: Any) -> list[_EntityMatch]:
         source = self._document_source(document)
@@ -453,6 +517,15 @@ def _as_mapping(value: Any) -> Mapping[str, Any]:
     if hasattr(value, "__dict__"):
         return dict(vars(value))
     return {}
+
+
+def _source_authority_from_scope(source_scope: str) -> str:
+    normalized = str(source_scope or "").strip().lower()
+    if normalized in {SOURCE_SCOPE_LOCAL_OFFICIAL, SOURCE_SCOPE_LOCAL_OFFICIAL_SERVICES}:
+        return SOURCE_AUTHORITY_LOCAL_OFFICIAL
+    if normalized == SOURCE_SCOPE_EXTERNAL_OFFICIAL:
+        return SOURCE_AUTHORITY_EXTERNAL_OFFICIAL
+    return SOURCE_AUTHORITY_UNKNOWN
 
 
 def resolve_authority_registry_artifact_path(cfg: Any) -> str:

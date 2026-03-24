@@ -10,9 +10,13 @@ if str(SRC_DIR) not in sys.path:
 
 from polaris_rag.authority import (
     REVIEW_STATE_NEEDS_REVIEW,
+    SOURCE_SCOPE_EXTERNAL_OFFICIAL,
     SOURCE_SCOPE_LOCAL_OFFICIAL,
+    RegistryArtifact,
+    RegistrySourceDocument,
     build_registry_artifact,
     extract_registry_candidates,
+    merge_registry_artifacts,
 )
 from polaris_rag.common import MarkdownDocument
 
@@ -761,3 +765,119 @@ def test_primary_overrides_cover_additional_software_pages() -> None:
     names = {(candidate.entity_type, candidate.canonical_name) for candidate in candidates}
     assert ("software", "CASTEP") in names
     assert ("software", "Gaussian") in names
+
+
+def test_build_registry_artifact_supports_external_source_scope_with_source_register_hints() -> None:
+    document = _doc(
+        doc_id="https://docs.example.org/gromacs/install.html",
+        source="https://docs.example.org/gromacs/install.html",
+        title="Installing GROMACS",
+        text="# Installing GROMACS\n\nSupported version 2024.4.\n\n```bash\nmodule load gromacs/2024.4\n```",
+    )
+    document.metadata.update(
+        {
+            "source_register_entity_type": "software",
+            "source_register_canonical_name": "GROMACS",
+            "source_register_aliases": ["gromacs", "GROMACS"],
+        }
+    )
+
+    artifact, review_rows = build_registry_artifact(
+        [document],
+        homepage="source-register:test",
+        source_urls=[document.metadata["source"]],
+        source_scope=SOURCE_SCOPE_EXTERNAL_OFFICIAL,
+        source_documents=[
+            RegistrySourceDocument(
+                url=document.metadata["source"],
+                source_scope=SOURCE_SCOPE_EXTERNAL_OFFICIAL,
+                source_id="gromacs",
+            )
+        ],
+    )
+
+    assert review_rows == []
+    software = next(entity for entity in artifact.entities if entity.entity_type == "software")
+    assert software.canonical_name == "GROMACS"
+    assert software.source_scope == SOURCE_SCOPE_EXTERNAL_OFFICIAL
+    assert "2024.4" in software.known_versions
+    assert artifact.source_documents[0].source_id == "gromacs"
+
+
+def test_merge_registry_artifacts_preserves_cross_scope_duplicates() -> None:
+    local_document = _doc(
+        doc_id="https://local.example/hpc/software-packages/gromacs.html",
+        source="https://local.example/hpc/software-packages/gromacs.html",
+        title="GROMACS",
+        text="# GROMACS\n\nSupported version 2024.4.",
+    )
+    external_document = _doc(
+        doc_id="https://external.example/gromacs/install.html",
+        source="https://external.example/gromacs/install.html",
+        title="Installing GROMACS",
+        text="# Installing GROMACS\n\nSupported version 2025.1.\n\n```bash\nmodule load gromacs/2025.1\n```",
+    )
+    external_document.metadata.update(
+        {
+            "source_register_entity_type": "software",
+            "source_register_canonical_name": "GROMACS",
+            "source_register_aliases": ["gromacs", "GROMACS"],
+        }
+    )
+
+    local_artifact, _ = build_registry_artifact(
+        [local_document],
+        homepage="https://local.example/index.html",
+        source_urls=[local_document.metadata["source"]],
+        source_documents=[
+            RegistrySourceDocument(
+                url=local_document.metadata["source"],
+                source_scope=SOURCE_SCOPE_LOCAL_OFFICIAL,
+                source_id="local_docs",
+            )
+        ],
+    )
+    external_artifact, _ = build_registry_artifact(
+        [external_document],
+        homepage="source-register:test",
+        source_urls=[external_document.metadata["source"]],
+        source_scope=SOURCE_SCOPE_EXTERNAL_OFFICIAL,
+        source_documents=[
+            RegistrySourceDocument(
+                url=external_document.metadata["source"],
+                source_scope=SOURCE_SCOPE_EXTERNAL_OFFICIAL,
+                source_id="gromacs",
+            )
+        ],
+    )
+
+    merged, review_rows = merge_registry_artifacts(
+        [
+            RegistryArtifact(
+                build=local_artifact.build,
+                source_urls=local_artifact.source_urls,
+                entities=local_artifact.entities,
+                summary=local_artifact.summary,
+                source_documents=local_artifact.source_documents,
+            ),
+            RegistryArtifact(
+                build=external_artifact.build,
+                source_urls=external_artifact.source_urls,
+                entities=external_artifact.entities,
+                summary=external_artifact.summary,
+                source_documents=external_artifact.source_documents,
+            ),
+        ]
+    )
+
+    assert review_rows == []
+    gromacs_entities = [
+        entity
+        for entity in merged.entities
+        if entity.entity_type == "software" and entity.canonical_name == "GROMACS"
+    ]
+    assert len(gromacs_entities) == 2
+    assert {entity.source_scope for entity in gromacs_entities} == {
+        SOURCE_SCOPE_LOCAL_OFFICIAL,
+        SOURCE_SCOPE_EXTERNAL_OFFICIAL,
+    }

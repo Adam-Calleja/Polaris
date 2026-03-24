@@ -9,13 +9,14 @@ import hashlib
 import json
 import re
 from pathlib import Path
-from typing import Iterable, Sequence
+from typing import Any, Iterable, Mapping, Sequence
 from urllib.parse import urlsplit
 
 from polaris_rag.common import MarkdownDocument
 
 SOURCE_SCOPE_LOCAL_OFFICIAL = "local_official"
 SOURCE_SCOPE_LOCAL_OFFICIAL_SERVICES = "local_official_services"
+SOURCE_SCOPE_EXTERNAL_OFFICIAL = "external_official"
 REGISTRY_ENTITY_TYPES: tuple[str, ...] = (
     "system",
     "partition",
@@ -255,6 +256,15 @@ class ReviewQueueRow:
 
 
 @dataclass(frozen=True)
+class RegistrySourceDocument:
+    """Provenance record for one crawled source document URL."""
+
+    url: str
+    source_scope: str
+    source_id: str = ""
+
+
+@dataclass(frozen=True)
 class RegistryEntity:
     """One normalized authority-registry entity."""
 
@@ -281,6 +291,7 @@ class RegistryArtifact:
     source_urls: list[str]
     entities: list[RegistryEntity]
     summary: dict[str, object]
+    source_documents: list[RegistrySourceDocument] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -600,7 +611,32 @@ def _document_slug(document: MarkdownDocument) -> str:
     return _strip_slug_suffix(_url_slug(_canonical_url(document))).lower()
 
 
-def _classify_document_page(document: MarkdownDocument, sections: Sequence[_Section]) -> str:
+def _document_metadata_value(document: MarkdownDocument, key: str) -> str:
+    metadata = dict(document.metadata or {})
+    return str(metadata.get(key) or "").strip()
+
+
+def _external_register_entity_type(document: MarkdownDocument) -> str:
+    return _document_metadata_value(document, "source_register_entity_type").lower()
+
+
+def _external_register_canonical_name(document: MarkdownDocument) -> str:
+    return _document_metadata_value(document, "source_register_canonical_name")
+
+
+def _external_register_aliases(document: MarkdownDocument) -> list[str]:
+    metadata = dict(document.metadata or {})
+    raw_value = metadata.get("source_register_aliases")
+    if isinstance(raw_value, list):
+        return _sorted_unique(raw_value)
+    return []
+
+
+def _classify_document_page(
+    document: MarkdownDocument,
+    sections: Sequence[_Section],
+    source_scope: str,
+) -> str:
     source_url = _canonical_url(document)
     path = urlsplit(source_url).path.lower()
     slug = _document_slug(document)
@@ -618,6 +654,8 @@ def _classify_document_page(document: MarkdownDocument, sections: Sequence[_Sect
         return _PAGE_CLASS_EXCLUDE
     if any(path.endswith(suffix) for suffix in _EXCLUDED_PAGE_SUFFIXES):
         return _PAGE_CLASS_EXCLUDE
+    if source_scope == SOURCE_SCOPE_EXTERNAL_OFFICIAL and _external_register_entity_type(document):
+        return _PAGE_CLASS_ENTITY
     if slug in _NOTICE_PAGE_SLUGS:
         return _PAGE_CLASS_NOTICE
     if slug in _PROCEDURAL_PAGE_SLUGS:
@@ -715,19 +753,23 @@ def _extract_module_like_versions(module_name: str) -> list[str]:
     return _sorted_unique(values)
 
 
-def _extract_software_versions(slug: str, title: str, sections: Sequence[_Section]) -> list[str]:
-    prefixes = _SOFTWARE_VERSION_PREFIXES.get(slug, (slug,))
+def _extract_software_versions_with_prefixes(
+    prefixes: Sequence[str],
+    title: str,
+    sections: Sequence[_Section],
+) -> list[str]:
     candidate_versions: list[str] = []
+    normalized_prefixes = tuple(prefix for prefix in prefixes if str(prefix or "").strip())
     for section in sections:
         if section.heading_path:
-            candidate_versions.extend(_extract_versions_from_module_references("\n".join(section.heading_path), prefixes))
-        candidate_versions.extend(_extract_versions_from_module_references(section.text, prefixes))
+            candidate_versions.extend(_extract_versions_from_module_references("\n".join(section.heading_path), normalized_prefixes))
+        candidate_versions.extend(_extract_versions_from_module_references(section.text, normalized_prefixes))
         for line in section.text.splitlines():
             line_text = str(line or "").strip()
             if not line_text:
                 continue
             lowered = line_text.lower()
-            if any(prefix.lower() in lowered for prefix in prefixes) and re.search(r"\b(?:version|versions?)\b", lowered):
+            if any(prefix.lower() in lowered for prefix in normalized_prefixes) and re.search(r"\b(?:version|versions?)\b", lowered):
                 if "http://" in lowered or "https://" in lowered:
                     continue
                 candidate_versions.extend(
@@ -741,6 +783,43 @@ def _extract_software_versions(slug: str, title: str, sections: Sequence[_Sectio
         if _looks_like_software_version(_clean_version_candidate(value))
     )
     return _sorted_unique(candidate_versions)
+
+
+def _extract_software_versions(slug: str, title: str, sections: Sequence[_Section]) -> list[str]:
+    prefixes = _SOFTWARE_VERSION_PREFIXES.get(slug, (slug,))
+    return _extract_software_versions_with_prefixes(prefixes, title, sections)
+
+
+def _external_software_prefixes(document: MarkdownDocument, canonical_name: str) -> tuple[str, ...]:
+    raw_aliases = [canonical_name, *_external_register_aliases(document)]
+    prefixes: set[str] = set()
+    for raw_value in raw_aliases:
+        text = _normalize_spaces(raw_value)
+        if not text:
+            continue
+        for variant in (
+            text,
+            text.lower(),
+            text.replace(" ", ""),
+            text.replace(" ", "-"),
+            text.replace(" ", "_"),
+        ):
+            cleaned = variant.strip()
+            if cleaned:
+                prefixes.add(cleaned)
+    return tuple(sorted(prefixes))
+
+
+def _extract_external_software_versions(
+    document: MarkdownDocument,
+    canonical_name: str,
+    sections: Sequence[_Section],
+) -> list[str]:
+    return _extract_software_versions_with_prefixes(
+        _external_software_prefixes(document, canonical_name),
+        canonical_name,
+        sections,
+    )
 
 
 def _status_for_primary_entity(slug: str, title: str, sections: Sequence[_Section]) -> str:
@@ -804,6 +883,43 @@ def _infer_primary_entity(document: MarkdownDocument, sections: Sequence[_Sectio
     title = _resolve_document_title(document, sections)
     if not title:
         return None
+
+    if source_scope == SOURCE_SCOPE_EXTERNAL_OFFICIAL:
+        entity_type = _external_register_entity_type(document)
+        canonical_name = _external_register_canonical_name(document) or title
+        if not canonical_name or entity_type not in REGISTRY_ENTITY_TYPES:
+            return None
+
+        heading_path = _primary_heading_path(sections)
+        if entity_type == "software":
+            versions = _extract_external_software_versions(document, canonical_name, sections)
+            status = _status_for_primary_software(slug, canonical_name, sections)
+        else:
+            versions = _extract_entity_versions(canonical_name, sections)
+            status = _status_for_primary_entity(slug, canonical_name, sections)
+        aliases = _sorted_unique(
+            [
+                canonical_name,
+                title,
+                *_external_register_aliases(document),
+                _clean_title(str((document.metadata or {}).get("title") or "")),
+                *_slug_aliases(source_url),
+            ]
+        )
+        evidence_text = _primary_evidence_text(canonical_name, sections)
+        return _Candidate(
+            entity_type=entity_type,
+            canonical_name=canonical_name,
+            aliases=tuple(aliases),
+            source_scope=source_scope,
+            status=status,
+            known_versions=tuple(versions),
+            doc_id=document.id,
+            doc_title=title,
+            heading_path=heading_path,
+            evidence_text=evidence_text,
+            extraction_method="source_register_hint",
+        )
 
     override = _PRIMARY_ENTITY_OVERRIDES.get(slug)
     entity_type: str | None = None
@@ -899,7 +1015,7 @@ def extract_registry_candidates(
 
     for document in sorted(markdown_documents, key=lambda item: str(item.id)):
         sections = _extract_sections(document.text)
-        page_class = _classify_document_page(document, sections)
+        page_class = _classify_document_page(document, sections, source_scope)
         title = _resolve_document_title(document, sections)
         doc_slug = _document_slug(document)
         primary = _infer_primary_entity(document, sections, source_scope) if page_class == _PAGE_CLASS_ENTITY else None
@@ -986,21 +1102,23 @@ def _source_scope_priority(source_scope: str) -> tuple[int, str]:
         return (0, source_scope)
     if source_scope == SOURCE_SCOPE_LOCAL_OFFICIAL_SERVICES:
         return (1, source_scope)
+    if source_scope == SOURCE_SCOPE_EXTERNAL_OFFICIAL:
+        return (2, source_scope)
     return (9, source_scope)
 
 
 def _merge_candidates(
     candidates: Iterable[_Candidate],
 ) -> tuple[list[RegistryEntity], list[ReviewQueueRow]]:
-    grouped: dict[tuple[str, str], list[_Candidate]] = defaultdict(list)
+    grouped: dict[tuple[str, str, str], list[_Candidate]] = defaultdict(list)
     for candidate in candidates:
-        key = (candidate.entity_type, _normalize_key(candidate.canonical_name))
+        key = (candidate.source_scope, candidate.entity_type, _normalize_key(candidate.canonical_name))
         grouped[key].append(candidate)
 
     entities: list[RegistryEntity] = []
     review_rows: list[ReviewQueueRow] = []
 
-    for (entity_type, _), group in sorted(grouped.items(), key=lambda item: item[0]):
+    for (_source_scope, entity_type, _), group in sorted(grouped.items(), key=lambda item: item[0]):
         group_sorted = sorted(
             group,
             key=lambda item: (
@@ -1140,6 +1258,44 @@ def _build_summary(entities: Sequence[RegistryEntity], review_rows: Sequence[Rev
     }
 
 
+def _normalize_source_document(value: RegistrySourceDocument | Mapping[str, Any]) -> RegistrySourceDocument:
+    if isinstance(value, RegistrySourceDocument):
+        return value
+    if not isinstance(value, Mapping):
+        raise TypeError(f"Unsupported source document value: {type(value)!r}")
+    url = str(value.get("url") or "").strip()
+    source_scope = str(value.get("source_scope") or "").strip()
+    source_id = str(value.get("source_id") or "").strip()
+    if not url or not source_scope:
+        raise ValueError("Each source document must define non-empty 'url' and 'source_scope'.")
+    return RegistrySourceDocument(url=url, source_scope=source_scope, source_id=source_id)
+
+
+def _resolve_source_documents(
+    *,
+    source_scope: str,
+    source_urls: Sequence[str],
+    source_documents: Sequence[RegistrySourceDocument | Mapping[str, Any]] | None,
+) -> list[RegistrySourceDocument]:
+    if source_documents is not None:
+        documents = [_normalize_source_document(value) for value in source_documents]
+    else:
+        documents = [
+            RegistrySourceDocument(url=str(url).strip(), source_scope=source_scope)
+            for url in source_urls
+            if str(url).strip()
+        ]
+
+    dedup: dict[tuple[str, str, str], RegistrySourceDocument] = {}
+    for document in documents:
+        key = (document.url, document.source_scope, document.source_id)
+        dedup[key] = document
+    return sorted(
+        dedup.values(),
+        key=lambda item: (item.source_scope, item.source_id, item.url),
+    )
+
+
 def build_registry_artifact(
     markdown_documents: Iterable[MarkdownDocument],
     *,
@@ -1150,14 +1306,10 @@ def build_registry_artifact(
     additional_candidates: Iterable[_Candidate] = (),
     additional_review_rows: Sequence[ReviewQueueRow] = (),
     additional_source_urls: Sequence[str] = (),
+    source_documents: Sequence[RegistrySourceDocument | Mapping[str, Any]] | None = None,
     build_metadata: dict[str, object] | None = None,
 ) -> tuple[RegistryArtifact, list[ReviewQueueRow]]:
     """Build a deterministic registry artifact from local official markdown docs."""
-
-    if source_scope != SOURCE_SCOPE_LOCAL_OFFICIAL:
-        raise ValueError(
-            f"Unsupported source_scope {source_scope!r}. Stage 1 only supports {SOURCE_SCOPE_LOCAL_OFFICIAL!r}."
-        )
 
     candidates, extraction_review_rows = extract_registry_candidates(
         markdown_documents,
@@ -1180,6 +1332,11 @@ def build_registry_artifact(
     }
     if build_metadata:
         build_payload.update(build_metadata)
+    resolved_source_documents = _resolve_source_documents(
+        source_scope=source_scope,
+        source_urls=[*source_urls, *additional_source_urls],
+        source_documents=source_documents,
+    )
     artifact = RegistryArtifact(
         build=build_payload,
         source_urls=sorted(
@@ -1189,6 +1346,7 @@ def build_registry_artifact(
                 if str(url).strip()
             }
         ),
+        source_documents=resolved_source_documents,
         entities=entities,
         summary=_build_summary(entities, review_rows),
     )
@@ -1203,11 +1361,238 @@ def persist_registry_artifact(artifact: RegistryArtifact, path: str | Path) -> P
     payload = {
         "build": artifact.build,
         "source_urls": list(artifact.source_urls),
+        "source_documents": [asdict(item) for item in artifact.source_documents],
         "entities": [asdict(entity) for entity in artifact.entities],
         "summary": artifact.summary,
     }
     resolved.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
     return resolved
+
+
+def load_registry_artifact(path: str | Path) -> RegistryArtifact:
+    """Load a persisted registry artifact."""
+
+    resolved = Path(path).expanduser().resolve()
+    payload = json.loads(resolved.read_text(encoding="utf-8"))
+    source_documents = [
+        _normalize_source_document(item)
+        for item in payload.get("source_documents", [])
+    ]
+    if not source_documents:
+        fallback_scope = str(payload.get("build", {}).get("source_scope") or SOURCE_SCOPE_LOCAL_OFFICIAL)
+        source_documents = [
+            RegistrySourceDocument(url=str(url), source_scope=fallback_scope)
+            for url in payload.get("source_urls", [])
+            if str(url).strip()
+        ]
+    entities = [
+        RegistryEntity(
+            entity_id=str(entity["entity_id"]),
+            entity_type=str(entity["entity_type"]),
+            canonical_name=str(entity["canonical_name"]),
+            aliases=[str(alias) for alias in entity.get("aliases", [])],
+            source_scope=str(entity["source_scope"]),
+            status=str(entity["status"]),
+            known_versions=[str(version) for version in entity.get("known_versions", [])],
+            doc_id=str(entity["doc_id"]),
+            doc_title=str(entity["doc_title"]),
+            heading_path=[str(part) for part in entity.get("heading_path", [])],
+            evidence_spans=list(entity.get("evidence_spans", [])),
+            extraction_method=str(entity["extraction_method"]),
+            review_state=str(entity["review_state"]),
+        )
+        for entity in payload.get("entities", [])
+    ]
+    return RegistryArtifact(
+        build=dict(payload.get("build", {})),
+        source_urls=[str(url) for url in payload.get("source_urls", [])],
+        source_documents=source_documents,
+        entities=entities,
+        summary=dict(payload.get("summary", {})),
+    )
+
+
+def merge_registry_artifacts(
+    artifacts: Sequence[RegistryArtifact],
+    *,
+    build_metadata: Mapping[str, object] | None = None,
+) -> tuple[RegistryArtifact, list[ReviewQueueRow]]:
+    """Merge existing registry artifacts while preserving cross-scope entities."""
+
+    grouped: dict[tuple[str, str, str], list[RegistryEntity]] = defaultdict(list)
+    source_urls: set[str] = set()
+    source_documents: list[RegistrySourceDocument] = []
+    extraction_versions: set[str] = set()
+    component_source_scopes: set[str] = set()
+
+    for artifact in artifacts:
+        extraction_version = str(artifact.build.get("extraction_version") or "").strip()
+        if extraction_version:
+            extraction_versions.add(extraction_version)
+        component_source_scopes.add(str(artifact.build.get("source_scope") or "").strip())
+        source_urls.update(str(url).strip() for url in artifact.source_urls if str(url).strip())
+        source_documents.extend(artifact.source_documents)
+        for entity in artifact.entities:
+            key = (entity.source_scope, entity.entity_type, _normalize_key(entity.canonical_name))
+            grouped[key].append(entity)
+
+    entities: list[RegistryEntity] = []
+    review_rows: list[ReviewQueueRow] = []
+
+    for (_source_scope, entity_type, _), group in sorted(grouped.items(), key=lambda item: item[0]):
+        group_sorted = sorted(
+            group,
+            key=lambda item: (
+                _source_scope_priority(item.source_scope),
+                item.canonical_name.lower(),
+                item.doc_id,
+                tuple(item.heading_path),
+                item.entity_id,
+            ),
+        )
+        primary = group_sorted[0]
+        statuses = sorted({item.status for item in group_sorted if item.status != "unknown"})
+        aliases = _sorted_unique(alias for item in group_sorted for alias in item.aliases)
+        versions = _sorted_unique(version for item in group_sorted for version in item.known_versions)
+        evidence_spans: list[dict[str, object]] = []
+        seen_spans: set[tuple[str, str, tuple[str, ...], str, str]] = set()
+        for item in group_sorted:
+            for span in item.evidence_spans:
+                normalized = {
+                    "doc_id": str(span.get("doc_id") or item.doc_id),
+                    "doc_title": str(span.get("doc_title") or item.doc_title),
+                    "heading_path": [str(part) for part in span.get("heading_path", item.heading_path)],
+                    "evidence_text": str(span.get("evidence_text") or ""),
+                    "extraction_method": str(span.get("extraction_method") or item.extraction_method),
+                }
+                key = (
+                    normalized["doc_id"],
+                    normalized["doc_title"],
+                    tuple(normalized["heading_path"]),
+                    normalized["evidence_text"],
+                    normalized["extraction_method"],
+                )
+                if key in seen_spans:
+                    continue
+                seen_spans.add(key)
+                evidence_spans.append(normalized)
+
+        status = statuses[0] if len(statuses) == 1 else "unknown"
+        review_state = REVIEW_STATE_AUTO_VERIFIED
+        if len(statuses) > 1:
+            review_state = REVIEW_STATE_NEEDS_REVIEW
+            review_rows.append(
+                ReviewQueueRow(
+                    reason="conflicting_status",
+                    entity_type=entity_type,
+                    canonical_name=primary.canonical_name,
+                    source_scope=primary.source_scope,
+                    candidate_count=len(group_sorted),
+                    status_values=statuses,
+                    aliases=aliases,
+                    doc_ids=_sorted_unique(item.doc_id for item in group_sorted),
+                    notes="Multiple explicit lifecycle statuses were present while merging registry artifacts.",
+                )
+            )
+
+        entities.append(
+            RegistryEntity(
+                entity_id=_make_entity_id(primary.source_scope, entity_type, primary.canonical_name),
+                entity_type=entity_type,
+                canonical_name=primary.canonical_name,
+                aliases=aliases,
+                source_scope=primary.source_scope,
+                status=status,
+                known_versions=versions,
+                doc_id=primary.doc_id,
+                doc_title=primary.doc_title,
+                heading_path=list(primary.heading_path),
+                evidence_spans=evidence_spans,
+                extraction_method=primary.extraction_method if len({item.extraction_method for item in group_sorted}) == 1 else "merged",
+                review_state=review_state,
+            )
+        )
+
+    alias_index: dict[tuple[str, str], list[RegistryEntity]] = defaultdict(list)
+    for entity in entities:
+        for alias in entity.aliases:
+            alias_index[(entity.entity_type, _normalize_key(alias))].append(entity)
+
+    entities_by_id = {entity.entity_id: entity for entity in entities}
+    needs_review_ids: set[str] = set()
+    for (entity_type, alias_key), alias_entities in sorted(alias_index.items(), key=lambda item: item[0]):
+        distinct_canonicals = {_normalize_key(entity.canonical_name) for entity in alias_entities}
+        if len(distinct_canonicals) <= 1 or not alias_key:
+            continue
+        for entity in alias_entities:
+            needs_review_ids.add(entity.entity_id)
+        review_source_scope = sorted(alias_entities, key=lambda entity: _source_scope_priority(entity.source_scope))[0].source_scope
+        review_rows.append(
+            ReviewQueueRow(
+                reason="alias_ambiguity",
+                entity_type=entity_type,
+                canonical_name=" / ".join(sorted(entity.canonical_name for entity in alias_entities)),
+                source_scope=review_source_scope,
+                candidate_count=len(alias_entities),
+                aliases=_sorted_unique(alias for entity in alias_entities for alias in entity.aliases),
+                doc_ids=_sorted_unique(entity.doc_id for entity in alias_entities),
+                notes="Alias key maps to multiple canonical entities while merging registry artifacts.",
+            )
+        )
+
+    final_entities: list[RegistryEntity] = []
+    for entity in sorted(entities, key=lambda item: (item.entity_type, item.canonical_name.lower(), item.entity_id)):
+        if entity.entity_id not in needs_review_ids or entity.review_state == REVIEW_STATE_NEEDS_REVIEW:
+            final_entities.append(entity)
+            continue
+        final_entities.append(
+            RegistryEntity(
+                entity_id=entity.entity_id,
+                entity_type=entity.entity_type,
+                canonical_name=entity.canonical_name,
+                aliases=list(entity.aliases),
+                source_scope=entity.source_scope,
+                status=entity.status,
+                known_versions=list(entity.known_versions),
+                doc_id=entity.doc_id,
+                doc_title=entity.doc_title,
+                heading_path=list(entity.heading_path),
+                evidence_spans=list(entity.evidence_spans),
+                extraction_method=entity.extraction_method,
+                review_state=REVIEW_STATE_NEEDS_REVIEW,
+            )
+        )
+
+    build_payload: dict[str, object] = {
+        "homepage": "merged_registry_artifacts",
+        "source_scope": "multi_scope",
+        "extraction_version": sorted(extraction_versions)[0] if len(extraction_versions) == 1 else EXTRACTION_VERSION,
+        "component_source_scopes": sorted(scope for scope in component_source_scopes if scope),
+    }
+    if build_metadata:
+        build_payload.update(dict(build_metadata))
+
+    resolved_source_documents = _resolve_source_documents(
+        source_scope="multi_scope",
+        source_urls=sorted(source_urls),
+        source_documents=source_documents,
+    )
+    artifact = RegistryArtifact(
+        build=build_payload,
+        source_urls=sorted(source_urls),
+        source_documents=resolved_source_documents,
+        entities=final_entities,
+        summary=_build_summary(final_entities, review_rows),
+    )
+    return artifact, sorted(
+        review_rows,
+        key=lambda row: (
+            row.reason,
+            row.entity_type,
+            row.canonical_name.lower(),
+            tuple(row.doc_ids),
+        ),
+    )
 
 
 def persist_review_rows(rows: Sequence[ReviewQueueRow], path: str | Path) -> Path:
@@ -1251,14 +1636,18 @@ __all__ = [
     "REGISTRY_ENTITY_TYPES",
     "REVIEW_STATE_AUTO_VERIFIED",
     "REVIEW_STATE_NEEDS_REVIEW",
+    "SOURCE_SCOPE_EXTERNAL_OFFICIAL",
     "SOURCE_SCOPE_LOCAL_OFFICIAL",
     "SOURCE_SCOPE_LOCAL_OFFICIAL_SERVICES",
     "STATUS_VALUES",
     "RegistryArtifact",
     "RegistryEntity",
+    "RegistrySourceDocument",
     "ReviewQueueRow",
     "build_registry_artifact",
     "extract_registry_candidates",
+    "load_registry_artifact",
+    "merge_registry_artifacts",
     "persist_registry_artifact",
     "persist_review_rows",
 ]

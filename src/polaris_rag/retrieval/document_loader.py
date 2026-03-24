@@ -29,7 +29,6 @@ load_support_tickets
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse, urljoin, urlsplit, urlunsplit
-from atlassian import Jira
 from datetime import datetime
 
 from polaris_rag.common import Document
@@ -386,6 +385,8 @@ def load_support_tickets(
         password = jira_api_config['password']
     if not username or not password:
         raise KeyError("Jira credentials are not properly configured.")
+
+    from atlassian import Jira
 
     jira = Jira(
         url='https://ucam-rcs.atlassian.net',

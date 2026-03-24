@@ -28,12 +28,14 @@ def _base_cfg(tmp_path: Path, *, include_external: bool = False) -> GlobalConfig
         {"name": "tickets", "weight": 1.0},
     ]
     vector_stores = {
-        "docs": {"collection_name": "docs_collection"},
-        "tickets": {"collection_name": "tickets_collection"},
+        "docs": {"collection_name": "docs_collection", "authority_scope": "local_official"},
+        "tickets": {"collection_name": "tickets_collection", "authority_scope": "ticket_memory"},
     }
     if include_external:
-        sources.insert(1, {"name": "external_docs", "weight": 1.0})
-        vector_stores["external_docs"] = {"collection_name": "external_collection"}
+        vector_stores["external_docs"] = {
+            "collection_name": "external_collection",
+            "authority_scope": "external_official",
+        }
     return GlobalConfig(
         raw={
             "retriever": {
@@ -103,3 +105,12 @@ def test_apply_evaluation_preset_all_docs_includes_external_source(monkeypatch, 
         "tickets",
     ]
     assert context.condition_summary["sources"][1]["collection_name"] == "external_collection"
+
+
+def test_apply_evaluation_preset_requires_explicit_external_scope_metadata(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setattr(experiment_presets, "create_reranker", lambda **kwargs: _FakeReranker(kwargs["config"]))
+    cfg = _base_cfg(tmp_path, include_external=True)
+    cfg.raw["vector_stores"]["external_docs"]["authority_scope"] = "unknown"
+
+    with pytest.raises(ValueError, match="authority_scope=external_official"):
+        experiment_presets.apply_evaluation_preset(cfg, "all_docs_validity_aware")
