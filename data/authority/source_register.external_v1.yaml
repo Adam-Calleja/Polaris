@@ -125,23 +125,69 @@ sources:
       max_depth: 2
       max_pages: 80
 
-  - source_id: "alphafold3"
-    canonical_name: "AlphaFold"
+  - source_id: "openfoam"
+    canonical_name: "OpenFOAM"
     entity_type: "software"
-    homepage: "https://github.com/google-deepmind/alphafold3/tree/main/docs"
-    allowed_domains: ["github.com"]
+    homepage: "https://doc.cfd.direct/openfoam/user-guide-v13/"
+    allowed_domains: ["doc.cfd.direct"]
     include_url_prefixes:
-      - "https://github.com/google-deepmind/alphafold3/tree/main/docs"
-      - "https://github.com/google-deepmind/alphafold3/blob/main/docs/"
+      - "https://doc.cfd.direct/openfoam/user-guide-v13/"
     exclude_url_patterns:
-      - "/issues/"
-      - "/pull/"
-      - "/actions"
-    aliases: ["alphafold", "AlphaFold", "AlphaFold 3"]
-    relevance_tags: ["software:alphafold", "benchmark:software_version", "hpc:bioinformatics"]
+      - "/release-notes/"
+      - "/api/"
+    aliases: ["openfoam", "OpenFOAM"]
+    relevance_tags: ["software:openfoam", "benchmark:software_version", "hpc:simulation"]
     crawl:
       max_depth: 2
-      max_pages: 40
+      max_pages: 80
+
+  - source_id: "openmm"
+    canonical_name: "OpenMM"
+    entity_type: "software"
+    homepage: "https://docs.openmm.org/latest/userguide/"
+    allowed_domains: ["docs.openmm.org"]
+    include_url_prefixes:
+      - "https://docs.openmm.org/latest/userguide/"
+    exclude_url_patterns:
+      - "/api-"
+      - "/development/"
+    aliases: ["openmm", "OpenMM"]
+    relevance_tags: ["software:openmm", "benchmark:software_version", "hpc:simulation"]
+    crawl:
+      max_depth: 2
+      max_pages: 80
+
+  - source_id: "intel_mpi"
+    canonical_name: "Intel MPI"
+    entity_type: "toolchain"
+    homepage: "https://www.intel.com/content/www/us/en/docs/mpi-library/developer-guide-linux/2021-16/overview.html"
+    allowed_domains: ["www.intel.com"]
+    include_url_prefixes:
+      - "https://www.intel.com/content/www/us/en/docs/mpi-library/developer-guide-linux/2021-16/"
+    exclude_url_patterns:
+      - "/pdf/"
+      - "/release-notes/"
+    aliases: ["intel mpi", "Intel MPI"]
+    relevance_tags: ["toolchain:intel_mpi", "benchmark:software_version", "hpc:mpi"]
+    crawl:
+      max_depth: 2
+      max_pages: 80
+
+  - source_id: "singularityce"
+    canonical_name: "SingularityCE"
+    entity_type: "software"
+    homepage: "https://docs.sylabs.io/guides/latest/user-guide/"
+    allowed_domains: ["docs.sylabs.io"]
+    include_url_prefixes:
+      - "https://docs.sylabs.io/guides/latest/user-guide/"
+    exclude_url_patterns:
+      - "/admin-guide/"
+      - "/release-notes/"
+    aliases: ["singularity", "SingularityCE", "singularityce"]
+    relevance_tags: ["software:singularityce", "benchmark:software_version", "hpc:containers"]
+    crawl:
+      max_depth: 2
+      max_pages: 80
 
   - source_id: "spack"
     canonical_name: "Spack"
