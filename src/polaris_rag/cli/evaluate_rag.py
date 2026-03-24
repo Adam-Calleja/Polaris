@@ -16,6 +16,7 @@ import time
 from typing import Any, Iterator, Mapping
 
 from polaris_rag.app.container import build_container
+from polaris_rag.common.evaluation_api import POLARIS_EVAL_INCLUDE_METADATA_HEADER
 from polaris_rag.common.request_budget import (
     EVAL_POLICY_DIAGNOSTIC,
     EVAL_POLICY_OFFICIAL,
@@ -35,6 +36,11 @@ from polaris_rag.evaluation.evaluation_dataset import (
     load_raw_examples,
     persist_prepared_rows,
     to_evaluation_dataset,
+)
+from polaris_rag.evaluation.experiment_presets import (
+    PresetContext,
+    apply_evaluation_preset,
+    list_preset_names,
 )
 from polaris_rag.evaluation.benchmark_annotations import (
     join_annotations_into_rows,
@@ -177,6 +183,74 @@ def _assert_prepared_rows_match_reranker(
             "Prepared rows were generated with a different reranker configuration. "
             "Regenerate prepared rows before running this evaluation."
         )
+
+
+def _prepared_rows_condition_fingerprint(rows: list[dict[str, Any]]) -> tuple[str | None, int]:
+    fingerprints: set[str] = set()
+    missing = 0
+    for row in rows:
+        metadata = _row_metadata(row)
+        value = metadata.get("condition_fingerprint")
+        text = str(value or "").strip()
+        if text:
+            fingerprints.add(text)
+        else:
+            missing += 1
+
+    if not fingerprints:
+        return None, missing
+    if len(fingerprints) != 1:
+        raise ValueError(
+            "Prepared rows contain multiple condition fingerprints. Regenerate prepared rows "
+            "before running this evaluation."
+        )
+    return next(iter(fingerprints)), missing
+
+
+def _assert_prepared_rows_match_condition(
+    rows: list[dict[str, Any]],
+    *,
+    expected_fingerprint: str | None,
+) -> None:
+    if not expected_fingerprint:
+        return
+
+    observed_fingerprint, missing_count = _prepared_rows_condition_fingerprint(rows)
+    if observed_fingerprint is None:
+        raise ValueError(
+            "Prepared rows do not record a condition fingerprint. Regenerate prepared rows "
+            "with the current Stage 5 evaluation pipeline before reuse."
+        )
+    if missing_count > 0:
+        raise ValueError(
+            "Prepared rows are missing condition fingerprints on some rows. Regenerate prepared rows "
+            "with the current Stage 5 evaluation pipeline before reuse."
+        )
+    if observed_fingerprint != expected_fingerprint:
+        raise ValueError(
+            "Prepared rows were generated with a different evaluation condition. "
+            "Regenerate prepared rows before running this evaluation."
+        )
+
+
+def _stamp_condition_metadata(
+    rows: list[dict[str, Any]],
+    *,
+    preset_context: PresetContext | None,
+) -> list[dict[str, Any]]:
+    if preset_context is None:
+        return rows
+
+    for row in rows:
+        metadata = row.get("metadata")
+        if not isinstance(metadata, Mapping):
+            metadata = {}
+        stamped = dict(metadata)
+        stamped["condition_fingerprint"] = preset_context.condition_fingerprint
+        if preset_context.preset_name:
+            stamped["preset_name"] = preset_context.preset_name
+        row["metadata"] = stamped
+    return rows
 
 
 def _parse_metrics(value: str | None) -> list[str] | None:
@@ -575,6 +649,12 @@ def parse_args() -> argparse.Namespace:
         help="Override prepared dataset path (JSON/JSONL)",
     )
     parser.add_argument(
+        "--preset",
+        choices=tuple(list_preset_names()),
+        default=None,
+        help="Apply a named evaluation condition preset before execution.",
+    )
+    parser.add_argument(
         "--annotations-file",
         default=None,
         help="Override benchmark annotation CSV used to enrich evaluation metadata",
@@ -899,6 +979,7 @@ def _resolve_prepared_rows(
     show_progress: bool,
     extra_api_headers: Mapping[str, str] | None = None,
     stage_context: EvaluationStageContext | None = None,
+    preset_context: PresetContext | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     dataset_cfg = _as_mapping(eval_cfg.get("dataset", {}))
     generation_cfg = _as_mapping(eval_cfg.get("generation", {}))
@@ -965,6 +1046,8 @@ def _resolve_prepared_rows(
         "reranker_profile": reranker_profile,
         "reranker_fingerprint": reranker_fingerprint,
     }
+    if preset_context is not None:
+        manifest.update(preset_context.manifest_fields())
 
     request_trace_factory = None
     effective_extra_api_headers = dict(extra_api_headers or {})
@@ -1001,6 +1084,10 @@ def _resolve_prepared_rows(
         _assert_prepared_rows_match_reranker(
             rows,
             expected_fingerprint=reranker_fingerprint,
+        )
+        _assert_prepared_rows_match_condition(
+            rows,
+            expected_fingerprint=preset_context.condition_fingerprint if preset_context is not None else None,
         )
         manifest.update(
             _prep_stats(
@@ -1065,6 +1152,7 @@ def _resolve_prepared_rows(
                 api_headers.update({str(k): str(v) for k, v in effective_extra_api_headers.items()})
             api_headers[POLARIS_TIMEOUT_HEADER] = str(deadlines.server_total_ms)
             api_headers[POLARIS_EVAL_POLICY_HEADER] = evaluation_policy
+            api_headers[POLARIS_EVAL_INCLUDE_METADATA_HEADER] = "true"
 
             rows = build_prepared_rows_from_api(
                 raw_examples=raw_examples,
@@ -1107,6 +1195,7 @@ def _resolve_prepared_rows(
                 reranker_profile=reranker_profile,
                 reranker_fingerprint=reranker_fingerprint,
             )
+        rows = _stamp_condition_metadata(rows, preset_context=preset_context)
     finally:
         if prep_renderer:
             prep_renderer.finish()
@@ -1304,7 +1393,8 @@ def main() -> None:
     show_progress = not args.no_progress
     interactive_progress = show_progress and sys.stderr.isatty()
 
-    cfg = GlobalConfig.load(args.config_file)
+    base_cfg = GlobalConfig.load(args.config_file)
+    cfg, preset_context = apply_evaluation_preset(base_cfg, getattr(args, "preset", None))
     eval_cfg = _as_mapping(_as_mapping(cfg.raw).get("evaluation", {}))
     output_dir = _resolve_output_dir(eval_cfg, args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -1355,6 +1445,7 @@ def main() -> None:
                 "runtime.prepare_only": str(prepare_only),
                 "runtime.tune_concurrency": str(tune_concurrency),
                 "runtime.trace_evaluator_llm": str(trace_evaluator_llm),
+                "runtime.preset": str(getattr(args, "preset", None) or ""),
             }
         )
         tracking.log_artifact(config_file, artifact_path="inputs")
@@ -1368,6 +1459,7 @@ def main() -> None:
                     show_progress=show_progress,
                     extra_api_headers=tracking.trace_headers(),
                     stage_context=dataset_stage,
+                    preset_context=preset_context,
                 )
             tracking.log_flat_params(dataset_manifest, prefix="dataset")
             _log_input_dataset_to_mlflow(tracking, dataset_manifest)
@@ -1465,11 +1557,13 @@ def main() -> None:
             output_dir=output_dir,
             extra_manifest={
                 "config_file": str(config_file),
+                **preset_context.manifest_fields(),
                 "dataset": dataset_manifest,
                 "tune_concurrency": tune_concurrency,
                 "trace_evaluator_llm": trace_evaluator_llm,
                 "mlflow_parent_run_id": tracking.run_id,
             },
+            source_rows=prepared_rows,
         )
 
         for artifact_path in artifacts.values():

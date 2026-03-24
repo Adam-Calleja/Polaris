@@ -9,6 +9,8 @@ from types import SimpleNamespace
 import pytest
 
 from polaris_rag.cli import evaluate_rag
+from polaris_rag.common import POLARIS_EVAL_INCLUDE_METADATA_HEADER
+from polaris_rag.evaluation.experiment_presets import PresetContext
 from polaris_rag.evaluation.evaluation_dataset import PrepProgressEvent
 
 
@@ -760,6 +762,7 @@ def test_resolve_prepared_rows_merges_extra_api_headers(monkeypatch, tmp_path) -
         "X-Polaris-MLflow-Run-ID": "run-123",
         "X-Polaris-Timeout-Ms": "29999",
         "X-Polaris-Eval-Policy": "official",
+        POLARIS_EVAL_INCLUDE_METADATA_HEADER: "true",
     }
     assert "query_api_header_keys" in manifest
     assert manifest["query_api_timeout"] == 30.0
@@ -831,9 +834,102 @@ def test_resolve_prepared_rows_uses_stage_context_for_api_mode(monkeypatch, tmp_
         "X-Polaris-MLflow-Stage": "dataset_preparation",
         "X-Polaris-Timeout-Ms": "29999",
         "X-Polaris-Eval-Policy": "official",
+        POLARIS_EVAL_INCLUDE_METADATA_HEADER: "true",
     }
     assert seen_trace_factories[-1] is not None
     assert stage_context.open_calls[-1]["include_child_trace"] is True
+
+
+def test_resolve_prepared_rows_stamps_condition_metadata(monkeypatch, tmp_path) -> None:
+    dataset_path = tmp_path / "dataset.jsonl"
+    dataset_path.write_text('{"id":"1","query":"Q1","expected_answer":"A1"}\n', encoding="utf-8")
+
+    monkeypatch.setattr(evaluate_rag, "build_container", lambda cfg: _DummyContainer(pipeline=object()))
+    monkeypatch.setattr(evaluate_rag, "build_prepared_rows", _fake_build_prepared_rows)
+
+    args = Namespace(
+        dataset_path=str(dataset_path),
+        prepared_path=None,
+        reuse_prepared=False,
+        generation_workers=1,
+        generation_mode="pipeline",
+        generation_max_attempts=None,
+        generation_retry_initial_backoff=None,
+        generation_retry_max_backoff=None,
+        generation_retry_jitter=None,
+        generation_retry_on_empty_response=None,
+        replay_failures_from=None,
+    )
+
+    preset_context = PresetContext(
+        preset_name="docs_only",
+        preset_description="Docs-only baseline with RRF reranking.",
+        condition_summary={"sources": [{"name": "docs"}]},
+        condition_fingerprint="condition-fp",
+    )
+
+    rows, manifest = evaluate_rag._resolve_prepared_rows(
+        cfg=object(),  # type: ignore[arg-type]
+        args=args,
+        eval_cfg={"dataset": {}, "generation": {"workers": 1, "mode": "pipeline"}},
+        show_progress=False,
+        preset_context=preset_context,
+    )
+
+    assert rows[0]["metadata"]["condition_fingerprint"] == "condition-fp"
+    assert rows[0]["metadata"]["preset_name"] == "docs_only"
+    assert manifest["condition_fingerprint"] == "condition-fp"
+    assert manifest["preset_name"] == "docs_only"
+
+
+def test_resolve_prepared_rows_rejects_reuse_when_condition_fingerprint_differs(monkeypatch, tmp_path) -> None:
+    prepared_path = tmp_path / "prepared.json"
+    prepared_path.write_text(
+        '[{"id":"row-1","user_input":"Q1","reference":"A1","response":"R1","retrieved_contexts":["ctx-1"],'
+        '"retrieved_context_ids":["doc-1"],"metadata":{"reranker_fingerprint":"fingerprint-123","condition_fingerprint":"old-condition"}}]',
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(
+        evaluate_rag,
+        "build_container",
+        lambda cfg: SimpleNamespace(
+            pipeline=object(),
+            retriever_source_settings={"docs": {"weight": 1.0}, "tickets": {"weight": 1.0}},
+        ),
+    )
+    monkeypatch.setattr(evaluate_rag, "_resolve_reranker_metadata", lambda cfg: ({"type": "rrf"}, "fingerprint-123"))
+
+    args = Namespace(
+        dataset_path=None,
+        prepared_path=str(prepared_path),
+        reuse_prepared=True,
+        generation_workers=1,
+        generation_mode="pipeline",
+        generation_max_attempts=None,
+        generation_retry_initial_backoff=None,
+        generation_retry_max_backoff=None,
+        generation_retry_jitter=None,
+        generation_retry_on_empty_response=None,
+        replay_failures_from=None,
+    )
+
+    cfg = _cfg_with_reranker(tmp_path, {"type": "rrf", "rrf_k": 60})
+    preset_context = PresetContext(
+        preset_name="docs_only",
+        preset_description="Docs-only baseline with RRF reranking.",
+        condition_summary={"sources": [{"name": "docs"}]},
+        condition_fingerprint="new-condition",
+    )
+
+    with pytest.raises(ValueError, match="different evaluation condition"):
+        evaluate_rag._resolve_prepared_rows(
+            cfg=cfg,
+            args=args,
+            eval_cfg={"dataset": {"prepared_path": str(prepared_path)}, "generation": {"workers": 1, "mode": "pipeline"}},
+            show_progress=False,
+            preset_context=preset_context,
+        )
 
 
 def test_resolve_prepared_rows_uses_parent_only_trace_factory_for_pipeline_mode(monkeypatch, tmp_path) -> None:

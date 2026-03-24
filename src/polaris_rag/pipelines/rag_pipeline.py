@@ -27,6 +27,7 @@ from polaris_rag.common.request_budget import (
     RequestBudgetExceededError,
     RetrievalTimeoutError,
 )
+from polaris_rag.retrieval.node_utils import serialize_source_nodes
 from polaris_rag.retrieval.query_constraints import QueryConstraints, serialize_query_constraints
 from polaris_rag.retrieval.types import Retriever
 from polaris_rag.generation.prompt_builder import PromptBuilder
@@ -447,51 +448,6 @@ class RAGPipeline:
 
     @staticmethod
     def _serialize_nodes(source_nodes: list[Any]) -> list[dict[str, Any]]:
-        items: list[dict[str, Any]] = []
-        for idx, source in enumerate(source_nodes, start=1):
-            node = getattr(source, "node", source)
-
-            doc_id = None
-            for attr in ("id_", "node_id", "id"):
-                value = getattr(node, attr, None)
-                if isinstance(value, str) and value:
-                    doc_id = value
-                    break
-
-            text = getattr(node, "text", None)
-            if not isinstance(text, str) and hasattr(node, "get_content"):
-                try:
-                    content = node.get_content()
-                    text = content if isinstance(content, str) else str(content)
-                except Exception:
-                    text = ""
-            if not isinstance(text, str):
-                text = str(text or "")
-
-            score_raw = getattr(source, "score", None)
-            score = float(score_raw) if isinstance(score_raw, (int, float)) else None
-            metadata = getattr(node, "metadata", None)
-            source_name = None
-            rerank_trace = None
-            if isinstance(metadata, dict):
-                source_raw = metadata.get("retrieval_source")
-                if isinstance(source_raw, str) and source_raw:
-                    source_name = source_raw
-                trace_raw = metadata.get("rerank_trace")
-                if trace_raw is not None:
-                    rerank_trace = trace_raw
-
-            items.append(
-                {
-                    "rank": idx,
-                    "doc_id": doc_id or "<unknown-doc-id>",
-                    "text": text,
-                    "score": score,
-                    "source": source_name,
-                    "rerank_trace": rerank_trace,
-                }
-            )
-
-        return items
+        return serialize_source_nodes(source_nodes, include_text=True)
 
 __all__ = ['RAGPipeline']

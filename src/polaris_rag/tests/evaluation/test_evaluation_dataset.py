@@ -17,9 +17,10 @@ from polaris_rag.evaluation.evaluation_dataset import (
 
 
 class _Node:
-    def __init__(self, node_id: str, text: str):
+    def __init__(self, node_id: str, text: str, metadata: dict[str, object] | None = None):
         self.id_ = node_id
         self.text = text
+        self.metadata = dict(metadata or {})
 
 
 class _Source:
@@ -83,7 +84,24 @@ class _TracePipeline:
     def run(self, query: str, **kwargs):  # noqa: ANN001
         return {
             "response": f"resp::{query}",
-            "source_nodes": [_Source(_Node("doc-1", "ctx-1"))],
+            "source_nodes": [
+                _Source(
+                    _Node(
+                        "doc-1",
+                        "ctx-1",
+                        metadata={
+                            "retrieval_source": "docs",
+                            "source_authority": "local_official",
+                            "authority_tier": 3,
+                            "validity_status": "current",
+                            "doc_title": "Official Docs",
+                            "software_names": ["GROMACS"],
+                            "software_versions": ["2024.4"],
+                            "private_email": "secret@example.com",
+                        },
+                    )
+                )
+            ],
             "retrieval_trace": [
                 {
                     "rank": 1,
@@ -91,9 +109,17 @@ class _TracePipeline:
                     "text": "ctx-1",
                     "score": 0.91,
                     "source": "docs",
+                    "source_authority": "local_official",
+                    "authority_tier": 3,
+                    "validity_status": "current",
                     "rerank_trace": {
                         "reranker_type": "validity_aware",
                         "final_score": 1.23,
+                        "authority_feature": 0.4,
+                        "scope_feature": 0.1,
+                        "version_feature": 0.3,
+                        "status_feature": 0.2,
+                        "freshness_feature": 0.05,
                     },
                 }
             ],
@@ -511,6 +537,11 @@ def test_build_prepared_rows_persists_reranker_metadata_and_trace() -> None:
     assert rows[0]["metadata"]["reranker_fingerprint"] == "fingerprint-123"
     assert rows[0]["metadata"]["retrieval_trace"][0]["doc_id"] == "doc-1"
     assert rows[0]["metadata"]["retrieval_trace"][0]["rerank_trace"]["final_score"] == 1.23
+    assert rows[0]["metadata"]["retrieval_sources"] == ["docs"]
+    assert rows[0]["metadata"]["retrieval_source_types"] == ["local_official"]
+    assert rows[0]["metadata"]["retrieval_features"][0]["final_score"] == 1.23
+    assert rows[0]["metadata"]["ranked_context_metadata"][0]["doc_title"] == "Official Docs"
+    assert "private_email" not in rows[0]["metadata"]["ranked_context_metadata"][0]
 
 
 def test_build_prepared_rows_from_api_fail_soft_captures_source_error() -> None:
@@ -564,6 +595,63 @@ def test_build_prepared_rows_from_api_uses_default_reranker_metadata() -> None:
 
     assert rows[0]["metadata"]["reranker_profile"] == {"type": "rrf", "rrf_k": 60}
     assert rows[0]["metadata"]["reranker_fingerprint"] == "rrf-fingerprint"
+
+
+def test_build_prepared_rows_from_api_persists_analysis_ready_metadata() -> None:
+    raw_examples = [{"id": "ex-1", "query": "Q1", "expected_answer": "A1"}]
+
+    def _requester(api_url: str, query: str, timeout_seconds: float, headers):  # noqa: ANN001, ARG001, ANN202
+        return {
+            "answer": f"answer::{query}",
+            "context": [{"doc_id": "doc-1", "text": "ctx-1"}],
+            "evaluation_metadata": {
+                "reranker_profile": {"type": "validity_aware"},
+                "reranker_fingerprint": "fingerprint-123",
+                "retrieval_trace": [
+                    {
+                        "rank": 1,
+                        "doc_id": "doc-1",
+                        "source": "docs",
+                        "source_authority": "local_official",
+                        "authority_tier": 3,
+                        "validity_status": "current",
+                        "rerank_trace": {
+                            "reranker_type": "validity_aware",
+                            "final_score": 1.1,
+                            "authority_feature": 0.4,
+                            "scope_feature": 0.1,
+                            "version_feature": 0.3,
+                            "status_feature": 0.2,
+                            "freshness_feature": 0.05,
+                        },
+                    }
+                ],
+                "ranked_context_metadata": [
+                    {
+                        "rank": 1,
+                        "doc_id": "doc-1",
+                        "source": "docs",
+                        "source_authority": "local_official",
+                        "validity_status": "current",
+                        "doc_title": "Official Docs",
+                    }
+                ],
+            },
+        }
+
+    rows = build_prepared_rows_from_api(
+        raw_examples=raw_examples,
+        api_url="http://unused.local/v1/query",
+        generation_workers=1,
+        requester=_requester,
+    )
+
+    assert rows[0]["metadata"]["reranker_profile"] == {"type": "validity_aware"}
+    assert rows[0]["metadata"]["reranker_fingerprint"] == "fingerprint-123"
+    assert rows[0]["metadata"]["retrieval_sources"] == ["docs"]
+    assert rows[0]["metadata"]["retrieval_source_types"] == ["local_official"]
+    assert rows[0]["metadata"]["retrieval_features"][0]["authority_feature"] == 0.4
+    assert rows[0]["metadata"]["ranked_context_metadata"][0]["doc_title"] == "Official Docs"
 
 
 def test_build_prepared_rows_emits_monotonic_progress_events() -> None:

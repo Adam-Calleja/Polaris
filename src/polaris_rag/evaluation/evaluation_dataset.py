@@ -27,6 +27,7 @@ from typing import TYPE_CHECKING, Any, Callable, Iterable, Iterator, Mapping, Pr
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+from polaris_rag.common.evaluation_api import POLARIS_EVAL_INCLUDE_METADATA_HEADER
 from polaris_rag.common.request_budget import (
     EVAL_POLICY_INTERACTIVE,
     EmptyResponseError,
@@ -40,6 +41,7 @@ from polaris_rag.common.request_budget import (
     is_timeout_exception,
     normalize_evaluation_policy,
 )
+from polaris_rag.retrieval.node_utils import serialize_source_nodes
 from polaris_rag.retrieval.query_constraints import serialize_query_constraints
 
 if TYPE_CHECKING:
@@ -239,6 +241,118 @@ def _stamp_reranker_metadata(
         metadata["reranker_fingerprint"] = str(reranker_fingerprint).strip()
     if isinstance(retrieval_trace, list):
         metadata["retrieval_trace"] = list(retrieval_trace)
+    return metadata
+
+
+def _normalized_trace_records(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    records: list[dict[str, Any]] = []
+    for item in value:
+        if isinstance(item, Mapping):
+            records.append(dict(item))
+    return records
+
+
+def _string_list(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(item) for item in value if str(item).strip()]
+
+
+def _sorted_unique_strings(values: Iterable[Any]) -> list[str]:
+    seen: set[str] = set()
+    items: list[str] = []
+    for value in values:
+        text = str(value or "").strip()
+        if not text or text in seen:
+            continue
+        seen.add(text)
+        items.append(text)
+    return sorted(items)
+
+
+def _derive_retrieval_sources(
+    *,
+    retrieval_trace: list[dict[str, Any]],
+    ranked_context_metadata: list[dict[str, Any]],
+) -> list[str]:
+    return _sorted_unique_strings(
+        [
+            item.get("source")
+            for item in [*retrieval_trace, *ranked_context_metadata]
+            if item.get("source") is not None
+        ]
+    )
+
+
+def _derive_retrieval_source_types(
+    *,
+    retrieval_trace: list[dict[str, Any]],
+    ranked_context_metadata: list[dict[str, Any]],
+) -> list[str]:
+    return _sorted_unique_strings(
+        [
+            item.get("source_authority")
+            for item in [*retrieval_trace, *ranked_context_metadata]
+            if item.get("source_authority") is not None
+        ]
+    )
+
+
+def _derive_retrieval_features(retrieval_trace: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    features: list[dict[str, Any]] = []
+    for item in retrieval_trace:
+        rerank_trace = item.get("rerank_trace")
+        rerank_map = dict(rerank_trace) if isinstance(rerank_trace, Mapping) else {}
+        features.append(
+            {
+                "rank": _to_int(item.get("rank"), 0),
+                "doc_id": str(item.get("doc_id", "") or ""),
+                "source": str(item.get("source", "") or "") or None,
+                "source_authority": str(item.get("source_authority", "") or "") or None,
+                "authority_tier": _to_int(item.get("authority_tier"), 0) or None,
+                "validity_status": str(item.get("validity_status", "") or "") or None,
+                "reranker_type": str(rerank_map.get("reranker_type", "") or "") or None,
+                "semantic_base": _to_float(rerank_map.get("semantic_base"), _to_float(item.get("score"), 0.0)),
+                "authority_feature": _to_float(rerank_map.get("authority_feature"), 0.0),
+                "scope_feature": _to_float(rerank_map.get("scope_feature"), 0.0),
+                "software_feature": _to_float(rerank_map.get("software_feature"), 0.0),
+                "scope_family_feature": _to_float(rerank_map.get("scope_family_feature"), 0.0),
+                "scope_family_effective_feature": _to_float(
+                    rerank_map.get("scope_family_effective_feature"),
+                    0.0,
+                ),
+                "version_feature": _to_float(rerank_map.get("version_feature"), 0.0),
+                "status_feature": _to_float(rerank_map.get("status_feature"), 0.0),
+                "freshness_feature": _to_float(rerank_map.get("freshness_feature"), 0.0),
+                "final_score": _to_float(
+                    rerank_map.get("final_score"),
+                    _to_float(item.get("score"), 0.0),
+                ),
+            }
+        )
+    return features
+
+
+def _stamp_analysis_metadata(
+    metadata: dict[str, Any],
+    *,
+    retrieval_trace: Any | None = None,
+    ranked_context_metadata: Any | None = None,
+) -> dict[str, Any]:
+    trace_records = _normalized_trace_records(retrieval_trace)
+    context_records = _normalized_trace_records(ranked_context_metadata)
+    metadata["retrieval_sources"] = _derive_retrieval_sources(
+        retrieval_trace=trace_records,
+        ranked_context_metadata=context_records,
+    )
+    metadata["retrieval_source_types"] = _derive_retrieval_source_types(
+        retrieval_trace=trace_records,
+        ranked_context_metadata=context_records,
+    )
+    metadata["retrieval_features"] = _derive_retrieval_features(trace_records)
+    metadata["ranked_context_metadata"] = context_records
     return metadata
 
 
@@ -1023,6 +1137,7 @@ def _prepare_one(
         source_nodes = result.get("source_nodes", []) or []
         retrieved_contexts, retrieved_context_ids = _normalise_source_nodes(source_nodes)
         query_constraints = serialize_query_constraints(result.get("query_constraints"))
+        ranked_context_metadata = serialize_source_nodes(source_nodes, include_text=False)
         timings = result.get("timings", {})
         elapsed_ms = _to_int(
             _as_metadata_dict(timings).get("retrieval_elapsed_ms"),
@@ -1048,6 +1163,11 @@ def _prepare_one(
             reranker_profile=_as_metadata_dict(result.get("reranker_profile")) or default_reranker_profile,
             reranker_fingerprint=str(result.get("reranker_fingerprint") or default_reranker_fingerprint or "").strip() or None,
             retrieval_trace=result.get("retrieval_trace"),
+        )
+        row_metadata = _stamp_analysis_metadata(
+            row_metadata,
+            retrieval_trace=result.get("retrieval_trace"),
+            ranked_context_metadata=ranked_context_metadata,
         )
 
         row = {
@@ -1087,6 +1207,11 @@ def _prepare_one(
             _as_metadata_dict(row.get("metadata", {})),
             reranker_profile=default_reranker_profile,
             reranker_fingerprint=default_reranker_fingerprint,
+        )
+        row["metadata"] = _stamp_analysis_metadata(
+            _as_metadata_dict(row.get("metadata", {})),
+            retrieval_trace=[],
+            ranked_context_metadata=[],
         )
         return index, row
 
@@ -1239,6 +1364,7 @@ def _prepare_one_via_api(
             result.get("context", [])
         )
         query_constraints = serialize_query_constraints(result.get("query_constraints"))
+        evaluation_metadata = _as_metadata_dict(result.get("evaluation_metadata", {}))
         elapsed_ms = max(0, int(round((time.perf_counter() - started_at) * 1000.0)))
 
         row_metadata = _build_row_metadata(
@@ -1253,9 +1379,22 @@ def _prepare_one_via_api(
             row_metadata["query_constraints"] = query_constraints
         row_metadata = _stamp_reranker_metadata(
             row_metadata,
-            reranker_profile=_as_metadata_dict(result.get("reranker_profile")) or default_reranker_profile,
-            reranker_fingerprint=str(result.get("reranker_fingerprint") or default_reranker_fingerprint or "").strip() or None,
-            retrieval_trace=result.get("retrieval_trace"),
+            reranker_profile=_as_metadata_dict(evaluation_metadata.get("reranker_profile"))
+            or _as_metadata_dict(result.get("reranker_profile"))
+            or default_reranker_profile,
+            reranker_fingerprint=str(
+                evaluation_metadata.get("reranker_fingerprint")
+                or result.get("reranker_fingerprint")
+                or default_reranker_fingerprint
+                or ""
+            ).strip()
+            or None,
+            retrieval_trace=evaluation_metadata.get("retrieval_trace", result.get("retrieval_trace")),
+        )
+        row_metadata = _stamp_analysis_metadata(
+            row_metadata,
+            retrieval_trace=evaluation_metadata.get("retrieval_trace", result.get("retrieval_trace")),
+            ranked_context_metadata=evaluation_metadata.get("ranked_context_metadata"),
         )
 
         row = {
@@ -1299,6 +1438,11 @@ def _prepare_one_via_api(
             reranker_profile=default_reranker_profile,
             reranker_fingerprint=default_reranker_fingerprint,
         )
+        row["metadata"] = _stamp_analysis_metadata(
+            _as_metadata_dict(row.get("metadata", {})),
+            retrieval_trace=[],
+            ranked_context_metadata=[],
+        )
         return index, row
 
 
@@ -1328,6 +1472,10 @@ def _row_trace_outputs(row: Mapping[str, Any]) -> dict[str, Any]:
         "retrieved_context_ids": list(row.get("retrieved_context_ids", []) or []),
         "retrieved_contexts": list(row.get("retrieved_contexts", []) or []),
         "query_constraints": metadata.get("query_constraints") if isinstance(metadata, Mapping) else None,
+        "retrieval_sources": metadata.get("retrieval_sources") if isinstance(metadata, Mapping) else None,
+        "retrieval_source_types": metadata.get("retrieval_source_types") if isinstance(metadata, Mapping) else None,
+        "retrieval_features": metadata.get("retrieval_features") if isinstance(metadata, Mapping) else None,
+        "ranked_context_metadata": metadata.get("ranked_context_metadata") if isinstance(metadata, Mapping) else None,
         "reranker_profile": metadata.get("reranker_profile") if isinstance(metadata, Mapping) else None,
         "reranker_fingerprint": metadata.get("reranker_fingerprint") if isinstance(metadata, Mapping) else None,
         "retrieval_trace": metadata.get("retrieval_trace") if isinstance(metadata, Mapping) else None,

@@ -72,6 +72,7 @@ from .request_budget import (
     normalize_evaluation_policy,
     resolve_evaluation_deadlines,
 )
+from .evaluation_api import POLARIS_EVAL_INCLUDE_METADATA_HEADER
 
 DocId: TypeAlias = str
 ChunkId: TypeAlias = str
@@ -101,6 +102,7 @@ __all__ = [
     "GenerationTimeoutError",
     "INFRA_FAILURE_CLASSES",
     "POLARIS_EVAL_POLICY_HEADER",
+    "POLARIS_EVAL_INCLUDE_METADATA_HEADER",
     "POLARIS_TIMEOUT_HEADER",
     "PolarisRuntimeError",
     "PolarisTimeoutError",

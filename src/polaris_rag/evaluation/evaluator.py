@@ -35,6 +35,7 @@ from polaris_rag.evaluation.metrics import (
     instantiate_metrics,
     resolve_metric_specs,
 )
+from polaris_rag.evaluation.run_analysis import build_analysis_rows, persist_analysis_rows
 from polaris_rag.observability.mlflow_tracking import set_span_outputs, start_span
 
 logger = logging.getLogger(__name__)
@@ -1031,6 +1032,7 @@ def write_outputs(
     result: EvaluationRunResult,
     output_dir: str | Path,
     extra_manifest: Mapping[str, Any] | None = None,
+    source_rows: list[dict[str, Any]] | None = None,
 ) -> dict[str, Path]:
     """Persist standard output artifacts for an evaluation run."""
 
@@ -1041,6 +1043,7 @@ def write_outputs(
     scores_parquet = out_dir / "scores.parquet"
     summary_json = out_dir / "summary.json"
     manifest_json = out_dir / "run_manifest.json"
+    analysis_rows_jsonl = out_dir / "analysis_rows.jsonl"
 
     result.scores_df.to_csv(scores_csv, index=False)
 
@@ -1054,14 +1057,41 @@ def write_outputs(
     summary_payload = result.summary_dict()
     summary_json.write_text(json.dumps(summary_payload, indent=2), encoding="utf-8")
 
+    extra = dict(extra_manifest or {})
+    condition_fields = {
+        "preset_name": extra.get("preset_name"),
+        "preset_description": extra.get("preset_description"),
+        "condition_fingerprint": extra.get("condition_fingerprint"),
+        "condition_summary": extra.get("condition_summary"),
+    }
+    analysis_rows_written = False
+    if source_rows is not None:
+        analysis_rows = build_analysis_rows(
+            source_rows=source_rows,
+            scores_df=result.scores_df,
+            condition_fields=condition_fields,
+        )
+        persist_analysis_rows(analysis_rows, analysis_rows_jsonl)
+        analysis_rows_written = True
+
     manifest_payload = {
         "summary": summary_payload,
+        "preset_name": condition_fields["preset_name"],
+        "preset_description": condition_fields["preset_description"],
+        "condition_fingerprint": condition_fields["condition_fingerprint"],
+        "condition_summary": condition_fields["condition_summary"],
+        "dataset": extra.get("dataset"),
+        "tune_concurrency": extra.get("tune_concurrency"),
+        "trace_evaluator_llm": extra.get("trace_evaluator_llm"),
+        "mlflow_parent_run_id": extra.get("mlflow_parent_run_id"),
+        "config_file": extra.get("config_file"),
         "artifacts": {
             "scores_csv": str(scores_csv),
             "scores_parquet": str(scores_parquet) if parquet_written else None,
             "summary_json": str(summary_json),
+            "analysis_rows_jsonl": str(analysis_rows_jsonl) if analysis_rows_written else None,
         },
-        "extra": dict(extra_manifest or {}),
+        "extra": extra,
     }
     manifest_json.write_text(json.dumps(manifest_payload, indent=2), encoding="utf-8")
 
@@ -1072,6 +1102,8 @@ def write_outputs(
     }
     if parquet_written:
         artifacts["scores_parquet"] = scores_parquet
+    if analysis_rows_written:
+        artifacts["analysis_rows_jsonl"] = analysis_rows_jsonl
 
     return artifacts
 

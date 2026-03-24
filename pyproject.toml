@@ -86,6 +86,7 @@ api = [
 ]
 
 [project.scripts]
+polaris-analyze-eval-runs = "polaris_rag.cli.analyze_eval_runs:main"
 polaris-benchmark-analysis = "polaris_rag.cli.benchmark_analysis:main"
 polaris-benchmark-annotations = "polaris_rag.cli.benchmark_annotations:main"
 polaris-build-authority-registry = "polaris_rag.cli.build_authority_registry:main"

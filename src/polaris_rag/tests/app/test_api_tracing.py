@@ -25,7 +25,22 @@ class _FakePipeline:
 
 class _ContextPipeline:
     def run(self, query: str, **kwargs):
-        node = type("_Node", (), {"id_": "ticket-1", "text": "FULL-TICKET"})()
+        node = type(
+            "_Node",
+            (),
+            {
+                "id_": "ticket-1",
+                "text": "FULL-TICKET",
+                "metadata": {
+                    "retrieval_source": "tickets",
+                    "source_authority": "ticket_memory",
+                    "authority_tier": 1,
+                    "validity_status": "unknown",
+                    "doc_title": "Ticket Memory",
+                    "private_email": "secret@example.com",
+                },
+            },
+        )()
         raw_node = type("_Node", (), {"id_": "ticket-1::chunk::0001", "text": "chunk"})()
         source = type("_Source", (), {"node": node, "score": 0.9})()
         raw_source = type("_Source", (), {"node": raw_node, "score": 0.8})()
@@ -33,6 +48,21 @@ class _ContextPipeline:
             "response": f"resp::{query}",
             "source_nodes": [source],
             "raw_source_nodes": [raw_source],
+            "retrieval_trace": [
+                {
+                    "rank": 1,
+                    "doc_id": "ticket-1",
+                    "source": "tickets",
+                    "source_authority": "ticket_memory",
+                    "validity_status": "unknown",
+                    "rerank_trace": {
+                        "reranker_type": "validity_aware",
+                        "final_score": 0.7,
+                    },
+                }
+            ],
+            "reranker_profile": {"type": "validity_aware"},
+            "reranker_fingerprint": "fingerprint-123",
         }
 
 
@@ -182,6 +212,32 @@ def test_query_returns_query_constraints_when_present() -> None:
     assert response.query_constraints.query_type == "software_version"
     assert response.query_constraints.software_names == ["GROMACS"]
     assert response.query_constraints.scope_family_names == ["cclake"]
+
+
+def test_query_includes_evaluation_metadata_when_requested() -> None:
+    api.app.state.container = _FakeContainer()
+    api.app.state.container.pipeline = _ContextPipeline()
+
+    request = Request(
+        {
+            "type": "http",
+            "method": "POST",
+            "path": "/v1/query",
+            "headers": [
+                (api.POLARIS_EVAL_INCLUDE_METADATA_HEADER.lower().encode("utf-8"), b"true"),
+            ],
+        }
+    )
+
+    response = api.query(api.QueryRequest(query="hello"), request)
+
+    assert response.evaluation_metadata is not None
+    assert response.evaluation_metadata["reranker_profile"] == {"type": "validity_aware"}
+    assert response.evaluation_metadata["reranker_fingerprint"] == "fingerprint-123"
+    assert response.evaluation_metadata["retrieval_trace"][0]["doc_id"] == "ticket-1"
+    assert response.evaluation_metadata["ranked_context_metadata"][0]["doc_title"] == "Ticket Memory"
+    assert "private_email" not in response.evaluation_metadata["ranked_context_metadata"][0]
+    assert "text" not in response.evaluation_metadata["ranked_context_metadata"][0]
 
 
 def test_query_maps_generation_timeout_to_504(monkeypatch) -> None:

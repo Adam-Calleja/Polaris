@@ -11,6 +11,7 @@ from polaris_rag.app.readiness import build_readiness_report
 import logging
 import traceback
 from typing import Any, Mapping
+from polaris_rag.common.evaluation_api import POLARIS_EVAL_INCLUDE_METADATA_HEADER
 from polaris_rag.common.request_budget import (
     EVAL_POLICY_INTERACTIVE,
     FAILURE_CLASS_API_INTERNAL_ERROR,
@@ -25,6 +26,7 @@ from polaris_rag.common.request_budget import (
     normalize_evaluation_policy,
     resolve_evaluation_deadlines,
 )
+from polaris_rag.retrieval.node_utils import extract_doc_id, extract_text, serialize_source_nodes
 from polaris_rag.retrieval.query_constraints import serialize_query_constraints
 from polaris_rag.observability.mlflow_tracking import (
     TRACE_CHILD_RUN_HEADER,
@@ -71,27 +73,7 @@ class QueryResponse(BaseModel):
     answer: str
     context: list[RetrievedContextChunk] = Field(default_factory=list)
     query_constraints: QueryConstraintsPayload | None = None
-
-
-def _extract_doc_id(node: Any) -> str:
-    for attr in ("id_", "node_id", "id"):
-        value = getattr(node, attr, None)
-        if isinstance(value, str) and value:
-            return value
-    return "<unknown-doc-id>"
-
-
-def _extract_text(node: Any) -> str:
-    text = getattr(node, "text", None)
-    if isinstance(text, str):
-        return text
-    if hasattr(node, "get_content"):
-        try:
-            content = node.get_content()
-            return content if isinstance(content, str) else str(content)
-        except Exception:
-            return ""
-    return ""
+    evaluation_metadata: dict[str, Any] | None = None
 
 
 def _serialize_context(source_nodes: list[Any]) -> list[RetrievedContextChunk]:
@@ -115,15 +97,15 @@ def _serialize_context(source_nodes: list[Any]) -> list[RetrievedContextChunk]:
                 elif len(sources) > 1:
                     source_name = "multi"
 
-        chunks.append(
-            RetrievedContextChunk(
-                rank=idx,
-                doc_id=_extract_doc_id(node),
-                text=_extract_text(node),
-                score=score,
-                source=source_name,
+            chunks.append(
+                RetrievedContextChunk(
+                    rank=idx,
+                    doc_id=extract_doc_id(node),
+                    text=extract_text(node),
+                    score=score,
+                    source=source_name,
+                )
             )
-        )
     return chunks
 
 
@@ -140,6 +122,24 @@ def _coerce_query_constraints(value: Any) -> QueryConstraintsPayload | None:
     if payload is None:
         return None
     return QueryConstraintsPayload(**payload)
+
+
+def _coerce_eval_metadata(value: Any) -> dict[str, Any] | None:
+    if not isinstance(value, Mapping):
+        return None
+    return {str(key): value[key] for key in value.keys()}
+
+
+def _serialize_context_metadata(source_nodes: list[Any]) -> list[dict[str, Any]]:
+    return serialize_source_nodes(source_nodes, include_text=False)
+
+
+def _include_eval_metadata(request: Request) -> bool:
+    raw = request.headers.get(POLARIS_EVAL_INCLUDE_METADATA_HEADER)
+    if raw is None:
+        return False
+    normalized = str(raw).strip().lower()
+    return normalized in {"1", "true", "yes", "y", "on"}
 
 
 def _resolve_request_budget(request: Request) -> RequestBudget | None:
@@ -188,7 +188,7 @@ def ready():
     status_code = 200 if report.get("ready") else 503
     return JSONResponse(status_code=status_code, content=report)
 
-@app.post("/v1/query", response_model=QueryResponse)
+@app.post("/v1/query", response_model=QueryResponse, response_model_exclude_none=True)
 def query(req: QueryRequest, request: Request):
     parent_run_id = request.headers.get(TRACE_PARENT_RUN_HEADER)
     child_run_id = request.headers.get(TRACE_CHILD_RUN_HEADER)
@@ -206,6 +206,7 @@ def query(req: QueryRequest, request: Request):
     if stage_name:
         trace_tags["polaris.stage"] = str(stage_name)
     request_budget = _resolve_request_budget(request)
+    include_eval_metadata = _include_eval_metadata(request)
     policy = request_budget.policy if request_budget is not None else normalize_evaluation_policy(None, default=EVAL_POLICY_INTERACTIVE)
     trace_tags["polaris.eval_policy"] = policy
     trace_span = None
@@ -224,6 +225,18 @@ def query(req: QueryRequest, request: Request):
             answer = str(result.get("response", ""))
             context = _serialize_context(result.get("source_nodes", []))
             query_constraints = _coerce_query_constraints(result.get("query_constraints"))
+            evaluation_metadata = None
+            if include_eval_metadata:
+                evaluation_metadata = _coerce_eval_metadata(
+                    {
+                        "reranker_profile": result.get("reranker_profile"),
+                        "reranker_fingerprint": result.get("reranker_fingerprint"),
+                        "retrieval_trace": result.get("retrieval_trace"),
+                        "ranked_context_metadata": _serialize_context_metadata(
+                            result.get("source_nodes", []) or []
+                        ),
+                    }
+                )
             timings = _as_mapping(result.get("timings", {}))
             response_status = "ok" if answer.strip() else "empty_response"
             context_payload = [
@@ -249,6 +262,7 @@ def query(req: QueryRequest, request: Request):
                         if query_constraints is not None and hasattr(query_constraints, "model_dump")
                         else query_constraints.dict() if query_constraints is not None else None
                     ),
+                    "evaluation_metadata": evaluation_metadata,
                     "timings": timings,
                     "policy": policy,
                 },
@@ -257,6 +271,7 @@ def query(req: QueryRequest, request: Request):
                 answer=answer,
                 context=context,
                 query_constraints=query_constraints,
+                evaluation_metadata=evaluation_metadata,
             )
     except (RetrievalTimeoutError, GenerationTimeoutError, RequestBudgetExceededError) as e:
         elapsed_ms = max(0, int(round((time.perf_counter() - request_started_at) * 1000.0)))
