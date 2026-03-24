@@ -35,6 +35,7 @@ _TIMESTAMP_OFFSET_SUFFIX = re.compile(r"([+-]\d{2})(\d{2})$")
 _DEFAULT_VALIDITY_WEIGHTS: dict[str, float] = {
     "authority": 0.04,
     "scope": 0.04,
+    "scope_family": 0.0,
     "version": 0.04,
     "status": 0.04,
     "freshness": 0.01,
@@ -234,6 +235,7 @@ class ValidityAwareReranker(BaseReranker):
             semantic_base = semantic_base_by_id.get(node_id, 1.0)
             authority_feature = _authority_feature(metadata, self.config.authority_values)
             scope_feature = _scope_feature(normalized_constraints, metadata)
+            scope_family_feature = _scope_family_feature(normalized_constraints, metadata)
             version_feature = _version_feature(normalized_constraints, metadata)
             status_feature = _status_feature(metadata, self.config.status_values)
             freshness_feature = freshness_by_id.get(node_id, 0.0)
@@ -241,6 +243,7 @@ class ValidityAwareReranker(BaseReranker):
             contributions = {
                 "authority_feature": self.config.weights["authority"] * authority_feature,
                 "scope_feature": self.config.weights["scope"] * scope_feature,
+                "scope_family_feature": self.config.weights["scope_family"] * scope_family_feature,
                 "version_feature": self.config.weights["version"] * version_feature,
                 "status_feature": self.config.weights["status"] * status_feature,
                 "freshness_feature": self.config.weights["freshness"] * freshness_feature,
@@ -254,6 +257,7 @@ class ValidityAwareReranker(BaseReranker):
                 "semantic_base": semantic_base,
                 "authority_feature": authority_feature,
                 "scope_feature": scope_feature,
+                "scope_family_feature": scope_family_feature,
                 "version_feature": version_feature,
                 "status_feature": status_feature,
                 "freshness_feature": freshness_feature,
@@ -473,6 +477,20 @@ def _scope_feature(
         candidate_values = _normalized_text_set(metadata.get(field))
         component_scores.append(_match_component_score(query_values, candidate_values))
     return _average_or_zero(component_scores)
+
+
+def _scope_family_feature(
+    constraints: Mapping[str, Any] | None,
+    metadata: Mapping[str, Any],
+) -> float:
+    if not constraints:
+        return 0.0
+
+    query_values = _normalized_text_set(constraints.get("scope_family_names"))
+    if not query_values:
+        return 0.0
+    candidate_values = _normalized_text_set(metadata.get("scope_family_names"))
+    return _match_component_score(query_values, candidate_values)
 
 
 def _version_feature(

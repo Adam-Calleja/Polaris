@@ -9,6 +9,7 @@ from typing import Any, Iterable, Mapping, Sequence
 
 from polaris_rag.authority import RegistryEntity
 from polaris_rag.retrieval.metadata_enricher import AuthorityRegistryIndex
+from polaris_rag.retrieval.scope_family import ScopeFamilyResolver
 
 QUERY_TYPE_LOCAL_OPERATIONAL = "local_operational"
 QUERY_TYPE_SOFTWARE_VERSION = "software_version"
@@ -40,9 +41,17 @@ _ON_PARTITION_PATTERN = re.compile(
     r"\bon\s+(?:the\s+)?([A-Za-z0-9][A-Za-z0-9_-]*)\s+partition\b",
     flags=re.IGNORECASE,
 )
+_OPERATIONAL_ON_SCOPE_PATTERN = re.compile(
+    r"\bon\s+(?:the\s+)?([A-Za-z0-9][A-Za-z0-9_-]*)\b",
+    flags=re.IGNORECASE,
+)
 _MODULE_CONTEXT_PATTERN = re.compile(r"\b(?:module|modules|spack)\b", flags=re.IGNORECASE)
 _PARTITION_CONTEXT_HINT_PATTERN = re.compile(
     r"\b(?:partition|queue|sbatch|srun|salloc)\b|--partition|(?<!\w)-p\b",
+    flags=re.IGNORECASE,
+)
+_RUN_CONTEXT_HINT_PATTERN = re.compile(
+    r"\b(?:run|running|submit|submitting|launch|launching|execute|executing|compile|compiling|build|building|install|installing|use|using|develop|development|job|jobs)\b",
     flags=re.IGNORECASE,
 )
 _SYSTEM_CONTEXT_HINT_PATTERN = re.compile(
@@ -66,6 +75,7 @@ class QueryConstraints:
     system_names: list[str] = field(default_factory=list)
     partition_names: list[str] = field(default_factory=list)
     service_names: list[str] = field(default_factory=list)
+    scope_family_names: list[str] = field(default_factory=list)
     software_names: list[str] = field(default_factory=list)
     software_versions: list[str] = field(default_factory=list)
     module_names: list[str] = field(default_factory=list)
@@ -82,6 +92,7 @@ class QueryConstraints:
             "system_names": list(self.system_names),
             "partition_names": list(self.partition_names),
             "service_names": list(self.service_names),
+            "scope_family_names": list(self.scope_family_names),
             "software_names": list(self.software_names),
             "software_versions": list(self.software_versions),
             "module_names": list(self.module_names),
@@ -111,6 +122,7 @@ class QueryConstraints:
             system_names=_normalize_text_list(value.get("system_names")),
             partition_names=_normalize_text_list(value.get("partition_names")),
             service_names=_normalize_text_list(value.get("service_names")),
+            scope_family_names=_normalize_text_list(value.get("scope_family_names")),
             software_names=_normalize_text_list(value.get("software_names")),
             software_versions=_normalize_text_list(value.get("software_versions")),
             module_names=_normalize_text_list(value.get("module_names")),
@@ -154,6 +166,7 @@ class AuthorityQueryConstraintParser:
         self.registry_index = registry_index
         self.entities_by_alias = self._build_entities_by_alias(registry_index.entities)
         self.alias_groups = self._build_alias_groups(self.entities_by_alias)
+        self.scope_family_resolver = ScopeFamilyResolver(registry_index.entities)
 
     @classmethod
     def from_registry_artifact(cls, path: str | Path) -> "AuthorityQueryConstraintParser":
@@ -166,6 +179,7 @@ class AuthorityQueryConstraintParser:
 
         observed_versions = self._extract_version_mentions(text)
         matches: dict[str, _EntityMatch] = {}
+        scope_family_names: set[str] = set()
 
         for partition_token in self._extract_partition_tokens(text):
             for entity in self.entities_by_alias.get(partition_token, ()):
@@ -178,8 +192,10 @@ class AuthorityQueryConstraintParser:
                     matched_alias=partition_token,
                     matched_versions=self._matched_versions(entity, observed_versions),
                 )
+                scope_family_names.update(self.scope_family_resolver.families_for_entity(entity))
 
         for module_token in self._extract_module_tokens(text):
+            scope_family_names.update(self.scope_family_resolver.families_for_text(module_token))
             for entity in self.entities_by_alias.get(module_token.lower(), ()):
                 self._record_match(
                     matches,
@@ -188,12 +204,14 @@ class AuthorityQueryConstraintParser:
                     matched_alias=module_token,
                     matched_versions=self._matched_versions(entity, observed_versions),
                 )
+                scope_family_names.update(self.scope_family_resolver.families_for_entity(entity))
 
         for alias_group in self.alias_groups:
             if not alias_group.pattern.search(text):
                 continue
 
-            for entity in self._resolve_alias_group(alias_group, text):
+            resolved_entities = self._resolve_alias_group(alias_group, text)
+            for entity in resolved_entities:
                 self._record_match(
                     matches,
                     entity,
@@ -201,11 +219,17 @@ class AuthorityQueryConstraintParser:
                     matched_alias=alias_group.alias,
                     matched_versions=self._matched_versions(entity, observed_versions),
                 )
+                scope_family_names.update(self.scope_family_resolver.families_for_entity(entity))
+            if resolved_entities:
+                continue
+
+            scope_family_names.update(self._family_hint_for_alias_group(alias_group, text))
 
         return self._build_constraints(
             text,
             matches.values(),
             explicit_version_mention=bool(observed_versions),
+            scope_family_names=scope_family_names,
         )
 
     @staticmethod
@@ -307,6 +331,27 @@ class AuthorityQueryConstraintParser:
 
         return ()
 
+    def _family_hint_for_alias_group(
+        self,
+        alias_group: _AliasGroup,
+        text: str,
+    ) -> tuple[str, ...]:
+        entity_types = {entity.entity_type for entity in alias_group.entities}
+        if not entity_types <= {"partition", "system"}:
+            return ()
+
+        match = alias_group.pattern.search(text or "")
+        if match is None:
+            return ()
+
+        context = self._local_context(text, match.start(), match.end(), radius=32)
+        if _PARTITION_CONTEXT_HINT_PATTERN.search(context) or _SYSTEM_CONTEXT_HINT_PATTERN.search(context):
+            return ()
+        if not _RUN_CONTEXT_HINT_PATTERN.search(context):
+            return ()
+
+        return tuple(self.scope_family_resolver.families_for_entities(alias_group.entities))
+
     @staticmethod
     def _local_context(text: str, start: int, end: int, *, radius: int = 28) -> str:
         left = max(0, int(start) - radius)
@@ -353,18 +398,20 @@ class AuthorityQueryConstraintParser:
         matches: Iterable[_EntityMatch],
         *,
         explicit_version_mention: bool,
+        scope_family_names: Iterable[str],
     ) -> QueryConstraints:
         sorted_matches = sorted(matches, key=lambda item: _entity_sort_key(item.entity))
         system_names = _names_for_type(sorted_matches, "system")
         partition_names = _names_for_type(sorted_matches, "partition")
         service_names = _names_for_type(sorted_matches, "service")
+        scope_family_names_list = _sorted_unique(scope_family_names)
         software_names = _names_for_type(sorted_matches, "software")
         module_names = _names_for_type(sorted_matches, "module")
         toolchain_names = _names_for_type(sorted_matches, "toolchain")
         software_versions = _versions_for_type(sorted_matches, "software")
         toolchain_versions = _versions_for_type(sorted_matches, "toolchain")
 
-        scope_required = True if system_names or partition_names or service_names else None
+        scope_required = True if system_names or partition_names or service_names or scope_family_names_list else None
 
         has_version_targets = bool(software_names or module_names or toolchain_names)
         has_explicit_version_match = bool(software_versions or toolchain_versions)
@@ -376,7 +423,13 @@ class AuthorityQueryConstraintParser:
         query_type = None
         if version_sensitive_guess and has_version_targets:
             query_type = QUERY_TYPE_SOFTWARE_VERSION
-        elif system_names or partition_names or service_names or _LOCAL_OPERATIONAL_QUERY_PATTERN.search(text or ""):
+        elif (
+            system_names
+            or partition_names
+            or service_names
+            or scope_family_names_list
+            or _LOCAL_OPERATIONAL_QUERY_PATTERN.search(text or "")
+        ):
             query_type = QUERY_TYPE_LOCAL_OPERATIONAL
         elif software_names or module_names or toolchain_names:
             query_type = QUERY_TYPE_GENERAL_HOW_TO
@@ -386,6 +439,7 @@ class AuthorityQueryConstraintParser:
             system_names=system_names,
             partition_names=partition_names,
             service_names=service_names,
+            scope_family_names=scope_family_names_list,
             software_names=software_names,
             software_versions=software_versions,
             module_names=module_names,

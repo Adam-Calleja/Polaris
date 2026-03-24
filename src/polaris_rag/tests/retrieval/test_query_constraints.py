@@ -74,6 +74,7 @@ def test_query_parser_extracts_unique_software_alias(tmp_path: Path) -> None:
     assert constraints.software_names == ["LAMMPS"]
     assert constraints.partition_names == []
     assert constraints.system_names == []
+    assert constraints.scope_family_names == []
     assert constraints.query_type == "general_how_to"
 
 
@@ -101,7 +102,9 @@ def test_query_parser_leaves_ambiguous_partition_system_alias_neutral_without_co
 
     assert constraints.partition_names == []
     assert constraints.system_names == []
-    assert constraints.scope_required is None
+    assert constraints.scope_family_names == ["cclake"]
+    assert constraints.scope_required is True
+    assert constraints.query_type == "local_operational"
 
 
 def test_query_parser_resolves_partition_alias_from_scheduler_syntax(tmp_path: Path) -> None:
@@ -128,8 +131,48 @@ def test_query_parser_resolves_partition_alias_from_scheduler_syntax(tmp_path: P
 
     assert constraints.partition_names == ["cclake"]
     assert constraints.system_names == []
+    assert constraints.scope_family_names == ["cclake"]
     assert constraints.scope_required is True
     assert constraints.query_type == "local_operational"
+
+
+def test_query_parser_resolves_family_alias_from_run_on_phrase(tmp_path: Path) -> None:
+    registry_path = _write_registry(
+        tmp_path,
+        entities=[
+            _entity(
+                entity_id="software-gromacs",
+                entity_type="software",
+                canonical_name="GROMACS",
+                aliases=["GROMACS", "gromacs"],
+                known_versions=["2024.4"],
+            ),
+            _entity(
+                entity_id="partition-cclake",
+                entity_type="partition",
+                canonical_name="cclake",
+                aliases=["cclake"],
+            ),
+            _entity(
+                entity_id="system-cclake",
+                entity_type="system",
+                canonical_name="Cascade Lake Nodes",
+                aliases=["cclake", "cascade lake nodes"],
+            ),
+        ],
+    )
+    parser = AuthorityQueryConstraintParser.from_registry_artifact(registry_path)
+
+    constraints = parser.parse("How do I run GROMACS 2024.4 on cclake?")
+
+    assert constraints.software_names == ["GROMACS"]
+    assert constraints.software_versions == ["2024.4"]
+    assert constraints.partition_names == []
+    assert constraints.system_names == []
+    assert constraints.scope_family_names == ["cclake"]
+    assert constraints.scope_required is True
+    assert constraints.version_sensitive_guess is True
+    assert constraints.query_type == "software_version"
 
 
 def test_query_parser_extracts_software_versions_and_marks_version_sensitive(tmp_path: Path) -> None:
@@ -151,8 +194,37 @@ def test_query_parser_extracts_software_versions_and_marks_version_sensitive(tmp
 
     assert constraints.software_names == ["LAMMPS"]
     assert constraints.software_versions == ["2024.4"]
+    assert constraints.scope_family_names == []
     assert constraints.version_sensitive_guess is True
     assert constraints.query_type == "software_version"
+
+
+def test_query_parser_keeps_generic_on_phrase_neutral_for_ambiguous_scope(tmp_path: Path) -> None:
+    registry_path = _write_registry(
+        tmp_path,
+        entities=[
+            _entity(
+                entity_id="partition-cclake",
+                entity_type="partition",
+                canonical_name="cclake",
+                aliases=["cclake"],
+            ),
+            _entity(
+                entity_id="system-cclake",
+                entity_type="system",
+                canonical_name="Cascade Lake Nodes",
+                aliases=["cclake", "cascade lake nodes"],
+            ),
+        ],
+    )
+    parser = AuthorityQueryConstraintParser.from_registry_artifact(registry_path)
+
+    constraints = parser.parse("What documentation exists on cclake?")
+
+    assert constraints.partition_names == []
+    assert constraints.system_names == []
+    assert constraints.scope_family_names == []
+    assert constraints.scope_required is None
 
 
 def test_query_parser_marks_explicit_version_mentions_sensitive_without_registry_version_match(tmp_path: Path) -> None:
@@ -174,6 +246,7 @@ def test_query_parser_marks_explicit_version_mentions_sensitive_without_registry
 
     assert constraints.software_names == ["LAMMPS"]
     assert constraints.software_versions == []
+    assert constraints.scope_family_names == []
     assert constraints.version_sensitive_guess is True
     assert constraints.query_type == "software_version"
 
@@ -203,14 +276,22 @@ def test_query_parser_extracts_module_and_toolchain_constraints(tmp_path: Path) 
                 aliases=["cuda/12.1"],
                 known_versions=["12.1"],
             ),
+            _entity(
+                entity_id="module-rhel8-cclake-base",
+                entity_type="module",
+                canonical_name="rhel8/cclake/base",
+                aliases=["rhel8/cclake/base"],
+                doc_id="https://docs.example.org/hpc/cclake.html",
+            ),
         ],
     )
     parser = AuthorityQueryConstraintParser.from_registry_artifact(registry_path)
 
-    constraints = parser.parse("module load gromacs/2024.4 cuda/12.1")
+    constraints = parser.parse("module load rhel8/cclake/base gromacs/2024.4 cuda/12.1")
 
     assert constraints.software_names == ["GROMACS"]
-    assert constraints.module_names == ["gromacs/2024.4"]
+    assert constraints.scope_family_names == ["cclake"]
+    assert constraints.module_names == ["gromacs/2024.4", "rhel8/cclake/base"]
     assert constraints.toolchain_names == ["cuda/12.1"]
     assert constraints.software_versions == ["2024.4"]
     assert constraints.toolchain_versions == ["12.1"]
@@ -237,6 +318,7 @@ def test_query_parser_returns_neutral_constraints_for_generic_query(tmp_path: Pa
         "system_names": [],
         "partition_names": [],
         "service_names": [],
+        "scope_family_names": [],
         "software_names": [],
         "software_versions": [],
         "module_names": [],
@@ -278,7 +360,37 @@ def test_query_parser_does_not_infer_system_scope_for_generic_software_query(tmp
     assert constraints.software_names == ["GROMACS"]
     assert constraints.partition_names == []
     assert constraints.system_names == []
+    assert constraints.scope_family_names == []
     assert constraints.scope_required is None
+
+
+def test_query_parser_resolves_system_alias_and_family_from_nodes_phrase(tmp_path: Path) -> None:
+    registry_path = _write_registry(
+        tmp_path,
+        entities=[
+            _entity(
+                entity_id="partition-cclake",
+                entity_type="partition",
+                canonical_name="cclake",
+                aliases=["cclake"],
+            ),
+            _entity(
+                entity_id="system-cclake",
+                entity_type="system",
+                canonical_name="Cascade Lake Nodes",
+                aliases=["cclake", "cascade lake nodes"],
+            ),
+        ],
+    )
+    parser = AuthorityQueryConstraintParser.from_registry_artifact(registry_path)
+
+    constraints = parser.parse("Which cclake nodes should I use?")
+
+    assert constraints.partition_names == []
+    assert constraints.system_names == ["Cascade Lake Nodes"]
+    assert constraints.scope_family_names == ["cclake"]
+    assert constraints.scope_required is True
+    assert constraints.query_type == "local_operational"
 
 
 def test_query_parser_is_deterministic(tmp_path: Path) -> None:

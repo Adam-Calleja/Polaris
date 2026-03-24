@@ -49,6 +49,7 @@ class QueryConstraintsPayload(BaseModel):
     system_names: list[str] = Field(default_factory=list)
     partition_names: list[str] = Field(default_factory=list)
     service_names: list[str] = Field(default_factory=list)
+    scope_family_names: list[str] = Field(default_factory=list)
     software_names: list[str] = Field(default_factory=list)
     software_versions: list[str] = Field(default_factory=list)
     module_names: list[str] = Field(default_factory=list)

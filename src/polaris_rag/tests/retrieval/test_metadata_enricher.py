@@ -108,13 +108,21 @@ def test_markdown_docs_propagate_enriched_authority_metadata_to_chunks(tmp_path:
                 status="current",
                 doc_id=doc_id,
             ),
+            _entity(
+                entity_id="module-rhel8-cclake-base",
+                entity_type="module",
+                canonical_name="rhel8/cclake/base",
+                aliases=["rhel8/cclake/base"],
+                status="current",
+                doc_id=doc_id,
+            ),
         ],
         source_urls=[doc_id],
     )
     document = MarkdownDocument(
         id=doc_id,
         document_type="html",
-        text="# GROMACS\n\nUse `module load gromacs/2024.4` to begin.",
+        text="# GROMACS\n\nUse `module load rhel8/cclake/base gromacs/2024.4` to begin.",
         metadata={"source": doc_id, "title": "GROMACS"},
     )
 
@@ -132,17 +140,19 @@ def test_markdown_docs_propagate_enriched_authority_metadata_to_chunks(tmp_path:
     assert enriched_document.metadata["source_authority"] == "local_official"
     assert enriched_document.metadata["authority_tier"] == 3
     assert enriched_document.metadata["software_names"] == ["GROMACS"]
-    assert enriched_document.metadata["module_names"] == ["gromacs/2024.4"]
+    assert enriched_document.metadata["module_names"] == ["gromacs/2024.4", "rhel8/cclake/base"]
+    assert enriched_document.metadata["scope_family_names"] == ["cclake"]
     assert enriched_document.metadata["software_versions"] == ["2021.3", "2024.4"]
     assert enriched_document.metadata["validity_status"] == "current"
-    assert len(enriched_document.metadata["official_doc_matches"]) == 2
+    assert len(enriched_document.metadata["official_doc_matches"]) == 3
 
     assert chunks
     assert chunks[0].metadata["source_authority"] == "local_official"
     assert chunks[0].metadata["software_names"] == ["GROMACS"]
-    assert chunks[0].metadata["module_names"] == ["gromacs/2024.4"]
+    assert chunks[0].metadata["module_names"] == ["gromacs/2024.4", "rhel8/cclake/base"]
+    assert chunks[0].metadata["scope_family_names"] == ["cclake"]
     assert chunks[0].metadata["validity_status"] == "current"
-    assert len(chunks[0].metadata["official_doc_matches"]) == 2
+    assert len(chunks[0].metadata["official_doc_matches"]) == 3
 
 
 def test_service_catalog_docs_still_enrich_as_local_official(tmp_path: Path) -> None:
@@ -214,15 +224,23 @@ def test_ticket_metadata_extraction_populates_authority_versions_and_privacy_fla
                 status="current",
                 doc_id="https://docs.example.org/hpc/cuda.html",
             ),
+            _entity(
+                entity_id="module-rhel8-cclake-base",
+                entity_type="module",
+                canonical_name="rhel8/cclake/base",
+                aliases=["rhel8/cclake/base"],
+                status="current",
+                doc_id="https://docs.example.org/hpc/cclake.html",
+            ),
         ],
-        source_urls=[doc_id, "https://docs.example.org/hpc/cuda.html"],
+        source_urls=[doc_id, "https://docs.example.org/hpc/cuda.html", "https://docs.example.org/hpc/cclake.html"],
     )
     ticket = Document(
         id="HPCSSUP-1",
         document_type="helpdesk_ticket",
         text=(
             "[INITIAL_DESCRIPTION]\n"
-            "module load gromacs/2021.3 cuda/12.1\n"
+            "module load rhel8/cclake/base gromacs/2021.3 cuda/12.1\n"
             "Please contact me at user@example.com.\n"
             "The failing input is under /home/abc123/project/run.\n"
             "The compute node was 131.111.8.42.\n"
@@ -245,7 +263,8 @@ def test_ticket_metadata_extraction_populates_authority_versions_and_privacy_fla
     assert enriched_ticket.metadata["authority_tier"] == 1
     assert enriched_ticket.metadata["software_names"] == ["GROMACS"]
     assert enriched_ticket.metadata["software_versions"] == ["2021.3"]
-    assert enriched_ticket.metadata["module_names"] == ["gromacs/2021.3"]
+    assert enriched_ticket.metadata["scope_family_names"] == ["cclake"]
+    assert enriched_ticket.metadata["module_names"] == ["gromacs/2021.3", "rhel8/cclake/base"]
     assert enriched_ticket.metadata["toolchain_names"] == ["cuda/12.1"]
     assert enriched_ticket.metadata["toolchain_versions"] == ["12.1"]
     assert enriched_ticket.metadata["validity_status"] == "current"
@@ -257,6 +276,7 @@ def test_ticket_metadata_extraction_populates_authority_versions_and_privacy_fla
     ]
     assert [match["canonical_name"] for match in enriched_ticket.metadata["official_doc_matches"]] == [
         "gromacs/2021.3",
+        "rhel8/cclake/base",
         "GROMACS",
         "cuda/12.1",
     ]
@@ -274,16 +294,24 @@ def test_jira_turn_chunker_preserves_enriched_ticket_metadata(tmp_path: Path) ->
                 known_versions=["2021.3"],
                 status="current",
                 doc_id="https://docs.example.org/hpc/gromacs.html",
-            )
+            ),
+            _entity(
+                entity_id="module-rhel8-cclake-base",
+                entity_type="module",
+                canonical_name="rhel8/cclake/base",
+                aliases=["rhel8/cclake/base"],
+                status="current",
+                doc_id="https://docs.example.org/hpc/cclake.html",
+            ),
         ],
-        source_urls=["https://docs.example.org/hpc/gromacs.html"],
+        source_urls=["https://docs.example.org/hpc/gromacs.html", "https://docs.example.org/hpc/cclake.html"],
     )
     ticket = Document(
         id="HPCSSUP-2",
         document_type="helpdesk_ticket",
         text=(
             "[INITIAL_DESCRIPTION]\n"
-            "module load gromacs/2021.3\n"
+            "module load rhel8/cclake/base gromacs/2021.3\n"
             "[CONVERSATION]\n"
             "<MESSAGE id=0001 role=TICKET_CREATOR>\n"
             "Still failing after reload.\n"
@@ -312,6 +340,7 @@ def test_jira_turn_chunker_preserves_enriched_ticket_metadata(tmp_path: Path) ->
     assert len(chunks) == 2
     assert all(chunk.metadata["source_authority"] == "ticket_memory" for chunk in chunks)
     assert all(chunk.metadata["software_names"] == ["GROMACS"] for chunk in chunks)
+    assert all(chunk.metadata["scope_family_names"] == ["cclake"] for chunk in chunks)
     assert all(chunk.metadata["validity_status"] == "current" for chunk in chunks)
 
 
@@ -365,14 +394,22 @@ def test_enriched_metadata_survives_vector_and_docstore_round_trip(tmp_path: Pat
                 known_versions=["2024.4"],
                 status="current",
                 doc_id=doc_id,
-            )
+            ),
+            _entity(
+                entity_id="module-rhel8-cclake-base",
+                entity_type="module",
+                canonical_name="rhel8/cclake/base",
+                aliases=["rhel8/cclake/base"],
+                status="current",
+                doc_id=doc_id,
+            ),
         ],
         source_urls=[doc_id],
     )
     document = MarkdownDocument(
         id=doc_id,
         document_type="html",
-        text="# GROMACS\n\nReference text for persistence validation.",
+        text="# GROMACS\n\nmodule load rhel8/cclake/base\n\nReference text for persistence validation.",
         metadata={"source": doc_id},
     )
     [enriched_document] = enrich_documents_with_authority_metadata(
@@ -390,6 +427,7 @@ def test_enriched_metadata_survives_vector_and_docstore_round_trip(tmp_path: Pat
     vector_store.insert_chunks(chunks, batch_size=4, use_async=False)
     assert vector_store.inserted_nodes
     assert vector_store.inserted_nodes[0].metadata["source_authority"] == "local_official"
+    assert vector_store.inserted_nodes[0].metadata["scope_family_names"] == ["cclake"]
     assert vector_store.inserted_nodes[0].metadata["validity_status"] == "current"
 
     chunk_docstore = SimpleDocumentStore()
@@ -409,6 +447,8 @@ def test_enriched_metadata_survives_vector_and_docstore_round_trip(tmp_path: Pat
     stored_document = reloaded_source_docstore.get_document(doc_id)
 
     assert stored_chunk.metadata["source_authority"] == "local_official"
+    assert stored_chunk.metadata["scope_family_names"] == ["cclake"]
     assert stored_chunk.metadata["software_names"] == ["GROMACS"]
     assert stored_document.metadata["source_authority"] == "local_official"
+    assert stored_document.metadata["scope_family_names"] == ["cclake"]
     assert stored_document.metadata["validity_status"] == "current"

@@ -10,6 +10,7 @@ import re
 from typing import Any, Iterable, Mapping, Sequence, TypeVar
 
 from polaris_rag.authority import RegistryEntity
+from polaris_rag.retrieval.scope_family import ScopeFamilyResolver
 
 ENRICHMENT_VERSION = "authority_metadata_v1"
 DEFAULT_REGISTRY_ARTIFACT_PATH = "data/authority/registry.local_official.v1.json"
@@ -152,6 +153,7 @@ class AuthorityMetadataEnricher:
     ) -> None:
         self.registry_index = registry_index
         self.source_name = str(source_name or "").strip().lower() or None
+        self.scope_family_resolver = ScopeFamilyResolver(registry_index.entities)
 
     @classmethod
     def from_registry_artifact(
@@ -181,6 +183,7 @@ class AuthorityMetadataEnricher:
             "system_names": self._names_for_type(matches, "system"),
             "partition_names": self._names_for_type(matches, "partition"),
             "service_names": self._names_for_type(matches, "service"),
+            "scope_family_names": self._scope_family_names(matches, document=document),
             "software_names": self._names_for_type(matches, "software"),
             "software_versions": self._versions_for_type(matches, "software", document=document),
             "module_names": self._names_for_type(matches, "module"),
@@ -277,6 +280,18 @@ class AuthorityMetadataEnricher:
                 continue
             versions.extend(match.entity.known_versions)
         return _sorted_unique(versions)
+
+    def _scope_family_names(
+        self,
+        matches: Sequence[_EntityMatch],
+        *,
+        document: Any,
+    ) -> list[str]:
+        families = set(self.scope_family_resolver.families_for_entities(match.entity for match in matches))
+        text = str(getattr(document, "text", "") or "")
+        for module_token in self._extract_module_tokens(text):
+            families.update(self.scope_family_resolver.families_for_text(module_token))
+        return _sorted_unique(families)
 
     def _names_for_type(self, matches: Sequence[_EntityMatch], entity_type: str) -> list[str]:
         return _sorted_unique(

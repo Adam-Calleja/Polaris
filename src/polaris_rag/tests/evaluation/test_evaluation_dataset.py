@@ -67,6 +67,7 @@ class _ConstraintPipeline:
                 "system_names": [],
                 "partition_names": [],
                 "service_names": [],
+                "scope_family_names": ["cclake"],
                 "software_names": ["GROMACS"],
                 "software_versions": ["2024.4"],
                 "module_names": [],
@@ -133,6 +134,7 @@ def _constraint_requester(
             "system_names": [],
             "partition_names": [],
             "service_names": [],
+            "scope_family_names": ["cclake"],
             "software_names": ["GROMACS"],
             "software_versions": ["2024.4"],
             "module_names": [],
@@ -493,6 +495,7 @@ def test_build_prepared_rows_persists_query_constraints_in_metadata() -> None:
 
     assert rows[0]["metadata"]["query_constraints"]["query_type"] == "software_version"
     assert rows[0]["metadata"]["query_constraints"]["software_names"] == ["GROMACS"]
+    assert rows[0]["metadata"]["query_constraints"]["scope_family_names"] == ["cclake"]
 
 
 def test_build_prepared_rows_persists_reranker_metadata_and_trace() -> None:
@@ -544,6 +547,7 @@ def test_build_prepared_rows_from_api_persists_query_constraints_in_metadata() -
 
     assert rows[0]["metadata"]["query_constraints"]["query_type"] == "software_version"
     assert rows[0]["metadata"]["query_constraints"]["software_versions"] == ["2024.4"]
+    assert rows[0]["metadata"]["query_constraints"]["scope_family_names"] == ["cclake"]
 
 
 def test_build_prepared_rows_from_api_uses_default_reranker_metadata() -> None:

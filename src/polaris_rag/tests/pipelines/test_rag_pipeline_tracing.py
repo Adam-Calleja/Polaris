@@ -61,6 +61,7 @@ class _FakeQueryConstraintParser:
             query_type="software_version",
             software_names=["GROMACS"],
             software_versions=["2024.4"],
+            scope_family_names=["cclake"],
             version_sensitive_guess=True,
         )
 
@@ -183,6 +184,7 @@ def test_pipeline_includes_and_forwards_query_constraints() -> None:
         "system_names": [],
         "partition_names": [],
         "service_names": [],
+        "scope_family_names": ["cclake"],
         "software_names": ["GROMACS"],
         "software_versions": ["2024.4"],
         "module_names": [],

@@ -39,6 +39,7 @@ def test_validity_aware_reranker_promotes_exact_local_official_match() -> None:
             "weights": {
                 "authority": 0.08,
                 "scope": 0.08,
+                "scope_family": 0.02,
                 "version": 0.08,
                 "status": 0.08,
                 "freshness": 0.01,
@@ -81,6 +82,7 @@ def test_validity_aware_reranker_promotes_exact_local_official_match() -> None:
             "system_names": ["cclake"],
             "partition_names": [],
             "service_names": [],
+            "scope_family_names": ["cclake"],
             "software_names": [],
             "software_versions": ["2024.4"],
             "module_names": [],
@@ -96,9 +98,75 @@ def test_validity_aware_reranker_promotes_exact_local_official_match() -> None:
     assert isinstance(trace, dict)
     assert trace["reranker_type"] == "validity_aware"
     assert trace["scope_feature"] == 1.0
+    assert trace["scope_family_feature"] == 0.0
     assert trace["version_feature"] == 1.0
     assert trace["authority_feature"] == 1.0
     assert trace["final_score"] > results[1].score
+
+
+def test_validity_aware_reranker_uses_scope_family_for_ambiguous_scope_queries() -> None:
+    reranker = create_reranker(
+        config={
+            "type": "validity_aware",
+            "trace_enabled": True,
+            "semantic_base": {"type": "rrf", "rrf_k": 60},
+            "weights": {
+                "authority": 0.0,
+                "scope": 0.0,
+                "scope_family": 0.04,
+                "version": 0.0,
+                "status": 0.0,
+                "freshness": 0.0,
+            },
+        },
+        source_settings={
+            "docs": {"weight": 1.0},
+            "tickets": {"weight": 1.0},
+        },
+    )
+
+    family_match = _Node(
+        "family-doc",
+        {
+            "source_authority": "local_official",
+            "scope_family_names": ["cclake"],
+        },
+    )
+    family_mismatch = _Node(
+        "wrong-family-doc",
+        {
+            "source_authority": "local_official",
+            "scope_family_names": ["icelake"],
+        },
+    )
+
+    candidates = [
+        MergedCandidate(node=family_match.node, best_score=0.8, source_ranks={"docs": 1}),
+        MergedCandidate(node=family_mismatch.node, best_score=0.8, source_ranks={"tickets": 1}),
+    ]
+    results = reranker.rerank(
+        candidates,
+        query_constraints={
+            "query_type": "local_operational",
+            "system_names": [],
+            "partition_names": [],
+            "service_names": [],
+            "scope_family_names": ["cclake"],
+            "software_names": [],
+            "software_versions": [],
+            "module_names": [],
+            "toolchain_names": [],
+            "toolchain_versions": [],
+            "scope_required": True,
+            "version_sensitive_guess": None,
+        },
+    )
+
+    assert [item.node.id_ for item in results] == ["family-doc", "wrong-family-doc"]
+    trace = family_match.metadata.get("rerank_trace")
+    assert isinstance(trace, dict)
+    assert trace["scope_feature"] == 0.0
+    assert trace["scope_family_feature"] == 1.0
 
 
 def test_create_validity_reranker_resolves_relative_weights_path(tmp_path: Path) -> None:
@@ -109,6 +177,7 @@ def test_create_validity_reranker_resolves_relative_weights_path(tmp_path: Path)
                 "weights:",
                 "  authority: 0.08",
                 "  scope: 0.04",
+                "  scope_family: 0.02",
                 "  version: 0.04",
                 "  status: 0.04",
                 "  freshness: 0.01",
@@ -129,6 +198,7 @@ def test_create_validity_reranker_resolves_relative_weights_path(tmp_path: Path)
 
     profile = reranker.profile()
     assert profile["weights"]["authority"] == 0.08
+    assert profile["weights"]["scope_family"] == 0.02
     assert profile["weights_source"]["type"] == "file"
     assert profile["weights_source"]["path"] == str(weights_path.resolve())
     assert reranker.fingerprint()

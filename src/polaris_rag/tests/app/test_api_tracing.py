@@ -46,6 +46,7 @@ class _QueryConstraintPipeline:
                 "system_names": [],
                 "partition_names": [],
                 "service_names": [],
+                "scope_family_names": ["cclake"],
                 "software_names": ["GROMACS"],
                 "software_versions": ["2024.4"],
                 "module_names": [],
@@ -180,6 +181,7 @@ def test_query_returns_query_constraints_when_present() -> None:
     assert response.query_constraints is not None
     assert response.query_constraints.query_type == "software_version"
     assert response.query_constraints.software_names == ["GROMACS"]
+    assert response.query_constraints.scope_family_names == ["cclake"]
 
 
 def test_query_maps_generation_timeout_to_504(monkeypatch) -> None:
