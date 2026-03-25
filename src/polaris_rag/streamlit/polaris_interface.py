@@ -143,19 +143,22 @@ def _render_main_header(*, sidebar_open: bool) -> None:
 
 
 def _render_drawer() -> None:
-    header_cols = st.columns([4, 1], gap="small")
-    with header_cols[0]:
-        st.markdown("<div class='polaris-drawer-title'>Menu</div>", unsafe_allow_html=True)
-    with header_cols[1]:
-        if st.button("×", key="shell-close-drawer", type="secondary", use_container_width=True):
-            st.session_state.ui_sidebar_open = False
-            st.rerun()
+    with st.container():
+        st.markdown("<div class='polaris-drawer-sentinel'></div>", unsafe_allow_html=True)
 
-    st.markdown("<div class='polaris-drawer-divider'></div>", unsafe_allow_html=True)
-    _render_drawer_navigation()
-    st.markdown("<div class='polaris-drawer-section-title'>Backend</div>", unsafe_allow_html=True)
-    st.markdown("<div class='polaris-drawer-divider'></div>", unsafe_allow_html=True)
-    _render_drawer_backend_controls()
+        header_cols = st.columns([4, 1], gap="small")
+        with header_cols[0]:
+            st.markdown("<div class='polaris-drawer-title'>Menu</div>", unsafe_allow_html=True)
+        with header_cols[1]:
+            if st.button("×", key="shell-close-drawer", type="secondary", use_container_width=True):
+                st.session_state.ui_sidebar_open = False
+                st.rerun()
+
+        st.markdown("<div class='polaris-drawer-divider'></div>", unsafe_allow_html=True)
+        _render_drawer_navigation()
+        st.markdown("<div class='polaris-drawer-section-title'>Backend</div>", unsafe_allow_html=True)
+        st.markdown("<div class='polaris-drawer-divider'></div>", unsafe_allow_html=True)
+        _render_drawer_backend_controls()
 
 
 def _render_drawer_navigation() -> None:
