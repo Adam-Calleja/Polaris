@@ -102,10 +102,10 @@ div[data-testid="stVerticalBlock"]:has(.polaris-drawer-sentinel):not(:has(div[da
   background: var(--polaris-drawer);
   border-radius: 0;
   min-height: calc(100vh + 3.25rem);
-  margin-top: -1.25rem;
+  margin-top: -1.35rem;
   margin-bottom: -2rem;
   margin-left: -1.6rem;
-  padding: 1.4rem 1.5rem 1.8rem;
+  padding: 0.7rem 1.5rem 1.8rem;
   box-shadow: 0 20px 60px rgba(5, 5, 23, 0.12);
 }
 
@@ -123,7 +123,7 @@ div[data-testid="stVerticalBlock"]:has(.polaris-drawer-sentinel):not(:has(div[da
   color: var(--polaris-text-dark);
   font-size: 1.05rem;
   font-weight: 700;
-  margin-top: 0.25rem;
+  margin-top: 0;
   margin-bottom: 0.4rem;
 }
 
@@ -143,7 +143,7 @@ div[data-testid="stVerticalBlock"]:has(.polaris-drawer-sentinel):not(:has(div[da
   gap: 0.95rem;
   min-height: 3rem;
   border-radius: 18px;
-  padding: 0.15rem 0.7rem;
+  padding: 0.15rem 0.2rem;
   margin-bottom: 0.35rem;
   color: var(--polaris-text-dark);
 }
@@ -179,6 +179,15 @@ div[data-testid="stVerticalBlock"]:has(.polaris-drawer-sentinel):not(:has(div[da
   color: var(--polaris-text-dark);
   font-weight: 700;
   border: 1px solid rgba(81, 78, 231, 0.1);
+}
+
+.polaris-timeout-pill--value {
+  min-height: 2.2rem;
+  background: var(--polaris-blue);
+  border: none;
+  color: var(--polaris-text-light);
+  font-size: 0.92rem;
+  letter-spacing: 0.01em;
 }
 
 .polaris-page-intro {
@@ -528,6 +537,93 @@ div[data-testid="stVerticalBlock"]:has(.polaris-drawer-sentinel):not(:has(div[da
 div[data-testid="stVerticalBlock"]:has(.polaris-drawer-sentinel):not(:has(div[data-testid="stVerticalBlock"] .polaris-drawer-sentinel)) div[data-baseweb="textarea"] {
   background: #ffffff !important;
   color: var(--polaris-text-dark) !important;
+}
+
+div[data-testid="stVerticalBlock"]:has(.polaris-drawer-nav-sentinel) button[kind="secondary"] {
+  background: transparent !important;
+  border: none !important;
+  color: var(--polaris-text-dark) !important;
+  box-shadow: none !important;
+  justify-content: flex-start !important;
+  text-align: left !important;
+  padding: 0.2rem 0.1rem !important;
+  min-height: 2.35rem !important;
+  font-weight: 500 !important;
+}
+
+div[data-testid="stVerticalBlock"]:has(.polaris-drawer-nav-sentinel) button[kind="secondary"]:hover,
+div[data-testid="stVerticalBlock"]:has(.polaris-drawer-nav-sentinel) button[kind="secondary"]:focus,
+div[data-testid="stVerticalBlock"]:has(.polaris-drawer-nav-sentinel) button[kind="secondary"]:focus-visible,
+div[data-testid="stVerticalBlock"]:has(.polaris-drawer-nav-sentinel) button[kind="secondary"]:active {
+  background: transparent !important;
+  border: none !important;
+  color: var(--polaris-text-dark) !important;
+  box-shadow: none !important;
+  outline: none !important;
+  transform: none !important;
+}
+
+div[data-testid="stVerticalBlock"]:has(.polaris-drawer-close-sentinel) button[kind="secondary"] {
+  background: transparent !important;
+  border: none !important;
+  color: rgba(23, 21, 63, 0.72) !important;
+  box-shadow: none !important;
+  min-height: 2rem !important;
+  padding: 0 !important;
+  font-size: 1rem !important;
+}
+
+div[data-testid="stVerticalBlock"]:has(.polaris-drawer-close-sentinel) button[kind="secondary"]:hover,
+div[data-testid="stVerticalBlock"]:has(.polaris-drawer-close-sentinel) button[kind="secondary"]:focus,
+div[data-testid="stVerticalBlock"]:has(.polaris-drawer-close-sentinel) button[kind="secondary"]:focus-visible,
+div[data-testid="stVerticalBlock"]:has(.polaris-drawer-close-sentinel) button[kind="secondary"]:active {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  transform: none !important;
+}
+
+div[data-testid="stVerticalBlock"]:has(.polaris-drawer-blue-field-sentinel) [data-baseweb="input"],
+div[data-testid="stVerticalBlock"]:has(.polaris-drawer-blue-field-sentinel) [data-baseweb="base-input"] {
+  background: var(--polaris-blue) !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+div[data-testid="stVerticalBlock"]:has(.polaris-drawer-blue-field-sentinel) input {
+  color: var(--polaris-text-light) !important;
+  -webkit-text-fill-color: var(--polaris-text-light) !important;
+  caret-color: var(--polaris-text-light) !important;
+  font-size: 0.9rem !important;
+  font-weight: 600 !important;
+}
+
+div[data-testid="stVerticalBlock"]:has(.polaris-drawer-blue-field-sentinel) input::placeholder {
+  color: rgba(245, 245, 255, 0.72) !important;
+  -webkit-text-fill-color: rgba(245, 245, 255, 0.72) !important;
+}
+
+div[data-testid="stVerticalBlock"]:has(.polaris-timeout-button-sentinel) button[kind="secondary"] {
+  background: var(--polaris-blue) !important;
+  border: none !important;
+  color: var(--polaris-text-light) !important;
+  box-shadow: none !important;
+  min-height: 2.2rem !important;
+  padding: 0 !important;
+  font-size: 1rem !important;
+}
+
+div[data-testid="stVerticalBlock"]:has(.polaris-timeout-button-sentinel) button[kind="secondary"]:hover,
+div[data-testid="stVerticalBlock"]:has(.polaris-timeout-button-sentinel) button[kind="secondary"]:focus,
+div[data-testid="stVerticalBlock"]:has(.polaris-timeout-button-sentinel) button[kind="secondary"]:focus-visible,
+div[data-testid="stVerticalBlock"]:has(.polaris-timeout-button-sentinel) button[kind="secondary"]:active {
+  background: var(--polaris-blue) !important;
+  border: none !important;
+  color: var(--polaris-text-light) !important;
+  box-shadow: none !important;
+  outline: none !important;
+  transform: none !important;
 }
 
 div[data-testid="stMetric"] {

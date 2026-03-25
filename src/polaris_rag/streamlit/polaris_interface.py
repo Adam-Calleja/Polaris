@@ -87,6 +87,11 @@ def _bootstrap_session_state() -> None:
         if key not in st.session_state:
             st.session_state[key] = value
 
+    if not str(st.session_state.ui_api_base_url or "").strip():
+        st.session_state.ui_api_base_url = DEFAULT_API_BASE_URL
+    if not str(st.session_state.ui_api_path or "").strip():
+        st.session_state.ui_api_path = DEFAULT_API_ENDPOINT_PATH
+
 
 def _inject_theme() -> None:
     css_path = Path(__file__).with_name("theme.css")
@@ -150,9 +155,11 @@ def _render_drawer() -> None:
         with header_cols[0]:
             st.markdown("<div class='polaris-drawer-title'>Menu</div>", unsafe_allow_html=True)
         with header_cols[1]:
-            if st.button("×", key="shell-close-drawer", type="secondary", use_container_width=True):
-                st.session_state.ui_sidebar_open = False
-                st.rerun()
+            with st.container():
+                st.markdown("<div class='polaris-drawer-close-sentinel'></div>", unsafe_allow_html=True)
+                if st.button("×", key="shell-close-drawer", type="secondary", use_container_width=True):
+                    st.session_state.ui_sidebar_open = False
+                    st.rerun()
 
         st.markdown("<div class='polaris-drawer-divider'></div>", unsafe_allow_html=True)
         _render_drawer_navigation()
@@ -167,46 +174,41 @@ def _render_drawer_navigation() -> None:
         if current_workspace == workspace_key:
             render_active_nav_row(icon, label)
             continue
-        if st.button(
-            f"{icon}  {label}",
-            key=f"nav-{workspace_key.lower()}",
-            type="secondary",
-            use_container_width=True,
-        ):
-            st.session_state.ui_workspace = workspace_key
-            st.rerun()
+        with st.container():
+            st.markdown("<div class='polaris-drawer-nav-sentinel'></div>", unsafe_allow_html=True)
+            if st.button(
+                f"{icon}  {label}",
+                key=f"nav-{workspace_key.lower()}",
+                type="secondary",
+                use_container_width=True,
+            ):
+                st.session_state.ui_workspace = workspace_key
+                st.rerun()
 
 
 def _render_drawer_backend_controls() -> None:
-    st.markdown("<div class='polaris-field-label'>API base URL</div>", unsafe_allow_html=True)
-    st.text_input(
-        "API base URL",
-        key="ui_api_base_url",
-        label_visibility="collapsed",
-    )
-
-    st.markdown("<div class='polaris-field-label'>Query Endpoint</div>", unsafe_allow_html=True)
-    st.text_input(
-        "Query endpoint",
-        key="ui_api_path",
-        label_visibility="collapsed",
-    )
+    _render_drawer_blue_field("API base URL", "ui_api_base_url", "API base URL")
+    _render_drawer_blue_field("Query Endpoint", "ui_api_path", "Query endpoint")
 
     st.markdown("<div class='polaris-field-label'>HTTP Timeout</div>", unsafe_allow_html=True)
-    timeout_cols = st.columns([1, 1.6, 1], gap="small")
+    timeout_cols = st.columns([1.4, 0.8, 0.8], gap="small")
     with timeout_cols[0]:
-        if st.button("−", key="timeout-dec", type="secondary", use_container_width=True):
-            st.session_state.ui_timeout_s = max(1, int(st.session_state.ui_timeout_s) - 5)
-            st.rerun()
-    with timeout_cols[1]:
         st.markdown(
-            f"<div class='polaris-timeout-pill'>{int(st.session_state.ui_timeout_s)}</div>",
+            f"<div class='polaris-timeout-pill polaris-timeout-pill--value'>{int(st.session_state.ui_timeout_s)}</div>",
             unsafe_allow_html=True,
         )
+    with timeout_cols[1]:
+        with st.container():
+            st.markdown("<div class='polaris-timeout-button-sentinel'></div>", unsafe_allow_html=True)
+            if st.button("−", key="timeout-dec", type="secondary", use_container_width=True):
+                st.session_state.ui_timeout_s = max(1, int(st.session_state.ui_timeout_s) - 5)
+                st.rerun()
     with timeout_cols[2]:
-        if st.button("+", key="timeout-inc", type="secondary", use_container_width=True):
-            st.session_state.ui_timeout_s = min(600, int(st.session_state.ui_timeout_s) + 5)
-            st.rerun()
+        with st.container():
+            st.markdown("<div class='polaris-timeout-button-sentinel'></div>", unsafe_allow_html=True)
+            if st.button("+", key="timeout-inc", type="secondary", use_container_width=True):
+                st.session_state.ui_timeout_s = min(600, int(st.session_state.ui_timeout_s) + 5)
+                st.rerun()
 
     st.toggle("Debug mode", key="ui_debug_mode")
     st.caption(
@@ -231,6 +233,19 @@ def _render_drawer_backend_controls() -> None:
     st.text_input("Software", key="ui_software_names", help="Comma-separated software names.")
     st.text_input("Software versions", key="ui_software_versions", help="Comma-separated version strings.")
     st.caption("Optional constraints for demos and controlled evaluation runs.")
+
+
+def _render_drawer_blue_field(label: str, key: str, input_label: str) -> None:
+    st.markdown(f"<div class='polaris-field-label'>{label}</div>", unsafe_allow_html=True)
+    chip_col, spacer_col = st.columns([1.55, 1], gap="small")
+    with chip_col:
+        with st.container():
+            st.markdown("<div class='polaris-drawer-blue-field-sentinel'></div>", unsafe_allow_html=True)
+            st.text_input(
+                input_label,
+                key=key,
+                label_visibility="collapsed",
+            )
 
 
 def _build_manual_query_constraints() -> dict[str, object] | None:
