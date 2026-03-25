@@ -216,9 +216,11 @@ def _render_drawer_backend_controls() -> None:
     )
 
     toggle_label = "Hide Manual Query Constraints" if bool(st.session_state.ui_manual_constraints_open) else "Manual Query Constraints"
-    if st.button(toggle_label, key="toggle-manual-constraints", type="secondary", use_container_width=True):
-        st.session_state.ui_manual_constraints_open = not bool(st.session_state.ui_manual_constraints_open)
-        st.rerun()
+    with st.container():
+        st.markdown("<div class='polaris-manual-constraints-sentinel'></div>", unsafe_allow_html=True)
+        if st.button(toggle_label, key="toggle-manual-constraints", type="secondary", use_container_width=True):
+            st.session_state.ui_manual_constraints_open = not bool(st.session_state.ui_manual_constraints_open)
+            st.rerun()
 
     if not bool(st.session_state.ui_manual_constraints_open):
         return
