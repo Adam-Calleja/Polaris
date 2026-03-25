@@ -94,7 +94,8 @@ a {
   letter-spacing: -0.02em;
 }
 
-div[data-testid="column"]:has(.polaris-drawer-title) {
+div[data-testid="column"]:has(.polaris-drawer-title),
+div[data-testid="stVerticalBlock"]:has(.polaris-drawer-title) {
   background: var(--polaris-drawer);
   border-radius: 0;
   min-height: calc(100vh - 2.5rem);
@@ -107,7 +108,13 @@ div[data-testid="column"]:has(.polaris-drawer-title) label,
 div[data-testid="column"]:has(.polaris-drawer-title) li,
 div[data-testid="column"]:has(.polaris-drawer-title) span,
 div[data-testid="column"]:has(.polaris-drawer-title) .stMarkdown,
-div[data-testid="column"]:has(.polaris-drawer-title) .stCaption {
+div[data-testid="column"]:has(.polaris-drawer-title) .stCaption,
+div[data-testid="stVerticalBlock"]:has(.polaris-drawer-title) p,
+div[data-testid="stVerticalBlock"]:has(.polaris-drawer-title) label,
+div[data-testid="stVerticalBlock"]:has(.polaris-drawer-title) li,
+div[data-testid="stVerticalBlock"]:has(.polaris-drawer-title) span,
+div[data-testid="stVerticalBlock"]:has(.polaris-drawer-title) .stMarkdown,
+div[data-testid="stVerticalBlock"]:has(.polaris-drawer-title) .stCaption {
   color: var(--polaris-text-dark) !important;
 }
 
@@ -509,7 +516,8 @@ button[kind="primary"]:hover {
   transform: translateY(-1px);
 }
 
-div[data-testid="column"]:has(.polaris-drawer-title) button[kind="secondary"] {
+div[data-testid="column"]:has(.polaris-drawer-title) button[kind="secondary"],
+div[data-testid="stVerticalBlock"]:has(.polaris-drawer-title) button[kind="secondary"] {
   background: #ffffff !important;
   color: var(--polaris-text-dark) !important;
   border-color: rgba(81, 78, 231, 0.18) !important;
@@ -518,7 +526,11 @@ div[data-testid="column"]:has(.polaris-drawer-title) button[kind="secondary"] {
 div[data-testid="column"]:has(.polaris-drawer-title) [data-baseweb="input"],
 div[data-testid="column"]:has(.polaris-drawer-title) [data-baseweb="base-input"],
 div[data-testid="column"]:has(.polaris-drawer-title) [data-baseweb="select"] > div,
-div[data-testid="column"]:has(.polaris-drawer-title) div[data-baseweb="textarea"] {
+div[data-testid="column"]:has(.polaris-drawer-title) div[data-baseweb="textarea"],
+div[data-testid="stVerticalBlock"]:has(.polaris-drawer-title) [data-baseweb="input"],
+div[data-testid="stVerticalBlock"]:has(.polaris-drawer-title) [data-baseweb="base-input"],
+div[data-testid="stVerticalBlock"]:has(.polaris-drawer-title) [data-baseweb="select"] > div,
+div[data-testid="stVerticalBlock"]:has(.polaris-drawer-title) div[data-baseweb="textarea"] {
   background: #ffffff !important;
   color: var(--polaris-text-dark) !important;
 }
