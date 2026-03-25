@@ -88,6 +88,23 @@ class _QueryConstraintPipeline:
         }
 
 
+class _TimedPipeline:
+    def run(self, query: str, **kwargs):
+        node_one = type("_Node", (), {"id_": "doc-1", "text": "chunk-1", "metadata": {"retrieval_source": "docs"}})()
+        node_two = type("_Node", (), {"id_": "doc-2", "text": "chunk-2", "metadata": {"retrieval_source": "tickets"}})()
+        return {
+            "response": f"resp::{query}",
+            "source_nodes": [
+                type("_Source", (), {"node": node_one, "score": 0.9})(),
+                type("_Source", (), {"node": node_two, "score": 0.8})(),
+            ],
+            "timings": {
+                "retrieval_elapsed_ms": 12,
+                "generation_elapsed_ms": 34,
+            },
+        }
+
+
 class _FakeContainer:
     def __init__(self):
         self.pipeline = _FakePipeline()
@@ -214,6 +231,56 @@ def test_query_returns_query_constraints_when_present() -> None:
     assert response.query_constraints.scope_family_names == ["cclake"]
 
 
+def test_query_forwards_body_query_constraints_to_pipeline() -> None:
+    captured = {"kwargs": None}
+
+    class _CapturingPipeline:
+        def run(self, query: str, **kwargs):  # noqa: ANN001
+            captured["kwargs"] = kwargs
+            return {"response": f"resp::{query}", "source_nodes": []}
+
+    api.app.state.container = _FakeContainer()
+    api.app.state.container.pipeline = _CapturingPipeline()
+
+    request = Request(
+        {
+            "type": "http",
+            "method": "POST",
+            "path": "/v1/query",
+            "headers": [],
+        }
+    )
+
+    response = api.query(
+        api.QueryRequest(
+            query="hello",
+            query_constraints=api.QueryConstraintsPayload(
+                query_type="software_version",
+                scope_family_names=["cclake"],
+                software_names=["GROMACS"],
+                software_versions=["2024.4"],
+            ),
+        ),
+        request,
+    )
+
+    assert response.answer == "resp::hello"
+    assert captured["kwargs"]["query_constraints"] == {
+        "query_type": "software_version",
+        "system_names": [],
+        "partition_names": [],
+        "service_names": [],
+        "scope_family_names": ["cclake"],
+        "software_names": ["GROMACS"],
+        "software_versions": ["2024.4"],
+        "module_names": [],
+        "toolchain_names": [],
+        "toolchain_versions": [],
+        "scope_required": None,
+        "version_sensitive_guess": None,
+    }
+
+
 def test_query_includes_evaluation_metadata_when_requested() -> None:
     api.app.state.container = _FakeContainer()
     api.app.state.container.pipeline = _ContextPipeline()
@@ -238,6 +305,57 @@ def test_query_includes_evaluation_metadata_when_requested() -> None:
     assert response.evaluation_metadata["ranked_context_metadata"][0]["doc_title"] == "Ticket Memory"
     assert "private_email" not in response.evaluation_metadata["ranked_context_metadata"][0]
     assert "text" not in response.evaluation_metadata["ranked_context_metadata"][0]
+
+
+def test_query_includes_evaluation_metadata_when_requested_in_body() -> None:
+    api.app.state.container = _FakeContainer()
+    api.app.state.container.pipeline = _ContextPipeline()
+
+    request = Request(
+        {
+            "type": "http",
+            "method": "POST",
+            "path": "/v1/query",
+            "headers": [],
+        }
+    )
+
+    response = api.query(
+        api.QueryRequest(query="hello", include_evaluation_metadata=True),
+        request,
+    )
+
+    assert response.evaluation_metadata is not None
+    assert response.evaluation_metadata["reranker_profile"] == {"type": "validity_aware"}
+
+
+def test_query_returns_answer_status_and_timings() -> None:
+    api.app.state.container = _FakeContainer()
+    api.app.state.container.pipeline = _TimedPipeline()
+
+    request = Request(
+        {
+            "type": "http",
+            "method": "POST",
+            "path": "/v1/query",
+            "headers": [],
+        }
+    )
+
+    response = api.query(api.QueryRequest(query="hello"), request)
+
+    assert response.answer_status.code == "grounded"
+    assert response.answer_status.detail == "Multiple supporting context items were retrieved for this answer."
+    assert response.timings.retrieval_elapsed_ms == 12
+    assert response.timings.generation_elapsed_ms == 34
+
+
+def test_query_request_model_accepts_legacy_body_shape() -> None:
+    request_model = api.QueryRequest.model_validate({"query": "hello"})
+
+    assert request_model.query == "hello"
+    assert request_model.query_constraints is None
+    assert request_model.include_evaluation_metadata is False
 
 
 def test_query_maps_generation_timeout_to_504(monkeypatch) -> None:

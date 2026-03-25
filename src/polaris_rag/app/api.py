@@ -42,9 +42,6 @@ from polaris_rag.observability.mlflow_tracking import (
 app = FastAPI(title="Polaris RAG API", version="0.1.0")
 logger = logging.getLogger("polaris_rag.api")
 
-class QueryRequest(BaseModel):
-    query: str
-
 
 class QueryConstraintsPayload(BaseModel):
     query_type: str | None = None
@@ -69,11 +66,29 @@ class RetrievedContextChunk(BaseModel):
     source: str | None = None
 
 
+class QueryAnswerStatus(BaseModel):
+    code: str
+    detail: str
+
+
+class QueryTimings(BaseModel):
+    retrieval_elapsed_ms: int | None = None
+    generation_elapsed_ms: int | None = None
+
+
+class QueryRequest(BaseModel):
+    query: str
+    query_constraints: QueryConstraintsPayload | None = None
+    include_evaluation_metadata: bool = False
+
+
 class QueryResponse(BaseModel):
     answer: str
     context: list[RetrievedContextChunk] = Field(default_factory=list)
     query_constraints: QueryConstraintsPayload | None = None
     evaluation_metadata: dict[str, Any] | None = None
+    answer_status: QueryAnswerStatus
+    timings: QueryTimings = Field(default_factory=QueryTimings)
 
 
 def _serialize_context(source_nodes: list[Any]) -> list[RetrievedContextChunk]:
@@ -128,6 +143,41 @@ def _coerce_eval_metadata(value: Any) -> dict[str, Any] | None:
     if not isinstance(value, Mapping):
         return None
     return {str(key): value[key] for key in value.keys()}
+
+
+def _coerce_optional_int(value: Any) -> int | None:
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _coerce_timings(value: Any) -> QueryTimings:
+    payload = _as_mapping(value)
+    return QueryTimings(
+        retrieval_elapsed_ms=_coerce_optional_int(payload.get("retrieval_elapsed_ms")),
+        generation_elapsed_ms=_coerce_optional_int(payload.get("generation_elapsed_ms")),
+    )
+
+
+def _derive_answer_status(context_items: list[RetrievedContextChunk]) -> QueryAnswerStatus:
+    context_count = len(context_items)
+    if context_count <= 0:
+        return QueryAnswerStatus(
+            code="no_evidence",
+            detail="No retrieved context was returned for this answer.",
+        )
+    if context_count == 1:
+        return QueryAnswerStatus(
+            code="limited_evidence",
+            detail="Only one supporting context item was retrieved for this answer.",
+        )
+    return QueryAnswerStatus(
+        code="grounded",
+        detail="Multiple supporting context items were retrieved for this answer.",
+    )
 
 
 def _serialize_context_metadata(source_nodes: list[Any]) -> list[dict[str, Any]]:
@@ -206,7 +256,7 @@ def query(req: QueryRequest, request: Request):
     if stage_name:
         trace_tags["polaris.stage"] = str(stage_name)
     request_budget = _resolve_request_budget(request)
-    include_eval_metadata = _include_eval_metadata(request)
+    include_eval_metadata = _include_eval_metadata(request) or bool(req.include_evaluation_metadata)
     policy = request_budget.policy if request_budget is not None else normalize_evaluation_policy(None, default=EVAL_POLICY_INTERACTIVE)
     trace_tags["polaris.eval_policy"] = policy
     trace_span = None
@@ -221,10 +271,20 @@ def query(req: QueryRequest, request: Request):
         ) as trace_span:
             if request_budget is not None:
                 set_span_attributes(trace_span, request_budget.to_attributes())
-            result = app.state.container.pipeline.run(req.query, request_budget=request_budget)
+            provided_query_constraints = (
+                req.query_constraints.model_dump()
+                if req.query_constraints is not None
+                else None
+            )
+            result = app.state.container.pipeline.run(
+                req.query,
+                request_budget=request_budget,
+                query_constraints=provided_query_constraints,
+            )
             answer = str(result.get("response", ""))
             context = _serialize_context(result.get("source_nodes", []))
             query_constraints = _coerce_query_constraints(result.get("query_constraints"))
+            answer_status = _derive_answer_status(context)
             evaluation_metadata = None
             if include_eval_metadata:
                 evaluation_metadata = _coerce_eval_metadata(
@@ -237,7 +297,7 @@ def query(req: QueryRequest, request: Request):
                         ),
                     }
                 )
-            timings = _as_mapping(result.get("timings", {}))
+            timings = _coerce_timings(result.get("timings", {}))
             response_status = "ok" if answer.strip() else "empty_response"
             context_payload = [
                 c.model_dump() if hasattr(c, "model_dump") else c.dict()
@@ -246,8 +306,8 @@ def query(req: QueryRequest, request: Request):
             set_span_attributes(
                 trace_span,
                 {
-                    "retrieval_elapsed_ms": timings.get("retrieval_elapsed_ms"),
-                    "generation_elapsed_ms": timings.get("generation_elapsed_ms"),
+                    "retrieval_elapsed_ms": timings.retrieval_elapsed_ms,
+                    "generation_elapsed_ms": timings.generation_elapsed_ms,
                     "response_status": response_status,
                     "budget_remaining_ms": request_budget.remaining_ms() if request_budget is not None else None,
                 },
@@ -263,7 +323,8 @@ def query(req: QueryRequest, request: Request):
                         else query_constraints.dict() if query_constraints is not None else None
                     ),
                     "evaluation_metadata": evaluation_metadata,
-                    "timings": timings,
+                    "answer_status": answer_status.model_dump(),
+                    "timings": timings.model_dump(),
                     "policy": policy,
                 },
             )
@@ -272,6 +333,8 @@ def query(req: QueryRequest, request: Request):
                 context=context,
                 query_constraints=query_constraints,
                 evaluation_metadata=evaluation_metadata,
+                answer_status=answer_status,
+                timings=timings,
             )
     except (RetrievalTimeoutError, GenerationTimeoutError, RequestBudgetExceededError) as e:
         elapsed_ms = max(0, int(round((time.perf_counter() - request_started_at) * 1000.0)))

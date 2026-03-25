@@ -99,8 +99,12 @@ services:
       dockerfile: Dockerfile.streamlit
     environment:
       RAG_API_BASE: http://rag-api:8000
+      POLARIS_API_BASE_URL: http://rag-api:8000
+      POLARIS_FEEDBACK_LOG_PATH: /app/data/ui_feedback/feedback.jsonl
     ports:
       - "8501:8501"
+    volumes:
+      - ./data:/app/data
     depends_on:
       rag-api:
         condition: service_healthy
