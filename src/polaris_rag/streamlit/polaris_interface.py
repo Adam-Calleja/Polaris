@@ -11,7 +11,7 @@ from polaris_rag.streamlit.api_client import (
     DEFAULT_FEEDBACK_LOG_PATH,
     DEFAULT_TIMEOUT_S,
 )
-from polaris_rag.streamlit.shell import WORKSPACE_META, current_display_name, render_active_nav_row, render_brand
+from polaris_rag.streamlit.shell import WORKSPACE_META, current_display_name, render_brand
 from polaris_rag.streamlit.views import assistant, evaluation, system
 
 
@@ -27,6 +27,8 @@ SESSION_DEFAULTS: dict[str, object] = {
     "ui_workspace": "Assistant",
     "ui_api_base_url": DEFAULT_API_BASE_URL,
     "ui_api_path": DEFAULT_API_ENDPOINT_PATH,
+    "ui_api_base_url_input": DEFAULT_API_BASE_URL,
+    "ui_api_path_input": DEFAULT_API_ENDPOINT_PATH,
     "ui_timeout_s": int(DEFAULT_TIMEOUT_S),
     "ui_debug_mode": False,
     "ui_query_type": "auto",
@@ -91,6 +93,10 @@ def _bootstrap_session_state() -> None:
         st.session_state.ui_api_base_url = DEFAULT_API_BASE_URL
     if not str(st.session_state.ui_api_path or "").strip():
         st.session_state.ui_api_path = DEFAULT_API_ENDPOINT_PATH
+    if not str(st.session_state.ui_api_base_url_input or "").strip():
+        st.session_state.ui_api_base_url_input = st.session_state.ui_api_base_url
+    if not str(st.session_state.ui_api_path_input or "").strip():
+        st.session_state.ui_api_path_input = st.session_state.ui_api_path
 
 
 def _inject_theme() -> None:
@@ -138,11 +144,13 @@ def _render_main_header(*, sidebar_open: bool) -> None:
             render_brand()
         return
 
-    toggle_col, spacer_col, brand_col = st.columns([0.8, 4.0, 1.3], gap="small")
+    toggle_col, spacer_col, brand_col = st.columns([0.42, 4.38, 1.2], gap="small")
     with toggle_col:
-        if st.button("☰", key="shell-open-drawer", type="secondary", use_container_width=True):
-            st.session_state.ui_sidebar_open = True
-            st.rerun()
+        with st.container():
+            st.markdown("<div class='polaris-open-drawer-sentinel'></div>", unsafe_allow_html=True)
+            if st.button("☰", key="shell-open-drawer", type="secondary", use_container_width=True):
+                st.session_state.ui_sidebar_open = True
+                st.rerun()
     with brand_col:
         render_brand()
 
@@ -150,16 +158,7 @@ def _render_main_header(*, sidebar_open: bool) -> None:
 def _render_drawer() -> None:
     with st.container():
         st.markdown("<div class='polaris-drawer-sentinel'></div>", unsafe_allow_html=True)
-
-        header_cols = st.columns([4, 1], gap="small")
-        with header_cols[0]:
-            st.markdown("<div class='polaris-drawer-title'>Menu</div>", unsafe_allow_html=True)
-        with header_cols[1]:
-            with st.container():
-                st.markdown("<div class='polaris-drawer-close-sentinel'></div>", unsafe_allow_html=True)
-                if st.button("×", key="shell-close-drawer", type="secondary", use_container_width=True):
-                    st.session_state.ui_sidebar_open = False
-                    st.rerun()
+        st.markdown("<div class='polaris-drawer-title'>Menu</div>", unsafe_allow_html=True)
 
         st.markdown("<div class='polaris-drawer-divider'></div>", unsafe_allow_html=True)
         _render_drawer_navigation()
@@ -169,11 +168,7 @@ def _render_drawer() -> None:
 
 
 def _render_drawer_navigation() -> None:
-    current_workspace = str(st.session_state.ui_workspace)
     for workspace_key, label, icon in WORKSPACE_META:
-        if current_workspace == workspace_key:
-            render_active_nav_row(icon, label)
-            continue
         with st.container():
             st.markdown("<div class='polaris-drawer-nav-sentinel'></div>", unsafe_allow_html=True)
             if st.button(
@@ -191,7 +186,7 @@ def _render_drawer_backend_controls() -> None:
     _render_drawer_blue_field("Query Endpoint", "ui_api_path", "Query endpoint")
 
     st.markdown("<div class='polaris-field-label'>HTTP Timeout</div>", unsafe_allow_html=True)
-    timeout_cols = st.columns([1.4, 0.8, 0.8], gap="small")
+    timeout_cols = st.columns([0.95, 0.38, 0.38, 1.45], gap="small")
     with timeout_cols[0]:
         st.markdown(
             f"<div class='polaris-timeout-pill polaris-timeout-pill--value'>{int(st.session_state.ui_timeout_s)}</div>",
@@ -209,13 +204,21 @@ def _render_drawer_backend_controls() -> None:
             if st.button("+", key="timeout-inc", type="secondary", use_container_width=True):
                 st.session_state.ui_timeout_s = min(600, int(st.session_state.ui_timeout_s) + 5)
                 st.rerun()
+    with timeout_cols[3]:
+        st.markdown("", unsafe_allow_html=True)
 
-    st.toggle("Debug mode", key="ui_debug_mode")
+    with st.container():
+        st.markdown("<div class='polaris-drawer-debug-toggle-sentinel'></div>", unsafe_allow_html=True)
+        st.toggle("Debug mode", key="ui_debug_mode")
     st.caption(
         "Debug mode requests evaluation metadata from the API and exposes raw diagnostic payloads in the interface."
     )
 
-    toggle_label = "Hide Manual Query Constraints" if bool(st.session_state.ui_manual_constraints_open) else "Manual Query Constraints"
+    toggle_label = (
+        "› Hide Manual Query Constraints"
+        if bool(st.session_state.ui_manual_constraints_open)
+        else "› Manual Query Constraints"
+    )
     with st.container():
         st.markdown("<div class='polaris-manual-constraints-sentinel'></div>", unsafe_allow_html=True)
         if st.button(toggle_label, key="toggle-manual-constraints", type="secondary", use_container_width=True):
@@ -238,16 +241,23 @@ def _render_drawer_backend_controls() -> None:
 
 
 def _render_drawer_blue_field(label: str, key: str, input_label: str) -> None:
+    widget_key = f"{key}_input"
     st.markdown(f"<div class='polaris-field-label'>{label}</div>", unsafe_allow_html=True)
-    chip_col, spacer_col = st.columns([1.55, 1], gap="small")
+    chip_col, _ = st.columns([1.02, 1.28], gap="small")
     with chip_col:
         with st.container():
             st.markdown("<div class='polaris-drawer-blue-field-sentinel'></div>", unsafe_allow_html=True)
             st.text_input(
                 input_label,
-                key=key,
+                key=widget_key,
                 label_visibility="collapsed",
+                on_change=_sync_drawer_text_field,
+                args=(widget_key, key),
             )
+
+
+def _sync_drawer_text_field(widget_key: str, state_key: str) -> None:
+    st.session_state[state_key] = str(st.session_state.get(widget_key, ""))
 
 
 def _build_manual_query_constraints() -> dict[str, object] | None:

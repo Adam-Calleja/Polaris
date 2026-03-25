@@ -14,3 +14,6 @@ __pycache__/
 *.egg-info/
 mlflow.db
 data/eval_runs
+frontend/node_modules/
+frontend/dist/
+coverage/

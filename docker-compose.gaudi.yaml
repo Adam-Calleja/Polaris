@@ -61,5 +61,5 @@ services:
     environment:
       POLARIS_CONFIG: /app/config/config.gaudi.yaml
 
-  streamlit:
+  frontend:
     networks: [polaris_net]

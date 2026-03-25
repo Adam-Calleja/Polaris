@@ -13,7 +13,7 @@ Polaris is a Retrieval-Augmented Generation (RAG) system for HPC service support
 - Vector search via Qdrant with configurable retrieval strategies.
 - OpenAI-compatible LLM and embedding backends (local or hosted).
 - FastAPI service with a stable `/v1/query` endpoint.
-- Streamlit chat UI for interactive demos.
+- React SPA for assistant, evaluation, and system inspection workflows.
 - RAGAS-based evaluation utilities and notebooks.
 - MLflow experiment tracking, artifacts, and tracing.
 - MLflow Prompt Registry-based runtime prompt versioning.
@@ -197,7 +197,12 @@ Environment variables used by the stack:
 - `HF_TOKEN`: Hugging Face token used by the embedding service, including the Gaudi TEI image.
 - `EMBED_API_BASE`: Base URL for the embeddings service.
 - `POLARIS_CONFIG`: Path to the runtime config inside the API/eval containers.
-- `POLARIS_API_BASE_URL`: API base URL used by Streamlit.
+- `POLARIS_FEEDBACK_LOG_PATH`: JSONL feedback log path used by the API UI endpoints.
+- `POLARIS_UI_CORS_ALLOWED_ORIGINS`: Comma-separated browser origins allowed to call the API from the frontend.
+- `POLARIS_UI_API_BASE_URL`: Browser-facing API base URL injected into the frontend container.
+- `POLARIS_UI_API_ENDPOINT_PATH`: Query endpoint path injected into the frontend container.
+- `POLARIS_UI_API_TIMEOUT_S`: Default browser request timeout injected into the frontend container.
+- `POLARIS_DISPLAY_NAME`: Optional display name shown in the frontend assistant view.
 - `MLFLOW_TRACKING_URI`: MLflow tracking server URI inside the containers. Docker
   Compose configures this as `http://mlflow:5000` for the API and eval services.
 

@@ -1,8 +1,11 @@
 # polaris_rag/app/api.py
 from __future__ import annotations
 
+from datetime import datetime, timezone
+import os
 import time
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from polaris_rag.config import GlobalConfig
@@ -38,9 +41,18 @@ from polaris_rag.observability.mlflow_tracking import (
     set_span_outputs,
     start_span,
 )
+from polaris_rag.ui.feedback import FeedbackRecord, append_feedback_record, feedback_summary
 
 app = FastAPI(title="Polaris RAG API", version="0.1.0")
 logger = logging.getLogger("polaris_rag.api")
+
+DEFAULT_UI_CORS_ALLOWED_ORIGINS = ("http://localhost:8501",)
+UI_CORS_ALLOWED_HEADERS = (
+    "Content-Type",
+    POLARIS_TIMEOUT_HEADER,
+    POLARIS_EVAL_POLICY_HEADER,
+    POLARIS_EVAL_INCLUDE_METADATA_HEADER,
+)
 
 
 class QueryConstraintsPayload(BaseModel):
@@ -89,6 +101,68 @@ class QueryResponse(BaseModel):
     evaluation_metadata: dict[str, Any] | None = None
     answer_status: QueryAnswerStatus
     timings: QueryTimings = Field(default_factory=QueryTimings)
+
+
+class UiRuntimeResponse(BaseModel):
+    query_endpoint_path: str = "/v1/query"
+    health_endpoint_path: str = "/health"
+    ready_endpoint_path: str = "/ready"
+    feedback_log_path: str
+
+
+class UiFeedbackSummaryResponse(BaseModel):
+    total: int = 0
+    helpful_yes: int = 0
+    grounded_yes: int = 0
+    by_scenario: list[dict[str, Any]] = Field(default_factory=list)
+    failure_types: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class UiFeedbackSubmissionRequest(BaseModel):
+    response_fingerprint: str
+    query: str
+    scenario_id: str | None = None
+    answer_status_code: str
+    evidence_count: int = 0
+    helpful: str
+    grounded: str
+    citation_quality: str
+    failure_type: str
+    notes: str = ""
+
+
+class UiFeedbackSubmissionResponse(BaseModel):
+    created_at: str
+    response_fingerprint: str
+
+
+def parse_cors_allowed_origins(raw_value: str | None) -> list[str]:
+    if raw_value is None:
+        return list(DEFAULT_UI_CORS_ALLOWED_ORIGINS)
+
+    values = [item.strip() for item in str(raw_value).split(",") if item.strip()]
+    if not values:
+        return list(DEFAULT_UI_CORS_ALLOWED_ORIGINS)
+    return values
+
+
+def configure_cors(target_app: FastAPI, allowed_origins: list[str] | None = None) -> None:
+    origins = allowed_origins or parse_cors_allowed_origins(os.getenv("POLARIS_UI_CORS_ALLOWED_ORIGINS"))
+    target_app.add_middleware(
+        CORSMiddleware,
+        allow_origins=origins,
+        allow_credentials=False,
+        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_headers=list(UI_CORS_ALLOWED_HEADERS),
+        expose_headers=list(UI_CORS_ALLOWED_HEADERS),
+    )
+
+
+def get_feedback_log_path() -> str:
+    return os.getenv("POLARIS_FEEDBACK_LOG_PATH", "/app/data/ui_feedback/feedback.jsonl")
+
+
+configure_cors(app)
 
 
 def _serialize_context(source_nodes: list[Any]) -> list[RetrievedContextChunk]:
@@ -217,15 +291,16 @@ def _resolve_request_budget(request: Request) -> RequestBudget | None:
         cleanup_reserve_ms=deadlines.cleanup_reserve_ms,
     )
 
+
 @app.on_event("startup")
 def startup():
     # Use env var so Docker can pass config location
-    import os
     cfg_path = os.environ.get("POLARIS_CONFIG", "/app/config/config.yaml")
     cfg = GlobalConfig.load(cfg_path)
     runtime_tracking_cfg = load_mlflow_runtime_config(cfg)
     configure_mlflow_runtime(runtime_tracking_cfg, strict=True)
     app.state.container = build_container(cfg)
+
 
 @app.get("/health")
 def health():
@@ -237,6 +312,40 @@ def ready():
     report = build_readiness_report(app.state.container.config)
     status_code = 200 if report.get("ready") else 503
     return JSONResponse(status_code=status_code, content=report)
+
+
+@app.get("/v1/ui/runtime", response_model=UiRuntimeResponse)
+def ui_runtime() -> UiRuntimeResponse:
+    return UiRuntimeResponse(feedback_log_path=get_feedback_log_path())
+
+
+@app.get("/v1/ui/feedback/summary", response_model=UiFeedbackSummaryResponse)
+def ui_feedback_summary() -> UiFeedbackSummaryResponse:
+    return UiFeedbackSummaryResponse(**feedback_summary(get_feedback_log_path()))
+
+
+@app.post("/v1/ui/feedback", response_model=UiFeedbackSubmissionResponse)
+def submit_ui_feedback(payload: UiFeedbackSubmissionRequest) -> UiFeedbackSubmissionResponse:
+    created_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    record = FeedbackRecord(
+        created_at=created_at,
+        response_fingerprint=payload.response_fingerprint,
+        query=payload.query,
+        scenario_id=payload.scenario_id,
+        answer_status_code=payload.answer_status_code,
+        evidence_count=max(0, int(payload.evidence_count)),
+        helpful=payload.helpful,
+        grounded=payload.grounded,
+        citation_quality=payload.citation_quality,
+        failure_type=payload.failure_type,
+        notes=payload.notes.strip(),
+    )
+    append_feedback_record(get_feedback_log_path(), record)
+    return UiFeedbackSubmissionResponse(
+        created_at=created_at,
+        response_fingerprint=payload.response_fingerprint,
+    )
+
 
 @app.post("/v1/query", response_model=QueryResponse, response_model_exclude_none=True)
 def query(req: QueryRequest, request: Request):

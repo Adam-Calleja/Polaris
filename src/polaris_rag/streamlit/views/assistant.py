@@ -201,25 +201,30 @@ def render_diagnostics_panel(
 
 def _render_landing_state() -> str | None:
     st.markdown("<div class='polaris-landing-spacer'></div>", unsafe_allow_html=True)
-    left_margin, content_col, right_margin = st.columns([0.25, 0.6, 0.15], gap="small")
-    with content_col:
-        st.markdown("<div class='polaris-quick-prompts-label'>Quick Prompts</div>", unsafe_allow_html=True)
-        prompt_cols = st.columns(2, gap="medium")
+    st.markdown(
+        "<div class='polaris-landing-label-shell'><div class='polaris-quick-prompts-label'>Quick Prompts</div></div>",
+        unsafe_allow_html=True,
+    )
+    with st.container():
+        st.markdown("<div class='polaris-landing-prompt-row-sentinel'></div>", unsafe_allow_html=True)
+        prompt_left_col, prompt_right_col, prompt_empty_col = st.columns([1, 1, 0.5], gap="medium")
+        prompt_columns = [prompt_left_col, prompt_right_col]
         for idx, prompt in enumerate(quick_prompt_cards()):
-            if prompt_cols[idx].button(
-                prompt,
-                key=f"assistant-quick-prompt-{idx}",
-                type="primary",
-                use_container_width=True,
-            ):
-                st.session_state.assistant_pending_prompt = prompt
-                st.rerun()
-        return _render_prompt_composer(
-            form_key="assistant-landing-form",
-            input_key="assistant_current_prompt",
-            placeholder="Next quick insights...",
-            submit_key="assistant-landing-submit",
-        )
+            with prompt_columns[idx]:
+                if st.button(
+                    prompt,
+                    key=f"assistant-quick-prompt-{idx}",
+                    type="primary",
+                    use_container_width=True,
+                ):
+                    st.session_state.assistant_pending_prompt = prompt
+                    st.rerun()
+    st.markdown("<div class='polaris-landing-composer-sentinel'></div>", unsafe_allow_html=True)
+    return _render_prompt_composer(
+        form_key="assistant-landing-form",
+        input_key="assistant_current_prompt",
+        placeholder="Next quick insights...",
+    )
 
 
 def _render_active_state(*, display_name: str, debug_mode: bool, sidebar_open: bool) -> str | None:
@@ -255,12 +260,6 @@ def _render_active_state(*, display_name: str, debug_mode: bool, sidebar_open: b
             )
 
         _render_history_section(older_messages)
-        submitted_prompt = _render_prompt_composer(
-            form_key="assistant-followup-form",
-            input_key="assistant_current_prompt",
-            placeholder="Ask a follow-up question...",
-            submit_key="assistant-followup-submit",
-        )
 
     with right_col:
         render_diagnostics_panel(
@@ -268,6 +267,11 @@ def _render_active_state(*, display_name: str, debug_mode: bool, sidebar_open: b
             latest_assistant.get("error"),
             debug_mode=debug_mode,
         )
+    submitted_prompt = _render_prompt_composer(
+        form_key="assistant-followup-form",
+        input_key="assistant_current_prompt",
+        placeholder="Ask a follow-up question...",
+    )
     return submitted_prompt
 
 
@@ -276,7 +280,6 @@ def _render_prompt_composer(
     form_key: str,
     input_key: str,
     placeholder: str,
-    submit_key: str,
 ) -> str | None:
     with st.form(form_key):
         input_col, action_col = st.columns([12, 1], gap="small")
@@ -288,7 +291,7 @@ def _render_prompt_composer(
                 placeholder=placeholder,
             )
         with action_col:
-            submitted = st.form_submit_button("➜", key=submit_key, type="secondary", use_container_width=True)
+            submitted = st.form_submit_button("➜", type="secondary", use_container_width=True)
 
     text = str(prompt or "").strip()
     if submitted and text:
