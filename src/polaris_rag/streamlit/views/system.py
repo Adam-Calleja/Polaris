@@ -5,6 +5,7 @@ import html
 import streamlit as st
 
 from polaris_rag.streamlit.api_client import ApiClientConfig, probe_endpoint
+from polaris_rag.streamlit.shell import render_page_intro
 
 
 def render_view(
@@ -13,8 +14,10 @@ def render_view(
     debug_mode: bool,
     feedback_log_path: str,
 ) -> None:
-    st.markdown("## System")
-    st.caption("System overview, source legend, and live backend readiness checks.")
+    render_page_intro(
+        "System",
+        "System overview, source legend, and live backend readiness checks.",
+    )
 
     _render_architecture()
     _render_source_legend()
@@ -61,7 +64,7 @@ def _render_source_legend() -> None:
 
 def _render_health_checks(config: ApiClientConfig) -> None:
     st.markdown("### Live Backend Checks")
-    if st.button("Refresh Status", key="system-refresh-status"):
+    if st.button("Refresh Status", key="system-refresh-status", type="secondary"):
         st.session_state.system_refresh_counter = st.session_state.get("system_refresh_counter", 0) + 1
 
     health = probe_endpoint(config, "/health")

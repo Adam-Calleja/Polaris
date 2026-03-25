@@ -14,6 +14,7 @@ from polaris_rag.streamlit.feedback import (
     compute_response_fingerprint,
     feedback_summary,
 )
+from polaris_rag.streamlit.shell import render_page_intro
 from polaris_rag.streamlit.views.assistant import render_answer_block, render_diagnostics_panel, render_error_block
 
 
@@ -23,8 +24,10 @@ def render_view(
     feedback_log_path: str,
     debug_mode: bool,
 ) -> None:
-    st.markdown("## Evaluation")
-    st.caption("Curated live scenarios for your screencast, report screenshots, and lightweight usability evidence.")
+    render_page_intro(
+        "Evaluation",
+        "Curated live scenarios for your screencast, report screenshots, and lightweight usability evidence.",
+    )
 
     _render_feedback_summary(feedback_log_path)
 
@@ -41,8 +44,13 @@ def _render_scenario(
 ) -> None:
     with st.container():
         header_cols = st.columns([4, 1], gap="small")
-        header_cols[0].markdown(f"### {scenario.title}")
-        run_clicked = header_cols[1].button("Run", key=f"scenario-run-{scenario.scenario_id}", use_container_width=True)
+        header_cols[0].markdown(f"<div class='polaris-scenario-title'>{scenario.title}</div>", unsafe_allow_html=True)
+        run_clicked = header_cols[1].button(
+            "Run",
+            key=f"scenario-run-{scenario.scenario_id}",
+            type="secondary",
+            use_container_width=True,
+        )
         st.write(scenario.description)
         st.caption(f"Focus: {scenario.focus}")
         st.code(scenario.query, language="text", wrap_lines=True)
@@ -133,7 +141,7 @@ def _render_feedback_form(*, scenario: DemoScenario, feedback_log_path: str, res
         return
 
     with st.form(f"feedback-form-{scenario.scenario_id}"):
-        st.markdown("#### Record Evaluation Feedback")
+        st.markdown("### Record Evaluation Feedback")
         helpful = st.radio("Helpful?", options=["yes", "partly", "no"], horizontal=True, key=f"helpful-{scenario.scenario_id}")
         grounded = st.radio("Grounded?", options=["yes", "partly", "no"], horizontal=True, key=f"grounded-{scenario.scenario_id}")
         citation_quality = st.selectbox(
@@ -147,7 +155,7 @@ def _render_feedback_form(*, scenario: DemoScenario, feedback_log_path: str, res
             key=f"failure-type-{scenario.scenario_id}",
         )
         notes = st.text_area("Notes", key=f"notes-{scenario.scenario_id}", height=120)
-        submitted = st.form_submit_button("Save Feedback", use_container_width=True)
+        submitted = st.form_submit_button("Save Feedback", type="secondary", use_container_width=True)
 
     if not submitted:
         return

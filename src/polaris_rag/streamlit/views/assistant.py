@@ -84,73 +84,94 @@ def parse_answer_sections(answer: str) -> list[AnswerSection]:
     return sections
 
 
+def quick_prompt_cards() -> tuple[str, str]:
+    return EXAMPLE_QUERIES[:2]
+
+
+def assistant_view_state(messages: list[dict[str, Any]]) -> str:
+    _, latest_assistant, _ = latest_exchange(messages)
+    return "active" if latest_assistant is not None else "landing"
+
+
+def latest_exchange(
+    messages: list[dict[str, Any]],
+) -> tuple[dict[str, Any] | None, dict[str, Any] | None, list[dict[str, Any]]]:
+    if not messages:
+        return None, None, []
+
+    latest_assistant_idx: int | None = None
+    for idx in range(len(messages) - 1, -1, -1):
+        if messages[idx].get("role") == "assistant":
+            latest_assistant_idx = idx
+            break
+
+    if latest_assistant_idx is None:
+        latest_user_idx = next(
+            (idx for idx in range(len(messages) - 1, -1, -1) if messages[idx].get("role") == "user"),
+            None,
+        )
+        if latest_user_idx is None:
+            return None, None, list(messages)
+        return messages[latest_user_idx], None, messages[:latest_user_idx]
+
+    latest_user_idx: int | None = None
+    for idx in range(latest_assistant_idx - 1, -1, -1):
+        if messages[idx].get("role") == "user":
+            latest_user_idx = idx
+            break
+
+    latest_user = messages[latest_user_idx] if latest_user_idx is not None else None
+    older_messages = messages[: latest_user_idx if latest_user_idx is not None else latest_assistant_idx]
+    return latest_user, messages[latest_assistant_idx], older_messages
+
+
 def render_view(
     config: ApiClientConfig,
     *,
     manual_query_constraints: Mapping[str, Any] | None,
     debug_mode: bool,
+    display_name: str,
+    sidebar_open: bool,
 ) -> None:
-    st.markdown("## Assistant")
-    st.caption("Evidence-first support assistance with source inspection, query diagnostics, and explicit weak-answer states.")
-
-    _render_example_queries()
-
-    prompt_from_buttons = st.session_state.pop("assistant_pending_prompt", None)
-    prompt_from_input = st.chat_input("Ask Polaris about HPC support, policies, or documentation...")
-    prompt = prompt_from_buttons or prompt_from_input
-    if prompt:
+    pending_prompt = st.session_state.pop("assistant_pending_prompt", None)
+    if pending_prompt:
         _submit_prompt(
             config,
-            prompt=prompt,
+            prompt=pending_prompt,
             manual_query_constraints=manual_query_constraints,
             debug_mode=debug_mode,
         )
+        st.rerun()
 
-    left_col, right_col = st.columns([7, 3], gap="large")
+    messages = list(st.session_state.assistant_messages)
+    current_state = assistant_view_state(messages)
 
-    with left_col:
-        _render_chat_history()
+    if current_state == "landing":
+        submitted_prompt = _render_landing_state()
+    else:
+        submitted_prompt = _render_active_state(
+            display_name=display_name,
+            debug_mode=debug_mode,
+            sidebar_open=sidebar_open,
+        )
 
-    with right_col:
-        _render_diagnostics_for_latest_message(debug_mode=debug_mode)
+    if submitted_prompt:
+        _submit_prompt(
+            config,
+            prompt=submitted_prompt,
+            manual_query_constraints=manual_query_constraints,
+            debug_mode=debug_mode,
+        )
+        st.session_state.assistant_current_prompt = ""
+        st.rerun()
 
 
 def render_answer_block(response: QueryResponseData) -> None:
-    _render_status_badges(response.answer_status.code, response.answer_status.detail, len(response.context))
-    if response.answer_status.code == "no_evidence":
-        st.warning(response.answer_status.detail)
-    elif response.answer_status.code == "limited_evidence":
-        st.info(response.answer_status.detail)
-
-    sections = parse_answer_sections(response.answer)
-    if not sections:
-        st.markdown("_No answer text was returned._")
-        return
-
-    for section in sections:
-        if section.key == "RESPONSE":
-            st.markdown(section.body)
-            continue
-
-        st.markdown(f"#### {section.heading}")
-        if section.key in {"EXAMPLE CUSTOMER REPLY", "REFERENCE KEY"}:
-            st.code(section.body or "No content returned.", language="text", wrap_lines=True)
-        else:
-            st.markdown(section.body or "_No content returned._")
+    st.markdown(_build_answer_card_html(response), unsafe_allow_html=True)
 
 
 def render_error_block(error: NormalizedApiError) -> None:
-    if error.kind == "timeout":
-        st.error("The request reached the API deadline before a full answer was returned.")
-        st.caption("Try a shorter query, disable debug mode, or increase the request timeout.")
-    elif error.kind == "network_error":
-        st.error("The Streamlit frontend could not reach the backend service.")
-        st.caption("Check the API base URL and whether the backend container is running.")
-    else:
-        st.error("The backend returned an error before the answer could be completed.")
-    st.code(error.message, language="text", wrap_lines=True)
-    if error.failure_class:
-        st.caption(f"Failure class: `{error.failure_class}`")
+    st.markdown(_build_error_card_html(error), unsafe_allow_html=True)
 
 
 def render_diagnostics_panel(
@@ -159,31 +180,120 @@ def render_diagnostics_panel(
     *,
     debug_mode: bool,
 ) -> None:
-    st.markdown("### Diagnostics")
-    if response is None and error is None:
-        st.info("Run a query to inspect evidence, timings, and query interpretation.")
-        return
+    st.markdown(_build_diagnostics_html(response, error), unsafe_allow_html=True)
 
     if response is not None:
-        st.metric("Evidence Chunks", len(response.context))
-        retrieval_ms = response.timings.retrieval_elapsed_ms if response.timings.retrieval_elapsed_ms is not None else "n/a"
-        generation_ms = response.timings.generation_elapsed_ms if response.timings.generation_elapsed_ms is not None else "n/a"
-        metric_cols = st.columns(2)
-        metric_cols[0].metric("Retrieval", retrieval_ms)
-        metric_cols[1].metric("Generation", generation_ms)
-        _render_constraints(response.query_constraints)
-        _render_context_items(response.context)
+        if response.context:
+            with st.expander("Retrieved Evidence", expanded=False):
+                _render_context_items(response.context)
         if debug_mode and response.evaluation_metadata:
             with st.expander("Debug Metadata", expanded=False):
                 st.json(response.evaluation_metadata)
         return
 
-    if error is not None:
-        st.metric("Evidence Chunks", 0)
-        st.warning(error.message)
-        if error.detail is not None:
-            with st.expander("Error Detail", expanded=False):
-                st.json(error.detail) if isinstance(error.detail, Mapping) else st.code(str(error.detail), language="text")
+    if error is not None and error.detail is not None:
+        with st.expander("Error Detail", expanded=False):
+            if isinstance(error.detail, Mapping):
+                st.json(error.detail)
+            else:
+                st.code(str(error.detail), language="text", wrap_lines=True)
+
+
+def _render_landing_state() -> str | None:
+    st.markdown("<div class='polaris-landing-spacer'></div>", unsafe_allow_html=True)
+    left_margin, content_col, right_margin = st.columns([0.25, 0.6, 0.15], gap="small")
+    with content_col:
+        st.markdown("<div class='polaris-quick-prompts-label'>Quick Prompts</div>", unsafe_allow_html=True)
+        prompt_cols = st.columns(2, gap="medium")
+        for idx, prompt in enumerate(quick_prompt_cards()):
+            if prompt_cols[idx].button(
+                prompt,
+                key=f"assistant-quick-prompt-{idx}",
+                type="primary",
+                use_container_width=True,
+            ):
+                st.session_state.assistant_pending_prompt = prompt
+                st.rerun()
+        return _render_prompt_composer(
+            form_key="assistant-landing-form",
+            input_key="assistant_current_prompt",
+            placeholder="Next quick insights...",
+            submit_key="assistant-landing-submit",
+        )
+
+
+def _render_active_state(*, display_name: str, debug_mode: bool, sidebar_open: bool) -> str | None:
+    latest_user, latest_assistant, older_messages = latest_exchange(list(st.session_state.assistant_messages))
+    if latest_assistant is None:
+        return _render_landing_state()
+
+    if latest_user is not None:
+        st.markdown(
+            f"<div class='polaris-user-label'>{html.escape(display_name)}</div>",
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            f"<div class='polaris-query-pill'>{html.escape(str(latest_user.get('content') or ''))}</div>",
+            unsafe_allow_html=True,
+        )
+
+    left_col, right_col = st.columns([7, 4], gap="large")
+    submitted_prompt: str | None = None
+
+    with left_col:
+        st.markdown("<div class='polaris-assistant-label'>Polaris</div>", unsafe_allow_html=True)
+        response = latest_assistant.get("response")
+        error = latest_assistant.get("error")
+        if response is not None:
+            render_answer_block(response)
+        elif error is not None:
+            render_error_block(error)
+        else:
+            st.markdown(
+                "<div class='polaris-answer-card'><div class='polaris-answer-empty'>No assistant content available.</div></div>",
+                unsafe_allow_html=True,
+            )
+
+        _render_history_section(older_messages)
+        submitted_prompt = _render_prompt_composer(
+            form_key="assistant-followup-form",
+            input_key="assistant_current_prompt",
+            placeholder="Ask a follow-up question...",
+            submit_key="assistant-followup-submit",
+        )
+
+    with right_col:
+        render_diagnostics_panel(
+            latest_assistant.get("response"),
+            latest_assistant.get("error"),
+            debug_mode=debug_mode,
+        )
+    return submitted_prompt
+
+
+def _render_prompt_composer(
+    *,
+    form_key: str,
+    input_key: str,
+    placeholder: str,
+    submit_key: str,
+) -> str | None:
+    with st.form(form_key):
+        input_col, action_col = st.columns([12, 1], gap="small")
+        with input_col:
+            prompt = st.text_input(
+                "Prompt",
+                key=input_key,
+                label_visibility="collapsed",
+                placeholder=placeholder,
+            )
+        with action_col:
+            submitted = st.form_submit_button("➜", key=submit_key, type="secondary", use_container_width=True)
+
+    text = str(prompt or "").strip()
+    if submitted and text:
+        return text
+    return None
 
 
 def _submit_prompt(
@@ -239,49 +349,132 @@ def _submit_prompt(
     st.session_state.assistant_latest_message = assistant_message
 
 
-def _render_chat_history() -> None:
-    messages = st.session_state.assistant_messages
-    if not messages:
-        st.markdown("### Start Here")
-        st.write(
-            "Use the example prompts or ask your own question. The answer panel is structured for quick reading, "
-            "while the diagnostics panel keeps the grounding evidence visible."
+def _render_history_section(older_messages: list[dict[str, Any]]) -> None:
+    if not older_messages:
+        return
+
+    button_label = "Hide Conversation History" if bool(st.session_state.assistant_history_open) else "Conversation History"
+    if st.button(button_label, key="assistant-history-toggle", type="secondary", use_container_width=False):
+        st.session_state.assistant_history_open = not bool(st.session_state.assistant_history_open)
+        st.rerun()
+
+    if not bool(st.session_state.assistant_history_open):
+        return
+
+    rows: list[str] = []
+    for message in older_messages:
+        role = str(message.get("role") or "assistant").title()
+        content = str(message.get("content") or "")
+        rows.append(
+            "<div class='polaris-history-row'>"
+            f"<div class='polaris-history-row__role'>{html.escape(role)}</div>"
+            f"<div class='polaris-history-row__content'>{_html_text(content)}</div>"
+            "</div>",
         )
-        return
-
-    for message in messages:
-        with st.chat_message(message["role"]):
-            if message["role"] == "user":
-                st.markdown(message["content"])
-                continue
-
-            response = message.get("response")
-            error = message.get("error")
-            if response is not None:
-                render_answer_block(response)
-            elif error is not None:
-                render_error_block(error)
-            else:
-                st.markdown("_No assistant content available._")
-
-
-def _render_diagnostics_for_latest_message(*, debug_mode: bool) -> None:
-    latest_message = st.session_state.get("assistant_latest_message")
-    if latest_message is None:
-        render_diagnostics_panel(None, None, debug_mode=debug_mode)
-        return
-    render_diagnostics_panel(
-        latest_message.get("response"),
-        latest_message.get("error"),
-        debug_mode=debug_mode,
+    st.markdown(
+        f"<div class='polaris-history-panel'>{''.join(rows)}</div>",
+        unsafe_allow_html=True,
     )
 
 
-def _render_constraints(query_constraints: Mapping[str, Any] | None) -> None:
-    st.markdown("#### Interpreted Query Constraints")
+def _render_context_items(context_items: list[RetrievedContextItem]) -> None:
+    for item in context_items:
+        score_text = f"{item.score:.4f}" if isinstance(item.score, float) else "n/a"
+        source_text = item.source or "unknown"
+        with st.expander(f"[{item.rank}] {item.doc_id} · {source_text} · {score_text}", expanded=False):
+            st.code(item.text or "No chunk text returned.", language="text", wrap_lines=True)
+
+
+def _build_answer_card_html(response: QueryResponseData) -> str:
+    badges = _build_status_badges_html(response.answer_status.code, len(response.context))
+    sections_html = "".join(_build_answer_section_html(section) for section in parse_answer_sections(response.answer))
+    if not sections_html:
+        sections_html = "<div class='polaris-answer-empty'>No answer text was returned.</div>"
+
+    return (
+        "<div class='polaris-answer-card'>"
+        f"{badges}"
+        f"<div class='polaris-answer-detail'>{html.escape(response.answer_status.detail)}</div>"
+        f"{sections_html}"
+        "</div>"
+    )
+
+
+def _build_error_card_html(error: NormalizedApiError) -> str:
+    if error.kind == "timeout":
+        title = "The request reached the API deadline before a full answer was returned."
+        body = "Try a shorter query, disable debug mode, or increase the request timeout."
+    elif error.kind == "network_error":
+        title = "The Streamlit frontend could not reach the backend service."
+        body = "Check the API base URL and whether the backend container is running."
+    else:
+        title = "The backend returned an error before the answer could be completed."
+        body = error.message
+
+    failure_class = (
+        f"<div class='polaris-answer-detail'>Failure class: {html.escape(error.failure_class)}</div>"
+        if error.failure_class
+        else ""
+    )
+    return (
+        "<div class='polaris-answer-card polaris-answer-card--error'>"
+        f"<div class='polaris-answer-section__title'>{html.escape(title)}</div>"
+        f"<div class='polaris-answer-section__body'>{html.escape(body)}</div>"
+        f"{failure_class}"
+        "</div>"
+    )
+
+
+def _build_diagnostics_html(response: QueryResponseData | None, error: NormalizedApiError | None) -> str:
+    if response is None and error is None:
+        return (
+            "<div class='polaris-diagnostics'>"
+            "<div class='polaris-diagnostics__title'>Diagnostics</div>"
+            "<div class='polaris-diagnostics__message'>Run a query to inspect evidence, timings, and query interpretation.</div>"
+            "</div>"
+        )
+
+    if response is not None:
+        retrieval_value = _format_timing_value(response.timings.retrieval_elapsed_ms)
+        generation_value = _format_timing_value(response.timings.generation_elapsed_ms)
+        constraints_html = _build_constraints_html(response.query_constraints)
+        return (
+            "<div class='polaris-diagnostics'>"
+            "<div class='polaris-diagnostics__title'>Diagnostics</div>"
+            "<div class='polaris-stat-block'>"
+            "<div class='polaris-stat-block__label'>Evidence Chunks</div>"
+            f"<div class='polaris-stat-block__value'>{len(response.context)}</div>"
+            "</div>"
+            "<div class='polaris-stat-grid'>"
+            "<div class='polaris-stat-grid__item'>"
+            "<div class='polaris-stat-grid__label'>Retrieval</div>"
+            f"<div class='polaris-stat-grid__value'>{html.escape(retrieval_value)}</div>"
+            "</div>"
+            "<div class='polaris-stat-grid__item'>"
+            "<div class='polaris-stat-grid__label'>Generation</div>"
+            f"<div class='polaris-stat-grid__value'>{html.escape(generation_value)}</div>"
+            "</div>"
+            "</div>"
+            "<div class='polaris-diagnostics__section-title'>Interpreted Query Constraints</div>"
+            f"{constraints_html}"
+            "</div>"
+        )
+
+    return (
+        "<div class='polaris-diagnostics'>"
+        "<div class='polaris-diagnostics__title'>Diagnostics</div>"
+        "<div class='polaris-stat-block'>"
+        "<div class='polaris-stat-block__label'>Evidence Chunks</div>"
+        "<div class='polaris-stat-block__value'>0</div>"
+        "</div>"
+        f"<div class='polaris-diagnostics__message'>{html.escape(error.message if error is not None else 'No diagnostics available.')}</div>"
+        "</div>"
+    )
+
+
+def _build_constraints_html(query_constraints: Mapping[str, Any] | None) -> str:
     if not query_constraints:
-        st.caption("No explicit query constraints were returned for this answer.")
-        return
+        return "<div class='polaris-constraints__empty'>No explicit query constraints were returned for this answer.</div>"
 
     labels = {
         "query_type": "Query type",
@@ -297,7 +490,7 @@ def _render_constraints(query_constraints: Mapping[str, Any] | None) -> None:
         "scope_required": "Scope required",
         "version_sensitive_guess": "Version sensitive",
     }
-
+    rows: list[str] = []
     for key, label in labels.items():
         value = query_constraints.get(key)
         if value in (None, [], ""):
@@ -306,68 +499,56 @@ def _render_constraints(query_constraints: Mapping[str, Any] | None) -> None:
             display_value = ", ".join(str(item) for item in value)
         else:
             display_value = str(value)
-        st.markdown(f"**{label}:** {display_value}")
+        rows.append(
+            "<div class='polaris-constraint-row'>"
+            f"<span class='polaris-constraint-row__label'>{html.escape(label)}:</span> "
+            f"<span class='polaris-constraint-row__value'>{html.escape(display_value)}</span>"
+            "</div>"
+        )
+    if not rows:
+        return "<div class='polaris-constraints__empty'>No explicit query constraints were returned for this answer.</div>"
+    return "".join(rows)
 
 
-def _render_context_items(context_items: list[RetrievedContextItem]) -> None:
-    st.markdown("#### Retrieved Evidence")
-    if not context_items:
-        st.caption("No supporting context was returned.")
-        return
-
-    for item in context_items:
-        score_text = f"{item.score:.4f}" if isinstance(item.score, float) else "n/a"
-        source_text = item.source or "unknown"
-        with st.expander(f"[{item.rank}] {item.doc_id}", expanded=False):
-            _render_inline_badges(
-                [
-                    (f"Source: {source_text}", "accent"),
-                    (f"Score: {score_text}", "muted"),
-                ]
-            )
-            st.code(item.text or "No chunk text returned.", language="text", wrap_lines=True)
-
-
-def _render_example_queries() -> None:
-    action_cols = st.columns([4, 1], gap="small")
-    with action_cols[0]:
-        st.markdown("### Demo Prompts")
-    with action_cols[1]:
-        if st.button("Clear Chat", use_container_width=True):
-            st.session_state.assistant_messages = []
-            st.session_state.assistant_latest_message = None
-            st.rerun()
-
-    button_cols = st.columns(2, gap="small")
-    for idx, query in enumerate(EXAMPLE_QUERIES):
-        column = button_cols[idx % 2]
-        if column.button(query, key=f"assistant-example-{idx}", use_container_width=True):
-            st.session_state.assistant_pending_prompt = query
-            st.rerun()
-
-
-def _render_status_badges(status_code: str, detail: str, evidence_count: int) -> None:
+def _build_status_badges_html(status_code: str, evidence_count: int) -> str:
     labels = {
         "grounded": "Grounded",
         "limited_evidence": "Limited Evidence",
         "no_evidence": "No Evidence",
     }
     status_label = labels.get(status_code, status_code.replace("_", " ").title())
-    _render_inline_badges(
-        [
-            (status_label, status_code),
-            (f"{evidence_count} evidence chunks", "muted"),
-        ]
+    return (
+        "<div class='polaris-status-row'>"
+        f"<span class='polaris-status-badge polaris-status-badge--{html.escape(status_code)}'>{html.escape(status_label)}</span>"
+        f"<span class='polaris-status-badge polaris-status-badge--muted'>{evidence_count} evidence chunks</span>"
+        "</div>"
     )
-    st.caption(detail)
 
 
-def _render_inline_badges(values: list[tuple[str, str]]) -> None:
-    rendered = "".join(
-        f"<span class='polaris-badge polaris-badge--{html.escape(variant)}'>{html.escape(label)}</span>"
-        for label, variant in values
+def _build_answer_section_html(section: AnswerSection) -> str:
+    if section.key == "RESPONSE":
+        return f"<div class='polaris-answer-section__body'>{_html_text(section.body)}</div>"
+
+    body_class = "polaris-answer-section__body polaris-answer-section__body--mono" if section.key in {"EXAMPLE CUSTOMER REPLY", "REFERENCE KEY"} else "polaris-answer-section__body"
+    return (
+        "<div class='polaris-answer-section'>"
+        f"<div class='polaris-answer-section__title'>{html.escape(section.heading)}</div>"
+        f"<div class='{body_class}'>{_html_text(section.body or 'No content returned.')}</div>"
+        "</div>"
     )
-    st.markdown(f"<div class='polaris-badge-row'>{rendered}</div>", unsafe_allow_html=True)
+
+
+def _format_timing_value(value_ms: int | None) -> str:
+    if value_ms is None:
+        return "n/a"
+    if value_ms >= 1000:
+        return f"{value_ms / 1000.0:.1f} s"
+    return f"{value_ms} ms"
+
+
+def _html_text(text: str) -> str:
+    escaped = html.escape(str(text or ""))
+    return escaped.replace("\n", "<br>")
 
 
 def _now_iso() -> str:
