@@ -650,6 +650,10 @@ button {
   margin-top: 1rem;
 }
 
+.assistant-page__footer {
+  margin-top: 2rem;
+}
+
 .assistant-page__actions {
   display: flex;
   justify-content: flex-end;

@@ -132,7 +132,7 @@ export function AssistantPage() {
           <PromptComposer
             disabled={submitting}
             onSubmit={submitPrompt}
-            placeholder="Next quick insights..."
+            placeholder="Ask a question..."
           />
         </div>
       </section>
@@ -196,15 +196,17 @@ export function AssistantPage() {
         </div>
       </div>
 
-      <PromptComposer
-        disabled={submitting}
-        onSubmit={submitPrompt}
-        placeholder="Ask a follow-up question..."
-      />
-      <div className="assistant-page__actions">
-        <button className="secondary-button" onClick={clearAssistantSession} type="button">
-          Clear Assistant
-        </button>
+      <div className="assistant-page__footer">
+        <PromptComposer
+          disabled={submitting}
+          onSubmit={submitPrompt}
+          placeholder="Enter a new question..."
+        />
+        <div className="assistant-page__actions">
+          <button className="secondary-button" onClick={clearAssistantSession} type="button">
+            Clear Assistant
+          </button>
+        </div>
       </div>
     </section>
   );
