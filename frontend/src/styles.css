@@ -698,6 +698,10 @@ button {
   gap: 1rem;
 }
 
+.evaluation-page__summary-grid {
+  margin-bottom: 1.75rem;
+}
+
 .metric-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   margin-bottom: 1rem;
@@ -751,10 +755,6 @@ button {
 .card-cluster {
   display: grid;
   gap: 1.2rem;
-}
-
-.evaluation-page__scenario-list {
-  margin-top: 1.5rem;
 }
 
 .feedback-form {
