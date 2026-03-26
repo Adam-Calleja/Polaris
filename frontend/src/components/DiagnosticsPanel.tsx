@@ -73,13 +73,13 @@ function DiagnosticsBody({
         </div>
         <div className="diagnostics__metric-grid">
           <div className="diagnostics__mini-metric">
-            <span className="diagnostics__mini-label">Retrieval</span>
+            <span className="diagnostics__mini-label">Retrieval Time (ms)</span>
             <span className="diagnostics__mini-value">
               {formatTimingValue(response.timings.retrieval_elapsed_ms)}
             </span>
           </div>
           <div className="diagnostics__mini-metric">
-            <span className="diagnostics__mini-label">Generation</span>
+            <span className="diagnostics__mini-label">Generation Time (ms)</span>
             <span className="diagnostics__mini-value">
               {formatTimingValue(response.timings.generation_elapsed_ms)}
             </span>
