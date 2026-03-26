@@ -132,9 +132,13 @@ button {
 }
 
 .app-shell__menu-button {
+  display: grid;
+  place-items: center;
   width: 2.8rem;
   height: 2.8rem;
+  padding: 0;
   font-size: 1.1rem;
+  line-height: 1;
 }
 
 .brand {
