@@ -177,7 +177,7 @@ function ScenarioResult({
       <div>
         {result.response ? <AnswerCard response={result.response} /> : result.error ? <ErrorCard error={result.error} /> : null}
       </div>
-      <div>
+      <div className="evaluation-page__diagnostics">
         <DiagnosticsPanel error={result.error} response={result.response} />
       </div>
     </div>
@@ -317,7 +317,7 @@ export function EvaluationPage() {
                 </button>
               </div>
               <p className="scenario-card__focus">Focus: {scenario.focus}</p>
-              <pre className="code-block">{scenario.query}</pre>
+              <pre className="code-block scenario-card__query">{scenario.query}</pre>
 
               {result ? (
                 <>

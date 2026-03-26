@@ -746,9 +746,20 @@ button {
   color: rgba(23, 21, 63, 0.7);
 }
 
+.scenario-card__query + .evaluation-page__result-grid {
+  margin-top: 1.35rem;
+}
+
 .scenario-card__run {
   min-width: 5.2rem;
   min-height: 3rem;
+}
+
+.evaluation-page__diagnostics .diagnostics {
+  border-color: rgba(255, 255, 255, 0.08);
+  background:
+    radial-gradient(circle at 82% 18%, rgba(117, 127, 255, 0.2), transparent 22%),
+    linear-gradient(100deg, var(--bg-dark) 0%, var(--bg-mid) 50%, var(--bg-bright) 100%);
 }
 
 .evaluation-page__scenario-list,
