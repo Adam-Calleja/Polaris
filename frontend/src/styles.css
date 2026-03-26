@@ -648,8 +648,29 @@ button {
 
 .loading-label {
   display: inline-block;
-  animation: loading-oscillate 1.25s infinite ease-in-out;
-  will-change: transform, opacity;
+  color: inherit;
+}
+
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  .loading-label {
+    background-image: linear-gradient(
+      100deg,
+      currentColor 0%,
+      currentColor 35%,
+      color-mix(in srgb, currentColor 40%, white 60%) 50%,
+      currentColor 65%,
+      currentColor 100%
+    );
+    background-size: 220% 100%;
+    background-position: 120% 0;
+    background-repeat: no-repeat;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    animation: loading-sheen 1.45s linear infinite;
+    will-change: background-position;
+  }
 }
 
 .history-panel {
@@ -901,14 +922,12 @@ button {
   }
 }
 
-@keyframes loading-oscillate {
+@keyframes loading-sheen {
   0%,
-  100% {
-    opacity: 0.72;
-    transform: translateX(0);
+  15% {
+    background-position: 120% 0;
   }
-  50% {
-    opacity: 1;
-    transform: translateX(0.22rem);
+  100% {
+    background-position: -120% 0;
   }
 }
