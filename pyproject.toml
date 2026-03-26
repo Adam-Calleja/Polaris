@@ -31,7 +31,7 @@ dependencies = [
   "llama-index-embeddings-openai-like>=0.1",
 
   # Vector DB client
-  "qdrant-client>=1.7",
+  "qdrant-client>=1.14,<1.15",
 
   # Tokenizers / HF utilities (required by llama-index openai_like + your tokenisation paths)
   "tiktoken>=0.5",
@@ -57,7 +57,7 @@ retrieval = [
   "llama-index-core>=0.10",
   "llama-index-vector-stores-qdrant>=0.1",
   "llama-index-retrievers-bm25>=0.1",
-  "qdrant-client>=1.7",
+  "qdrant-client>=1.14,<1.15",
 ]
 tokenizers = [
   "tiktoken>=0.5",

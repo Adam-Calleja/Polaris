@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import json
 import os
 import time
 from fastapi import FastAPI, HTTPException, Request
@@ -315,6 +316,15 @@ def health():
 @app.get("/ready")
 def ready():
     report = build_readiness_report(app.state.container.config)
+    signature = json.dumps(report, sort_keys=True, default=str)
+    last_logged_signature = getattr(app.state, "_last_readiness_failure_signature", None)
+
+    if report.get("ready"):
+        app.state._last_readiness_failure_signature = None
+    elif signature != last_logged_signature:
+        logger.warning("Readiness check failed: %s", signature)
+        app.state._last_readiness_failure_signature = signature
+
     status_code = 200 if report.get("ready") else 503
     return JSONResponse(status_code=status_code, content=report)
 

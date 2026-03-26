@@ -269,6 +269,52 @@ def test_ready_endpoint_returns_503_when_report_is_not_ready(monkeypatch) -> Non
     assert json.loads(response.body)["checks"]["embed"]["status"] == "failed"
 
 
+def test_ready_endpoint_logs_non_ready_report_once(monkeypatch, caplog) -> None:
+    api.app.state.container = SimpleNamespace(config=_make_config())
+    api.app.state._last_readiness_failure_signature = None
+    monkeypatch.setattr(
+        api,
+        "build_readiness_report",
+        lambda config: {
+            "ready": False,
+            "status": "not_ready",
+            "checks": {"qdrant": {"status": "failed", "reason": "collection missing"}},
+        },
+    )
+
+    with caplog.at_level("WARNING"):
+        first = api.ready()
+        second = api.ready()
+
+    assert first.status_code == 503
+    assert second.status_code == 503
+    assert caplog.text.count("Readiness check failed:") == 1
+    assert "collection missing" in caplog.text
+
+
+def test_ready_endpoint_resets_failure_log_dedup_after_success(monkeypatch, caplog) -> None:
+    api.app.state.container = SimpleNamespace(config=_make_config())
+    api.app.state._last_readiness_failure_signature = None
+    reports = iter(
+        [
+            {"ready": False, "status": "not_ready", "checks": {"embed": {"status": "failed"}}},
+            {"ready": True, "status": "ok", "checks": {}},
+            {"ready": False, "status": "not_ready", "checks": {"embed": {"status": "failed"}}},
+        ]
+    )
+    monkeypatch.setattr(api, "build_readiness_report", lambda config: next(reports))
+
+    with caplog.at_level("WARNING"):
+        first = api.ready()
+        second = api.ready()
+        third = api.ready()
+
+    assert first.status_code == 503
+    assert second.status_code == 200
+    assert third.status_code == 503
+    assert caplog.text.count("Readiness check failed:") == 2
+
+
 def test_health_endpoint_remains_live_when_ready_fails(monkeypatch) -> None:
     api.app.state.container = SimpleNamespace(config=_make_config())
     monkeypatch.setattr(
