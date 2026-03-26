@@ -9,7 +9,7 @@ from polaris_rag.app import api
 def test_configure_cors_allows_frontend_origin_and_headers(monkeypatch) -> None:
     monkeypatch.setenv(
         "POLARIS_UI_CORS_ALLOWED_ORIGINS",
-        "http://localhost:8501,http://example.test:9000",
+        "http://localhost:8500,http://localhost:8501,http://example.test:9000",
     )
 
     test_app = FastAPI()
@@ -24,14 +24,14 @@ def test_configure_cors_allows_frontend_origin_and_headers(monkeypatch) -> None:
     response = client.options(
         "/echo",
         headers={
-            "Origin": "http://localhost:8501",
+            "Origin": "http://localhost:8500",
             "Access-Control-Request-Method": "POST",
             "Access-Control-Request-Headers": ", ".join(api.UI_CORS_ALLOWED_HEADERS),
         },
     )
 
     assert response.status_code == 200
-    assert response.headers["access-control-allow-origin"] == "http://localhost:8501"
+    assert response.headers["access-control-allow-origin"] == "http://localhost:8500"
     allowed_headers = response.headers["access-control-allow-headers"].lower()
     for header_name in api.UI_CORS_ALLOWED_HEADERS:
         assert header_name.lower() in allowed_headers

@@ -49,7 +49,7 @@ To run the same stack with the Gaudi-specific overrides:
 docker compose -f docker-compose.yaml -f docker-compose.gaudi.yaml up --build
 ```
 
-UI: [http://localhost:8501](http://localhost:8501)  
+UI: [http://localhost:8500](http://localhost:8500)  
 API: [http://localhost:8000](http://localhost:8000)
 MLflow: [http://localhost:5000](http://localhost:5000)
 

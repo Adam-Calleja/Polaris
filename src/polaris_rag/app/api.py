@@ -46,7 +46,12 @@ from polaris_rag.ui.feedback import FeedbackRecord, append_feedback_record, feed
 app = FastAPI(title="Polaris RAG API", version="0.1.0")
 logger = logging.getLogger("polaris_rag.api")
 
-DEFAULT_UI_CORS_ALLOWED_ORIGINS = ("http://localhost:8501",)
+DEFAULT_UI_CORS_ALLOWED_ORIGINS = (
+    "http://localhost:8500",
+    "http://127.0.0.1:8500",
+    "http://localhost:8501",
+    "http://127.0.0.1:8501",
+)
 UI_CORS_ALLOWED_HEADERS = (
     "Content-Type",
     POLARIS_TIMEOUT_HEADER,
