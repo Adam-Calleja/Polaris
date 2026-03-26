@@ -479,6 +479,7 @@ button {
 .answer-card--pending .answer-card__title {
   width: min(100%, 20rem);
   margin: 0;
+  padding: 0.9rem 1.25rem;
   text-align: center;
 }
 
