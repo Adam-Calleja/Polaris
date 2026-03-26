@@ -470,6 +470,18 @@ button {
   padding: 1.65rem 1.8rem 1.85rem;
 }
 
+.answer-card--pending {
+  display: grid;
+  place-items: center;
+  min-height: 9.5rem;
+}
+
+.answer-card--pending .answer-card__title {
+  width: min(100%, 20rem);
+  margin: 0;
+  text-align: center;
+}
+
 .answer-card--error {
   border-color: rgba(209, 77, 103, 0.22);
 }
