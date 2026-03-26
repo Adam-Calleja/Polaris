@@ -189,23 +189,23 @@ export function AssistantPage() {
               ) : null}
             </div>
           ) : null}
+
+          <div className="assistant-page__footer">
+            <PromptComposer
+              disabled={submitting}
+              onSubmit={submitPrompt}
+              placeholder="Enter a new question..."
+            />
+            <div className="assistant-page__actions">
+              <button className="secondary-button" onClick={clearAssistantSession} type="button">
+                Clear Assistant
+              </button>
+            </div>
+          </div>
         </div>
 
         <div className="assistant-page__secondary">
           <DiagnosticsPanel error={latestAssistant?.error} response={latestAssistant?.response} />
-        </div>
-      </div>
-
-      <div className="assistant-page__footer">
-        <PromptComposer
-          disabled={submitting}
-          onSubmit={submitPrompt}
-          placeholder="Enter a new question..."
-        />
-        <div className="assistant-page__actions">
-          <button className="secondary-button" onClick={clearAssistantSession} type="button">
-            Clear Assistant
-          </button>
         </div>
       </div>
     </section>

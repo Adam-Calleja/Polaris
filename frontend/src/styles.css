@@ -700,7 +700,7 @@ button {
 
 .assistant-page__footer {
   margin-top: 2rem;
-  width: min(100%, 44rem);
+  width: 100%;
 }
 
 .assistant-page__footer .prompt-composer {
