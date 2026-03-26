@@ -142,12 +142,13 @@ button {
   align-items: center;
   gap: 0.72rem;
   margin-left: auto;
+  padding: 1rem 1rem 2rem 1rem;
   font-weight: 600;
-  font-size: 1.26rem;
+  font-size: 2rem;
 }
 
 .brand__icon {
-  font-size: 1.22rem;
+  font-size: 2rem;
 }
 
 .brand__text {
