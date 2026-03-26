@@ -821,6 +821,11 @@ button {
   margin-top: 1.35rem;
 }
 
+.evaluation-page__result-grid + .feedback-form,
+.evaluation-page__result-grid + .status-card {
+  margin-top: 1.35rem;
+}
+
 .scenario-card__run {
   min-width: 5.2rem;
   min-height: 3rem;
