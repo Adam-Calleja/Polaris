@@ -1,7 +1,7 @@
 import type { FrontendRuntimeConfig } from "./types";
 
 const DEFAULT_RUNTIME: FrontendRuntimeConfig = {
-  apiBaseUrl: "http://localhost:8000",
+  apiBaseUrl: "http://rag-api:8000",
   apiEndpointPath: "/v1/query",
   apiTimeoutS: 60,
   displayName: "You",
