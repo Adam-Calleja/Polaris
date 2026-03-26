@@ -746,6 +746,16 @@ button {
   color: rgba(23, 21, 63, 0.7);
 }
 
+.scenario-card__focus {
+  margin: 0.65rem 0 1.05rem;
+}
+
+.scenario-card__query {
+  border: 1px solid rgba(81, 78, 231, 0.14);
+  background: rgba(81, 78, 231, 0.1);
+  color: var(--text-dark);
+}
+
 .scenario-card__query + .evaluation-page__result-grid {
   margin-top: 1.35rem;
 }
