@@ -472,8 +472,8 @@ button {
 
 .answer-card--pending {
   display: grid;
-  place-items: center;
-  min-height: 9.5rem;
+  place-items: center left;
+  min-height: 2rem;
 }
 
 .answer-card--pending .answer-card__title {
