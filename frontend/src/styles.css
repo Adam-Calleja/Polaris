@@ -753,6 +753,10 @@ button {
   gap: 1.2rem;
 }
 
+.evaluation-page__scenario-list {
+  margin-top: 1.5rem;
+}
+
 .feedback-form {
   margin-top: 1rem;
 }
