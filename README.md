@@ -53,6 +53,10 @@ UI: [http://localhost:8500](http://localhost:8500)
 API: [http://localhost:8000](http://localhost:8000)
 MLflow: [http://localhost:5000](http://localhost:5000)
 
+The Dockerized frontend proxies API requests through the same origin at
+`/api`, so normal browser use of the UI only needs the frontend port. Direct
+API access on `8000` is still available for `curl`, notebooks, and debugging.
+
 Check API dependency readiness with:
 
 ```bash
@@ -199,7 +203,7 @@ Environment variables used by the stack:
 - `POLARIS_CONFIG`: Path to the runtime config inside the API/eval containers.
 - `POLARIS_FEEDBACK_LOG_PATH`: JSONL feedback log path used by the API UI endpoints.
 - `POLARIS_UI_CORS_ALLOWED_ORIGINS`: Comma-separated browser origins allowed to call the API from the frontend.
-- `POLARIS_UI_API_BASE_URL`: Browser-facing API base URL injected into the frontend container.
+- `POLARIS_UI_API_BASE_URL`: Frontend API base path injected into the frontend container. For the Dockerized frontend this should normally be `/api` so nginx proxies requests to `rag-api`.
 - `POLARIS_UI_API_ENDPOINT_PATH`: Query endpoint path injected into the frontend container.
 - `POLARIS_UI_API_TIMEOUT_S`: Default browser request timeout injected into the frontend container.
 - `POLARIS_DISPLAY_NAME`: Optional display name shown in the frontend assistant view.

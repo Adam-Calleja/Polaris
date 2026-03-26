@@ -64,6 +64,19 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
 
+function resolveHydratedApiBaseUrl(rawValue: unknown, runtimeDefault: string): string {
+  if (typeof rawValue !== "string" || !rawValue.trim()) {
+    return runtimeDefault;
+  }
+
+  const value = rawValue.trim();
+  if (runtimeDefault === "/api" && value === "http://localhost:8000") {
+    return runtimeDefault;
+  }
+
+  return value;
+}
+
 function hydrateState(runtimeDefaults: FrontendRuntimeConfig): AppState {
   const baseState: AppState = {
     currentWorkspace: "Assistant",
@@ -96,8 +109,7 @@ function hydrateState(runtimeDefaults: FrontendRuntimeConfig): AppState {
       ...baseState,
       currentWorkspace: isWorkspace(parsed.currentWorkspace) ? parsed.currentWorkspace : baseState.currentWorkspace,
       drawerOpen: Boolean(parsed.drawerOpen),
-      apiBaseUrl:
-        typeof parsed.apiBaseUrl === "string" && parsed.apiBaseUrl.trim() ? parsed.apiBaseUrl : baseState.apiBaseUrl,
+      apiBaseUrl: resolveHydratedApiBaseUrl(parsed.apiBaseUrl, baseState.apiBaseUrl),
       apiEndpointPath:
         typeof parsed.apiEndpointPath === "string" && parsed.apiEndpointPath.trim()
           ? parsed.apiEndpointPath

@@ -51,4 +51,28 @@ describe("AppProvider", () => {
 
     expect(JSON.parse(window.sessionStorage.getItem(SESSION_STORAGE_KEY) ?? "{}").timeoutS).toBe(82);
   });
+
+  it("migrates the legacy docker API base URL to the same-origin proxy", () => {
+    window.sessionStorage.setItem(
+      SESSION_STORAGE_KEY,
+      JSON.stringify({
+        apiBaseUrl: "http://localhost:8000",
+      }),
+    );
+
+    render(
+      <AppProvider
+        runtimeDefaults={{
+          apiBaseUrl: "/api",
+          apiEndpointPath: "/v1/query",
+          apiTimeoutS: 60,
+          displayName: "You",
+        }}
+      >
+        <Probe />
+      </AppProvider>,
+    );
+
+    expect(JSON.parse(window.sessionStorage.getItem(SESSION_STORAGE_KEY) ?? "{}").apiBaseUrl).toBe("/api");
+  });
 });

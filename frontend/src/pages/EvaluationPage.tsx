@@ -16,6 +16,7 @@ import { buildManualQueryConstraints, computeResponseFingerprint, mergeQueryCons
 import { AnswerCard } from "../components/AnswerCard";
 import { DiagnosticsPanel } from "../components/DiagnosticsPanel";
 import { ErrorCard } from "../components/ErrorCard";
+import { LoadingLabel } from "../components/LoadingLabel";
 
 function apiConfigFromState(state: ReturnType<typeof useAppState>["state"]): ApiClientConfig {
   return {
@@ -313,7 +314,7 @@ export function EvaluationPage() {
                   }}
                   type="button"
                 >
-                  {runningScenarioId === scenario.scenarioId ? "Running..." : "Run"}
+                  {runningScenarioId === scenario.scenarioId ? <LoadingLabel label="Running" /> : "Run"}
                 </button>
               </div>
               <p className="scenario-card__focus">Focus: {scenario.focus}</p>

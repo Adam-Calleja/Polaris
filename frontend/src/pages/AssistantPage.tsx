@@ -13,6 +13,7 @@ import {
 import { AnswerCard } from "../components/AnswerCard";
 import { DiagnosticsPanel } from "../components/DiagnosticsPanel";
 import { ErrorCard } from "../components/ErrorCard";
+import { LoadingLabel } from "../components/LoadingLabel";
 import { PromptComposer } from "../components/PromptComposer";
 
 function apiConfigFromState(state: ReturnType<typeof useAppState>["state"]): ApiClientConfig {
@@ -153,7 +154,9 @@ export function AssistantPage() {
           <div className="assistant-page__assistant-label">Polaris</div>
           {latestAssistant?.pending ? (
             <article className="surface-card answer-card answer-card--pending">
-              <h3 className="answer-card__title">Retrieving evidence and drafting an answer...</h3>
+              <h3 className="answer-card__title">
+                <LoadingLabel label="Retrieving evidence and drafting an answer" />
+              </h3>
               <div className="answer-card__body">
                 The latest query is in flight. Diagnostics will populate once the API responds.
               </div>

@@ -100,7 +100,7 @@ services:
       context: .
       dockerfile: Dockerfile.frontend
     environment:
-      POLARIS_UI_API_BASE_URL: http://localhost:8000
+      POLARIS_UI_API_BASE_URL: /api
       POLARIS_UI_API_ENDPOINT_PATH: /v1/query
       POLARIS_UI_API_TIMEOUT_S: 60
       POLARIS_DISPLAY_NAME: ${POLARIS_DISPLAY_NAME:-You}
