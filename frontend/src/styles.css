@@ -780,6 +780,10 @@ button {
   gap: 1.2rem;
 }
 
+.system-page .card-cluster + .card-cluster {
+  margin-top: 0.95rem;
+}
+
 .feedback-form {
   margin-top: 1rem;
 }
