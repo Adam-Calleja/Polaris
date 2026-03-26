@@ -467,20 +467,21 @@ button {
 }
 
 .answer-card {
-  padding: 1.65rem 1.8rem 1.85rem;
+  padding: 1rem 1.8rem 1rem;
 }
 
 .answer-card--pending {
   display: grid;
   place-items: center left;
-  min-height: 2rem;
+  min-height: 1rem;
 }
 
 .answer-card--pending .answer-card__title {
   width: min(100%, 20rem);
   margin: 0;
-  padding: 0.9rem 1.25rem;
+  padding: 0rem 0rem;
   text-align: center;
+  color: var(--text-muted);
 }
 
 .answer-card--error {
