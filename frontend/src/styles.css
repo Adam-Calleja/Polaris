@@ -650,6 +650,7 @@ button {
   display: inline-block;
   color: inherit;
   position: relative;
+  font-weight: 400;
 }
 
 @supports ((-webkit-background-clip: text) or (background-clip: text)) {

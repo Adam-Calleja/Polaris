@@ -157,9 +157,6 @@ export function AssistantPage() {
               <h3 className="answer-card__title">
                 <LoadingLabel label="Retrieving evidence and drafting an answer" />
               </h3>
-              <div className="answer-card__body">
-                The latest query is in flight. Diagnostics will populate once the API responds.
-              </div>
             </article>
           ) : latestAssistant?.response ? (
             <AnswerCard response={latestAssistant.response} />
