@@ -1063,9 +1063,10 @@ button {
 
 .metric-card__value {
   margin-top: 0.55rem;
-  font-size: clamp(1.9rem, 3vw, 2.7rem);
+  font-size: clamp(2.6rem, 4vw, 3.4rem);
   font-weight: 400;
-  color: var(--text-muted)
+  line-height: 1;
+  color: var(--text-dark);
 }
 
 .summary-table__row,
