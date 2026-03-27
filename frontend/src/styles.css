@@ -614,24 +614,12 @@ button {
 }
 
 .assistant-hero__composer {
-  width: min(100%, 39rem);
+  width: 100%;
+  max-width: 58rem;
 }
 
 .assistant-hero__composer .prompt-composer {
   width: 100%;
-}
-
-.assistant-hero__composer .prompt-composer__input {
-  min-height: 4rem;
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid rgba(81, 78, 231, 0.1);
-  box-shadow: 0 16px 36px rgba(20, 18, 58, 0.1);
-}
-
-.assistant-hero__composer .prompt-composer__button {
-  background: linear-gradient(135deg, #514ee7, #8e61ff);
-  color: #ffffff;
-  box-shadow: 0 16px 32px rgba(81, 78, 231, 0.28);
 }
 
 .prompt-composer {

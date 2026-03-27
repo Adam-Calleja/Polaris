@@ -72,11 +72,19 @@ export function SystemPage() {
   const [refreshToken, setRefreshToken] = useState(0);
   const [refreshing, setRefreshing] = useState(true);
 
+  function beginRefresh() {
+    setRefreshing(true);
+    setHealthProbe(null);
+    setReadyProbe(null);
+    setRuntime(null);
+    setRuntimeError(null);
+  }
+
   useEffect(() => {
     let cancelled = false;
 
     async function loadSystemView() {
-      setRefreshing(true);
+      beginRefresh();
       const config = apiConfigFromState(state);
       const [health, ready, runtimeConfig] = await Promise.allSettled([
         probeEndpoint(config, "/health"),
@@ -147,7 +155,10 @@ export function SystemPage() {
             <button
               className="secondary-button secondary-button--light"
               disabled={refreshing}
-              onClick={() => setRefreshToken((value) => value + 1)}
+              onClick={() => {
+                beginRefresh();
+                setRefreshToken((value) => value + 1);
+              }}
               type="button"
             >
               {refreshing ? <LoadingLabel label="Refreshing status" /> : "Refresh Status"}
