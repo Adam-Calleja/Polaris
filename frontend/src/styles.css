@@ -616,7 +616,6 @@ button {
 
 .assistant-hero__composer {
   width: 100%;
-  max-width: 58rem;
 }
 
 .assistant-hero__composer .prompt-composer {
