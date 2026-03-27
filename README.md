@@ -210,6 +210,48 @@ Environment variables used by the stack:
 - `MLFLOW_TRACKING_URI`: MLflow tracking server URI inside the containers. Docker
   Compose configures this as `http://mlflow:5000` for the API and eval services.
 
+## Testing
+Run tests from the repository root unless noted otherwise.
+
+### Python Test Suite
+
+For local Python test runs, install the package in editable mode with the
+optional extras used by the API, retrieval, evaluation, and tracking paths:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -U pip
+pip install -e ".[eval,llm,api,retrieval,tracking]"
+pip install pytest
+```
+
+Then run the backend test suite with:
+
+```bash
+pytest -q
+```
+
+If you are running directly from the source tree without an editable install,
+use the `src/` layout explicitly:
+
+```bash
+PYTHONPATH=src pytest -q
+```
+
+Some tests start temporary loopback HTTP servers on `127.0.0.1`. In sandboxed
+or restricted environments that block local socket binding, those tests can
+fail even when the code is otherwise correct.
+
+### Frontend Test Suite
+
+The React frontend has its own Vitest suite under `frontend/`:
+
+```bash
+cd frontend
+npm test
+```
+
 ## Evaluation
 Evaluation utilities live in `src/polaris_rag/evaluation`. There are notebooks for dataset creation and analysis:
 - `create_evaluation_dataset.ipynb`
