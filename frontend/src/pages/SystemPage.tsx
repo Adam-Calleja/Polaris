@@ -117,14 +117,6 @@ export function SystemPage() {
   return (
     <section className="system-page">
       <div className="page-workspace surface-card">
-        <div className="page-intro">
-          <div className="page-workspace__eyebrow">System overview</div>
-          <h1 className="page-intro__title">System</h1>
-          <p className="page-intro__body">
-            System overview, source legend, and live backend readiness checks.
-          </p>
-        </div>
-
         <section className="card-cluster">
           <h2 className="section-heading">Architecture Flow</h2>
           <div className="stage-grid">

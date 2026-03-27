@@ -40,7 +40,7 @@ describe("App shell routing", () => {
     await userEvent.click(screen.getByRole("link", { name: /evaluation/i }));
 
     await waitFor(() => {
-      expect(screen.getByRole("heading", { name: "Evaluation" })).toBeInTheDocument();
+      expect(screen.getByText("Saved Feedback")).toBeInTheDocument();
     });
   });
 
@@ -62,7 +62,7 @@ describe("App shell routing", () => {
     renderApp("/evaluation");
 
     await waitFor(() => {
-      expect(screen.getByRole("heading", { name: "Evaluation" })).toBeInTheDocument();
+      expect(screen.getByText("Saved Feedback")).toBeInTheDocument();
     });
 
     await userEvent.click(screen.getByRole("link", { name: "Polaris" }));

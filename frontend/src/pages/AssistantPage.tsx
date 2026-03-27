@@ -158,7 +158,6 @@ export function AssistantPage() {
         <div className="assistant-workspace__header">
           <div className="assistant-workspace__header-copy">
             <div className="assistant-hero__eyebrow">Assistant session</div>
-            <h2 className="assistant-workspace__title">Polaris response</h2>
           </div>
           <button className="secondary-button secondary-button--light" onClick={clearAssistantSession} type="button">
             Clear Assistant

@@ -255,15 +255,6 @@ export function EvaluationPage() {
   return (
     <section className="evaluation-page">
       <div className="page-workspace surface-card">
-        <div className="page-intro">
-          <div className="page-workspace__eyebrow">Live evaluation</div>
-          <h1 className="page-intro__title">Evaluation</h1>
-          <p className="page-intro__body">
-            Curated live scenarios for your screencast, report screenshots, and lightweight usability
-            evidence.
-          </p>
-        </div>
-
         <div className="metric-grid">
           <SummaryCard label="Saved Feedback" value={summary?.total ?? (loadingSummary ? "…" : 0)} />
           <SummaryCard label="Helpful = yes" value={summary?.helpful_yes ?? (loadingSummary ? "…" : 0)} />
