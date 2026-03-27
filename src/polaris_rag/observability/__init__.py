@@ -1,4 +1,13 @@
-"""Observability helpers for Polaris."""
+"""Observability helpers for Polaris.
+
+This package groups the public helpers and types that belong to this subsystem of the
+Polaris RAG codebase.
+
+See Also
+--------
+mlflow_tracking
+    Related module for mlflow Tracking.
+"""
 
 from .mlflow_tracking import (
     TRACE_CHILD_RUN_HEADER,

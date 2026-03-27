@@ -1,4 +1,20 @@
-"""Deterministic runtime query constraint extraction."""
+"""Deterministic runtime query constraint extraction.
+
+This module combines public functions and classes used by the surrounding Polaris
+subsystem.
+
+Classes
+-------
+QueryConstraints
+    Structured query-side constraints extracted from a runtime query.
+AuthorityQueryConstraintParser
+    Extract deterministic query constraints from runtime text.
+
+Functions
+---------
+serialize_query_constraints
+    Normalize query constraints into a stable serializable mapping.
+"""
 
 from __future__ import annotations
 
@@ -69,7 +85,35 @@ _VERSION_SENSITIVE_HINT_PATTERN = re.compile(
 
 @dataclass(frozen=True)
 class QueryConstraints:
-    """Structured query-side constraints extracted from a runtime query."""
+    """Structured query-side constraints extracted from a runtime query.
+    
+    Attributes
+    ----------
+    query_type : str or None
+        Value for query Type.
+    system_names : list[str]
+        Value for system Names.
+    partition_names : list[str]
+        Value for partition Names.
+    service_names : list[str]
+        Value for service Names.
+    scope_family_names : list[str]
+        Value for scope Family Names.
+    software_names : list[str]
+        Value for software Names.
+    software_versions : list[str]
+        Value for software Versions.
+    module_names : list[str]
+        Value for module Names.
+    toolchain_names : list[str]
+        Value for toolchain Names.
+    toolchain_versions : list[str]
+        Value for toolchain Versions.
+    scope_required : bool or None
+        Value for scope Required.
+    version_sensitive_guess : bool or None
+        Value for version Sensitive Guess.
+    """
 
     query_type: str | None = None
     system_names: list[str] = field(default_factory=list)
@@ -85,7 +129,13 @@ class QueryConstraints:
     version_sensitive_guess: bool | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        """Return a JSON-serializable representation."""
+        """Return a JSON-serializable representation.
+        
+        Returns
+        -------
+        dict[str, Any]
+            Structured result of the operation.
+        """
 
         return {
             "query_type": self.query_type,
@@ -104,7 +154,18 @@ class QueryConstraints:
 
     @classmethod
     def from_value(cls, value: "QueryConstraints | Mapping[str, Any] | None") -> "QueryConstraints | None":
-        """Normalize supported query-constraint payloads."""
+        """Normalize supported query-constraint payloads.
+        
+        Parameters
+        ----------
+        value : QueryConstraints or Mapping[str, Any] or None, optional
+            Input value to normalize, coerce, or inspect.
+        
+        Returns
+        -------
+        QueryConstraints or None
+            Result of the operation.
+        """
 
         if value is None:
             return None
@@ -136,7 +197,18 @@ class QueryConstraints:
 def serialize_query_constraints(
     value: QueryConstraints | Mapping[str, Any] | None,
 ) -> dict[str, Any] | None:
-    """Normalize query constraints into a stable serializable mapping."""
+    """Normalize query constraints into a stable serializable mapping.
+    
+    Parameters
+    ----------
+    value : QueryConstraints or Mapping[str, Any] or None, optional
+        Input value to normalize, coerce, or inspect.
+    
+    Returns
+    -------
+    dict[str, Any] or None
+        Serialized query Constraints.
+    """
 
     normalized = QueryConstraints.from_value(value)
     if normalized is None:
@@ -160,9 +232,29 @@ class _EntityMatch:
 
 
 class AuthorityQueryConstraintParser:
-    """Extract deterministic query constraints from runtime text."""
+    """Extract deterministic query constraints from runtime text.
+    
+    Parameters
+    ----------
+    registry_index : AuthorityRegistryIndex
+        Value for registry Index.
+    
+    Methods
+    -------
+    from_registry_artifact
+        Construct an instance from registry Artifact.
+    parse
+        Parse.
+    """
 
     def __init__(self, registry_index: AuthorityRegistryIndex) -> None:
+        """Initialize the instance.
+        
+        Parameters
+        ----------
+        registry_index : AuthorityRegistryIndex
+            Value for registry Index.
+        """
         self.registry_index = registry_index
         self.entities_by_alias = self._build_entities_by_alias(registry_index.entities)
         self.alias_groups = self._build_alias_groups(self.entities_by_alias)
@@ -170,9 +262,33 @@ class AuthorityQueryConstraintParser:
 
     @classmethod
     def from_registry_artifact(cls, path: str | Path) -> "AuthorityQueryConstraintParser":
+        """Construct an instance from registry Artifact.
+        
+        Parameters
+        ----------
+        path : str or Path
+            Filesystem path used by the operation.
+        
+        Returns
+        -------
+        AuthorityQueryConstraintParser
+            Result of the operation.
+        """
         return cls(AuthorityRegistryIndex.load(path))
 
     def parse(self, query: str) -> QueryConstraints:
+        """Parse.
+        
+        Parameters
+        ----------
+        query : str
+            User query text.
+        
+        Returns
+        -------
+        QueryConstraints
+            Result of the operation.
+        """
         text = str(query or "")
         if not text.strip():
             return QueryConstraints()
@@ -236,6 +352,18 @@ class AuthorityQueryConstraintParser:
     def _build_entities_by_alias(
         entities: Sequence[RegistryEntity],
     ) -> dict[str, tuple[RegistryEntity, ...]]:
+        """Build entities By Alias.
+        
+        Parameters
+        ----------
+        entities : Sequence[RegistryEntity]
+            Value for entities.
+        
+        Returns
+        -------
+        dict[str, tuple[RegistryEntity, ...]]
+            Structured result of the operation.
+        """
         grouped: dict[str, dict[str, RegistryEntity]] = {}
 
         for entity in entities:
@@ -255,6 +383,18 @@ class AuthorityQueryConstraintParser:
     def _build_alias_groups(
         entities_by_alias: Mapping[str, Sequence[RegistryEntity]],
     ) -> tuple[_AliasGroup, ...]:
+        """Build alias Groups.
+        
+        Parameters
+        ----------
+        entities_by_alias : Mapping[str, Sequence[RegistryEntity]]
+            Value for entities By Alias.
+        
+        Returns
+        -------
+        tuple[_AliasGroup, ...]
+            Collected results from the operation.
+        """
         groups: list[_AliasGroup] = []
         for alias, entities in entities_by_alias.items():
             pattern = _compile_boundary_pattern(alias)
@@ -271,6 +411,18 @@ class AuthorityQueryConstraintParser:
         return tuple(groups)
 
     def _extract_version_mentions(self, text: str) -> list[str]:
+        """Extract version Mentions.
+        
+        Parameters
+        ----------
+        text : str
+            Text value to inspect, tokenize, or encode.
+        
+        Returns
+        -------
+        list[str]
+            Collected results from the operation.
+        """
         observed = {match.group(0) for match in _GENERIC_VERSION_PATTERN.finditer(text or "")}
         for version_entry in self.registry_index.version_entries:
             if version_entry.pattern.search(text or ""):
@@ -279,6 +431,18 @@ class AuthorityQueryConstraintParser:
 
     @staticmethod
     def _extract_module_tokens(text: str) -> list[str]:
+        """Extract module Tokens.
+        
+        Parameters
+        ----------
+        text : str
+            Text value to inspect, tokenize, or encode.
+        
+        Returns
+        -------
+        list[str]
+            Collected results from the operation.
+        """
         tokens: list[str] = []
         for match in _MODULE_LOAD_PATTERN.finditer(text or ""):
             raw_segment = match.group(1) or ""
@@ -291,6 +455,18 @@ class AuthorityQueryConstraintParser:
 
     @staticmethod
     def _extract_partition_tokens(text: str) -> list[str]:
+        """Extract partition Tokens.
+        
+        Parameters
+        ----------
+        text : str
+            Text value to inspect, tokenize, or encode.
+        
+        Returns
+        -------
+        list[str]
+            Collected results from the operation.
+        """
         tokens: list[str] = []
         for pattern in (_PARTITION_ASSIGNMENT_PATTERN, _PARTITION_CONTEXT_PATTERN, _ON_PARTITION_PATTERN):
             for match in pattern.finditer(text or ""):
@@ -304,6 +480,20 @@ class AuthorityQueryConstraintParser:
         alias_group: _AliasGroup,
         text: str,
     ) -> tuple[RegistryEntity, ...]:
+        """Resolve alias Group.
+        
+        Parameters
+        ----------
+        alias_group : _AliasGroup
+            Value for alias Group.
+        text : str
+            Text value to inspect, tokenize, or encode.
+        
+        Returns
+        -------
+        tuple[RegistryEntity, ...]
+            Collected results from the operation.
+        """
         if len(alias_group.entities) == 1:
             return alias_group.entities
 
@@ -336,6 +526,20 @@ class AuthorityQueryConstraintParser:
         alias_group: _AliasGroup,
         text: str,
     ) -> tuple[str, ...]:
+        """Family Hint For Alias Group.
+        
+        Parameters
+        ----------
+        alias_group : _AliasGroup
+            Value for alias Group.
+        text : str
+            Text value to inspect, tokenize, or encode.
+        
+        Returns
+        -------
+        tuple[str, ...]
+            Collected results from the operation.
+        """
         entity_types = {entity.entity_type for entity in alias_group.entities}
         if not entity_types <= {"partition", "system"}:
             return ()
@@ -354,12 +558,44 @@ class AuthorityQueryConstraintParser:
 
     @staticmethod
     def _local_context(text: str, start: int, end: int, *, radius: int = 28) -> str:
+        """Local Context.
+        
+        Parameters
+        ----------
+        text : str
+            Text value to inspect, tokenize, or encode.
+        start : int
+            Value for start.
+        end : int
+            Value for end.
+        radius : int, optional
+            Value for radius.
+        
+        Returns
+        -------
+        str
+            Resulting string value.
+        """
         left = max(0, int(start) - radius)
         right = min(len(text), int(end) + radius)
         return text[left:right]
 
     @staticmethod
     def _matched_versions(entity: RegistryEntity, observed_versions: Sequence[str]) -> set[str]:
+        """Matched Versions.
+        
+        Parameters
+        ----------
+        entity : RegistryEntity
+            Value for entity.
+        observed_versions : Sequence[str]
+            Value for observed Versions.
+        
+        Returns
+        -------
+        set[str]
+            Collected results from the operation.
+        """
         observed = {version.lower(): version for version in observed_versions}
         matched: set[str] = set()
         for version in entity.known_versions:
@@ -376,6 +612,21 @@ class AuthorityQueryConstraintParser:
         matched_alias: str | None = None,
         matched_versions: Iterable[str] = (),
     ) -> None:
+        """Record match.
+        
+        Parameters
+        ----------
+        matches : dict[str, _EntityMatch]
+            Value for matches.
+        entity : RegistryEntity
+            Value for entity.
+        match_method : str
+            Value for match Method.
+        matched_alias : str or None, optional
+            Value for matched Alias.
+        matched_versions : Iterable[str], optional
+            Value for matched Versions.
+        """
         current = matches.get(entity.entity_id)
         if current is None:
             current = _EntityMatch(
@@ -400,6 +651,24 @@ class AuthorityQueryConstraintParser:
         explicit_version_mention: bool,
         scope_family_names: Iterable[str],
     ) -> QueryConstraints:
+        """Build constraints.
+        
+        Parameters
+        ----------
+        text : str
+            Text value to inspect, tokenize, or encode.
+        matches : Iterable[_EntityMatch]
+            Value for matches.
+        explicit_version_mention : bool
+            Value for explicit Version Mention.
+        scope_family_names : Iterable[str]
+            Value for scope Family Names.
+        
+        Returns
+        -------
+        QueryConstraints
+            Result of the operation.
+        """
         sorted_matches = sorted(matches, key=lambda item: _entity_sort_key(item.entity))
         system_names = _names_for_type(sorted_matches, "system")
         partition_names = _names_for_type(sorted_matches, "partition")
@@ -451,6 +720,20 @@ class AuthorityQueryConstraintParser:
 
 
 def _names_for_type(matches: Sequence[_EntityMatch], entity_type: str) -> list[str]:
+    """Names For Type.
+    
+    Parameters
+    ----------
+    matches : Sequence[_EntityMatch]
+        Value for matches.
+    entity_type : str
+        Value for entity Type.
+    
+    Returns
+    -------
+    list[str]
+        Collected results from the operation.
+    """
     return _sorted_unique(
         match.entity.canonical_name
         for match in matches
@@ -459,6 +742,20 @@ def _names_for_type(matches: Sequence[_EntityMatch], entity_type: str) -> list[s
 
 
 def _versions_for_type(matches: Sequence[_EntityMatch], entity_type: str) -> list[str]:
+    """Versions For Type.
+    
+    Parameters
+    ----------
+    matches : Sequence[_EntityMatch]
+        Value for matches.
+    entity_type : str
+        Value for entity Type.
+    
+    Returns
+    -------
+    list[str]
+        Collected results from the operation.
+    """
     values: list[str] = []
     for match in matches:
         if match.entity.entity_type != entity_type:
@@ -468,6 +765,18 @@ def _versions_for_type(matches: Sequence[_EntityMatch], entity_type: str) -> lis
 
 
 def _entity_aliases(entity: RegistryEntity) -> list[str]:
+    """Entity Aliases.
+    
+    Parameters
+    ----------
+    entity : RegistryEntity
+        Value for entity.
+    
+    Returns
+    -------
+    list[str]
+        Collected results from the operation.
+    """
     raw_values = [entity.canonical_name, *entity.aliases]
     dedup: dict[str, str] = {}
     for raw_value in raw_values:
@@ -479,6 +788,18 @@ def _entity_aliases(entity: RegistryEntity) -> list[str]:
 
 
 def _compile_boundary_pattern(value: str) -> re.Pattern[str] | None:
+    """Compile boundary Pattern.
+    
+    Parameters
+    ----------
+    value : str
+        Input value to normalize, coerce, or inspect.
+    
+    Returns
+    -------
+    re.Pattern[str] or None
+        Result of the operation.
+    """
     text = str(value or "").strip()
     if not text:
         return None
@@ -489,10 +810,34 @@ def _compile_boundary_pattern(value: str) -> re.Pattern[str] | None:
 
 
 def _entity_sort_key(entity: RegistryEntity) -> tuple[str, str, str]:
+    """Entity Sort Key.
+    
+    Parameters
+    ----------
+    entity : RegistryEntity
+        Value for entity.
+    
+    Returns
+    -------
+    tuple[str, str, str]
+        Collected results from the operation.
+    """
     return (entity.entity_type, entity.canonical_name.lower(), entity.entity_id)
 
 
 def _normalize_optional_text(value: Any) -> str | None:
+    """Normalize optional Text.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    
+    Returns
+    -------
+    str or None
+        Result of the operation.
+    """
     if value is None:
         return None
     text = str(value).strip()
@@ -500,18 +845,54 @@ def _normalize_optional_text(value: Any) -> str | None:
 
 
 def _normalize_optional_bool(value: Any) -> bool | None:
+    """Normalize optional Bool.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    
+    Returns
+    -------
+    bool or None
+        Result of the operation.
+    """
     if value is None:
         return None
     return bool(value)
 
 
 def _normalize_text_list(value: Any) -> list[str]:
+    """Normalize text List.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    
+    Returns
+    -------
+    list[str]
+        Collected results from the operation.
+    """
     if not isinstance(value, list):
         return []
     return _sorted_unique(value)
 
 
 def _should_index_alias(value: str) -> bool:
+    """Should Index Alias.
+    
+    Parameters
+    ----------
+    value : str
+        Input value to normalize, coerce, or inspect.
+    
+    Returns
+    -------
+    bool
+        `True` if should Index Alias; otherwise `False`.
+    """
     text = str(value or "").strip()
     if not text:
         return False
@@ -527,6 +908,18 @@ def _should_index_alias(value: str) -> bool:
 
 
 def _sorted_unique(values: Iterable[str]) -> list[str]:
+    """Sorted Unique.
+    
+    Parameters
+    ----------
+    values : Iterable[str]
+        Value for values.
+    
+    Returns
+    -------
+    list[str]
+        Collected results from the operation.
+    """
     return sorted({str(value).strip() for value in values if str(value or "").strip()})
 
 

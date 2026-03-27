@@ -1,4 +1,20 @@
-"""Offline authority-registry builder for local official docs."""
+"""Offline authority-registry builder for local official docs.
+
+This module exposes public helper functions used by the surrounding Polaris subsystem.
+
+Functions
+---------
+get_internal_links
+    Return internal Links.
+get_service_catalog_links
+    Return service Catalog Links.
+load_website_docs
+    Load website Docs.
+parse_args
+    Parse args.
+main
+    Run the command-line entrypoint.
+"""
 
 from __future__ import annotations
 
@@ -25,6 +41,18 @@ _STATIC_ASSET_EXTENSIONS = (
 
 
 def _find_repo_root(start: Path) -> Path:
+    """Find Repo Root.
+    
+    Parameters
+    ----------
+    start : Path
+        Value for start.
+    
+    Returns
+    -------
+    Path
+        Result of the operation.
+    """
     for candidate in (start, *start.parents):
         if (candidate / "pyproject.toml").exists() and (candidate / "src").exists():
             return candidate
@@ -57,12 +85,38 @@ from polaris_rag.retrieval.markdown_converter import convert_documents_to_markdo
 
 
 def _get_internal_links_one_hop(homepage: str) -> list[str]:
+    """Return internal Links One Hop.
+    
+    Parameters
+    ----------
+    homepage : str
+        Value for homepage.
+    
+    Returns
+    -------
+    list[str]
+        Collected results from the operation.
+    """
     from polaris_rag.retrieval.document_loader import get_internal_links as _get_internal_links
 
     return _get_internal_links(homepage)
 
 
 def _is_allowed_authority_url(homepage: str, url: str) -> bool:
+    """Return whether allowed Authority URL.
+    
+    Parameters
+    ----------
+    homepage : str
+        Value for homepage.
+    url : str
+        URL used by the operation.
+    
+    Returns
+    -------
+    bool
+        `True` if is Allowed Authority URL; otherwise `False`.
+    """
     homepage_parts = urlsplit(homepage)
     candidate_parts = urlsplit(url)
     if not candidate_parts.scheme or not candidate_parts.netloc:
@@ -92,6 +146,22 @@ def _crawl_internal_links(
     is_allowed_url,
     max_depth: int | None = None,
 ) -> list[str]:
+    """Crawl Internal Links.
+    
+    Parameters
+    ----------
+    homepage : str
+        Value for homepage.
+    is_allowed_url : Any
+        URL used by the operation.
+    max_depth : int or None, optional
+        Value for max Depth.
+    
+    Returns
+    -------
+    list[str]
+        Collected results from the operation.
+    """
     queue: list[tuple[str, int]] = [(homepage, 0)]
     seen: set[str] = set()
     ordered: list[str] = []
@@ -122,6 +192,18 @@ def _crawl_internal_links(
 
 
 def get_internal_links(homepage: str) -> list[str]:
+    """Return internal Links.
+    
+    Parameters
+    ----------
+    homepage : str
+        Value for homepage.
+    
+    Returns
+    -------
+    list[str]
+        Requested internal Links.
+    """
     return _crawl_internal_links(
         homepage,
         is_allowed_url=_is_allowed_authority_url,
@@ -129,6 +211,18 @@ def get_internal_links(homepage: str) -> list[str]:
 
 
 def get_service_catalog_links(homepage: str) -> list[str]:
+    """Return service Catalog Links.
+    
+    Parameters
+    ----------
+    homepage : str
+        Value for homepage.
+    
+    Returns
+    -------
+    list[str]
+        Requested service Catalog Links.
+    """
     return _crawl_internal_links(
         homepage,
         is_allowed_url=is_allowed_service_catalog_url,
@@ -137,12 +231,33 @@ def get_service_catalog_links(homepage: str) -> list[str]:
 
 
 def load_website_docs(links: list[str]):
+    """Load website Docs.
+    
+    Parameters
+    ----------
+    links : list[str]
+        Value for links.
+    """
     from polaris_rag.retrieval.document_loader import load_website_docs as _load_website_docs
 
     return _load_website_docs(links)
 
 
 def _load_markdown_documents(cfg: GlobalConfig, links: list[str]) -> list:
+    """Load markdown Documents.
+    
+    Parameters
+    ----------
+    cfg : GlobalConfig
+        Configuration object or mapping used to resolve runtime settings.
+    links : list[str]
+        Value for links.
+    
+    Returns
+    -------
+    list
+        Collected results from the operation.
+    """
     conditions = cfg.document_preprocess_html_conditions
     tags = cfg.document_preprocess_html_tags
     documents = load_website_docs(links)
@@ -160,6 +275,13 @@ def _load_markdown_documents(cfg: GlobalConfig, links: list[str]) -> list:
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse args.
+    
+    Returns
+    -------
+    argparse.Namespace
+        Parsed args.
+    """
     parser = argparse.ArgumentParser(description="Build a deterministic authority registry from local official docs")
     parser.add_argument(
         "--config-file",
@@ -218,6 +340,13 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> None:
+    """Run the command-line entrypoint.
+
+    Notes
+    -----
+    Parses CLI arguments, crawls the configured documentation sources, and
+    persists the generated authority-registry artifacts.
+    """
     args = parse_args()
     cfg = GlobalConfig.load(args.config_file)
 

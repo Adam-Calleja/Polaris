@@ -1,4 +1,26 @@
-"""Conversion helpers for normalizing sources to Markdown."""
+"""Conversion helpers for normalizing sources to Markdown.
+
+This module combines public functions and classes used by the surrounding Polaris
+subsystem.
+
+Classes
+-------
+MarkdownConverter
+    Convert a source object into a markdown-normalized document.
+MarkItDownDocumentConverter
+    Markdown converter backed by Microsoft's MarkItDown.
+NativeJiraMarkdownConverter
+    Markdown converter for structured Jira ticket payloads.
+
+Functions
+---------
+build_markdown_converter
+    Build markdown Converter.
+convert_documents_to_markdown
+    Convert documents To Markdown.
+convert_tickets_to_markdown
+    Convert tickets To Markdown.
+"""
 
 from __future__ import annotations
 
@@ -30,13 +52,42 @@ _SUFFIX_BY_DOCUMENT_TYPE = {
 
 
 class MarkdownConverter(Protocol):
-    """Convert a source object into a markdown-normalized document."""
+    """Convert a source object into a markdown-normalized document.
+    
+    Methods
+    -------
+    convert
+        Return markdown-normalized content for ``source``.
+    """
 
     def convert(self, source: Any) -> MarkdownDocument:
-        """Return markdown-normalized content for ``source``."""
+        """Return markdown-normalized content for ``source``.
+        
+        Parameters
+        ----------
+        source : Any
+            Source definition, source name, or source identifier to process.
+        
+        Returns
+        -------
+        MarkdownDocument
+            Result of the operation.
+        """
 
 
 def _normalise_markdown(text: str) -> str:
+    """Normalize markdown.
+    
+    Parameters
+    ----------
+    text : str
+        Text value to inspect, tokenize, or encode.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     text = (text or "").replace("\r\n", "\n").replace("\r", "\n")
     text = re.sub(r"[ \t]+\n", "\n", text)
     text = re.sub(r"\n{3,}", "\n\n", text)
@@ -44,6 +95,18 @@ def _normalise_markdown(text: str) -> str:
 
 
 def _html_title(html: str) -> str | None:
+    """HTML Title.
+    
+    Parameters
+    ----------
+    html : str
+        Value for HTML.
+    
+    Returns
+    -------
+    str or None
+        Result of the operation.
+    """
     soup = BeautifulSoup(html or "", "html.parser")
     title = soup.title.string if soup.title and soup.title.string else ""
     title = str(title or "").strip()
@@ -51,6 +114,18 @@ def _html_title(html: str) -> str | None:
 
 
 def _document_suffix(document: Document) -> str:
+    """Document Suffix.
+    
+    Parameters
+    ----------
+    document : Document
+        Value for document.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     metadata = dict(getattr(document, "metadata", {}) or {})
     source_path = metadata.get("source_path")
     if source_path:
@@ -61,6 +136,25 @@ def _document_suffix(document: Document) -> str:
 
 
 def _markitdown_convert(document: Document, *, options: dict[str, Any] | None = None) -> MarkdownDocument:
+    """Markitdown Convert.
+    
+    Parameters
+    ----------
+    document : Document
+        Value for document.
+    options : dict[str, Any] or None, optional
+        Value for options.
+    
+    Returns
+    -------
+    MarkdownDocument
+        Result of the operation.
+    
+    Raises
+    ------
+    ImportError
+        If `ImportError` is raised while executing the operation.
+    """
     try:
         from markitdown import MarkItDown  # type: ignore
     except ImportError as exc:
@@ -102,19 +196,67 @@ def _markitdown_convert(document: Document, *, options: dict[str, Any] | None = 
 
 
 class MarkItDownDocumentConverter:
-    """Markdown converter backed by Microsoft's MarkItDown."""
+    """Markdown converter backed by Microsoft's MarkItDown.
+    
+    Parameters
+    ----------
+    options : dict[str, Any] or None, optional
+        Value for options.
+    
+    Methods
+    -------
+    convert
+        Convert.
+    """
 
     def __init__(self, *, options: dict[str, Any] | None = None) -> None:
+        """Initialize the instance.
+        
+        Parameters
+        ----------
+        options : dict[str, Any] or None, optional
+            Value for options.
+        """
         self.options = dict(options or {})
 
     def convert(self, source: Document) -> MarkdownDocument:
+        """Convert.
+        
+        Parameters
+        ----------
+        source : Document
+            Source definition, source name, or source identifier to process.
+        
+        Returns
+        -------
+        MarkdownDocument
+            Result of the operation.
+        """
         return _markitdown_convert(source, options=self.options)
 
 
 class NativeJiraMarkdownConverter:
-    """Markdown converter for structured Jira ticket payloads."""
+    """Markdown converter for structured Jira ticket payloads.
+    
+    Methods
+    -------
+    convert
+        Convert.
+    """
 
     def convert(self, source: dict[str, Any]) -> MarkdownDocument:
+        """Convert.
+        
+        Parameters
+        ----------
+        source : dict[str, Any]
+            Source definition, source name, or source identifier to process.
+        
+        Returns
+        -------
+        MarkdownDocument
+            Result of the operation.
+        """
         return convert_jira_ticket_to_markdown(source)
 
 
@@ -123,6 +265,25 @@ def build_markdown_converter(
     *,
     options: dict[str, Any] | None = None,
 ) -> MarkdownConverter:
+    """Build markdown Converter.
+    
+    Parameters
+    ----------
+    engine : str
+        Value for engine.
+    options : dict[str, Any] or None, optional
+        Value for options.
+    
+    Returns
+    -------
+    MarkdownConverter
+        Constructed markdown Converter.
+    
+    Raises
+    ------
+    ValueError
+        If the provided value is invalid for the operation.
+    """
     normalized = (engine or "").strip().lower().replace("-", "_")
     if normalized == MARKITDOWN_CONVERSION_ENGINE:
         return MarkItDownDocumentConverter(options=options)
@@ -137,6 +298,22 @@ def convert_documents_to_markdown(
     engine: str = MARKITDOWN_CONVERSION_ENGINE,
     options: dict[str, Any] | None = None,
 ) -> list[MarkdownDocument]:
+    """Convert documents To Markdown.
+    
+    Parameters
+    ----------
+    documents : list[Document]
+        Document objects to enrich, convert, or inspect.
+    engine : str, optional
+        Value for engine.
+    options : dict[str, Any] or None, optional
+        Value for options.
+    
+    Returns
+    -------
+    list[MarkdownDocument]
+        Collected results from the operation.
+    """
     converter = build_markdown_converter(engine, options=options)
     return [converter.convert(document) for document in documents]
 
@@ -147,6 +324,22 @@ def convert_tickets_to_markdown(
     engine: str = NATIVE_JIRA_CONVERSION_ENGINE,
     options: dict[str, Any] | None = None,
 ) -> list[MarkdownDocument]:
+    """Convert tickets To Markdown.
+    
+    Parameters
+    ----------
+    tickets : list[dict[str, Any]]
+        Value for tickets.
+    engine : str, optional
+        Value for engine.
+    options : dict[str, Any] or None, optional
+        Value for options.
+    
+    Returns
+    -------
+    list[MarkdownDocument]
+        Collected results from the operation.
+    """
     converter = build_markdown_converter(engine, options=options)
     return [converter.convert(ticket) for ticket in tickets]
 

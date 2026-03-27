@@ -411,6 +411,18 @@ class RAGPipeline:
         return self.run(query, **kwargs)
 
     def _resolve_contexts(self, source_nodes: list[Any]) -> list[Any]:
+        """Resolve contexts.
+        
+        Parameters
+        ----------
+        source_nodes : list[Any]
+            Retrieved nodes or node wrappers to serialize.
+        
+        Returns
+        -------
+        list[Any]
+            Collected results from the operation.
+        """
         if self.context_resolver is None:
             return source_nodes
         return list(self.context_resolver.resolve(source_nodes))
@@ -421,6 +433,20 @@ class RAGPipeline:
         query: str,
         provided: Any,
     ) -> QueryConstraints | None:
+        """Resolve query Constraints.
+        
+        Parameters
+        ----------
+        query : str
+            User query text.
+        provided : Any
+            Value for provided.
+        
+        Returns
+        -------
+        QueryConstraints or None
+            Result of the operation.
+        """
         normalized = QueryConstraints.from_value(provided)
         if normalized is not None:
             return normalized
@@ -429,6 +455,13 @@ class RAGPipeline:
         return QueryConstraints.from_value(self.query_constraint_parser.parse(query))
 
     def _reranker_profile(self) -> Mapping[str, Any] | None:
+        """Reranker Profile.
+        
+        Returns
+        -------
+        Mapping[str, Any] or None
+            Result of the operation.
+        """
         getter = getattr(self.retriever, "reranker_profile", None)
         if callable(getter):
             try:
@@ -438,6 +471,13 @@ class RAGPipeline:
         return None
 
     def _reranker_fingerprint(self) -> str | None:
+        """Reranker Fingerprint.
+        
+        Returns
+        -------
+        str or None
+            Result of the operation.
+        """
         getter = getattr(self.retriever, "reranker_fingerprint", None)
         if callable(getter):
             try:
@@ -448,6 +488,18 @@ class RAGPipeline:
 
     @staticmethod
     def _serialize_nodes(source_nodes: list[Any]) -> list[dict[str, Any]]:
+        """Serialize nodes.
+        
+        Parameters
+        ----------
+        source_nodes : list[Any]
+            Retrieved nodes or node wrappers to serialize.
+        
+        Returns
+        -------
+        list[dict[str, Any]]
+            Collected results from the operation.
+        """
         return serialize_source_nodes(source_nodes, include_text=True)
 
 __all__ = ['RAGPipeline']

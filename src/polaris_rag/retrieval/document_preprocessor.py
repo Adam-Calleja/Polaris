@@ -61,6 +61,18 @@ def _jira_comment_role(ticket_fields: dict, comment: dict) -> str:
 
 
 def _build_jira_ticket_metadata(ticket: dict) -> dict[str, object]:
+    """Build jira Ticket Metadata.
+    
+    Parameters
+    ----------
+    ticket : dict
+        Value for ticket.
+    
+    Returns
+    -------
+    dict[str, object]
+        Structured result of the operation.
+    """
     created_date = ticket["fields"].get("created", None)
     updated_date = ticket["fields"].get("updated", None)
     resolution_date = ticket["fields"].get("resolutionDate", None)
@@ -96,6 +108,18 @@ def _build_jira_ticket_metadata(ticket: dict) -> dict[str, object]:
 
 
 def _normalise_markdown(text: str) -> str:
+    """Normalize markdown.
+    
+    Parameters
+    ----------
+    text : str
+        Text value to inspect, tokenize, or encode.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     lines = [(line or "").rstrip() for line in str(text or "").replace("\r\n", "\n").replace("\r", "\n").split("\n")]
     output = "\n".join(lines)
     while "\n\n\n" in output:
@@ -460,7 +484,18 @@ def build_jira_ticket_text(ticket: dict) -> str:
 
 
 def build_jira_ticket_markdown(ticket: dict) -> str:
-    """Render a Jira ticket into readable Markdown while preserving turns."""
+    """Render a Jira ticket into readable Markdown while preserving turns.
+    
+    Parameters
+    ----------
+    ticket : dict
+        Value for ticket.
+    
+    Returns
+    -------
+    str
+        Constructed jira Ticket Markdown.
+    """
     fields = ticket["fields"]
     summary = fields.get("summary", "")
     description = fields.get("description")
@@ -513,7 +548,18 @@ def build_jira_ticket_markdown(ticket: dict) -> str:
 
 
 def convert_jira_ticket_to_markdown(ticket: dict) -> MarkdownDocument:
-    """Convert a Jira issue payload into a markdown-normalized document."""
+    """Convert a Jira issue payload into a markdown-normalized document.
+    
+    Parameters
+    ----------
+    ticket : dict
+        Value for ticket.
+    
+    Returns
+    -------
+    MarkdownDocument
+        Result of the operation.
+    """
     metadata = _build_jira_ticket_metadata(ticket)
     metadata["conversion_engine"] = "native_jira"
     metadata["source_format"] = "jira_adf"
@@ -527,7 +573,18 @@ def convert_jira_ticket_to_markdown(ticket: dict) -> MarkdownDocument:
 
 
 def convert_jira_tickets_to_markdown(tickets: list[dict]) -> list[MarkdownDocument]:
-    """Batch-convert Jira issues into markdown-normalized documents."""
+    """Batch-convert Jira issues into markdown-normalized documents.
+    
+    Parameters
+    ----------
+    tickets : list[dict]
+        Value for tickets.
+    
+    Returns
+    -------
+    list[MarkdownDocument]
+        Collected results from the operation.
+    """
     return [convert_jira_ticket_to_markdown(ticket) for ticket in tickets]
 
 def preprocess_jira_ticket(ticket: dict, anonymizer=None) -> Document:

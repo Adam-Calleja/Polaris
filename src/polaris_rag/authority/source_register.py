@@ -1,4 +1,30 @@
-"""Deterministic external source-register loading and crawl helpers."""
+"""Deterministic external source-register loading and crawl helpers.
+
+This module combines public functions and classes used by the surrounding Polaris
+subsystem.
+
+Classes
+-------
+ExternalSourceCrawlConfig
+    Configuration for external Source Crawl.
+ExternalSourceDefinition
+    Structured definition for external Source.
+ExternalSourceRegister
+    Collection of registered external Source.
+
+Functions
+---------
+load_external_source_register
+    Load and validate an external source register.
+discover_external_source_urls
+    Crawl one registered external source deterministically.
+discover_all_external_source_urls
+    Return discovered URLs keyed by registered source id.
+source_url_allowed
+    Return whether a URL is allowed by a registered source definition.
+attach_source_register_metadata
+    Attach deterministic source-register metadata to loaded documents.
+"""
 
 from __future__ import annotations
 
@@ -37,12 +63,46 @@ DocumentT = TypeVar("DocumentT")
 
 @dataclass(frozen=True)
 class ExternalSourceCrawlConfig:
+    """Configuration for external Source Crawl.
+    
+    Attributes
+    ----------
+    max_depth : int
+        Value for max Depth.
+    max_pages : int
+        Value for max Pages.
+    """
     max_depth: int
     max_pages: int
 
 
 @dataclass(frozen=True)
 class ExternalSourceDefinition:
+    """Structured definition for external Source.
+    
+    Attributes
+    ----------
+    source_id : str
+        Stable identifier for the registered source.
+    canonical_name : str
+        Value for canonical Name.
+    entity_type : str
+        Value for entity Type.
+    homepage : str
+        Value for homepage.
+    allowed_domains : tuple[str, ...]
+        Value for allowed Domains.
+    include_url_prefixes : tuple[str, ...]
+        Whether to include URL Prefixes.
+    exclude_url_patterns : tuple[str, ...]
+        Value for exclude URL Patterns.
+    aliases : tuple[str, ...]
+        Value for aliases.
+    relevance_tags : tuple[str, ...]
+        Value for relevance Tags.
+    crawl : ExternalSourceCrawlConfig
+        Value for crawl.
+    """
     source_id: str
     canonical_name: str
     entity_type: str
@@ -57,12 +117,39 @@ class ExternalSourceDefinition:
 
 @dataclass(frozen=True)
 class ExternalSourceRegister:
+    """Collection of registered external Source.
+    
+    Attributes
+    ----------
+    version : str
+        Value for version.
+    sources : tuple[ExternalSourceDefinition, ...]
+        Value for sources.
+    """
     version: str
     sources: tuple[ExternalSourceDefinition, ...]
 
 
 def load_external_source_register(path: str | Path) -> ExternalSourceRegister:
-    """Load and validate an external source register."""
+    """Load and validate an external source register.
+    
+    Parameters
+    ----------
+    path : str or Path
+        Filesystem path used by the operation.
+    
+    Returns
+    -------
+    ExternalSourceRegister
+        Loaded external Source Register.
+    
+    Raises
+    ------
+    TypeError
+        If the provided value has an unexpected type.
+    ValueError
+        If the provided value is invalid for the operation.
+    """
 
     resolved = Path(path).expanduser().resolve()
     payload = yaml.safe_load(resolved.read_text(encoding="utf-8")) or {}
@@ -90,7 +177,20 @@ def discover_external_source_urls(
     *,
     get_internal_links: Callable[[str], Sequence[str]],
 ) -> list[str]:
-    """Crawl one registered external source deterministically."""
+    """Crawl one registered external source deterministically.
+    
+    Parameters
+    ----------
+    source : ExternalSourceDefinition
+        Source definition, source name, or source identifier to process.
+    get_internal_links : Callable[[str], Sequence[str]]
+        Callable used to discover internal links for a source homepage.
+    
+    Returns
+    -------
+    list[str]
+        Collected results from the operation.
+    """
 
     queue: list[tuple[str, int]] = [(source.homepage, 0)]
     seen: set[str] = set()
@@ -127,7 +227,20 @@ def discover_all_external_source_urls(
     *,
     get_internal_links: Callable[[str], Sequence[str]],
 ) -> dict[str, list[str]]:
-    """Return discovered URLs keyed by registered source id."""
+    """Return discovered URLs keyed by registered source id.
+    
+    Parameters
+    ----------
+    register : ExternalSourceRegister
+        Value for register.
+    get_internal_links : Callable[[str], Sequence[str]]
+        Callable used to discover internal links for a source homepage.
+    
+    Returns
+    -------
+    dict[str, list[str]]
+        Structured result of the operation.
+    """
 
     return {
         source.source_id: discover_external_source_urls(source, get_internal_links=get_internal_links)
@@ -136,7 +249,20 @@ def discover_all_external_source_urls(
 
 
 def source_url_allowed(source: ExternalSourceDefinition, url: str) -> bool:
-    """Return whether a URL is allowed by a registered source definition."""
+    """Return whether a URL is allowed by a registered source definition.
+    
+    Parameters
+    ----------
+    source : ExternalSourceDefinition
+        Source definition, source name, or source identifier to process.
+    url : str
+        URL used by the operation.
+    
+    Returns
+    -------
+    bool
+        `True` if source URL Allowed; otherwise `False`.
+    """
 
     normalized = _canonicalize_url(url)
     parts = urlsplit(normalized)
@@ -164,7 +290,20 @@ def attach_source_register_metadata(
     *,
     source: ExternalSourceDefinition,
 ) -> list[DocumentT]:
-    """Attach deterministic source-register metadata to loaded documents."""
+    """Attach deterministic source-register metadata to loaded documents.
+    
+    Parameters
+    ----------
+    documents : Sequence[DocumentT]
+        Document objects to enrich, convert, or inspect.
+    source : ExternalSourceDefinition
+        Source definition, source name, or source identifier to process.
+    
+    Returns
+    -------
+    list[DocumentT]
+        Collected results from the operation.
+    """
 
     enriched: list[DocumentT] = []
     for document in documents:
@@ -185,6 +324,25 @@ def attach_source_register_metadata(
 
 
 def _normalize_source_definition(value: Any) -> ExternalSourceDefinition:
+    """Normalize source Definition.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    
+    Returns
+    -------
+    ExternalSourceDefinition
+        Result of the operation.
+    
+    Raises
+    ------
+    TypeError
+        If the provided value has an unexpected type.
+    ValueError
+        If the provided value is invalid for the operation.
+    """
     if not isinstance(value, Mapping):
         raise TypeError(f"Each source definition must be a mapping, got {type(value)!r}.")
 
@@ -257,6 +415,25 @@ def _normalize_source_definition(value: Any) -> ExternalSourceDefinition:
 
 
 def _normalize_crawl_config(value: Any, *, source_id: str) -> ExternalSourceCrawlConfig:
+    """Normalize crawl Config.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    source_id : str
+        Stable identifier for the registered source.
+    
+    Returns
+    -------
+    ExternalSourceCrawlConfig
+        Result of the operation.
+    
+    Raises
+    ------
+    TypeError
+        If the provided value has an unexpected type.
+    """
     if not isinstance(value, Mapping):
         raise TypeError(f"sources[{source_id}].crawl must be a mapping.")
     max_depth = _normalized_non_negative_int(value.get("max_depth"), f"sources[{source_id}].crawl.max_depth")
@@ -265,6 +442,25 @@ def _normalize_crawl_config(value: Any, *, source_id: str) -> ExternalSourceCraw
 
 
 def _normalize_domain_list(value: Any, *, source_id: str) -> tuple[str, ...]:
+    """Normalize domain List.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    source_id : str
+        Stable identifier for the registered source.
+    
+    Returns
+    -------
+    tuple[str, ...]
+        Collected results from the operation.
+    
+    Raises
+    ------
+    ValueError
+        If the provided value is invalid for the operation.
+    """
     if not isinstance(value, list) or not value:
         raise ValueError(f"sources[{source_id}].allowed_domains must be a non-empty list.")
     domains = []
@@ -282,6 +478,25 @@ def _normalize_domain_list(value: Any, *, source_id: str) -> tuple[str, ...]:
 
 
 def _normalize_url_prefixes(value: Any, *, source_id: str) -> tuple[str, ...]:
+    """Normalize URL Prefixes.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    source_id : str
+        Stable identifier for the registered source.
+    
+    Returns
+    -------
+    tuple[str, ...]
+        Collected results from the operation.
+    
+    Raises
+    ------
+    ValueError
+        If the provided value is invalid for the operation.
+    """
     if not isinstance(value, list) or not value:
         raise ValueError(f"sources[{source_id}].include_url_prefixes must be a non-empty list.")
     prefixes = tuple(sorted({_canonicalize_url(str(item or "").strip()) for item in value if str(item or "").strip()}))
@@ -291,6 +506,25 @@ def _normalize_url_prefixes(value: Any, *, source_id: str) -> tuple[str, ...]:
 
 
 def _normalize_regex_list(value: Any, *, source_id: str) -> tuple[str, ...]:
+    """Normalize regex List.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    source_id : str
+        Stable identifier for the registered source.
+    
+    Returns
+    -------
+    tuple[str, ...]
+        Collected results from the operation.
+    
+    Raises
+    ------
+    TypeError
+        If the provided value has an unexpected type.
+    """
     if value is None:
         return tuple()
     if not isinstance(value, list):
@@ -306,6 +540,18 @@ def _normalize_regex_list(value: Any, *, source_id: str) -> tuple[str, ...]:
 
 
 def _validate_source_prefix_overlaps(sources: Sequence[ExternalSourceDefinition]) -> None:
+    """Validate source Prefix Overlaps.
+    
+    Parameters
+    ----------
+    sources : Sequence[ExternalSourceDefinition]
+        Value for sources.
+    
+    Raises
+    ------
+    ValueError
+        If the provided value is invalid for the operation.
+    """
     for idx, left in enumerate(sources):
         left_prefixes = set(left.include_url_prefixes)
         for right in sources[idx + 1 :]:
@@ -319,6 +565,18 @@ def _validate_source_prefix_overlaps(sources: Sequence[ExternalSourceDefinition]
 
 
 def _canonicalize_url(url: str) -> str:
+    """Canonicalize URL.
+    
+    Parameters
+    ----------
+    url : str
+        URL used by the operation.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     parts = urlsplit(str(url or "").strip())
     scheme = parts.scheme.lower()
     netloc = parts.netloc.lower()
@@ -329,11 +587,42 @@ def _canonicalize_url(url: str) -> str:
 
 
 def _has_unstable_path_hint(url: str) -> bool:
+    """Return whether unstable Path Hint.
+    
+    Parameters
+    ----------
+    url : str
+        URL used by the operation.
+    
+    Returns
+    -------
+    bool
+        `True` if has Unstable Path Hint; otherwise `False`.
+    """
     lower = _canonicalize_url(url).lower()
     return any(hint in lower for hint in _COMMUNITY_PATH_HINTS)
 
 
 def _normalized_non_empty_text(value: Any, field_name: str) -> str:
+    """Normalized Non Empty Text.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    field_name : str
+        Value for field Name.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    
+    Raises
+    ------
+    ValueError
+        If the provided value is invalid for the operation.
+    """
     text = str(value or "").strip()
     if not text:
         raise ValueError(f"{field_name} must be a non-empty string.")
@@ -341,6 +630,25 @@ def _normalized_non_empty_text(value: Any, field_name: str) -> str:
 
 
 def _normalized_positive_int(value: Any, field_name: str) -> int:
+    """Normalized Positive Int.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    field_name : str
+        Value for field Name.
+    
+    Returns
+    -------
+    int
+        Computed integer value.
+    
+    Raises
+    ------
+    ValueError
+        If the provided value is invalid for the operation.
+    """
     try:
         resolved = int(value)
     except (TypeError, ValueError):
@@ -351,6 +659,25 @@ def _normalized_positive_int(value: Any, field_name: str) -> int:
 
 
 def _normalized_non_negative_int(value: Any, field_name: str) -> int:
+    """Normalized Non Negative Int.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    field_name : str
+        Value for field Name.
+    
+    Returns
+    -------
+    int
+        Computed integer value.
+    
+    Raises
+    ------
+    ValueError
+        If the provided value is invalid for the operation.
+    """
     try:
         resolved = int(value)
     except (TypeError, ValueError):

@@ -1,4 +1,16 @@
-"""Deterministic extractor for the official RCS services catalog."""
+"""Deterministic extractor for the official RCS services catalog.
+
+This module exposes public helper functions used by the surrounding Polaris subsystem.
+
+Functions
+---------
+service_catalog_normalized_path
+    Service Catalog Normalized Path.
+is_allowed_service_catalog_url
+    Return whether allowed Service Catalog URL.
+extract_service_catalog_candidates
+    Extract service Catalog Candidates.
+"""
 
 from __future__ import annotations
 
@@ -102,6 +114,18 @@ _DATA_STORAGE_SUBSERVICE_LABELS = (
 
 
 def service_catalog_normalized_path(url: str) -> str:
+    """Service Catalog Normalized Path.
+    
+    Parameters
+    ----------
+    url : str
+        URL used by the operation.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     path = urlsplit(str(url or "")).path.strip("/").lower()
     if path in _SERVICE_CATALOG_LANDING_PATHS:
         return path
@@ -112,6 +136,20 @@ def service_catalog_normalized_path(url: str) -> str:
 
 
 def is_allowed_service_catalog_url(homepage: str, url: str) -> bool:
+    """Return whether allowed Service Catalog URL.
+    
+    Parameters
+    ----------
+    homepage : str
+        Value for homepage.
+    url : str
+        URL used by the operation.
+    
+    Returns
+    -------
+    bool
+        `True` if allowed Service Catalog URL; otherwise `False`.
+    """
     homepage_parts = urlsplit(homepage)
     candidate_parts = urlsplit(url)
     if not candidate_parts.scheme or not candidate_parts.netloc:
@@ -132,6 +170,18 @@ def is_allowed_service_catalog_url(homepage: str, url: str) -> bool:
 def extract_service_catalog_candidates(
     markdown_documents: Sequence[MarkdownDocument],
 ) -> tuple[list[_Candidate], list[ReviewQueueRow]]:
+    """Extract service Catalog Candidates.
+    
+    Parameters
+    ----------
+    markdown_documents : Sequence[MarkdownDocument]
+        Value for markdown Documents.
+    
+    Returns
+    -------
+    tuple[list[_Candidate], list[ReviewQueueRow]]
+        Result of the operation.
+    """
     candidates: list[_Candidate] = []
 
     for document in sorted(markdown_documents, key=lambda item: str(item.id)):
@@ -178,6 +228,20 @@ def extract_service_catalog_candidates(
 
 
 def _resolve_service_catalog_title(document: MarkdownDocument, sections: Sequence[object]) -> str:
+    """Resolve service Catalog Title.
+    
+    Parameters
+    ----------
+    document : MarkdownDocument
+        Value for document.
+    sections : Sequence[object]
+        Value for sections.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     heading_title = _primary_heading_title(sections)
     if heading_title:
         return heading_title
@@ -189,10 +253,36 @@ def _resolve_service_catalog_title(document: MarkdownDocument, sections: Sequenc
 
 
 def _service_catalog_evidence_text(document: MarkdownDocument) -> str:
+    """Service Catalog Evidence Text.
+    
+    Parameters
+    ----------
+    document : MarkdownDocument
+        Value for document.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     return str(document.text or "").strip()[:400]
 
 
 def _extract_landing_page_candidates(document: MarkdownDocument, doc_title: str) -> list[_Candidate]:
+    """Extract landing Page Candidates.
+    
+    Parameters
+    ----------
+    document : MarkdownDocument
+        Value for document.
+    doc_title : str
+        Value for doc Title.
+    
+    Returns
+    -------
+    list[_Candidate]
+        Collected results from the operation.
+    """
     text = str(document.text or "")
     candidates: list[_Candidate] = []
 
@@ -220,6 +310,20 @@ def _extract_landing_page_candidates(document: MarkdownDocument, doc_title: str)
 
 
 def _extract_data_storage_subservice_candidates(document: MarkdownDocument, doc_title: str) -> list[_Candidate]:
+    """Extract data Storage Subservice Candidates.
+    
+    Parameters
+    ----------
+    document : MarkdownDocument
+        Value for document.
+    doc_title : str
+        Value for doc Title.
+    
+    Returns
+    -------
+    list[_Candidate]
+        Collected results from the operation.
+    """
     text = str(document.text or "")
     candidates: list[_Candidate] = []
     for label in _DATA_STORAGE_SUBSERVICE_LABELS:
@@ -245,6 +349,18 @@ def _extract_data_storage_subservice_candidates(document: MarkdownDocument, doc_
 
 
 def _service_spec_for_label(label: str) -> _ServiceCatalogSpec | None:
+    """Service Spec For Label.
+    
+    Parameters
+    ----------
+    label : str
+        Value for label.
+    
+    Returns
+    -------
+    _ServiceCatalogSpec or None
+        Result of the operation.
+    """
     normalized = _normalize_spaces(label)
     for spec in _SERVICE_CATALOG_PATH_SPECS.values():
         aliases = {spec.canonical_name, *spec.explicit_aliases}
@@ -256,6 +372,20 @@ def _service_spec_for_label(label: str) -> _ServiceCatalogSpec | None:
 
 
 def _explicit_aliases_from_text(text: str, canonical_name: str) -> list[str]:
+    """Explicit Aliases From Text.
+    
+    Parameters
+    ----------
+    text : str
+        Text value to inspect, tokenize, or encode.
+    canonical_name : str
+        Value for canonical Name.
+    
+    Returns
+    -------
+    list[str]
+        Collected results from the operation.
+    """
     body = str(text or "")
     aliases: list[str] = []
     explicit_patterns = {

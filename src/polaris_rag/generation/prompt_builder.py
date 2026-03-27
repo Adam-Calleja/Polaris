@@ -96,10 +96,30 @@ class PromptTemplate:
 
 class PromptBuilder:
     """Registry and factory for prompt templates.
-
-    This class manages a collection of named :class:`PromptTemplate` instances
-    and provides methods to register templates from dictionaries or files and
-    to render prompts by name.
+    
+    This class manages a collection of named :class:`PromptTemplate` instances and
+    provides methods to register templates from dictionaries or files and to render
+    prompts by name.
+    
+    Methods
+    -------
+    register_from_dict
+        Register a new template from a dictionary.
+    register_from_file
+        Load and register templates from a JSON file.
+    register_from_package
+        Load and register templates from a JSON file bundled as a package
+        resource.
+    register_from_source
+        Register templates from a source spec.
+    list_prompts
+        Return a sorted list of registered prompt template names.
+    has_prompt
+        Return True if a prompt template with this name is registered.
+    get_template
+        Get a registered PromptTemplate by name.
+    build
+        Build and render a prompt by template name.
     """
 
     def __init__(self):
@@ -282,11 +302,28 @@ class PromptBuilder:
         return self.register_from_file(Path(source), base_dir=base_dir)
 
     def list_prompts(self) -> List[str]:
-        """Return a sorted list of registered prompt template names."""
+        """Return a sorted list of registered prompt template names.
+        
+        Returns
+        -------
+        List[str]
+            Available prompts.
+        """
         return sorted(self.templates.keys())
 
     def has_prompt(self, name: str) -> bool:
-        """Return True if a prompt template with this name is registered."""
+        """Return True if a prompt template with this name is registered.
+        
+        Parameters
+        ----------
+        name : str
+            Human-readable name for the resource or tracing span.
+        
+        Returns
+        -------
+        bool
+            `True` if prompt; otherwise `False`.
+        """
         return name in self.templates
 
     def get_template(self, name: str) -> PromptTemplate:

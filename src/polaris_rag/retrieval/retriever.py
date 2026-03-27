@@ -221,6 +221,10 @@ class HybridRetriever:
         result_queue: Queue[tuple[bool, object]] = Queue(maxsize=1)
 
         def _worker() -> None:
+            """Worker.
+            
+            This helper is internal to the surrounding module.
+            """
             try:
                 result_queue.put((True, self._retriever.retrieve(query)))
             except Exception as exc:  # pragma: no cover - exercised via caller behavior
@@ -280,6 +284,26 @@ class MultiCollectionRetriever:
             rerank: Mapping[str, Any] | None = None,
             config_base_dir: str | Path | None = None,
         ):
+        """Initialize the instance.
+        
+        Parameters
+        ----------
+        source_retrievers : Mapping[str, Any]
+            Value for source Retrievers.
+        source_settings : Mapping[str, Mapping[str, Any]] or None, optional
+            Value for source Settings.
+        final_top_k : int, optional
+            Value for final Top K.
+        rerank : Mapping[str, Any] or None, optional
+            Value for rerank.
+        config_base_dir : str or Path or None, optional
+            Value for config Base Dir.
+        
+        Raises
+        ------
+        ValueError
+            If the provided value is invalid for the operation.
+        """
         if not source_retrievers:
             raise ValueError("'source_retrievers' must define at least one source retriever.")
 
@@ -303,7 +327,24 @@ class MultiCollectionRetriever:
             query_constraints: Any | None = None,
             **kwargs,
         ) -> list[NodeWithScore]:
-        """Retrieve and rerank nodes for a query."""
+        """Retrieve and rerank nodes for a query.
+        
+        Parameters
+        ----------
+        query : str
+            User query text.
+        timeout_seconds : float or None, optional
+            timeout Seconds expressed in seconds.
+        query_constraints : Any or None, optional
+            Optional structured retrieval constraints.
+        **kwargs : Any
+            Value for kwargs.
+        
+        Returns
+        -------
+        list[NodeWithScore]
+            Collected results from the operation.
+        """
         candidates = self._collect_candidates(
             query,
             timeout_seconds=timeout_seconds,
@@ -326,12 +367,24 @@ class MultiCollectionRetriever:
         return reranked[: self.final_top_k]
 
     def reranker_profile(self) -> dict[str, Any]:
-        """Return the active reranker profile."""
+        """Return the active reranker profile.
+        
+        Returns
+        -------
+        dict[str, Any]
+            Structured result of the operation.
+        """
 
         return self._reranker.profile()
 
     def reranker_fingerprint(self) -> str:
-        """Return the active reranker fingerprint."""
+        """Return the active reranker fingerprint.
+        
+        Returns
+        -------
+        str
+            Resulting string value.
+        """
 
         return self._reranker.fingerprint()
 
@@ -395,6 +448,26 @@ class MultiCollectionRetriever:
 
     @staticmethod
     def _remaining_timeout(deadline: float | None, source_name: str) -> float | None:
+        """Remaining Timeout.
+        
+        Parameters
+        ----------
+        deadline : float or None, optional
+            Value for deadline.
+        source_name : str
+            Value for source Name.
+        
+        Returns
+        -------
+        float or None
+            Result of the operation.
+        
+        Raises
+        ------
+        RetrievalTimeoutError
+            If `RetrievalTimeoutError` is raised while executing the
+            operation.
+        """
         if deadline is None:
             return None
         remaining = deadline - time.monotonic()
@@ -406,6 +479,18 @@ class MultiCollectionRetriever:
 
     @staticmethod
     def _to_float_or_none(value: Any) -> float | None:
+        """To Float Or None.
+        
+        Parameters
+        ----------
+        value : Any
+            Input value to normalize, coerce, or inspect.
+        
+        Returns
+        -------
+        float or None
+            Result of the operation.
+        """
         if value is None:
             return None
         try:

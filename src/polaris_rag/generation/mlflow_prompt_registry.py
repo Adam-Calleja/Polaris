@@ -1,4 +1,22 @@
-"""MLflow Prompt Registry integration utilities."""
+"""MLflow Prompt Registry integration utilities.
+
+This module combines public functions and classes used by the surrounding Polaris
+subsystem.
+
+Classes
+-------
+PromptRegistryConfig
+    Resolved prompt-registry settings from config.
+
+Functions
+---------
+resolve_prompt_registry_config
+    Resolve prompt-registry config from GlobalConfig/raw mapping.
+load_prompt_template_from_registry
+    Load prompt template text from MLflow Prompt Registry alias.
+register_prompt_version
+    Register a prompt version and optionally set/update an alias.
+"""
 
 from __future__ import annotations
 
@@ -8,6 +26,18 @@ from typing import Any, Mapping
 
 
 def _as_mapping(obj: Any) -> Mapping[str, Any]:
+    """As Mapping.
+    
+    Parameters
+    ----------
+    obj : Any
+        Value for obj.
+    
+    Returns
+    -------
+    Mapping[str, Any]
+        Result of the operation.
+    """
     if isinstance(obj, Mapping):
         return obj
     if hasattr(obj, "__dict__"):
@@ -16,6 +46,20 @@ def _as_mapping(obj: Any) -> Mapping[str, Any]:
 
 
 def _as_bool(value: Any, default: bool) -> bool:
+    """As Bool.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    default : bool
+        Fallback value to use when normalization fails.
+    
+    Returns
+    -------
+    bool
+        `True` if as Bool; otherwise `False`.
+    """
     if value is None:
         return default
     if isinstance(value, bool):
@@ -30,6 +74,13 @@ def _as_bool(value: Any, default: bool) -> bool:
 
 
 def _import_mlflow() -> Any | None:
+    """Import MLflow.
+    
+    Returns
+    -------
+    Any or None
+        Result of the operation.
+    """
     try:
         import mlflow  # type: ignore
 
@@ -39,6 +90,20 @@ def _import_mlflow() -> Any | None:
 
 
 def _filter_supported_kwargs(func: Any, kwargs: Mapping[str, Any]) -> dict[str, Any]:
+    """Filter Supported Kwargs.
+    
+    Parameters
+    ----------
+    func : Any
+        Value for func.
+    kwargs : Mapping[str, Any]
+        Value for kwargs.
+    
+    Returns
+    -------
+    dict[str, Any]
+        Structured result of the operation.
+    """
     try:
         sig = inspect.signature(func)
     except (TypeError, ValueError):
@@ -54,7 +119,17 @@ def _filter_supported_kwargs(func: Any, kwargs: Mapping[str, Any]) -> dict[str, 
 
 @dataclass(frozen=True)
 class PromptRegistryConfig:
-    """Resolved prompt-registry settings from config."""
+    """Resolved prompt-registry settings from config.
+    
+    Attributes
+    ----------
+    enabled : bool
+        Value for enabled.
+    name : str or None
+        Human-readable name for the resource or tracing span.
+    alias : str
+        Value for alias.
+    """
 
     enabled: bool = False
     name: str | None = None
@@ -62,7 +137,18 @@ class PromptRegistryConfig:
 
 
 def resolve_prompt_registry_config(cfg: Any) -> PromptRegistryConfig:
-    """Resolve prompt-registry config from GlobalConfig/raw mapping."""
+    """Resolve prompt-registry config from GlobalConfig/raw mapping.
+    
+    Parameters
+    ----------
+    cfg : Any
+        Configuration object or mapping used to resolve runtime settings.
+    
+    Returns
+    -------
+    PromptRegistryConfig
+        Resolved prompt Registry Config.
+    """
 
     raw = _as_mapping(getattr(cfg, "raw", cfg))
     mlflow_cfg = _as_mapping(raw.get("mlflow", {}))
@@ -82,6 +168,18 @@ def resolve_prompt_registry_config(cfg: Any) -> PromptRegistryConfig:
 
 
 def _template_to_text(template: Any) -> str:
+    """Template To Text.
+    
+    Parameters
+    ----------
+    template : Any
+        Value for template.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     if isinstance(template, str):
         return template
 
@@ -143,7 +241,31 @@ def load_prompt_template_from_registry(
     alias: str,
     local_prompt_name: str | None = None,
 ) -> dict[str, Any]:
-    """Load prompt template text from MLflow Prompt Registry alias."""
+    """Load prompt template text from MLflow Prompt Registry alias.
+    
+    Parameters
+    ----------
+    tracking_uri : str or None, optional
+        Value for tracking Uri.
+    prompt_name : str
+        Value for prompt Name.
+    alias : str
+        Value for alias.
+    local_prompt_name : str or None, optional
+        Value for local Prompt Name.
+    
+    Returns
+    -------
+    dict[str, Any]
+        Loaded prompt Template From Registry.
+    
+    Raises
+    ------
+    RuntimeError
+        If `RuntimeError` is raised while executing the operation.
+    ValueError
+        If the provided value is invalid for the operation.
+    """
 
     mlflow = _import_mlflow()
     if mlflow is None:
@@ -189,7 +311,35 @@ def register_prompt_version(
     commit_message: str,
     tags: Mapping[str, str] | None = None,
 ) -> dict[str, Any]:
-    """Register a prompt version and optionally set/update an alias."""
+    """Register a prompt version and optionally set/update an alias.
+    
+    Parameters
+    ----------
+    tracking_uri : str or None, optional
+        Value for tracking Uri.
+    prompt_name : str
+        Value for prompt Name.
+    template_text : str
+        Value for template Text.
+    alias : str or None, optional
+        Value for alias.
+    commit_message : str
+        Value for commit Message.
+    tags : Mapping[str, str] or None, optional
+        Value for tags.
+    
+    Returns
+    -------
+    dict[str, Any]
+        Structured result of the operation.
+    
+    Raises
+    ------
+    ValueError
+        If the provided value is invalid for the operation.
+    RuntimeError
+        If `RuntimeError` is raised while executing the operation.
+    """
 
     if not template_text.strip():
         raise ValueError("Cannot register empty prompt template text.")

@@ -1,4 +1,14 @@
-"""CLI entrypoint for benchmark annotation scaffolding and validation."""
+"""CLI entrypoint for benchmark annotation scaffolding and validation.
+
+This module exposes public helper functions used by the surrounding Polaris subsystem.
+
+Functions
+---------
+parse_args
+    Parse args.
+main
+    Run the command-line entrypoint.
+"""
 
 from __future__ import annotations
 
@@ -17,6 +27,13 @@ from polaris_rag.evaluation.benchmark_annotations import (
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse args.
+    
+    Returns
+    -------
+    argparse.Namespace
+        Parsed args.
+    """
     parser = argparse.ArgumentParser(
         description="Scaffold and validate benchmark annotation CSV files"
     )
@@ -66,6 +83,18 @@ def parse_args() -> argparse.Namespace:
 
 
 def _load_split_lookup(args: argparse.Namespace) -> tuple[list[dict], dict[str, str]]:
+    """Load split Lookup.
+    
+    Parameters
+    ----------
+    args : argparse.Namespace
+        Value for args.
+    
+    Returns
+    -------
+    tuple[list[dict], dict[str, str]]
+        Collected results from the operation.
+    """
     raw_examples = load_raw_examples(args.dataset_file)
     dev_examples = load_raw_examples(args.dev_dataset_file)
     test_examples = load_raw_examples(args.test_dataset_file)
@@ -74,12 +103,23 @@ def _load_split_lookup(args: argparse.Namespace) -> tuple[list[dict], dict[str, 
 
 
 def _print_columns() -> None:
+    """Print Columns.
+    
+    This helper is internal to the surrounding module.
+    """
     print("Columns:")
     for name in ANNOTATION_COLUMNS:
         print(f"- {name}")
 
 
 def main() -> None:
+    """Run the command-line entrypoint.
+
+    Notes
+    -----
+    Parses CLI arguments, validates or scaffolds benchmark annotations, and
+    prints the resulting output locations to standard output.
+    """
     args = parse_args()
     raw_examples, split_lookup = _load_split_lookup(args)
 

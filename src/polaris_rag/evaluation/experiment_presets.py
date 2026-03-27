@@ -1,4 +1,23 @@
-"""Evaluation preset resolution for reproducible experiment conditions."""
+"""Evaluation preset resolution for reproducible experiment conditions.
+
+This module combines public functions and classes used by the surrounding Polaris
+subsystem.
+
+Classes
+-------
+PresetContext
+    Resolved preset metadata embedded into run artifacts.
+
+Functions
+---------
+list_preset_names
+    List preset Names.
+apply_evaluation_preset
+    Apply an evaluation preset and return the effective config plus manifest
+    metadata.
+resolve_condition_summary
+    Return a stable summary of the active experiment condition.
+"""
 
 from __future__ import annotations
 
@@ -29,7 +48,19 @@ FEATURE_WEIGHT_KEYS: tuple[str, ...] = (
 
 @dataclass(frozen=True)
 class PresetContext:
-    """Resolved preset metadata embedded into run artifacts."""
+    """Resolved preset metadata embedded into run artifacts.
+    
+    Attributes
+    ----------
+    preset_name : str or None
+        Value for preset Name.
+    preset_description : str or None
+        Value for preset Description.
+    condition_summary : dict[str, Any]
+        Value for condition Summary.
+    condition_fingerprint : str
+        Value for condition Fingerprint.
+    """
 
     preset_name: str | None
     preset_description: str | None
@@ -37,6 +68,13 @@ class PresetContext:
     condition_fingerprint: str
 
     def manifest_fields(self) -> dict[str, Any]:
+        """Manifest Fields.
+        
+        Returns
+        -------
+        dict[str, Any]
+            Structured result of the operation.
+        """
         return {
             "preset_name": self.preset_name,
             "preset_description": self.preset_description,
@@ -46,6 +84,13 @@ class PresetContext:
 
 
 def list_preset_names() -> list[str]:
+    """List preset Names.
+    
+    Returns
+    -------
+    list[str]
+        Available preset Names.
+    """
     return [
         "docs_only",
         "tickets_only",
@@ -58,7 +103,25 @@ def list_preset_names() -> list[str]:
 
 
 def apply_evaluation_preset(cfg: GlobalConfig, preset_name: str | None) -> tuple[GlobalConfig, PresetContext]:
-    """Apply an evaluation preset and return the effective config plus manifest metadata."""
+    """Apply an evaluation preset and return the effective config plus manifest metadata.
+    
+    Parameters
+    ----------
+    cfg : GlobalConfig
+        Configuration object or mapping used to resolve runtime settings.
+    preset_name : str or None, optional
+        Value for preset Name.
+    
+    Returns
+    -------
+    tuple[GlobalConfig, PresetContext]
+        Result of the operation.
+    
+    Raises
+    ------
+    ValueError
+        If the provided value is invalid for the operation.
+    """
 
     raw = deepcopy(_as_mapping(getattr(cfg, "raw", {})))
     if preset_name:
@@ -82,7 +145,18 @@ def apply_evaluation_preset(cfg: GlobalConfig, preset_name: str | None) -> tuple
 
 
 def resolve_condition_summary(cfg: GlobalConfig) -> dict[str, Any]:
-    """Return a stable summary of the active experiment condition."""
+    """Return a stable summary of the active experiment condition.
+    
+    Parameters
+    ----------
+    cfg : GlobalConfig
+        Configuration object or mapping used to resolve runtime settings.
+    
+    Returns
+    -------
+    dict[str, Any]
+        Resolved condition Summary.
+    """
 
     raw = _as_mapping(getattr(cfg, "raw", {}))
     retriever_cfg = _as_mapping(raw.get("retriever", {}))
@@ -118,24 +192,80 @@ def resolve_condition_summary(cfg: GlobalConfig) -> dict[str, Any]:
 
 
 def _apply_docs_only(raw: dict[str, Any], *, config_path: Path | None) -> str:
+    """Apply docs Only.
+    
+    Parameters
+    ----------
+    raw : dict[str, Any]
+        Value for raw.
+    config_path : Path or None, optional
+        Filesystem path used by the operation.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     _configure_sources(raw, ["docs"])
     _configure_rrf_reranker(raw)
     return "Docs-only baseline with RRF reranking."
 
 
 def _apply_tickets_only(raw: dict[str, Any], *, config_path: Path | None) -> str:
+    """Apply tickets Only.
+    
+    Parameters
+    ----------
+    raw : dict[str, Any]
+        Value for raw.
+    config_path : Path or None, optional
+        Filesystem path used by the operation.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     _configure_sources(raw, ["tickets"])
     _configure_rrf_reranker(raw)
     return "Tickets-only baseline with RRF reranking."
 
 
 def _apply_naive_combined(raw: dict[str, Any], *, config_path: Path | None) -> str:
+    """Apply naive Combined.
+    
+    Parameters
+    ----------
+    raw : dict[str, Any]
+        Value for raw.
+    config_path : Path or None, optional
+        Filesystem path used by the operation.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     _configure_sources(raw, ["docs", "tickets"])
     _configure_rrf_reranker(raw)
     return "Naive docs+tickets baseline with RRF reranking."
 
 
 def _apply_source_aware(raw: dict[str, Any], *, config_path: Path | None) -> str:
+    """Apply source Aware.
+    
+    Parameters
+    ----------
+    raw : dict[str, Any]
+        Value for raw.
+    config_path : Path or None, optional
+        Filesystem path used by the operation.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     weights = _target_feature_weights(raw, config_path=config_path, enabled_feature="authority")
     _configure_sources(raw, ["docs", "tickets"])
     _configure_validity_reranker(raw, weights=weights, config_path=config_path)
@@ -143,6 +273,20 @@ def _apply_source_aware(raw: dict[str, Any], *, config_path: Path | None) -> str
 
 
 def _apply_freshness_only(raw: dict[str, Any], *, config_path: Path | None) -> str:
+    """Apply freshness Only.
+    
+    Parameters
+    ----------
+    raw : dict[str, Any]
+        Value for raw.
+    config_path : Path or None, optional
+        Filesystem path used by the operation.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     weights = _target_feature_weights(raw, config_path=config_path, enabled_feature="freshness")
     _configure_sources(raw, ["docs", "tickets"])
     _configure_validity_reranker(raw, weights=weights, config_path=config_path)
@@ -150,12 +294,45 @@ def _apply_freshness_only(raw: dict[str, Any], *, config_path: Path | None) -> s
 
 
 def _apply_validity_aware(raw: dict[str, Any], *, config_path: Path | None) -> str:
+    """Apply validity Aware.
+    
+    Parameters
+    ----------
+    raw : dict[str, Any]
+        Value for raw.
+    config_path : Path or None, optional
+        Filesystem path used by the operation.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     _configure_sources(raw, ["docs", "tickets"])
     _configure_validity_reranker(raw, weights=None, config_path=config_path)
     return "Frozen validity-aware reranker over docs+tickets."
 
 
 def _apply_all_docs_validity_aware(raw: dict[str, Any], *, config_path: Path | None) -> str:
+    """Apply all Docs Validity Aware.
+    
+    Parameters
+    ----------
+    raw : dict[str, Any]
+        Value for raw.
+    config_path : Path or None, optional
+        Filesystem path used by the operation.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    
+    Raises
+    ------
+    ValueError
+        If the provided value is invalid for the operation.
+    """
     external_source_names = _configured_external_source_names(raw)
     if not external_source_names:
         raise ValueError(
@@ -179,6 +356,18 @@ _PRESET_HANDLERS = {
 
 
 def _as_mapping(value: Any) -> dict[str, Any]:
+    """As Mapping.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    
+    Returns
+    -------
+    dict[str, Any]
+        Structured result of the operation.
+    """
     if isinstance(value, Mapping):
         return dict(value)
     if hasattr(value, "__dict__"):
@@ -187,6 +376,18 @@ def _as_mapping(value: Any) -> dict[str, Any]:
 
 
 def _configured_source_names(raw: Mapping[str, Any]) -> list[str]:
+    """Configured Source Names.
+    
+    Parameters
+    ----------
+    raw : Mapping[str, Any]
+        Value for raw.
+    
+    Returns
+    -------
+    list[str]
+        Collected results from the operation.
+    """
     retriever_cfg = _as_mapping(raw.get("retriever", {}))
     raw_sources = retriever_cfg.get("sources")
     if not isinstance(raw_sources, list):
@@ -201,6 +402,18 @@ def _configured_source_names(raw: Mapping[str, Any]) -> list[str]:
 
 
 def _configured_external_source_names(raw: Mapping[str, Any]) -> list[str]:
+    """Configured External Source Names.
+    
+    Parameters
+    ----------
+    raw : Mapping[str, Any]
+        Value for raw.
+    
+    Returns
+    -------
+    list[str]
+        Collected results from the operation.
+    """
     vector_stores = _as_mapping(raw.get("vector_stores", {}))
     return sorted(
         source_name
@@ -210,6 +423,20 @@ def _configured_external_source_names(raw: Mapping[str, Any]) -> list[str]:
 
 
 def _configure_sources(raw: dict[str, Any], source_names: list[str]) -> None:
+    """Configure Sources.
+    
+    Parameters
+    ----------
+    raw : dict[str, Any]
+        Value for raw.
+    source_names : list[str]
+        Value for source Names.
+    
+    Raises
+    ------
+    ValueError
+        If the provided value is invalid for the operation.
+    """
     retriever_cfg = _as_mapping(raw.get("retriever", {}))
     existing_sources = retriever_cfg.get("sources")
     if not isinstance(existing_sources, list):
@@ -244,6 +471,13 @@ def _configure_sources(raw: dict[str, Any], source_names: list[str]) -> None:
 
 
 def _configure_rrf_reranker(raw: dict[str, Any]) -> None:
+    """Configure RRF Reranker.
+    
+    Parameters
+    ----------
+    raw : dict[str, Any]
+        Value for raw.
+    """
     retriever_cfg = _as_mapping(raw.get("retriever", {}))
     current_rerank = _as_mapping(retriever_cfg.get("rerank", {}))
     semantic_base_cfg = _as_mapping(current_rerank.get("semantic_base", {}))
@@ -262,6 +496,17 @@ def _configure_validity_reranker(
     weights: Mapping[str, float] | None,
     config_path: Path | None,
 ) -> None:
+    """Configure Validity Reranker.
+    
+    Parameters
+    ----------
+    raw : dict[str, Any]
+        Value for raw.
+    weights : Mapping[str, float] or None, optional
+        Weight values to evaluate or persist.
+    config_path : Path or None, optional
+        Filesystem path used by the operation.
+    """
     retriever_cfg = _as_mapping(raw.get("retriever", {}))
     current_rerank = _as_mapping(retriever_cfg.get("rerank", {}))
     semantic_base_cfg = _as_mapping(current_rerank.get("semantic_base", {}))
@@ -288,6 +533,27 @@ def _target_feature_weights(
     config_path: Path | None,
     enabled_feature: str,
 ) -> dict[str, float]:
+    """Target Feature Weights.
+    
+    Parameters
+    ----------
+    raw : Mapping[str, Any]
+        Value for raw.
+    config_path : Path or None, optional
+        Filesystem path used by the operation.
+    enabled_feature : str
+        Value for enabled Feature.
+    
+    Returns
+    -------
+    dict[str, float]
+        Structured result of the operation.
+    
+    Raises
+    ------
+    ValueError
+        If the provided value is invalid for the operation.
+    """
     tuned_weights = _load_tuned_feature_weights(raw, config_path=config_path)
     if enabled_feature not in FEATURE_WEIGHT_KEYS:
         raise ValueError(f"Unsupported feature weight {enabled_feature!r}.")
@@ -298,6 +564,27 @@ def _target_feature_weights(
 
 
 def _load_tuned_feature_weights(raw: Mapping[str, Any], *, config_path: Path | None) -> dict[str, float]:
+    """Load tuned Feature Weights.
+    
+    Parameters
+    ----------
+    raw : Mapping[str, Any]
+        Value for raw.
+    config_path : Path or None, optional
+        Filesystem path used by the operation.
+    
+    Returns
+    -------
+    dict[str, float]
+        Structured result of the operation.
+    
+    Raises
+    ------
+    TypeError
+        If the provided value has an unexpected type.
+    ValueError
+        If the provided value is invalid for the operation.
+    """
     resolved = _resolve_weights_file_path(raw, config_path=config_path)
     payload = yaml.safe_load(resolved.read_text(encoding="utf-8")) or {}
     if not isinstance(payload, Mapping):
@@ -312,6 +599,20 @@ def _load_tuned_feature_weights(raw: Mapping[str, Any], *, config_path: Path | N
 
 
 def _resolved_weights_path(raw: Mapping[str, Any], *, config_path: Path | None) -> str:
+    """Resolved Weights Path.
+    
+    Parameters
+    ----------
+    raw : Mapping[str, Any]
+        Value for raw.
+    config_path : Path or None, optional
+        Filesystem path used by the operation.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     retriever_cfg = _as_mapping(raw.get("retriever", {}))
     rerank_cfg = _as_mapping(retriever_cfg.get("rerank", {}))
     configured = str(rerank_cfg.get("weights_path", "") or "").strip()
@@ -321,6 +622,25 @@ def _resolved_weights_path(raw: Mapping[str, Any], *, config_path: Path | None) 
 
 
 def _resolve_weights_file_path(raw: Mapping[str, Any], *, config_path: Path | None) -> Path:
+    """Resolve weights File Path.
+    
+    Parameters
+    ----------
+    raw : Mapping[str, Any]
+        Value for raw.
+    config_path : Path or None, optional
+        Filesystem path used by the operation.
+    
+    Returns
+    -------
+    Path
+        Result of the operation.
+    
+    Raises
+    ------
+    FileNotFoundError
+        If the requested file does not exist.
+    """
     configured = _resolved_weights_path(raw, config_path=config_path)
     candidate = Path(configured).expanduser()
     if not candidate.is_absolute():
@@ -337,6 +657,18 @@ def _resolve_weights_file_path(raw: Mapping[str, Any], *, config_path: Path | No
 
 
 def _source_settings_from_raw(raw: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
+    """Source Settings From Raw.
+    
+    Parameters
+    ----------
+    raw : Mapping[str, Any]
+        Value for raw.
+    
+    Returns
+    -------
+    dict[str, dict[str, Any]]
+        Structured result of the operation.
+    """
     retriever_cfg = _as_mapping(raw.get("retriever", {}))
     raw_sources = retriever_cfg.get("sources")
     if not isinstance(raw_sources, list):
@@ -358,12 +690,36 @@ def _source_settings_from_raw(raw: Mapping[str, Any]) -> dict[str, dict[str, Any
 
 
 def _config_base_dir(config_path: Path | None) -> Path:
+    """Config Base Dir.
+    
+    Parameters
+    ----------
+    config_path : Path or None, optional
+        Filesystem path used by the operation.
+    
+    Returns
+    -------
+    Path
+        Result of the operation.
+    """
     if config_path is None:
         return Path.cwd()
     return Path(config_path).expanduser().resolve().parent
 
 
 def _stable_fingerprint(value: Mapping[str, Any]) -> str:
+    """Stable Fingerprint.
+    
+    Parameters
+    ----------
+    value : Mapping[str, Any]
+        Input value to normalize, coerce, or inspect.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     payload = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 

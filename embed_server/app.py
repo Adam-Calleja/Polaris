@@ -1,3 +1,21 @@
+"""Embedding API service for Polaris.
+
+This module loads the configured embedding model, exposes health and embedding
+endpoints, and serves OpenAI-compatible embedding payloads for the Polaris stack.
+
+Classes
+-------
+EmbeddingsRequest
+    Request model for embeddings.
+
+Functions
+---------
+healthz
+    Return a basic health payload for the embedding service.
+embeddings
+    Generate embeddings for one or more input strings.
+"""
+
 from __future__ import annotations
 
 import os
@@ -37,12 +55,37 @@ def _patch_autocast_signature() -> None:
     original = torch.is_autocast_enabled
 
     def _wrapped(device_type: str | None = None) -> bool:
+        """Wrapped.
+        
+        Parameters
+        ----------
+        device_type : str or None, optional
+            Value for device Type.
+        
+        Returns
+        -------
+        bool
+            `True` if wrapped; otherwise `False`.
+        """
         return original()
 
     torch.is_autocast_enabled = _wrapped  # type: ignore[assignment]
 
 
 class EmbeddingsRequest(BaseModel):
+    """Request model for embeddings.
+    
+    Attributes
+    ----------
+    input : Union[str, List[str]]
+        Value for input.
+    model : Optional[str]
+        Value for model.
+    encoding_format : Optional[str]
+        Value for encoding Format.
+    user : Optional[str]
+        Value for user.
+    """
     input: Union[str, List[str]]
     model: Optional[str] = None
     encoding_format: Optional[str] = None
@@ -50,6 +93,10 @@ class EmbeddingsRequest(BaseModel):
 
 
 def _load_model() -> None:
+    """Load model.
+    
+    This helper is internal to the surrounding module.
+    """
     global _model, _tokenizer
 
     _patch_autocast_signature()
@@ -76,6 +123,18 @@ def _load_model() -> None:
 
 
 def _mean_pool_embeddings(texts: List[str]) -> List[List[float]]:
+    """Mean Pool Embeddings.
+    
+    Parameters
+    ----------
+    texts : List[str]
+        Input text values to encode or count.
+    
+    Returns
+    -------
+    List[List[float]]
+        Result of the operation.
+    """
     assert _model is not None and _tokenizer is not None
 
     inputs = _tokenizer(
@@ -96,6 +155,18 @@ def _mean_pool_embeddings(texts: List[str]) -> List[List[float]]:
 
 
 def _encode_embeddings(texts: List[str]) -> List[List[float]]:
+    """Encode Embeddings.
+    
+    Parameters
+    ----------
+    texts : List[str]
+        Input text values to encode or count.
+    
+    Returns
+    -------
+    List[List[float]]
+        Result of the operation.
+    """
     assert _model is not None and _tokenizer is not None
 
     if USE_MODEL_ENCODE and hasattr(_model, "encode"):
@@ -111,6 +182,18 @@ def _encode_embeddings(texts: List[str]) -> List[List[float]]:
 
 
 def _encode_embeddings_batched(texts: List[str]) -> List[List[float]]:
+    """Encode Embeddings Batched.
+    
+    Parameters
+    ----------
+    texts : List[str]
+        Input text values to encode or count.
+    
+    Returns
+    -------
+    List[List[float]]
+        Result of the operation.
+    """
     if len(texts) <= EMBED_MAX_BATCH_SIZE:
         return _encode_embeddings(texts)
 
@@ -122,6 +205,18 @@ def _encode_embeddings_batched(texts: List[str]) -> List[List[float]]:
 
 
 def _count_tokens(texts: List[str]) -> int:
+    """Count tokens.
+    
+    Parameters
+    ----------
+    texts : List[str]
+        Input text values to encode or count.
+    
+    Returns
+    -------
+    int
+        Computed integer value.
+    """
     assert _tokenizer is not None
     total = 0
     for text in texts:
@@ -131,16 +226,44 @@ def _count_tokens(texts: List[str]) -> int:
 
 @app.on_event("startup")
 def _startup() -> None:
+    """Initialize application state during startup.
+    
+    This helper is internal to the surrounding module.
+    """
     _load_model()
 
 
 @app.get("/healthz")
 def healthz() -> dict:
+    """Return a basic health payload for the embedding service.
+    
+    Returns
+    -------
+    dict
+        Structured result of the operation.
+    """
     return {"status": "ok", "model": MODEL_ID}
 
 
 @app.post("/v1/embeddings")
 def embeddings(request: EmbeddingsRequest) -> dict:
+    """Generate embeddings for one or more input strings.
+    
+    Parameters
+    ----------
+    request : EmbeddingsRequest
+        Incoming FastAPI request object or request payload.
+    
+    Returns
+    -------
+    dict
+        Structured result of the operation.
+    
+    Raises
+    ------
+    HTTPException
+        If the request is invalid or the backend operation fails.
+    """
     if request.encoding_format not in (None, "float", "base64"):
         raise HTTPException(
             status_code=400,

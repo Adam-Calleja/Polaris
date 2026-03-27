@@ -1,4 +1,34 @@
-"""Deterministic local-official authority registry builder."""
+"""Deterministic local-official authority registry builder.
+
+This module combines public functions and classes used by the surrounding Polaris
+subsystem.
+
+Classes
+-------
+ReviewQueueRow
+    Manual-audit row for ambiguous registry candidates.
+RegistrySourceDocument
+    Provenance record for one crawled source document URL.
+RegistryEntity
+    One normalized authority-registry entity.
+RegistryArtifact
+    Serialized output for a deterministic authority build.
+
+Functions
+---------
+extract_registry_candidates
+    Extract raw registry candidates from markdown-normalized documents.
+build_registry_artifact
+    Build a deterministic registry artifact from local official markdown docs.
+persist_registry_artifact
+    Persist a registry artifact as stable JSON.
+load_registry_artifact
+    Load a persisted registry artifact.
+merge_registry_artifacts
+    Merge existing registry artifacts while preserving cross-scope entities.
+persist_review_rows
+    Persist manual-audit rows as CSV.
+"""
 
 from __future__ import annotations
 
@@ -242,7 +272,29 @@ _COMMAND_SNIPPET_PATTERN = re.compile(r"\b(?:module|source|conda|sbatch|srun|sal
 
 @dataclass(frozen=True)
 class ReviewQueueRow:
-    """Manual-audit row for ambiguous registry candidates."""
+    """Manual-audit row for ambiguous registry candidates.
+    
+    Attributes
+    ----------
+    reason : str
+        Value for reason.
+    entity_type : str
+        Value for entity Type.
+    canonical_name : str
+        Value for canonical Name.
+    source_scope : str
+        Value for source Scope.
+    candidate_count : int
+        Value for candidate Count.
+    status_values : list[str]
+        Value for status Values.
+    aliases : list[str]
+        Value for aliases.
+    doc_ids : list[str]
+        Stable identifiers for doc.
+    notes : str
+        Value for notes.
+    """
 
     reason: str
     entity_type: str
@@ -257,7 +309,17 @@ class ReviewQueueRow:
 
 @dataclass(frozen=True)
 class RegistrySourceDocument:
-    """Provenance record for one crawled source document URL."""
+    """Provenance record for one crawled source document URL.
+    
+    Attributes
+    ----------
+    url : str
+        URL used by the operation.
+    source_scope : str
+        Value for source Scope.
+    source_id : str
+        Stable identifier for the registered source.
+    """
 
     url: str
     source_scope: str
@@ -266,7 +328,37 @@ class RegistrySourceDocument:
 
 @dataclass(frozen=True)
 class RegistryEntity:
-    """One normalized authority-registry entity."""
+    """One normalized authority-registry entity.
+    
+    Attributes
+    ----------
+    entity_id : str
+        Stable identifier for entity.
+    entity_type : str
+        Value for entity Type.
+    canonical_name : str
+        Value for canonical Name.
+    aliases : list[str]
+        Value for aliases.
+    source_scope : str
+        Value for source Scope.
+    status : str
+        Value for status.
+    known_versions : list[str]
+        Value for known Versions.
+    doc_id : str
+        Stable identifier for doc.
+    doc_title : str
+        Value for doc Title.
+    heading_path : list[str]
+        Filesystem path used by the operation.
+    evidence_spans : list[dict[str, object]]
+        Value for evidence Spans.
+    extraction_method : str
+        Value for extraction Method.
+    review_state : str
+        Value for review State.
+    """
 
     entity_id: str
     entity_type: str
@@ -285,7 +377,21 @@ class RegistryEntity:
 
 @dataclass(frozen=True)
 class RegistryArtifact:
-    """Serialized output for a deterministic authority build."""
+    """Serialized output for a deterministic authority build.
+    
+    Attributes
+    ----------
+    build : dict[str, object]
+        Value for build.
+    source_urls : list[str]
+        URLs used by the operation.
+    entities : list[RegistryEntity]
+        Value for entities.
+    summary : dict[str, object]
+        Summary payload to render or persist.
+    source_documents : list[RegistrySourceDocument]
+        Value for source Documents.
+    """
 
     build: dict[str, object]
     source_urls: list[str]
@@ -316,40 +422,136 @@ class _Candidate:
 
 
 def _clean_title(title: str) -> str:
+    """Clean Title.
+    
+    Parameters
+    ----------
+    title : str
+        Value for title.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     text = str(title or "").strip()
     text = _TITLE_SUFFIX_PATTERN.sub("", text)
     return text.strip()
 
 
 def _clean_heading_text(text: str) -> str:
+    """Clean Heading Text.
+    
+    Parameters
+    ----------
+    text : str
+        Text value to inspect, tokenize, or encode.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     value = _HEADING_PERMALINK_PATTERN.sub("", str(text or "").strip())
     return _normalize_spaces(value)
 
 
 def _normalize_spaces(text: str) -> str:
+    """Normalize spaces.
+    
+    Parameters
+    ----------
+    text : str
+        Text value to inspect, tokenize, or encode.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     return _MULTISPACE_PATTERN.sub(" ", str(text or "").strip())
 
 
 def _normalize_alias(text: str) -> str:
+    """Normalize alias.
+    
+    Parameters
+    ----------
+    text : str
+        Text value to inspect, tokenize, or encode.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     return _normalize_spaces(text)
 
 
 def _normalize_key(text: str) -> str:
+    """Normalize key.
+    
+    Parameters
+    ----------
+    text : str
+        Text value to inspect, tokenize, or encode.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     lowered = str(text or "").strip().lower()
     return _PUNCT_NORMALISE_PATTERN.sub(" ", lowered).strip()
 
 
 def _sorted_unique(values: Iterable[str]) -> list[str]:
+    """Sorted Unique.
+    
+    Parameters
+    ----------
+    values : Iterable[str]
+        Value for values.
+    
+    Returns
+    -------
+    list[str]
+        Collected results from the operation.
+    """
     return sorted({str(value).strip() for value in values if str(value or "").strip()})
 
 
 def _canonical_url(document: MarkdownDocument) -> str:
+    """Canonical URL.
+    
+    Parameters
+    ----------
+    document : MarkdownDocument
+        Value for document.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     metadata = dict(document.metadata or {})
     source = str(metadata.get("source") or document.id or "").strip()
     return source or str(document.id)
 
 
 def _url_slug(source_url: str) -> str:
+    """URL Slug.
+    
+    Parameters
+    ----------
+    source_url : str
+        URL used by the operation.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     path = urlsplit(source_url).path.strip("/")
     if not path:
         return ""
@@ -357,6 +559,18 @@ def _url_slug(source_url: str) -> str:
 
 
 def _strip_slug_suffix(slug: str) -> str:
+    """Strip Slug Suffix.
+    
+    Parameters
+    ----------
+    slug : str
+        Value for slug.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     text = str(slug or "").strip()
     for suffix in (".html", ".rst.txt"):
         if text.lower().endswith(suffix):
@@ -365,6 +579,18 @@ def _strip_slug_suffix(slug: str) -> str:
 
 
 def _slug_aliases(source_url: str) -> list[str]:
+    """Slug Aliases.
+    
+    Parameters
+    ----------
+    source_url : str
+        URL used by the operation.
+    
+    Returns
+    -------
+    list[str]
+        Collected results from the operation.
+    """
     slug = _strip_slug_suffix(_url_slug(source_url))
     if not slug:
         return []
@@ -376,6 +602,18 @@ def _slug_aliases(source_url: str) -> list[str]:
 
 
 def _extract_sections(markdown_text: str) -> list[_Section]:
+    """Extract sections.
+    
+    Parameters
+    ----------
+    markdown_text : str
+        Value for markdown Text.
+    
+    Returns
+    -------
+    list[_Section]
+        Collected results from the operation.
+    """
     lines = str(markdown_text or "").replace("\r\n", "\n").replace("\r", "\n").split("\n")
     sections: list[_Section] = []
     stack: list[str] = []
@@ -384,6 +622,10 @@ def _extract_sections(markdown_text: str) -> list[_Section]:
     in_fence = False
 
     def _flush() -> None:
+        """Flush.
+        
+        This helper is internal to the surrounding module.
+        """
         if not current_lines:
             return
         text = "\n".join(current_lines).strip()
@@ -424,10 +666,34 @@ def _extract_sections(markdown_text: str) -> list[_Section]:
 
 
 def _extract_versions(text: str) -> list[str]:
+    """Extract versions.
+    
+    Parameters
+    ----------
+    text : str
+        Text value to inspect, tokenize, or encode.
+    
+    Returns
+    -------
+    list[str]
+        Collected results from the operation.
+    """
     return _sorted_unique(_VERSION_PATTERN.findall(str(text or "")))
 
 
 def _extract_status(text: str) -> str:
+    """Extract status.
+    
+    Parameters
+    ----------
+    text : str
+        Text value to inspect, tokenize, or encode.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     body = str(text or "")
     for status, pattern in _STATUS_PATTERNS:
         if pattern.search(body):
@@ -436,6 +702,18 @@ def _extract_status(text: str) -> str:
 
 
 def _iter_command_snippets(text: str) -> list[str]:
+    """Iter Command Snippets.
+    
+    Parameters
+    ----------
+    text : str
+        Text value to inspect, tokenize, or encode.
+    
+    Returns
+    -------
+    list[str]
+        Collected results from the operation.
+    """
     body = str(text or "").replace("\r\n", "\n").replace("\r", "\n")
     snippets: list[str] = []
     current_fence: list[str] = []
@@ -443,6 +721,10 @@ def _iter_command_snippets(text: str) -> list[str]:
     in_fence = False
 
     def _flush_indented() -> None:
+        """Flush Indented.
+        
+        This helper is internal to the surrounding module.
+        """
         nonlocal current_indented
         snippet = "\n".join(current_indented).strip()
         if snippet and _COMMAND_SNIPPET_PATTERN.search(snippet):
@@ -489,6 +771,18 @@ def _iter_command_snippets(text: str) -> list[str]:
 
 
 def _extract_partition_names(text: str) -> list[str]:
+    """Extract partition Names.
+    
+    Parameters
+    ----------
+    text : str
+        Text value to inspect, tokenize, or encode.
+    
+    Returns
+    -------
+    list[str]
+        Collected results from the operation.
+    """
     matches: list[str] = []
     body = str(text or "")
     for snippet in _iter_command_snippets(text):
@@ -514,6 +808,18 @@ def _extract_partition_names(text: str) -> list[str]:
 
 
 def _split_module_tokens(raw_value: str) -> list[str]:
+    """Split module Tokens.
+    
+    Parameters
+    ----------
+    raw_value : str
+        Raw value value to normalize.
+    
+    Returns
+    -------
+    list[str]
+        Collected results from the operation.
+    """
     if not raw_value:
         return []
     cutoff = raw_value
@@ -539,6 +845,18 @@ def _split_module_tokens(raw_value: str) -> list[str]:
 
 
 def _looks_like_module_token(token: str) -> bool:
+    """Looks Like Module Token.
+    
+    Parameters
+    ----------
+    token : str
+        Value for token.
+    
+    Returns
+    -------
+    bool
+        `True` if looks Like Module Token; otherwise `False`.
+    """
     cleaned = str(token or "").strip()
     if not cleaned:
         return False
@@ -557,6 +875,18 @@ def _looks_like_module_token(token: str) -> bool:
 
 
 def _extract_module_names(text: str) -> list[str]:
+    """Extract module Names.
+    
+    Parameters
+    ----------
+    text : str
+        Text value to inspect, tokenize, or encode.
+    
+    Returns
+    -------
+    list[str]
+        Collected results from the operation.
+    """
     matches: list[str] = []
     for snippet in _iter_command_snippets(text):
         for line in str(snippet).splitlines():
@@ -576,6 +906,18 @@ def _extract_module_names(text: str) -> list[str]:
 
 
 def _infer_toolchain_name(module_name: str) -> str | None:
+    """Infer toolchain Name.
+    
+    Parameters
+    ----------
+    module_name : str
+        Value for module Name.
+    
+    Returns
+    -------
+    str or None
+        Result of the operation.
+    """
     token = str(module_name or "").strip()
     if not token:
         return None
@@ -594,6 +936,18 @@ def _infer_toolchain_name(module_name: str) -> str | None:
 
 
 def _primary_heading_path(sections: Sequence[_Section]) -> tuple[str, ...]:
+    """Primary Heading Path.
+    
+    Parameters
+    ----------
+    sections : Sequence[_Section]
+        Value for sections.
+    
+    Returns
+    -------
+    tuple[str, ...]
+        Collected results from the operation.
+    """
     for section in sections:
         if section.heading_path:
             return section.heading_path
@@ -601,6 +955,18 @@ def _primary_heading_path(sections: Sequence[_Section]) -> tuple[str, ...]:
 
 
 def _primary_heading_title(sections: Sequence[_Section]) -> str:
+    """Primary Heading Title.
+    
+    Parameters
+    ----------
+    sections : Sequence[_Section]
+        Value for sections.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     path = _primary_heading_path(sections)
     if not path:
         return ""
@@ -608,23 +974,85 @@ def _primary_heading_title(sections: Sequence[_Section]) -> str:
 
 
 def _document_slug(document: MarkdownDocument) -> str:
+    """Document Slug.
+    
+    Parameters
+    ----------
+    document : MarkdownDocument
+        Value for document.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     return _strip_slug_suffix(_url_slug(_canonical_url(document))).lower()
 
 
 def _document_metadata_value(document: MarkdownDocument, key: str) -> str:
+    """Document Metadata Value.
+    
+    Parameters
+    ----------
+    document : MarkdownDocument
+        Value for document.
+    key : str
+        Value for key.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     metadata = dict(document.metadata or {})
     return str(metadata.get(key) or "").strip()
 
 
 def _external_register_entity_type(document: MarkdownDocument) -> str:
+    """External Register Entity Type.
+    
+    Parameters
+    ----------
+    document : MarkdownDocument
+        Value for document.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     return _document_metadata_value(document, "source_register_entity_type").lower()
 
 
 def _external_register_canonical_name(document: MarkdownDocument) -> str:
+    """External Register Canonical Name.
+    
+    Parameters
+    ----------
+    document : MarkdownDocument
+        Value for document.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     return _document_metadata_value(document, "source_register_canonical_name")
 
 
 def _external_register_aliases(document: MarkdownDocument) -> list[str]:
+    """External Register Aliases.
+    
+    Parameters
+    ----------
+    document : MarkdownDocument
+        Value for document.
+    
+    Returns
+    -------
+    list[str]
+        Collected results from the operation.
+    """
     metadata = dict(document.metadata or {})
     raw_value = metadata.get("source_register_aliases")
     if isinstance(raw_value, list):
@@ -637,6 +1065,22 @@ def _classify_document_page(
     sections: Sequence[_Section],
     source_scope: str,
 ) -> str:
+    """Classify Document Page.
+    
+    Parameters
+    ----------
+    document : MarkdownDocument
+        Value for document.
+    sections : Sequence[_Section]
+        Value for sections.
+    source_scope : str
+        Value for source Scope.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     source_url = _canonical_url(document)
     path = urlsplit(source_url).path.lower()
     slug = _document_slug(document)
@@ -670,6 +1114,20 @@ def _classify_document_page(
 
 
 def _resolve_document_title(document: MarkdownDocument, sections: Sequence[_Section]) -> str:
+    """Resolve document Title.
+    
+    Parameters
+    ----------
+    document : MarkdownDocument
+        Value for document.
+    sections : Sequence[_Section]
+        Value for sections.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     heading_title = _primary_heading_title(sections)
     if heading_title:
         return heading_title
@@ -683,6 +1141,20 @@ def _resolve_document_title(document: MarkdownDocument, sections: Sequence[_Sect
 
 
 def _extract_entity_versions(title: str, sections: Sequence[_Section]) -> list[str]:
+    """Extract entity Versions.
+    
+    Parameters
+    ----------
+    title : str
+        Value for title.
+    sections : Sequence[_Section]
+        Value for sections.
+    
+    Returns
+    -------
+    list[str]
+        Collected results from the operation.
+    """
     candidate_texts: list[str] = [title]
     for section in sections:
         if section.heading_path:
@@ -698,6 +1170,18 @@ def _extract_entity_versions(title: str, sections: Sequence[_Section]) -> list[s
 
 
 def _looks_like_software_version(value: str) -> bool:
+    """Looks Like Software Version.
+    
+    Parameters
+    ----------
+    value : str
+        Input value to normalize, coerce, or inspect.
+    
+    Returns
+    -------
+    bool
+        `True` if looks Like Software Version; otherwise `False`.
+    """
     token = str(value or "").strip()
     if not token:
         return False
@@ -709,6 +1193,20 @@ def _looks_like_software_version(value: str) -> bool:
 
 
 def _extract_versions_from_module_references(text: str, prefixes: Sequence[str]) -> list[str]:
+    """Extract versions From Module References.
+    
+    Parameters
+    ----------
+    text : str
+        Text value to inspect, tokenize, or encode.
+    prefixes : Sequence[str]
+        Value for prefixes.
+    
+    Returns
+    -------
+    list[str]
+        Collected results from the operation.
+    """
     versions: list[str] = []
     body = str(text or "")
     for prefix in prefixes:
@@ -721,6 +1219,18 @@ def _extract_versions_from_module_references(text: str, prefixes: Sequence[str])
 
 
 def _clean_version_candidate(value: str) -> str:
+    """Clean Version Candidate.
+    
+    Parameters
+    ----------
+    value : str
+        Input value to normalize, coerce, or inspect.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     token = str(value or "").strip().strip("`'\".,;:!?)]}")
     if not token:
         return ""
@@ -745,6 +1255,18 @@ def _clean_version_candidate(value: str) -> str:
 
 
 def _extract_module_like_versions(module_name: str) -> list[str]:
+    """Extract module Like Versions.
+    
+    Parameters
+    ----------
+    module_name : str
+        Value for module Name.
+    
+    Returns
+    -------
+    list[str]
+        Collected results from the operation.
+    """
     values: list[str] = []
     for segment in str(module_name or "").split("/"):
         cleaned = _clean_version_candidate(segment)
@@ -758,6 +1280,22 @@ def _extract_software_versions_with_prefixes(
     title: str,
     sections: Sequence[_Section],
 ) -> list[str]:
+    """Extract software Versions With Prefixes.
+    
+    Parameters
+    ----------
+    prefixes : Sequence[str]
+        Value for prefixes.
+    title : str
+        Value for title.
+    sections : Sequence[_Section]
+        Value for sections.
+    
+    Returns
+    -------
+    list[str]
+        Collected results from the operation.
+    """
     candidate_versions: list[str] = []
     normalized_prefixes = tuple(prefix for prefix in prefixes if str(prefix or "").strip())
     for section in sections:
@@ -786,11 +1324,41 @@ def _extract_software_versions_with_prefixes(
 
 
 def _extract_software_versions(slug: str, title: str, sections: Sequence[_Section]) -> list[str]:
+    """Extract software Versions.
+    
+    Parameters
+    ----------
+    slug : str
+        Value for slug.
+    title : str
+        Value for title.
+    sections : Sequence[_Section]
+        Value for sections.
+    
+    Returns
+    -------
+    list[str]
+        Collected results from the operation.
+    """
     prefixes = _SOFTWARE_VERSION_PREFIXES.get(slug, (slug,))
     return _extract_software_versions_with_prefixes(prefixes, title, sections)
 
 
 def _external_software_prefixes(document: MarkdownDocument, canonical_name: str) -> tuple[str, ...]:
+    """External Software Prefixes.
+    
+    Parameters
+    ----------
+    document : MarkdownDocument
+        Value for document.
+    canonical_name : str
+        Value for canonical Name.
+    
+    Returns
+    -------
+    tuple[str, ...]
+        Collected results from the operation.
+    """
     raw_aliases = [canonical_name, *_external_register_aliases(document)]
     prefixes: set[str] = set()
     for raw_value in raw_aliases:
@@ -815,6 +1383,22 @@ def _extract_external_software_versions(
     canonical_name: str,
     sections: Sequence[_Section],
 ) -> list[str]:
+    """Extract external Software Versions.
+    
+    Parameters
+    ----------
+    document : MarkdownDocument
+        Value for document.
+    canonical_name : str
+        Value for canonical Name.
+    sections : Sequence[_Section]
+        Value for sections.
+    
+    Returns
+    -------
+    list[str]
+        Collected results from the operation.
+    """
     return _extract_software_versions_with_prefixes(
         _external_software_prefixes(document, canonical_name),
         canonical_name,
@@ -823,6 +1407,22 @@ def _extract_external_software_versions(
 
 
 def _status_for_primary_entity(slug: str, title: str, sections: Sequence[_Section]) -> str:
+    """Status For Primary Entity.
+    
+    Parameters
+    ----------
+    slug : str
+        Value for slug.
+    title : str
+        Value for title.
+    sections : Sequence[_Section]
+        Value for sections.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     override = _PRIMARY_ENTITY_STATUS_OVERRIDES.get(slug)
     if override:
         return override
@@ -834,6 +1434,22 @@ def _status_for_primary_entity(slug: str, title: str, sections: Sequence[_Sectio
 
 
 def _status_for_primary_software(slug: str, title: str, sections: Sequence[_Section]) -> str:
+    """Status For Primary Software.
+    
+    Parameters
+    ----------
+    slug : str
+        Value for slug.
+    title : str
+        Value for title.
+    sections : Sequence[_Section]
+        Value for sections.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     override = _PRIMARY_ENTITY_STATUS_OVERRIDES.get(slug)
     if override:
         return override
@@ -850,6 +1466,20 @@ def _status_for_primary_software(slug: str, title: str, sections: Sequence[_Sect
 
 
 def _status_for_partition(partition_name: str, section_text: str) -> str:
+    """Status For Partition.
+    
+    Parameters
+    ----------
+    partition_name : str
+        Value for partition Name.
+    section_text : str
+        Value for section Text.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     status = _extract_status(section_text)
     if status != "unknown":
         return status
@@ -857,6 +1487,20 @@ def _status_for_partition(partition_name: str, section_text: str) -> str:
 
 
 def _status_for_module_like(module_name: str, section_text: str) -> str:
+    """Status For Module Like.
+    
+    Parameters
+    ----------
+    module_name : str
+        Value for module Name.
+    section_text : str
+        Value for section Text.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     normalized = _normalize_key(module_name)
     if normalized in {_normalize_key(value) for value in _LEGACY_MODULE_NAMES}:
         return "legacy"
@@ -864,6 +1508,20 @@ def _status_for_module_like(module_name: str, section_text: str) -> str:
 
 
 def _partition_aliases(partition_name: str, doc_slug: str) -> list[str]:
+    """Partition Aliases.
+    
+    Parameters
+    ----------
+    partition_name : str
+        Value for partition Name.
+    doc_slug : str
+        Value for doc Slug.
+    
+    Returns
+    -------
+    list[str]
+        Collected results from the operation.
+    """
     aliases = [partition_name.lower()]
     for alias in _PARTITION_ALIASES_BY_DOC_SLUG.get(doc_slug, {}).get(partition_name, ()):
         aliases.append(alias)
@@ -871,6 +1529,20 @@ def _partition_aliases(partition_name: str, doc_slug: str) -> list[str]:
 
 
 def _primary_evidence_text(title: str, sections: Sequence[_Section]) -> str:
+    """Primary Evidence Text.
+    
+    Parameters
+    ----------
+    title : str
+        Value for title.
+    sections : Sequence[_Section]
+        Value for sections.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     for section in sections:
         if section.text.strip():
             return section.text.strip()[:400]
@@ -878,6 +1550,22 @@ def _primary_evidence_text(title: str, sections: Sequence[_Section]) -> str:
 
 
 def _infer_primary_entity(document: MarkdownDocument, sections: Sequence[_Section], source_scope: str) -> _Candidate | None:
+    """Infer primary Entity.
+    
+    Parameters
+    ----------
+    document : MarkdownDocument
+        Value for document.
+    sections : Sequence[_Section]
+        Value for sections.
+    source_scope : str
+        Value for source Scope.
+    
+    Returns
+    -------
+    _Candidate or None
+        Result of the operation.
+    """
     source_url = _canonical_url(document)
     slug = _document_slug(document)
     title = _resolve_document_title(document, sections)
@@ -983,6 +1671,38 @@ def _build_candidate(
     evidence_text: str,
     extraction_method: str,
 ) -> _Candidate | None:
+    """Build candidate.
+    
+    Parameters
+    ----------
+    entity_type : str
+        Value for entity Type.
+    canonical_name : str
+        Value for canonical Name.
+    aliases : Iterable[str]
+        Value for aliases.
+    source_scope : str
+        Value for source Scope.
+    status : str
+        Value for status.
+    known_versions : Iterable[str]
+        Value for known Versions.
+    doc_id : str
+        Stable identifier for doc.
+    doc_title : str
+        Value for doc Title.
+    heading_path : Sequence[str]
+        Filesystem path used by the operation.
+    evidence_text : str
+        Value for evidence Text.
+    extraction_method : str
+        Value for extraction Method.
+    
+    Returns
+    -------
+    _Candidate or None
+        Result of the operation.
+    """
     canonical = _normalize_spaces(canonical_name)
     if not canonical:
         return None
@@ -1008,7 +1728,20 @@ def extract_registry_candidates(
     *,
     source_scope: str = SOURCE_SCOPE_LOCAL_OFFICIAL,
 ) -> tuple[list[_Candidate], list[ReviewQueueRow]]:
-    """Extract raw registry candidates from markdown-normalized documents."""
+    """Extract raw registry candidates from markdown-normalized documents.
+    
+    Parameters
+    ----------
+    markdown_documents : Iterable[MarkdownDocument]
+        Value for markdown Documents.
+    source_scope : str, optional
+        Value for source Scope.
+    
+    Returns
+    -------
+    tuple[list[_Candidate], list[ReviewQueueRow]]
+        Result of the operation.
+    """
 
     candidates: list[_Candidate] = []
     review_rows: list[ReviewQueueRow] = []
@@ -1093,11 +1826,39 @@ def extract_registry_candidates(
 
 
 def _make_entity_id(source_scope: str, entity_type: str, canonical_name: str) -> str:
+    """Make Entity ID.
+    
+    Parameters
+    ----------
+    source_scope : str
+        Value for source Scope.
+    entity_type : str
+        Value for entity Type.
+    canonical_name : str
+        Value for canonical Name.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     payload = f"{source_scope}|{entity_type}|{_normalize_key(canonical_name)}"
     return hashlib.sha1(payload.encode("utf-8")).hexdigest()[:16]
 
 
 def _source_scope_priority(source_scope: str) -> tuple[int, str]:
+    """Source Scope Priority.
+    
+    Parameters
+    ----------
+    source_scope : str
+        Value for source Scope.
+    
+    Returns
+    -------
+    tuple[int, str]
+        Collected results from the operation.
+    """
     if source_scope == SOURCE_SCOPE_LOCAL_OFFICIAL:
         return (0, source_scope)
     if source_scope == SOURCE_SCOPE_LOCAL_OFFICIAL_SERVICES:
@@ -1110,6 +1871,18 @@ def _source_scope_priority(source_scope: str) -> tuple[int, str]:
 def _merge_candidates(
     candidates: Iterable[_Candidate],
 ) -> tuple[list[RegistryEntity], list[ReviewQueueRow]]:
+    """Merge candidates.
+    
+    Parameters
+    ----------
+    candidates : Iterable[_Candidate]
+        Value for candidates.
+    
+    Returns
+    -------
+    tuple[list[RegistryEntity], list[ReviewQueueRow]]
+        Collected results from the operation.
+    """
     grouped: dict[tuple[str, str, str], list[_Candidate]] = defaultdict(list)
     for candidate in candidates:
         key = (candidate.source_scope, candidate.entity_type, _normalize_key(candidate.canonical_name))
@@ -1244,6 +2017,20 @@ def _merge_candidates(
 
 
 def _build_summary(entities: Sequence[RegistryEntity], review_rows: Sequence[ReviewQueueRow]) -> dict[str, object]:
+    """Build summary.
+    
+    Parameters
+    ----------
+    entities : Sequence[RegistryEntity]
+        Value for entities.
+    review_rows : Sequence[ReviewQueueRow]
+        Value for review Rows.
+    
+    Returns
+    -------
+    dict[str, object]
+        Structured result of the operation.
+    """
     type_counts = Counter(entity.entity_type for entity in entities)
     status_counts = Counter(entity.status for entity in entities)
     source_scope_counts = Counter(entity.source_scope for entity in entities)
@@ -1259,6 +2046,25 @@ def _build_summary(entities: Sequence[RegistryEntity], review_rows: Sequence[Rev
 
 
 def _normalize_source_document(value: RegistrySourceDocument | Mapping[str, Any]) -> RegistrySourceDocument:
+    """Normalize source Document.
+    
+    Parameters
+    ----------
+    value : RegistrySourceDocument or Mapping[str, Any]
+        Input value to normalize, coerce, or inspect.
+    
+    Returns
+    -------
+    RegistrySourceDocument
+        Result of the operation.
+    
+    Raises
+    ------
+    TypeError
+        If the provided value has an unexpected type.
+    ValueError
+        If the provided value is invalid for the operation.
+    """
     if isinstance(value, RegistrySourceDocument):
         return value
     if not isinstance(value, Mapping):
@@ -1277,6 +2083,22 @@ def _resolve_source_documents(
     source_urls: Sequence[str],
     source_documents: Sequence[RegistrySourceDocument | Mapping[str, Any]] | None,
 ) -> list[RegistrySourceDocument]:
+    """Resolve source Documents.
+    
+    Parameters
+    ----------
+    source_scope : str
+        Value for source Scope.
+    source_urls : Sequence[str]
+        URLs used by the operation.
+    source_documents : Sequence[RegistrySourceDocument or Mapping[str, Any]] or None, optional
+        Value for source Documents.
+    
+    Returns
+    -------
+    list[RegistrySourceDocument]
+        Collected results from the operation.
+    """
     if source_documents is not None:
         documents = [_normalize_source_document(value) for value in source_documents]
     else:
@@ -1309,7 +2131,36 @@ def build_registry_artifact(
     source_documents: Sequence[RegistrySourceDocument | Mapping[str, Any]] | None = None,
     build_metadata: dict[str, object] | None = None,
 ) -> tuple[RegistryArtifact, list[ReviewQueueRow]]:
-    """Build a deterministic registry artifact from local official markdown docs."""
+    """Build a deterministic registry artifact from local official markdown docs.
+    
+    Parameters
+    ----------
+    markdown_documents : Iterable[MarkdownDocument]
+        Value for markdown Documents.
+    homepage : str
+        Value for homepage.
+    source_urls : Sequence[str]
+        URLs used by the operation.
+    source_scope : str, optional
+        Value for source Scope.
+    extraction_version : str, optional
+        Value for extraction Version.
+    additional_candidates : Iterable[_Candidate], optional
+        Value for additional Candidates.
+    additional_review_rows : Sequence[ReviewQueueRow], optional
+        Value for additional Review Rows.
+    additional_source_urls : Sequence[str], optional
+        URLs used by the operation.
+    source_documents : Sequence[RegistrySourceDocument or Mapping[str, Any]] or None, optional
+        Value for source Documents.
+    build_metadata : dict[str, object] or None, optional
+        Value for build Metadata.
+    
+    Returns
+    -------
+    tuple[RegistryArtifact, list[ReviewQueueRow]]
+        Constructed registry Artifact.
+    """
 
     candidates, extraction_review_rows = extract_registry_candidates(
         markdown_documents,
@@ -1354,7 +2205,20 @@ def build_registry_artifact(
 
 
 def persist_registry_artifact(artifact: RegistryArtifact, path: str | Path) -> Path:
-    """Persist a registry artifact as stable JSON."""
+    """Persist a registry artifact as stable JSON.
+    
+    Parameters
+    ----------
+    artifact : RegistryArtifact
+        Value for artifact.
+    path : str or Path
+        Filesystem path used by the operation.
+    
+    Returns
+    -------
+    Path
+        Result of the operation.
+    """
 
     resolved = Path(path).expanduser().resolve()
     resolved.parent.mkdir(parents=True, exist_ok=True)
@@ -1370,7 +2234,18 @@ def persist_registry_artifact(artifact: RegistryArtifact, path: str | Path) -> P
 
 
 def load_registry_artifact(path: str | Path) -> RegistryArtifact:
-    """Load a persisted registry artifact."""
+    """Load a persisted registry artifact.
+    
+    Parameters
+    ----------
+    path : str or Path
+        Filesystem path used by the operation.
+    
+    Returns
+    -------
+    RegistryArtifact
+        Loaded registry Artifact.
+    """
 
     resolved = Path(path).expanduser().resolve()
     payload = json.loads(resolved.read_text(encoding="utf-8"))
@@ -1417,7 +2292,20 @@ def merge_registry_artifacts(
     *,
     build_metadata: Mapping[str, object] | None = None,
 ) -> tuple[RegistryArtifact, list[ReviewQueueRow]]:
-    """Merge existing registry artifacts while preserving cross-scope entities."""
+    """Merge existing registry artifacts while preserving cross-scope entities.
+    
+    Parameters
+    ----------
+    artifacts : Sequence[RegistryArtifact]
+        Value for artifacts.
+    build_metadata : Mapping[str, object] or None, optional
+        Value for build Metadata.
+    
+    Returns
+    -------
+    tuple[RegistryArtifact, list[ReviewQueueRow]]
+        Result of the operation.
+    """
 
     grouped: dict[tuple[str, str, str], list[RegistryEntity]] = defaultdict(list)
     source_urls: set[str] = set()
@@ -1596,7 +2484,20 @@ def merge_registry_artifacts(
 
 
 def persist_review_rows(rows: Sequence[ReviewQueueRow], path: str | Path) -> Path:
-    """Persist manual-audit rows as CSV."""
+    """Persist manual-audit rows as CSV.
+    
+    Parameters
+    ----------
+    rows : Sequence[ReviewQueueRow]
+        Value for rows.
+    path : str or Path
+        Filesystem path used by the operation.
+    
+    Returns
+    -------
+    Path
+        Result of the operation.
+    """
 
     resolved = Path(path).expanduser().resolve()
     resolved.parent.mkdir(parents=True, exist_ok=True)

@@ -1,3 +1,18 @@
+"""Readiness probes for Polaris RAG dependencies.
+
+This module checks whether configured local dependencies such as the embedding service
+and Qdrant are reachable and correctly provisioned for the running Polaris deployment.
+
+Functions
+---------
+check_embed_readiness
+    Check whether the configured embedding dependency is ready.
+check_qdrant_readiness
+    Check whether required Qdrant sources are ready.
+build_readiness_report
+    Build a combined readiness report for configured dependencies.
+"""
+
 from __future__ import annotations
 
 from typing import Any, Mapping
@@ -17,6 +32,18 @@ _READINESS_TIMEOUT_SECONDS = 2.0
 
 
 def _as_mapping(obj: Any) -> Mapping[str, Any]:
+    """As Mapping.
+    
+    Parameters
+    ----------
+    obj : Any
+        Value for obj.
+    
+    Returns
+    -------
+    Mapping[str, Any]
+        Result of the operation.
+    """
     if isinstance(obj, Mapping):
         return obj
     if hasattr(obj, "__dict__"):
@@ -25,6 +52,18 @@ def _as_mapping(obj: Any) -> Mapping[str, Any]:
 
 
 def _normalize_vector_store_kind(kind: Any) -> str:
+    """Normalize vector Store Kind.
+    
+    Parameters
+    ----------
+    kind : Any
+        Value for kind.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     if not kind:
         return "qdrant"
 
@@ -35,6 +74,18 @@ def _normalize_vector_store_kind(kind: Any) -> str:
 
 
 def _local_embed_probe_urls(api_base: str) -> tuple[str | None, list[str]]:
+    """Local Embed Probe URLs.
+    
+    Parameters
+    ----------
+    api_base : str
+        Base URL of the configured HTTP dependency.
+    
+    Returns
+    -------
+    tuple[str or None, list[str]]
+        Collected results from the operation.
+    """
     parsed = urlparse(api_base)
     if not parsed.scheme or not parsed.netloc:
         return None, []
@@ -44,16 +95,47 @@ def _local_embed_probe_urls(api_base: str) -> tuple[str | None, list[str]]:
 
 
 def _is_local_embed_dependency(api_base: str) -> bool:
+    """Return whether local Embed Dependency.
+    
+    Parameters
+    ----------
+    api_base : str
+        Base URL of the configured HTTP dependency.
+    
+    Returns
+    -------
+    bool
+        `True` if is Local Embed Dependency; otherwise `False`.
+    """
     parsed = urlparse(api_base)
     host = (parsed.hostname or "").strip().lower()
     return host in _LOCAL_EMBED_HOSTS
 
 
 def _readiness_timeout() -> httpx.Timeout:
+    """Readiness Timeout.
+    
+    Returns
+    -------
+    httpx.Timeout
+        Result of the operation.
+    """
     return httpx.Timeout(_READINESS_TIMEOUT_SECONDS, connect=1.0)
 
 
 def check_embed_readiness(config: Any) -> dict[str, Any]:
+    """Check whether the configured embedding dependency is ready.
+    
+    Parameters
+    ----------
+    config : Any
+        Configuration object or mapping used by the operation.
+    
+    Returns
+    -------
+    dict[str, Any]
+        Structured status information for the requested readiness check.
+    """
     raw = _as_mapping(getattr(config, "raw", config))
     embedder_cfg = _as_mapping(raw.get("embedder", {}))
     kind = str(embedder_cfg.get("type") or embedder_cfg.get("kind") or "").strip().lower().replace("-", "_")
@@ -118,6 +200,18 @@ def check_embed_readiness(config: Any) -> dict[str, Any]:
 
 
 def check_qdrant_readiness(config: Any) -> dict[str, Any]:
+    """Check whether required Qdrant sources are ready.
+    
+    Parameters
+    ----------
+    config : Any
+        Configuration object or mapping used by the operation.
+    
+    Returns
+    -------
+    dict[str, Any]
+        Structured status information for the requested readiness check.
+    """
     raw = _as_mapping(getattr(config, "raw", config))
     retriever_cfg = _as_mapping(raw.get("retriever", {}))
     vector_stores = _as_mapping(raw.get("vector_stores", {}))
@@ -275,6 +369,18 @@ def check_qdrant_readiness(config: Any) -> dict[str, Any]:
 
 
 def build_readiness_report(config: Any) -> dict[str, Any]:
+    """Build a combined readiness report for configured dependencies.
+    
+    Parameters
+    ----------
+    config : Any
+        Configuration object or mapping used by the operation.
+    
+    Returns
+    -------
+    dict[str, Any]
+        Constructed readiness Report.
+    """
     embed = check_embed_readiness(config)
     qdrant = check_qdrant_readiness(config)
     checks = {

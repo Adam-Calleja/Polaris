@@ -1,4 +1,18 @@
-"""Offline authority-registry builder for seeded external official docs."""
+"""Offline authority-registry builder for seeded external official docs.
+
+This module exposes public helper functions used by the surrounding Polaris subsystem.
+
+Functions
+---------
+get_internal_links
+    Return internal Links.
+load_website_docs
+    Load website Docs.
+parse_args
+    Parse args.
+main
+    Run the command-line entrypoint.
+"""
 
 from __future__ import annotations
 
@@ -8,6 +22,18 @@ from pathlib import Path
 
 
 def _find_repo_root(start: Path) -> Path:
+    """Find Repo Root.
+    
+    Parameters
+    ----------
+    start : Path
+        Value for start.
+    
+    Returns
+    -------
+    Path
+        Result of the operation.
+    """
     for candidate in (start, *start.parents):
         if (candidate / "pyproject.toml").exists() and (candidate / "src").exists():
             return candidate
@@ -40,18 +66,44 @@ from polaris_rag.retrieval.markdown_converter import convert_documents_to_markdo
 
 
 def get_internal_links(homepage: str) -> list[str]:
+    """Return internal Links.
+    
+    Parameters
+    ----------
+    homepage : str
+        Value for homepage.
+    
+    Returns
+    -------
+    list[str]
+        Requested internal Links.
+    """
     from polaris_rag.retrieval.document_loader import get_internal_links as _get_internal_links
 
     return _get_internal_links(homepage)
 
 
 def load_website_docs(links: list[str]):
+    """Load website Docs.
+    
+    Parameters
+    ----------
+    links : list[str]
+        Value for links.
+    """
     from polaris_rag.retrieval.document_loader import load_website_docs as _load_website_docs
 
     return _load_website_docs(links)
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse args.
+    
+    Returns
+    -------
+    argparse.Namespace
+        Parsed args.
+    """
     parser = argparse.ArgumentParser(description="Build a deterministic authority registry from seeded external official docs")
     parser.add_argument(
         "--config-file",
@@ -106,6 +158,15 @@ def parse_args() -> argparse.Namespace:
 
 
 def _load_external_markdown_documents(cfg: GlobalConfig, register_path: str | Path):
+    """Load external Markdown Documents.
+    
+    Parameters
+    ----------
+    cfg : GlobalConfig
+        Configuration object or mapping used to resolve runtime settings.
+    register_path : str or Path
+        Filesystem path used by the operation.
+    """
     register = load_external_source_register(register_path)
     discovered_urls = discover_all_external_source_urls(register, get_internal_links=get_internal_links)
 
@@ -146,6 +207,13 @@ def _load_external_markdown_documents(cfg: GlobalConfig, register_path: str | Pa
 
 
 def main() -> None:
+    """Run the command-line entrypoint.
+    
+    Raises
+    ------
+    RuntimeError
+        If `RuntimeError` is raised while executing the operation.
+    """
     args = parse_args()
     cfg = GlobalConfig.load(args.config_file)
 

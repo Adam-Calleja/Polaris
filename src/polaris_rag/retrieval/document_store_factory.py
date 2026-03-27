@@ -119,7 +119,18 @@ def build_storage_context(
 
 
 def source_document_store_path(persist_dir: str | Path) -> str:
-    """Return the path used for the persisted source-document store."""
+    """Return the path used for the persisted source-document store.
+    
+    Parameters
+    ----------
+    persist_dir : str or Path
+        Value for persist Dir.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     return str(Path(persist_dir).expanduser().resolve() / SOURCE_DOCUMENT_STORE_FILENAME)
 
 
@@ -127,7 +138,18 @@ def load_or_create_source_document_store(
         *,
         persist_dir: str | Path | None,
     ) -> BaseDocumentStore:
-    """Load a persisted source-document store or create a fresh one."""
+    """Load a persisted source-document store or create a fresh one.
+    
+    Parameters
+    ----------
+    persist_dir : str or Path or None, optional
+        Value for persist Dir.
+    
+    Returns
+    -------
+    BaseDocumentStore
+        Loaded or Create Source Document Store.
+    """
     if persist_dir is None:
         return create_docstore("simple")
 
@@ -162,7 +184,15 @@ def persist_docstore(
         *,
         persist_path: str | Path,
     ) -> None:
-    """Persist a standalone docstore to a specific JSON path."""
+    """Persist a standalone docstore to a specific JSON path.
+    
+    Parameters
+    ----------
+    docstore : BaseDocumentStore
+        Value for docstore.
+    persist_path : str or Path
+        Filesystem path used by the operation.
+    """
     target = Path(persist_path).expanduser().resolve()
     target.parent.mkdir(parents=True, exist_ok=True)
     docstore.persist(persist_path=str(target))
@@ -230,7 +260,20 @@ def add_documents_to_docstore(
         docstore: BaseDocumentStore,
         documents: Iterable[Any],
     ) -> int:
-    """Store full source documents in a docstore."""
+    """Store full source documents in a docstore.
+    
+    Parameters
+    ----------
+    docstore : BaseDocumentStore
+        Value for docstore.
+    documents : Iterable[Any]
+        Document objects to enrich, convert, or inspect.
+    
+    Returns
+    -------
+    int
+        Computed integer value.
+    """
     nodes = [document_to_text_node(document) for document in documents]
     docstore.add_documents(nodes, allow_update=True)
     return len(nodes)
@@ -240,7 +283,20 @@ def delete_ref_docs_from_docstore(
         docstore: BaseDocumentStore,
         ref_doc_ids: Sequence[str],
     ) -> int:
-    """Delete all nodes associated with each ref-doc id from a docstore."""
+    """Delete all nodes associated with each ref-doc id from a docstore.
+    
+    Parameters
+    ----------
+    docstore : BaseDocumentStore
+        Value for docstore.
+    ref_doc_ids : Sequence[str]
+        Stable identifiers for ref Doc.
+    
+    Returns
+    -------
+    int
+        Computed integer value.
+    """
     deleted = 0
     seen: set[str] = set()
     for ref_doc_id in ref_doc_ids:

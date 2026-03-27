@@ -1,4 +1,14 @@
-"""CLI entrypoint to register Polaris prompts in MLflow Prompt Registry."""
+"""CLI entrypoint to register Polaris prompts in MLflow Prompt Registry.
+
+This module exposes public helper functions used by the surrounding Polaris subsystem.
+
+Functions
+---------
+parse_args
+    Parse args.
+main
+    Run the command-line entrypoint.
+"""
 
 from __future__ import annotations
 
@@ -17,6 +27,25 @@ from polaris_rag.observability.mlflow_tracking import load_mlflow_runtime_config
 
 
 def _load_prompt_builder(cfg: GlobalConfig) -> PromptBuilder:
+    """Load prompt Builder.
+    
+    Parameters
+    ----------
+    cfg : GlobalConfig
+        Configuration object or mapping used to resolve runtime settings.
+    
+    Returns
+    -------
+    PromptBuilder
+        Result of the operation.
+    
+    Raises
+    ------
+    ValueError
+        If the provided value is invalid for the operation.
+    TypeError
+        If the provided value has an unexpected type.
+    """
     prompts = cfg.prompts
     if prompts is None:
         raise ValueError("No prompt sources configured under 'prompts' in config file.")
@@ -40,6 +69,23 @@ def _load_prompt_builder(cfg: GlobalConfig) -> PromptBuilder:
 
 
 def _template_to_text(template: PromptTemplate) -> str:
+    """Template To Text.
+    
+    Parameters
+    ----------
+    template : PromptTemplate
+        Value for template.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    
+    Raises
+    ------
+    ValueError
+        If the provided value is invalid for the operation.
+    """
     parts: list[str] = []
 
     if template.system:
@@ -64,6 +110,23 @@ def _template_to_text(template: PromptTemplate) -> str:
 
 
 def _parse_tag_overrides(values: list[str]) -> dict[str, str]:
+    """Parse tag Overrides.
+    
+    Parameters
+    ----------
+    values : list[str]
+        Value for values.
+    
+    Returns
+    -------
+    dict[str, str]
+        Structured result of the operation.
+    
+    Raises
+    ------
+    ValueError
+        If the provided value is invalid for the operation.
+    """
     tags: dict[str, str] = {}
     for item in values:
         if "=" not in item:
@@ -78,6 +141,13 @@ def _parse_tag_overrides(values: list[str]) -> dict[str, str]:
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse args.
+    
+    Returns
+    -------
+    argparse.Namespace
+        Parsed args.
+    """
     parser = argparse.ArgumentParser(description="Register Polaris prompt templates in MLflow Prompt Registry")
 
     parser.add_argument(
@@ -122,6 +192,13 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> None:
+    """Run the command-line entrypoint.
+
+    Notes
+    -----
+    Parses CLI arguments, registers the selected prompt templates with MLflow,
+    and prints the resulting registry metadata to standard output.
+    """
     args = parse_args()
 
     cfg = GlobalConfig.load(args.config_file)

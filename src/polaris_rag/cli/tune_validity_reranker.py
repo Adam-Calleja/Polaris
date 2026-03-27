@@ -1,4 +1,18 @@
-"""Tune validity-aware reranker weights on a development split."""
+"""Tune validity-aware reranker weights on a development split.
+
+This module combines public functions and classes used by the surrounding Polaris
+subsystem.
+
+Classes
+-------
+TrialResult
+    Structured result for trial.
+
+Functions
+---------
+main
+    Run the command-line entrypoint.
+"""
 
 from __future__ import annotations
 
@@ -53,6 +67,21 @@ DEFAULT_STATUS_VALUES: dict[str, float] = {
 
 @dataclass(frozen=True)
 class TrialResult:
+    """Structured result for trial.
+    
+    Attributes
+    ----------
+    weights : dict[str, float]
+        Weight values to evaluate or persist.
+    objective : float
+        Value for objective.
+    metric_means : dict[str, float]
+        Value for metric Means.
+    reranker_fingerprint : str or None
+        Value for reranker Fingerprint.
+    prepared_rows : int
+        Value for prepared Rows.
+    """
     weights: dict[str, float]
     objective: float
     metric_means: dict[str, float]
@@ -60,6 +89,13 @@ class TrialResult:
     prepared_rows: int
 
     def tie_break_key(self) -> tuple[float, float, float, tuple[tuple[str, float], ...]]:
+        """Return the deterministic tie-break key for a trial result.
+        
+        Returns
+        -------
+        tuple[float, float, float, tuple[tuple[str, float], ...]]
+            Result of the operation.
+        """
         total_weight = sum(self.weights.values())
         ordered_weights = tuple(sorted((key, float(value)) for key, value in self.weights.items()))
         return (
@@ -71,6 +107,13 @@ class TrialResult:
 
 
 def _parse_args() -> argparse.Namespace:
+    """Parse args.
+    
+    Returns
+    -------
+    argparse.Namespace
+        Result of the operation.
+    """
     parser = argparse.ArgumentParser(description="Tune validity-aware reranker weights on a dev split.")
     parser.add_argument(
         "-c",
@@ -103,6 +146,18 @@ def _parse_args() -> argparse.Namespace:
 
 
 def _as_mapping(value: Any) -> Mapping[str, Any]:
+    """As Mapping.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    
+    Returns
+    -------
+    Mapping[str, Any]
+        Result of the operation.
+    """
     if isinstance(value, Mapping):
         return value
     if hasattr(value, "__dict__"):
@@ -111,6 +166,25 @@ def _as_mapping(value: Any) -> Mapping[str, Any]:
 
 
 def _resolve_dataset_path(cfg: GlobalConfig, cli_value: str | None) -> Path:
+    """Resolve dataset Path.
+    
+    Parameters
+    ----------
+    cfg : GlobalConfig
+        Configuration object or mapping used to resolve runtime settings.
+    cli_value : str or None, optional
+        Optional value provided via the command line.
+    
+    Returns
+    -------
+    Path
+        Result of the operation.
+    
+    Raises
+    ------
+    ValueError
+        If the provided value is invalid for the operation.
+    """
     if cli_value:
         return Path(cli_value).expanduser().resolve()
 
@@ -125,6 +199,18 @@ def _resolve_dataset_path(cfg: GlobalConfig, cli_value: str | None) -> Path:
 
 
 def _weight_trials(grid: Mapping[str, Iterable[float]] | None = None) -> list[dict[str, float]]:
+    """Weight Trials.
+    
+    Parameters
+    ----------
+    grid : Mapping[str, Iterable[float]] or None, optional
+        Value for grid.
+    
+    Returns
+    -------
+    list[dict[str, float]]
+        Collected results from the operation.
+    """
     effective = {key: tuple(values) for key, values in (grid or DEFAULT_WEIGHT_GRID).items()}
     ordered_keys = tuple(sorted(effective.keys()))
     trials: list[dict[str, float]] = []
@@ -134,10 +220,39 @@ def _weight_trials(grid: Mapping[str, Iterable[float]] | None = None) -> list[di
 
 
 def _trial_sort_key(trial: TrialResult) -> tuple[float, tuple[float, float, float, tuple[tuple[str, float], ...]]]:
+    """Trial Sort Key.
+    
+    Parameters
+    ----------
+    trial : TrialResult
+        Value for trial.
+    
+    Returns
+    -------
+    tuple[float, tuple[float, float, float, tuple[tuple[str, float], ...]]]
+        Collected results from the operation.
+    """
     return (trial.objective, trial.tie_break_key())
 
 
 def _select_best_trial(trials: Iterable[TrialResult]) -> TrialResult:
+    """Select Best Trial.
+    
+    Parameters
+    ----------
+    trials : Iterable[TrialResult]
+        Value for trials.
+    
+    Returns
+    -------
+    TrialResult
+        Result of the operation.
+    
+    Raises
+    ------
+    ValueError
+        If the provided value is invalid for the operation.
+    """
     ordered = list(trials)
     if not ordered:
         raise ValueError("No tuning trials were produced.")
@@ -145,6 +260,18 @@ def _select_best_trial(trials: Iterable[TrialResult]) -> TrialResult:
 
 
 def _coerce_metric_mean(values: Iterable[Any]) -> float:
+    """Coerce metric Mean.
+    
+    Parameters
+    ----------
+    values : Iterable[Any]
+        Value for values.
+    
+    Returns
+    -------
+    float
+        Computed floating-point value.
+    """
     numeric: list[float] = []
     for value in values:
         if isinstance(value, bool):
@@ -163,6 +290,18 @@ def _coerce_metric_mean(values: Iterable[Any]) -> float:
 
 
 def _trial_metric_means(result: Any) -> dict[str, float]:
+    """Trial Metric Means.
+    
+    Parameters
+    ----------
+    result : Any
+        Evaluation or backend result object to summarize.
+    
+    Returns
+    -------
+    dict[str, float]
+        Structured result of the operation.
+    """
     scores_df = getattr(result, "scores_df", None)
     if scores_df is None:
         return {}
@@ -175,6 +314,18 @@ def _trial_metric_means(result: Any) -> dict[str, float]:
 
 
 def _trial_objective(metric_means: Mapping[str, float]) -> float:
+    """Trial Objective.
+    
+    Parameters
+    ----------
+    metric_means : Mapping[str, float]
+        Value for metric Means.
+    
+    Returns
+    -------
+    float
+        Computed floating-point value.
+    """
     usable = [float(metric_means[name]) for name in OBJECTIVE_METRICS if name in metric_means and metric_means[name] == metric_means[name]]
     if not usable:
         return float("-inf")
@@ -182,6 +333,20 @@ def _trial_objective(metric_means: Mapping[str, float]) -> float:
 
 
 def _trial_cfg(cfg: GlobalConfig, *, weights: Mapping[str, float]) -> GlobalConfig:
+    """Trial Cfg.
+    
+    Parameters
+    ----------
+    cfg : GlobalConfig
+        Configuration object or mapping used to resolve runtime settings.
+    weights : Mapping[str, float]
+        Weight values to evaluate or persist.
+    
+    Returns
+    -------
+    GlobalConfig
+        Result of the operation.
+    """
     raw = copy.deepcopy(_as_mapping(getattr(cfg, "raw", {})))
     retriever_cfg = copy.deepcopy(_as_mapping(raw.get("retriever", {})))
     rerank_cfg = copy.deepcopy(_as_mapping(retriever_cfg.get("rerank", {})))
@@ -221,6 +386,24 @@ def _run_trial(
     weights: Mapping[str, float],
     generation_workers: int | None,
 ) -> TrialResult:
+    """Run Trial.
+    
+    Parameters
+    ----------
+    cfg : GlobalConfig
+        Configuration object or mapping used to resolve runtime settings.
+    raw_examples : list[dict[str, Any]]
+        Raw examples value to normalize.
+    weights : Mapping[str, float]
+        Weight values to evaluate or persist.
+    generation_workers : int or None, optional
+        Value for generation Workers.
+    
+    Returns
+    -------
+    TrialResult
+        Result of the operation.
+    """
     trial_cfg = _trial_cfg(cfg, weights=weights)
     container = build_container(trial_cfg)
     eval_cfg = _as_mapping(_as_mapping(getattr(trial_cfg, "raw", {})).get("evaluation", {}))
@@ -271,6 +454,20 @@ def _run_trial(
 
 
 def _output_manifest_path(output_path: Path, cli_value: str | None) -> Path:
+    """Output Manifest Path.
+    
+    Parameters
+    ----------
+    output_path : Path
+        Filesystem path used by the operation.
+    cli_value : str or None, optional
+        Optional value provided via the command line.
+    
+    Returns
+    -------
+    Path
+        Result of the operation.
+    """
     if cli_value:
         return Path(cli_value).expanduser().resolve()
     return output_path.with_suffix(output_path.suffix + ".manifest.json")
@@ -283,6 +480,19 @@ def _write_weight_file(
     generated_at: str,
     dataset_path: Path,
 ) -> None:
+    """Write weight File.
+    
+    Parameters
+    ----------
+    path : Path
+        Filesystem path used by the operation.
+    best : TrialResult
+        Value for best.
+    generated_at : str
+        Value for generated At.
+    dataset_path : Path
+        Filesystem path used by the operation.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
         "profile_name": "validity_reranker.dev_v3",
@@ -312,6 +522,23 @@ def _write_manifest(
     best: TrialResult,
     generated_at: str,
 ) -> None:
+    """Write manifest.
+    
+    Parameters
+    ----------
+    path : Path
+        Filesystem path used by the operation.
+    cfg : GlobalConfig
+        Configuration object or mapping used to resolve runtime settings.
+    dataset_path : Path
+        Filesystem path used by the operation.
+    trials : list[TrialResult]
+        Value for trials.
+    best : TrialResult
+        Value for best.
+    generated_at : str
+        Value for generated At.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
         "generated_at": generated_at,
@@ -341,6 +568,13 @@ def _write_manifest(
 
 
 def main() -> None:
+    """Run the command-line entrypoint.
+
+    Notes
+    -----
+    Parses CLI arguments, evaluates the configured reranker weight grid, and
+    persists the selected configuration and trial manifest.
+    """
     args = _parse_args()
     cfg = GlobalConfig.load(args.config_file)
     dataset_path = _resolve_dataset_path(cfg, args.dataset_path)

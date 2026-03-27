@@ -1,7 +1,12 @@
 """Thin wrapper for `polaris_rag.cli.tune_validity_reranker`.
 
-Usage:
-    python scripts/tune_validity_reranker.py -c config/config.yaml --dataset-path data/test/dev.jsonl
+Usage: python scripts/tune_validity_reranker.py -c config/config.yaml --dataset-path
+data/test/dev.jsonl
+
+Notes
+-----
+This wrapper keeps local script execution aligned with the installed console-script
+entrypoint.
 """
 
 from __future__ import annotations

@@ -1,15 +1,48 @@
-"""polaris_rag.evaluation.evaluation_dataset
+"""polaris_rag.evaluation.evaluation_dataset.
 
 Utilities for preparing Polaris datasets for RAGAS evaluation.
 
-The expected raw format contains at least:
-- query
-- expected_answer
+The expected raw format contains at least: - query - expected_answer
 
-Preparation executes the Polaris RAG pipeline to generate:
-- response
-- retrieved_contexts
-- retrieved_context_ids
+Preparation executes the Polaris RAG pipeline to generate: - response -
+retrieved_contexts - retrieved_context_ids
+
+Classes
+-------
+PrepProgressEvent
+    Progress snapshot emitted while preparing rows.
+PrepTraceRecorder
+    Prep Trace Recorder.
+PrepRetryPolicy
+    Retry policy for per-row generation during dataset preparation.
+QueryAPIError
+    Exception raised for query API.
+
+Functions
+---------
+load_raw_examples
+    Load raw evaluation examples from JSON or JSONL.
+load_prepared_rows
+    Load prepared rows from JSON or JSONL.
+load_sample_ids
+    Load sample IDs from a plain-text file or JSON/JSONL payload.
+load_sample_categories
+    Load category -> sample-id mappings from JSON or YAML.
+split_raw_examples_by_ids
+    Split raw examples into dev and test rows using the provided test IDs.
+stratified_split_raw_examples_by_categories
+    Split raw examples using stratified category labels for non-singleton
+    categories.
+stratified_split_raw_examples_by_annotation_labels
+    Split raw examples using multilabel benchmark annotations.
+persist_prepared_rows
+    Persist prepared rows to JSON or JSONL based on file extension.
+build_prepared_rows
+    Convert raw examples into rows compatible with ``EvaluationDataset``.
+build_prepared_rows_from_api
+    Convert raw examples into prepared rows by calling Polaris query API.
+to_evaluation_dataset
+    Create a RAGAS ``EvaluationDataset`` from prepared rows.
 """
 
 from __future__ import annotations
@@ -50,7 +83,25 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True)
 class PrepProgressEvent:
-    """Progress snapshot emitted while preparing rows."""
+    """Progress snapshot emitted while preparing rows.
+    
+    Attributes
+    ----------
+    completed : int
+        Value for completed.
+    total : int
+        Value for total.
+    successes : int
+        Value for successes.
+    failures : int
+        Value for failures.
+    elapsed_seconds : float
+        elapsed Seconds expressed in seconds.
+    mode : str
+        Value for mode.
+    last_error : str or None
+        Latest error string reported while processing rows.
+    """
 
     completed: int
     total: int
@@ -66,9 +117,34 @@ ApiRequester = Callable[[str, str, float, Mapping[str, str] | None], dict[str, A
 
 
 class PrepTraceRecorder(Protocol):
-    def set_outputs(self, outputs: Any) -> None: ...
+    """Prep Trace Recorder.
+    
+    Methods
+    -------
+    set_outputs
+        Set Outputs.
+    set_attributes
+        Set Attributes.
+    """
+    def set_outputs(self, outputs: Any) -> None:
+        """Record outputs for the active preparation trace.
 
-    def set_attributes(self, attributes: Mapping[str, Any]) -> None: ...
+        Parameters
+        ----------
+        outputs : Any
+            Output payload to record or propagate.
+        """
+        ...
+
+    def set_attributes(self, attributes: Mapping[str, Any]) -> None:
+        """Record attributes for the active preparation trace.
+
+        Parameters
+        ----------
+        attributes : Mapping[str, Any]
+            Tracing attributes to attach to the current span or recorder.
+        """
+        ...
 
 
 PrepAttemptTraceFactory = Callable[
@@ -79,15 +155,43 @@ PrepAttemptTraceFactory = Callable[
 
 class _NoopTraceRecorder:
     def set_outputs(self, outputs: Any) -> None:
+        """Set Outputs.
+        
+        Parameters
+        ----------
+        outputs : Any
+            Output payload to record or propagate.
+        """
         return None
 
     def set_attributes(self, attributes: Mapping[str, Any]) -> None:
+        """Set Attributes.
+        
+        Parameters
+        ----------
+        attributes : Mapping[str, Any]
+            Tracing attributes to attach to the current span or recorder.
+        """
         return None
 
 
 @dataclass(frozen=True)
 class PrepRetryPolicy:
-    """Retry policy for per-row generation during dataset preparation."""
+    """Retry policy for per-row generation during dataset preparation.
+    
+    Attributes
+    ----------
+    max_attempts : int
+        Value for max Attempts.
+    initial_backoff_seconds : float
+        initial Backoff Seconds expressed in seconds.
+    max_backoff_seconds : float
+        max Backoff Seconds expressed in seconds.
+    jitter_seconds : float
+        jitter Seconds expressed in seconds.
+    retry_on_empty_response : bool
+        Whether empty responses should be retried.
+    """
 
     max_attempts: int = 1
     initial_backoff_seconds: float = 1.0
@@ -97,6 +201,18 @@ class PrepRetryPolicy:
 
     @classmethod
     def from_value(cls, value: "PrepRetryPolicy | Mapping[str, Any] | None") -> "PrepRetryPolicy":
+        """Construct an instance from an arbitrary input value.
+        
+        Parameters
+        ----------
+        value : PrepRetryPolicy or Mapping[str, Any] or None, optional
+            Input value to normalize, coerce, or inspect.
+        
+        Returns
+        -------
+        PrepRetryPolicy
+            Result of the operation.
+        """
         if isinstance(value, PrepRetryPolicy):
             return cls(
                 max_attempts=value.max_attempts,
@@ -118,6 +234,13 @@ class PrepRetryPolicy:
         return cls().normalized()
 
     def normalized(self) -> "PrepRetryPolicy":
+        """Return a normalized copy of the current value.
+        
+        Returns
+        -------
+        PrepRetryPolicy
+            Result of the operation.
+        """
         initial_backoff = max(0.0, float(self.initial_backoff_seconds))
         max_backoff = max(0.0, float(self.max_backoff_seconds))
         if max_backoff < initial_backoff:
@@ -133,6 +256,20 @@ class PrepRetryPolicy:
 
 
 def _to_int(value: Any, default: int) -> int:
+    """To Int.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    default : int
+        Fallback value to use when normalization fails.
+    
+    Returns
+    -------
+    int
+        Computed integer value.
+    """
     try:
         return int(value)
     except (TypeError, ValueError):
@@ -140,6 +277,20 @@ def _to_int(value: Any, default: int) -> int:
 
 
 def _to_float(value: Any, default: float) -> float:
+    """To Float.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    default : float
+        Fallback value to use when normalization fails.
+    
+    Returns
+    -------
+    float
+        Computed floating-point value.
+    """
     try:
         return float(value)
     except (TypeError, ValueError):
@@ -147,6 +298,20 @@ def _to_float(value: Any, default: float) -> float:
 
 
 def _to_bool(value: Any, default: bool) -> bool:
+    """To Bool.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    default : bool
+        Fallback value to use when normalization fails.
+    
+    Returns
+    -------
+    bool
+        `True` if to Bool; otherwise `False`.
+    """
     if value is None:
         return default
     if isinstance(value, bool):
@@ -161,6 +326,17 @@ def _to_bool(value: Any, default: bool) -> bool:
 
 
 class QueryAPIError(RuntimeError):
+    """Exception raised for query API.
+    
+    Parameters
+    ----------
+    message : str
+        Value for message.
+    status_code : int or None, optional
+        Value for status Code.
+    detail : Mapping[str, Any] or None, optional
+        Structured failure detail payload from the backend.
+    """
     def __init__(
         self,
         message: str,
@@ -168,6 +344,17 @@ class QueryAPIError(RuntimeError):
         status_code: int | None = None,
         detail: Mapping[str, Any] | None = None,
     ) -> None:
+        """Initialize the instance.
+        
+        Parameters
+        ----------
+        message : str
+            Value for message.
+        status_code : int or None, optional
+            Value for status Code.
+        detail : Mapping[str, Any] or None, optional
+            Structured failure detail payload from the backend.
+        """
         super().__init__(message)
         detail_map = dict(detail or {})
         self.status_code = status_code
@@ -188,6 +375,18 @@ class QueryAPIError(RuntimeError):
 
 
 def _as_metadata_dict(value: Any) -> dict[str, Any]:
+    """As Metadata Dict.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    
+    Returns
+    -------
+    dict[str, Any]
+        Structured result of the operation.
+    """
     if isinstance(value, Mapping):
         return dict(value)
     return {}
@@ -206,6 +405,36 @@ def _build_row_metadata(
     response_status: str | None = None,
     original_metadata: Any | None = None,
 ) -> dict[str, Any]:
+    """Build row Metadata.
+    
+    Parameters
+    ----------
+    base_metadata : Any
+        Base metadata mapping to copy and extend.
+    source_error : str or None, optional
+        Error text associated with the source row.
+    failure_class : str or None, optional
+        Value for failure Class.
+    failure_stage : str or None, optional
+        Value for failure Stage.
+    http_status : int or None, optional
+        HTTP status code associated with the failure.
+    elapsed_ms : int or None, optional
+        Elapsed time for the operation in milliseconds.
+    policy : str or None, optional
+        Evaluation policy name used to resolve runtime behavior.
+    budget_ms : int or None, optional
+        Request budget to record in milliseconds.
+    response_status : str or None, optional
+        Response status string to record with the failure.
+    original_metadata : Any or None, optional
+        Value for original Metadata.
+    
+    Returns
+    -------
+    dict[str, Any]
+        Structured result of the operation.
+    """
     metadata = _as_metadata_dict(base_metadata)
     if source_error is not None:
         metadata["source_error"] = source_error
@@ -235,6 +464,24 @@ def _stamp_reranker_metadata(
     reranker_fingerprint: str | None = None,
     retrieval_trace: Any | None = None,
 ) -> dict[str, Any]:
+    """Stamp reranker Metadata.
+    
+    Parameters
+    ----------
+    metadata : dict[str, Any]
+        Metadata mapping to extend or stamp.
+    reranker_profile : Mapping[str, Any] or None, optional
+        Value for reranker Profile.
+    reranker_fingerprint : str or None, optional
+        Value for reranker Fingerprint.
+    retrieval_trace : Any or None, optional
+        Value for retrieval Trace.
+    
+    Returns
+    -------
+    dict[str, Any]
+        Structured result of the operation.
+    """
     if reranker_profile is not None:
         metadata["reranker_profile"] = _as_metadata_dict(reranker_profile)
     if reranker_fingerprint is not None and str(reranker_fingerprint).strip():
@@ -245,6 +492,18 @@ def _stamp_reranker_metadata(
 
 
 def _normalized_trace_records(value: Any) -> list[dict[str, Any]]:
+    """Normalized Trace Records.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    
+    Returns
+    -------
+    list[dict[str, Any]]
+        Collected results from the operation.
+    """
     if not isinstance(value, list):
         return []
     records: list[dict[str, Any]] = []
@@ -255,12 +514,36 @@ def _normalized_trace_records(value: Any) -> list[dict[str, Any]]:
 
 
 def _string_list(value: Any) -> list[str]:
+    """String List.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    
+    Returns
+    -------
+    list[str]
+        Collected results from the operation.
+    """
     if not isinstance(value, list):
         return []
     return [str(item) for item in value if str(item).strip()]
 
 
 def _sorted_unique_strings(values: Iterable[Any]) -> list[str]:
+    """Sorted Unique Strings.
+    
+    Parameters
+    ----------
+    values : Iterable[Any]
+        Value for values.
+    
+    Returns
+    -------
+    list[str]
+        Collected results from the operation.
+    """
     seen: set[str] = set()
     items: list[str] = []
     for value in values:
@@ -277,6 +560,20 @@ def _derive_retrieval_sources(
     retrieval_trace: list[dict[str, Any]],
     ranked_context_metadata: list[dict[str, Any]],
 ) -> list[str]:
+    """Derive Retrieval Sources.
+    
+    Parameters
+    ----------
+    retrieval_trace : list[dict[str, Any]]
+        Value for retrieval Trace.
+    ranked_context_metadata : list[dict[str, Any]]
+        Value for ranked Context Metadata.
+    
+    Returns
+    -------
+    list[str]
+        Collected results from the operation.
+    """
     return _sorted_unique_strings(
         [
             item.get("source")
@@ -291,6 +588,20 @@ def _derive_retrieval_source_types(
     retrieval_trace: list[dict[str, Any]],
     ranked_context_metadata: list[dict[str, Any]],
 ) -> list[str]:
+    """Derive Retrieval Source Types.
+    
+    Parameters
+    ----------
+    retrieval_trace : list[dict[str, Any]]
+        Value for retrieval Trace.
+    ranked_context_metadata : list[dict[str, Any]]
+        Value for ranked Context Metadata.
+    
+    Returns
+    -------
+    list[str]
+        Collected results from the operation.
+    """
     return _sorted_unique_strings(
         [
             item.get("source_authority")
@@ -301,6 +612,18 @@ def _derive_retrieval_source_types(
 
 
 def _derive_retrieval_features(retrieval_trace: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Derive Retrieval Features.
+    
+    Parameters
+    ----------
+    retrieval_trace : list[dict[str, Any]]
+        Value for retrieval Trace.
+    
+    Returns
+    -------
+    list[dict[str, Any]]
+        Collected results from the operation.
+    """
     features: list[dict[str, Any]] = []
     for item in retrieval_trace:
         rerank_trace = item.get("rerank_trace")
@@ -341,6 +664,22 @@ def _stamp_analysis_metadata(
     retrieval_trace: Any | None = None,
     ranked_context_metadata: Any | None = None,
 ) -> dict[str, Any]:
+    """Stamp analysis Metadata.
+    
+    Parameters
+    ----------
+    metadata : dict[str, Any]
+        Metadata mapping to extend or stamp.
+    retrieval_trace : Any or None, optional
+        Value for retrieval Trace.
+    ranked_context_metadata : Any or None, optional
+        Value for ranked Context Metadata.
+    
+    Returns
+    -------
+    dict[str, Any]
+        Structured result of the operation.
+    """
     trace_records = _normalized_trace_records(retrieval_trace)
     context_records = _normalized_trace_records(ranked_context_metadata)
     metadata["retrieval_sources"] = _derive_retrieval_sources(
@@ -366,6 +705,30 @@ def _failure_metadata_from_exception(
     budget_ms: int | None = None,
     source_error: str | None = None,
 ) -> dict[str, Any]:
+    """Failure Metadata From Exception.
+    
+    Parameters
+    ----------
+    exc : BaseException
+        Value for exc.
+    original_metadata : Any
+        Value for original Metadata.
+    elapsed_ms : int or None, optional
+        Elapsed time for the operation in milliseconds.
+    http_status : int or None, optional
+        HTTP status code associated with the failure.
+    policy : str or None, optional
+        Evaluation policy name used to resolve runtime behavior.
+    budget_ms : int or None, optional
+        Request budget to record in milliseconds.
+    source_error : str or None, optional
+        Error text associated with the source row.
+    
+    Returns
+    -------
+    dict[str, Any]
+        Structured result of the operation.
+    """
     detail = build_failure_detail(
         exc,
         elapsed_ms=elapsed_ms,
@@ -387,6 +750,18 @@ def _failure_metadata_from_exception(
 
 
 def _parse_error_detail(body: str) -> dict[str, Any]:
+    """Parse error Detail.
+    
+    Parameters
+    ----------
+    body : str
+        Value for body.
+    
+    Returns
+    -------
+    dict[str, Any]
+        Structured result of the operation.
+    """
     text = str(body or "").strip()
     if not text:
         return {}
@@ -402,6 +777,18 @@ def _parse_error_detail(body: str) -> dict[str, Any]:
 
 
 def _extract_doc_id(node: Any) -> str:
+    """Extract doc ID.
+    
+    Parameters
+    ----------
+    node : Any
+        Value for node.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     for attr in ("id_", "node_id", "id"):
         value = getattr(node, attr, None)
         if isinstance(value, str) and value:
@@ -410,6 +797,18 @@ def _extract_doc_id(node: Any) -> str:
 
 
 def _extract_text(node: Any) -> str:
+    """Extract text.
+    
+    Parameters
+    ----------
+    node : Any
+        Value for node.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     text = getattr(node, "text", None)
     if isinstance(text, str):
         return text
@@ -425,6 +824,18 @@ def _extract_text(node: Any) -> str:
 
 
 def _normalise_source_nodes(source_nodes: list[Any]) -> tuple[list[str], list[str]]:
+    """Normalize source Nodes.
+    
+    Parameters
+    ----------
+    source_nodes : list[Any]
+        Retrieved nodes or node wrappers to serialize.
+    
+    Returns
+    -------
+    tuple[list[str], list[str]]
+        Collected results from the operation.
+    """
     context_texts: list[str] = []
     context_ids: list[str] = []
 
@@ -437,6 +848,23 @@ def _normalise_source_nodes(source_nodes: list[Any]) -> tuple[list[str], list[st
 
 
 def _read_json_or_jsonl(path: Path) -> list[dict[str, Any]]:
+    """Read JSON Or JSONL.
+    
+    Parameters
+    ----------
+    path : Path
+        Filesystem path used by the operation.
+    
+    Returns
+    -------
+    list[dict[str, Any]]
+        Collected results from the operation.
+    
+    Raises
+    ------
+    ValueError
+        If the provided value is invalid for the operation.
+    """
     text = path.read_text(encoding="utf-8").strip()
     if not text:
         return []
@@ -467,7 +895,23 @@ def _read_json_or_jsonl(path: Path) -> list[dict[str, Any]]:
 
 
 def load_raw_examples(path: str | Path) -> list[dict[str, Any]]:
-    """Load raw evaluation examples from JSON or JSONL."""
+    """Load raw evaluation examples from JSON or JSONL.
+    
+    Parameters
+    ----------
+    path : str or Path
+        Filesystem path used by the operation.
+    
+    Returns
+    -------
+    list[dict[str, Any]]
+        Loaded raw Examples.
+    
+    Raises
+    ------
+    FileNotFoundError
+        If the requested file does not exist.
+    """
 
     p = Path(path).expanduser().resolve()
     if not p.exists():
@@ -476,13 +920,42 @@ def load_raw_examples(path: str | Path) -> list[dict[str, Any]]:
 
 
 def load_prepared_rows(path: str | Path) -> list[dict[str, Any]]:
-    """Load prepared rows from JSON or JSONL."""
+    """Load prepared rows from JSON or JSONL.
+    
+    Parameters
+    ----------
+    path : str or Path
+        Filesystem path used by the operation.
+    
+    Returns
+    -------
+    list[dict[str, Any]]
+        Loaded prepared Rows.
+    """
 
     return load_raw_examples(path)
 
 
 def load_sample_ids(path: str | Path) -> list[str]:
-    """Load sample IDs from a plain-text file or JSON/JSONL payload."""
+    """Load sample IDs from a plain-text file or JSON/JSONL payload.
+    
+    Parameters
+    ----------
+    path : str or Path
+        Filesystem path used by the operation.
+    
+    Returns
+    -------
+    list[str]
+        Loaded sample IDs.
+    
+    Raises
+    ------
+    FileNotFoundError
+        If the requested file does not exist.
+    ValueError
+        If the provided value is invalid for the operation.
+    """
 
     p = Path(path).expanduser().resolve()
     if not p.exists():
@@ -522,7 +995,25 @@ def load_sample_ids(path: str | Path) -> list[str]:
 
 
 def load_sample_categories(path: str | Path) -> dict[str, list[str]]:
-    """Load category -> sample-id mappings from JSON or YAML."""
+    """Load category -> sample-id mappings from JSON or YAML.
+    
+    Parameters
+    ----------
+    path : str or Path
+        Filesystem path used by the operation.
+    
+    Returns
+    -------
+    dict[str, list[str]]
+        Loaded sample Categories.
+    
+    Raises
+    ------
+    FileNotFoundError
+        If the requested file does not exist.
+    ValueError
+        If the provided value is invalid for the operation.
+    """
 
     p = Path(path).expanduser().resolve()
     if not p.exists():
@@ -560,7 +1051,27 @@ def split_raw_examples_by_ids(
     *,
     id_field: str = "id",
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    """Split raw examples into dev and test rows using the provided test IDs."""
+    """Split raw examples into dev and test rows using the provided test IDs.
+    
+    Parameters
+    ----------
+    raw_examples : Iterable[Mapping[str, Any]]
+        Raw examples value to normalize.
+    selected_ids : Iterable[str]
+        Stable identifiers for selected.
+    id_field : str, optional
+        Value for ID Field.
+    
+    Returns
+    -------
+    tuple[list[dict[str, Any]], list[dict[str, Any]]]
+        Result of the operation.
+    
+    Raises
+    ------
+    ValueError
+        If the provided value is invalid for the operation.
+    """
 
     dataset_by_id: dict[str, dict[str, Any]] = {}
     dataset_order: list[str] = []
@@ -601,7 +1112,31 @@ def stratified_split_raw_examples_by_categories(
     random_state: int = 42,
     id_field: str = "id",
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, Any]]:
-    """Split raw examples using stratified category labels for non-singleton categories."""
+    """Split raw examples using stratified category labels for non-singleton categories.
+    
+    Parameters
+    ----------
+    raw_examples : Iterable[Mapping[str, Any]]
+        Raw examples value to normalize.
+    categories : Mapping[str, list[str]]
+        Value for categories.
+    test_size : int
+        Value for test Size.
+    random_state : int, optional
+        Value for random State.
+    id_field : str, optional
+        Value for ID Field.
+    
+    Returns
+    -------
+    tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, Any]]
+        Result of the operation.
+    
+    Raises
+    ------
+    ValueError
+        If the provided value is invalid for the operation.
+    """
 
     dataset_by_id: dict[str, dict[str, Any]] = {}
     dataset_order: list[str] = []
@@ -690,6 +1225,27 @@ def _resolve_requested_test_size(
     test_size: int | None,
     test_fraction: float | None,
 ) -> int:
+    """Resolve requested Test Size.
+    
+    Parameters
+    ----------
+    total_rows : int
+        Value for total Rows.
+    test_size : int or None, optional
+        Value for test Size.
+    test_fraction : float or None, optional
+        Value for test Fraction.
+    
+    Returns
+    -------
+    int
+        Computed integer value.
+    
+    Raises
+    ------
+    ValueError
+        If the provided value is invalid for the operation.
+    """
     if total_rows <= 1:
         raise ValueError("Need at least two rows to create a dev/test split.")
 
@@ -714,6 +1270,18 @@ def _resolve_requested_test_size(
 
 
 def _annotation_docs_scope_bucket(value: str) -> str:
+    """Annotation Docs Scope Bucket.
+    
+    Parameters
+    ----------
+    value : str
+        Input value to normalize, coerce, or inspect.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     normalized = str(value or "").strip()
     if normalized in {"local_and_external", "external_official"}:
         return "external_involved"
@@ -723,6 +1291,18 @@ def _annotation_docs_scope_bucket(value: str) -> str:
 
 
 def _annotation_split_fields(row: Mapping[str, Any]) -> dict[str, str]:
+    """Annotation Split Fields.
+    
+    Parameters
+    ----------
+    row : Mapping[str, Any]
+        Value for row.
+    
+    Returns
+    -------
+    dict[str, str]
+        Structured result of the operation.
+    """
     return {
         "source_needed": str(row.get("source_needed", "") or "").strip(),
         "docs_scope_bucket": _annotation_docs_scope_bucket(row.get("docs_scope_needed", "")),
@@ -735,6 +1315,18 @@ def _annotation_split_fields(row: Mapping[str, Any]) -> dict[str, str]:
 
 
 def _annotation_feature_names(split_fields: Mapping[str, str]) -> tuple[str, ...]:
+    """Annotation Feature Names.
+    
+    Parameters
+    ----------
+    split_fields : Mapping[str, str]
+        Value for split Fields.
+    
+    Returns
+    -------
+    tuple[str, ...]
+        Collected results from the operation.
+    """
     return tuple(f"{field}={value}" for field, value in split_fields.items())
 
 
@@ -743,6 +1335,20 @@ def _count_selected_features(
     *,
     features_by_id: Mapping[str, tuple[str, ...]],
 ) -> Counter[str]:
+    """Count selected Features.
+    
+    Parameters
+    ----------
+    selected_ids : Iterable[str]
+        Stable identifiers for selected.
+    features_by_id : Mapping[str, tuple[str, ...]]
+        Stable identifier for features By.
+    
+    Returns
+    -------
+    Counter[str]
+        Result of the operation.
+    """
     counts: Counter[str] = Counter()
     for sample_id in selected_ids:
         counts.update(features_by_id[sample_id])
@@ -755,6 +1361,22 @@ def _multilabel_selection_score(
     target_counts: Mapping[str, int],
     total_counts: Mapping[str, int],
 ) -> float:
+    """Multilabel Selection Score.
+    
+    Parameters
+    ----------
+    counts : Mapping[str, int]
+        Value for counts.
+    target_counts : Mapping[str, int]
+        Value for target Counts.
+    total_counts : Mapping[str, int]
+        Value for total Counts.
+    
+    Returns
+    -------
+    float
+        Computed floating-point value.
+    """
     score = 0.0
     for feature_name, total_count in total_counts.items():
         observed = int(counts.get(feature_name, 0))
@@ -776,6 +1398,28 @@ def _greedy_initial_multilabel_selection(
     test_size: int,
     random_state: int,
 ) -> list[str]:
+    """Greedy Initial Multilabel Selection.
+    
+    Parameters
+    ----------
+    sample_ids : list[str]
+        Stable identifiers for sample.
+    features_by_id : Mapping[str, tuple[str, ...]]
+        Stable identifier for features By.
+    target_counts : Mapping[str, int]
+        Value for target Counts.
+    total_counts : Mapping[str, int]
+        Value for total Counts.
+    test_size : int
+        Value for test Size.
+    random_state : int
+        Value for random State.
+    
+    Returns
+    -------
+    list[str]
+        Collected results from the operation.
+    """
     rng = random.Random(int(random_state))
     remaining_ids = list(sample_ids)
     rng.shuffle(remaining_ids)
@@ -829,6 +1473,30 @@ def _optimise_multilabel_selection(
     random_state: int,
     restarts: int = 8,
 ) -> tuple[list[str], float, Counter[str]]:
+    """Optimise Multilabel Selection.
+    
+    Parameters
+    ----------
+    sample_ids : list[str]
+        Stable identifiers for sample.
+    features_by_id : Mapping[str, tuple[str, ...]]
+        Stable identifier for features By.
+    target_counts : Mapping[str, int]
+        Value for target Counts.
+    total_counts : Mapping[str, int]
+        Value for total Counts.
+    test_size : int
+        Value for test Size.
+    random_state : int
+        Value for random State.
+    restarts : int, optional
+        Value for restarts.
+    
+    Returns
+    -------
+    tuple[list[str], float, Counter[str]]
+        Collected results from the operation.
+    """
     sample_order = {sample_id: index for index, sample_id in enumerate(sample_ids)}
 
     best_selected_ids: list[str] = []
@@ -908,6 +1576,20 @@ def _optimise_multilabel_selection(
 
 
 def _count_field_values(rows: Iterable[Mapping[str, str]], *, field: str) -> dict[str, int]:
+    """Count field Values.
+    
+    Parameters
+    ----------
+    rows : Iterable[Mapping[str, str]]
+        Value for rows.
+    field : str
+        Value for field.
+    
+    Returns
+    -------
+    dict[str, int]
+        Structured result of the operation.
+    """
     counts = Counter(str(row.get(field, "") or "").strip() for row in rows)
     return {key: counts[key] for key in sorted(counts)}
 
@@ -922,7 +1604,35 @@ def stratified_split_raw_examples_by_annotation_labels(
     id_field: str = "id",
     require_verified: bool = True,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, Any]]:
-    """Split raw examples using multilabel benchmark annotations."""
+    """Split raw examples using multilabel benchmark annotations.
+    
+    Parameters
+    ----------
+    raw_examples : Iterable[Mapping[str, Any]]
+        Raw examples value to normalize.
+    annotation_rows : Iterable[Mapping[str, Any]]
+        Value for annotation Rows.
+    test_size : int or None, optional
+        Value for test Size.
+    test_fraction : float or None, optional
+        Value for test Fraction.
+    random_state : int, optional
+        Value for random State.
+    id_field : str, optional
+        Value for ID Field.
+    require_verified : bool, optional
+        Value for require Verified.
+    
+    Returns
+    -------
+    tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, Any]]
+        Result of the operation.
+    
+    Raises
+    ------
+    ValueError
+        If the provided value is invalid for the operation.
+    """
 
     from polaris_rag.evaluation.benchmark_annotations import validate_annotation_rows
 
@@ -1034,7 +1744,20 @@ def stratified_split_raw_examples_by_annotation_labels(
 
 
 def persist_prepared_rows(rows: Iterable[dict[str, Any]], path: str | Path) -> Path:
-    """Persist prepared rows to JSON or JSONL based on file extension."""
+    """Persist prepared rows to JSON or JSONL based on file extension.
+    
+    Parameters
+    ----------
+    rows : Iterable[dict[str, Any]]
+        Value for rows.
+    path : str or Path
+        Filesystem path used by the operation.
+    
+    Returns
+    -------
+    Path
+        Result of the operation.
+    """
 
     p = Path(path).expanduser().resolve()
     p.parent.mkdir(parents=True, exist_ok=True)
@@ -1053,6 +1776,25 @@ def persist_prepared_rows(rows: Iterable[dict[str, Any]], path: str | Path) -> P
 
 
 def _coerce_sample_ids(values: Iterable[Any], *, source: str) -> list[str]:
+    """Coerce sample IDs.
+    
+    Parameters
+    ----------
+    values : Iterable[Any]
+        Value for values.
+    source : str
+        Source definition, source name, or source identifier to process.
+    
+    Returns
+    -------
+    list[str]
+        Collected results from the operation.
+    
+    Raises
+    ------
+    ValueError
+        If the provided value is invalid for the operation.
+    """
     ids: list[str] = []
     for value in values:
         sample_id = ""
@@ -1070,6 +1812,18 @@ def _coerce_sample_ids(values: Iterable[Any], *, source: str) -> list[str]:
 
 
 def _import_train_test_split() -> Any:
+    """Import Train Test Split.
+    
+    Returns
+    -------
+    Any
+        Result of the operation.
+    
+    Raises
+    ------
+    RuntimeError
+        If `RuntimeError` is raised while executing the operation.
+    """
     try:
         from sklearn.model_selection import train_test_split
     except Exception as exc:
@@ -1094,6 +1848,45 @@ def _prepare_one(
     default_reranker_profile: Mapping[str, Any] | None = None,
     default_reranker_fingerprint: str | None = None,
 ) -> tuple[int, dict[str, Any]]:
+    """Prepare One.
+    
+    Parameters
+    ----------
+    index : int
+        Value for index.
+    example : dict[str, Any]
+        Value for example.
+    pipeline : Any
+        Value for pipeline.
+    query_field : str
+        Value for query Field.
+    reference_field : str
+        Value for reference Field.
+    id_field : str
+        Value for ID Field.
+    llm_generate_overrides : dict[str, Any] or None, optional
+        Value for LLM Generate Overrides.
+    raise_exceptions : bool
+        Value for raise Exceptions.
+    policy : str or None, optional
+        Evaluation policy name used to resolve runtime behavior.
+    budget_ms : int or None, optional
+        Request budget to record in milliseconds.
+    default_reranker_profile : Mapping[str, Any] or None, optional
+        Value for default Reranker Profile.
+    default_reranker_fingerprint : str or None, optional
+        Value for default Reranker Fingerprint.
+    
+    Returns
+    -------
+    tuple[int, dict[str, Any]]
+        Collected results from the operation.
+    
+    Raises
+    ------
+    ValueError
+        If the provided value is invalid for the operation.
+    """
     query = str(example.get(query_field, "") or "").strip()
     reference = str(example.get(reference_field, "") or "").strip()
     sample_id = str(example.get(id_field, f"row-{index}"))
@@ -1222,6 +2015,29 @@ def _post_query_api(
     timeout_seconds: float,
     headers: Mapping[str, str] | None = None,
 ) -> dict[str, Any]:
+    """Post Query API.
+    
+    Parameters
+    ----------
+    api_url : str
+        URL used by the operation.
+    query : str
+        User query text.
+    timeout_seconds : float
+        timeout Seconds expressed in seconds.
+    headers : Mapping[str, str] or None, optional
+        HTTP headers to send with the request.
+    
+    Returns
+    -------
+    dict[str, Any]
+        Structured result of the operation.
+    
+    Raises
+    ------
+    QueryAPIError
+        If `QueryAPIError` is raised while executing the operation.
+    """
     request_headers = {"Content-Type": "application/json"}
     if headers:
         request_headers.update({str(k): str(v) for k, v in headers.items()})
@@ -1289,6 +2105,18 @@ def _post_query_api(
 
 
 def _extract_api_context_chunks(value: Any) -> tuple[list[str], list[str]]:
+    """Extract API Context Chunks.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    
+    Returns
+    -------
+    tuple[list[str], list[str]]
+        Collected results from the operation.
+    """
     if not isinstance(value, list):
         return [], []
 
@@ -1324,6 +2152,49 @@ def _prepare_one_via_api(
     default_reranker_profile: Mapping[str, Any] | None = None,
     default_reranker_fingerprint: str | None = None,
 ) -> tuple[int, dict[str, Any]]:
+    """Prepare One Via API.
+    
+    Parameters
+    ----------
+    index : int
+        Value for index.
+    example : dict[str, Any]
+        Value for example.
+    api_url : str
+        URL used by the operation.
+    query_field : str
+        Value for query Field.
+    reference_field : str
+        Value for reference Field.
+    id_field : str
+        Value for ID Field.
+    raise_exceptions : bool
+        Value for raise Exceptions.
+    timeout_seconds : float
+        timeout Seconds expressed in seconds.
+    headers : Mapping[str, str] or None, optional
+        HTTP headers to send with the request.
+    requester : ApiRequester
+        Value for requester.
+    policy : str or None, optional
+        Evaluation policy name used to resolve runtime behavior.
+    budget_ms : int or None, optional
+        Request budget to record in milliseconds.
+    default_reranker_profile : Mapping[str, Any] or None, optional
+        Value for default Reranker Profile.
+    default_reranker_fingerprint : str or None, optional
+        Value for default Reranker Fingerprint.
+    
+    Returns
+    -------
+    tuple[int, dict[str, Any]]
+        Collected results from the operation.
+    
+    Raises
+    ------
+    ValueError
+        If the provided value is invalid for the operation.
+    """
     query = str(example.get(query_field, "") or "").strip()
     reference = str(example.get(reference_field, "") or "").strip()
     sample_id = str(example.get(id_field, f"row-{index}"))
@@ -1447,10 +2318,34 @@ def _prepare_one_via_api(
 
 
 def _error_text_from_exception(exc: Exception) -> str:
+    """Error Text From Exception.
+    
+    Parameters
+    ----------
+    exc : Exception
+        Value for exc.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     return f"{type(exc).__name__}: {exc}"
 
 
 def _row_trace_outputs(row: Mapping[str, Any]) -> dict[str, Any]:
+    """Row Trace Outputs.
+    
+    Parameters
+    ----------
+    row : Mapping[str, Any]
+        Value for row.
+    
+    Returns
+    -------
+    dict[str, Any]
+        Structured result of the operation.
+    """
     metadata = row.get("metadata")
     source_error = None
     failure_class = None
@@ -1494,6 +2389,24 @@ def _open_attempt_trace(
     inputs: Mapping[str, Any],
     attributes: Mapping[str, Any] | None = None,
 ) -> Iterator[PrepTraceRecorder]:
+    """Open Attempt Trace.
+    
+    Parameters
+    ----------
+    trace_factory : PrepAttemptTraceFactory or None, optional
+        Value for trace Factory.
+    name : str
+        Human-readable name for the resource or tracing span.
+    inputs : Mapping[str, Any]
+        Input payload to record or pass through the operation.
+    attributes : Mapping[str, Any] or None, optional
+        Tracing attributes to attach to the current span or recorder.
+    
+    Returns
+    -------
+    Iterator[PrepTraceRecorder]
+        Result of the operation.
+    """
     if trace_factory is None:
         yield _NoopTraceRecorder()
         return
@@ -1503,11 +2416,35 @@ def _open_attempt_trace(
 
 
 def _row_has_source_error(row: dict[str, Any]) -> bool:
+    """Row Has Source Error.
+    
+    Parameters
+    ----------
+    row : dict[str, Any]
+        Value for row.
+    
+    Returns
+    -------
+    bool
+        `True` if row Has Source Error; otherwise `False`.
+    """
     metadata = row.get("metadata")
     return isinstance(metadata, Mapping) and bool(metadata.get("source_error"))
 
 
 def _source_error_text(row: dict[str, Any]) -> str | None:
+    """Source Error Text.
+    
+    Parameters
+    ----------
+    row : dict[str, Any]
+        Value for row.
+    
+    Returns
+    -------
+    str or None
+        Result of the operation.
+    """
     metadata = row.get("metadata")
     if not isinstance(metadata, Mapping):
         return None
@@ -1519,20 +2456,70 @@ def _source_error_text(row: dict[str, Any]) -> str | None:
 
 
 def _is_missing_query_source_error(source_error: str | None) -> bool:
+    """Return whether missing Query Source Error.
+    
+    Parameters
+    ----------
+    source_error : str or None, optional
+        Error text associated with the source row.
+    
+    Returns
+    -------
+    bool
+        `True` if is Missing Query Source Error; otherwise `False`.
+    """
     return (source_error or "").strip().lower() == "missing query"
 
 
 def _is_missing_query_exception(exc: Exception) -> bool:
+    """Return whether missing Query Exception.
+    
+    Parameters
+    ----------
+    exc : Exception
+        Value for exc.
+    
+    Returns
+    -------
+    bool
+        `True` if is Missing Query Exception; otherwise `False`.
+    """
     return isinstance(exc, ValueError) and str(exc).startswith("Missing query for example ")
 
 
 def _row_has_empty_response(row: dict[str, Any]) -> bool:
+    """Row Has Empty Response.
+    
+    Parameters
+    ----------
+    row : dict[str, Any]
+        Value for row.
+    
+    Returns
+    -------
+    bool
+        `True` if row Has Empty Response; otherwise `False`.
+    """
     response = row.get("response")
     return str(response or "").strip() == ""
 
 
 def _compute_retry_delay_seconds(policy: PrepRetryPolicy, attempt_number: int) -> float:
     # Exponential backoff where attempt_number is 1-indexed.
+    """Compute Retry Delay Seconds.
+    
+    Parameters
+    ----------
+    policy : PrepRetryPolicy
+        Evaluation policy name used to resolve runtime behavior.
+    attempt_number : int
+        Value for attempt Number.
+    
+    Returns
+    -------
+    float
+        Computed floating-point value.
+    """
     expo = policy.initial_backoff_seconds * (2 ** max(0, attempt_number - 1))
     base_delay = min(policy.max_backoff_seconds, expo)
     jitter = random.uniform(0.0, policy.jitter_seconds) if policy.jitter_seconds > 0 else 0.0
@@ -1540,6 +2527,15 @@ def _compute_retry_delay_seconds(policy: PrepRetryPolicy, attempt_number: int) -
 
 
 def _sleep_before_retry(policy: PrepRetryPolicy, attempt_number: int) -> None:
+    """Sleep before before Retry.
+    
+    Parameters
+    ----------
+    policy : PrepRetryPolicy
+        Evaluation policy name used to resolve runtime behavior.
+    attempt_number : int
+        Value for attempt Number.
+    """
     delay_seconds = _compute_retry_delay_seconds(policy, attempt_number=attempt_number)
     if delay_seconds > 0:
         time.sleep(delay_seconds)
@@ -1553,6 +2549,26 @@ def _fail_soft_empty_response_row(
     policy: str | None = None,
     budget_ms: int | None = None,
 ) -> dict[str, Any]:
+    """Fail Soft Empty Response Row.
+    
+    Parameters
+    ----------
+    row : dict[str, Any]
+        Value for row.
+    message : str
+        Value for message.
+    original_metadata : Any
+        Value for original Metadata.
+    policy : str or None, optional
+        Evaluation policy name used to resolve runtime behavior.
+    budget_ms : int or None, optional
+        Request budget to record in milliseconds.
+    
+    Returns
+    -------
+    dict[str, Any]
+        Structured result of the operation.
+    """
     return {
         "id": str(row.get("id", "") or ""),
         "user_input": str(row.get("user_input", "") or ""),
@@ -1592,6 +2608,51 @@ def _prepare_one_with_retries(
     default_reranker_profile: Mapping[str, Any] | None = None,
     default_reranker_fingerprint: str | None = None,
 ) -> tuple[int, dict[str, Any]]:
+    """Prepare One With Retries.
+    
+    Parameters
+    ----------
+    index : int
+        Value for index.
+    example : dict[str, Any]
+        Value for example.
+    pipeline : Any
+        Value for pipeline.
+    query_field : str
+        Value for query Field.
+    reference_field : str
+        Value for reference Field.
+    id_field : str
+        Value for ID Field.
+    llm_generate_overrides : dict[str, Any] or None, optional
+        Value for LLM Generate Overrides.
+    raise_exceptions : bool
+        Value for raise Exceptions.
+    retry_policy : PrepRetryPolicy
+        Value for retry Policy.
+    trace_factory : PrepAttemptTraceFactory or None, optional
+        Value for trace Factory.
+    evaluation_policy : str or None, optional
+        Value for evaluation Policy.
+    budget_ms : int or None, optional
+        Request budget to record in milliseconds.
+    default_reranker_profile : Mapping[str, Any] or None, optional
+        Value for default Reranker Profile.
+    default_reranker_fingerprint : str or None, optional
+        Value for default Reranker Fingerprint.
+    
+    Returns
+    -------
+    tuple[int, dict[str, Any]]
+        Collected results from the operation.
+    
+    Raises
+    ------
+    RuntimeError
+        If `RuntimeError` is raised while executing the operation.
+    EmptyResponseError
+        If generation returns an empty answer when one is required.
+    """
     policy = PrepRetryPolicy.from_value(retry_policy)
     sample_id = str(example.get(id_field, f"row-{index}"))
     query = str(example.get(query_field, "") or "").strip()
@@ -1707,6 +2768,55 @@ def _prepare_one_via_api_with_retries(
     default_reranker_profile: Mapping[str, Any] | None = None,
     default_reranker_fingerprint: str | None = None,
 ) -> tuple[int, dict[str, Any]]:
+    """Prepare One Via API With Retries.
+    
+    Parameters
+    ----------
+    index : int
+        Value for index.
+    example : dict[str, Any]
+        Value for example.
+    api_url : str
+        URL used by the operation.
+    query_field : str
+        Value for query Field.
+    reference_field : str
+        Value for reference Field.
+    id_field : str
+        Value for ID Field.
+    raise_exceptions : bool
+        Value for raise Exceptions.
+    timeout_seconds : float
+        timeout Seconds expressed in seconds.
+    headers : Mapping[str, str] or None, optional
+        HTTP headers to send with the request.
+    requester : ApiRequester
+        Value for requester.
+    retry_policy : PrepRetryPolicy
+        Value for retry Policy.
+    trace_factory : PrepAttemptTraceFactory or None, optional
+        Value for trace Factory.
+    evaluation_policy : str or None, optional
+        Value for evaluation Policy.
+    budget_ms : int or None, optional
+        Request budget to record in milliseconds.
+    default_reranker_profile : Mapping[str, Any] or None, optional
+        Value for default Reranker Profile.
+    default_reranker_fingerprint : str or None, optional
+        Value for default Reranker Fingerprint.
+    
+    Returns
+    -------
+    tuple[int, dict[str, Any]]
+        Collected results from the operation.
+    
+    Raises
+    ------
+    RuntimeError
+        If `RuntimeError` is raised while executing the operation.
+    EmptyResponseError
+        If generation returns an empty answer when one is required.
+    """
     policy = PrepRetryPolicy.from_value(retry_policy)
     sample_id = str(example.get(id_field, f"row-{index}"))
     query = str(example.get(query_field, "") or "").strip()
@@ -1816,6 +2926,27 @@ def _emit_progress(
     started_at: float,
     last_error: str | None = None,
 ) -> None:
+    """Emit Progress.
+    
+    Parameters
+    ----------
+    callback : PrepProgressCallback or None, optional
+        Value for callback.
+    mode : str
+        Value for mode.
+    completed : int
+        Value for completed.
+    total : int
+        Value for total.
+    successes : int
+        Value for successes.
+    failures : int
+        Value for failures.
+    started_at : float
+        Value for started At.
+    last_error : str or None, optional
+        Value for last Error.
+    """
     if callback is None:
         return
 
@@ -1872,6 +3003,15 @@ def build_prepared_rows(
     indexed_rows: list[tuple[int, dict[str, Any]]] = []
 
     def _record_progress(row: dict[str, Any], *, last_error: str | None = None) -> None:
+        """Record progress.
+        
+        Parameters
+        ----------
+        row : dict[str, Any]
+            Value for row.
+        last_error : str or None, optional
+            Value for last Error.
+        """
         nonlocal completed, successes, failures
         completed += 1
         if _row_has_source_error(row) or last_error:
@@ -1980,7 +3120,50 @@ def build_prepared_rows_from_api(
     reranker_profile: Mapping[str, Any] | None = None,
     reranker_fingerprint: str | None = None,
 ) -> list[dict[str, Any]]:
-    """Convert raw examples into prepared rows by calling Polaris query API."""
+    """Convert raw examples into prepared rows by calling Polaris query API.
+    
+    Parameters
+    ----------
+    raw_examples : list[dict[str, Any]]
+        Raw examples value to normalize.
+    api_url : str
+        URL used by the operation.
+    query_field : str, optional
+        Value for query Field.
+    reference_field : str, optional
+        Value for reference Field.
+    id_field : str, optional
+        Value for ID Field.
+    generation_workers : int, optional
+        Value for generation Workers.
+    raise_exceptions : bool, optional
+        Value for raise Exceptions.
+    timeout_seconds : float, optional
+        timeout Seconds expressed in seconds.
+    headers : Mapping[str, str] or None, optional
+        HTTP headers to send with the request.
+    requester : ApiRequester or None, optional
+        Value for requester.
+    retry_policy : PrepRetryPolicy or Mapping[str, Any] or None, optional
+        Value for retry Policy.
+    progress_callback : PrepProgressCallback or None, optional
+        Value for progress Callback.
+    trace_factory : PrepAttemptTraceFactory or None, optional
+        Value for trace Factory.
+    policy : str or None, optional
+        Evaluation policy name used to resolve runtime behavior.
+    budget_ms : int or None, optional
+        Request budget to record in milliseconds.
+    reranker_profile : Mapping[str, Any] or None, optional
+        Value for reranker Profile.
+    reranker_fingerprint : str or None, optional
+        Value for reranker Fingerprint.
+    
+    Returns
+    -------
+    list[dict[str, Any]]
+        Constructed prepared Rows From API.
+    """
 
     workers = max(1, int(generation_workers))
     effective_retry_policy = PrepRetryPolicy.from_value(retry_policy)
@@ -1993,6 +3176,15 @@ def build_prepared_rows_from_api(
     effective_requester = requester or _post_query_api
 
     def _record_progress(row: dict[str, Any], *, last_error: str | None = None) -> None:
+        """Record progress.
+        
+        Parameters
+        ----------
+        row : dict[str, Any]
+            Value for row.
+        last_error : str or None, optional
+            Value for last Error.
+        """
         nonlocal completed, successes, failures
         completed += 1
         if _row_has_source_error(row) or last_error:
@@ -2086,7 +3278,18 @@ def build_prepared_rows_from_api(
 
 
 def to_evaluation_dataset(rows: list[dict[str, Any]]) -> "EvaluationDataset":
-    """Create a RAGAS ``EvaluationDataset`` from prepared rows."""
+    """Create a RAGAS ``EvaluationDataset`` from prepared rows.
+    
+    Parameters
+    ----------
+    rows : list[dict[str, Any]]
+        Value for rows.
+    
+    Returns
+    -------
+    EvaluationDataset
+        Result of the operation.
+    """
 
     from ragas import EvaluationDataset
 

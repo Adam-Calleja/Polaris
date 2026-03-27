@@ -36,6 +36,20 @@ from polaris_rag.common.request_budget import RetrievalTimeoutError
 
 
 def _as_bool(value: Any, default: bool) -> bool:
+    """As Bool.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    default : bool
+        Fallback value to use when normalization fails.
+    
+    Returns
+    -------
+    bool
+        `True` if as Bool; otherwise `False`.
+    """
     if value is None:
         return default
     if isinstance(value, bool):
@@ -51,9 +65,24 @@ def _as_bool(value: Any, default: bool) -> bool:
 
 class BaseEmbedder(ABC):
     """Abstract interface for text embedding.
-
+    
     Concrete implementations wrap a provider-specific embedder and expose a small,
     consistent API used by the Polaris retrieval pipeline.
+    
+    Methods
+    -------
+    get_embedder
+        Return the LlamaIndex embedding instance.
+    from_config
+        Create an embedder from a YAML configuration file.
+    from_config_dict
+        Create an embedder from a configuration mapping.
+    embed_query
+        Embed a single query string.
+    embed_documents
+        Embed multiple documents.
+    aembed_documents
+        Asynchronously embed a batch of documents.
     """
 
     @abstractmethod
@@ -405,6 +434,25 @@ class OpenAILikeEmbedder(BaseEmbedder):
         return self.embedder
 
     def embed_query(self, query: str, timeout_seconds: float | None = None) -> list[float]:
+        """Embed Query.
+        
+        Parameters
+        ----------
+        query : str
+            User query text.
+        timeout_seconds : float or None, optional
+            timeout Seconds expressed in seconds.
+        
+        Returns
+        -------
+        list[float]
+            Collected results from the operation.
+        
+        Raises
+        ------
+        RetrievalTimeoutError
+            If `RetrievalTimeoutError` is raised while executing the operation.
+        """
         effective_timeout = timeout_seconds if timeout_seconds is not None else self.default_timeout_seconds
         if effective_timeout is None:
             return super().embed_query(query)

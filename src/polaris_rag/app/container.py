@@ -370,7 +370,13 @@ class PolarisContainer:
 
     @cached_property
     def storage_persist_dir(self) -> str | None:
-        """Return the resolved storage-context persist dir, if configured."""
+        """Return the resolved storage-context persist dir, if configured.
+        
+        Returns
+        -------
+        str or None
+            Result of the operation.
+        """
         sc_cfg = getattr(self.config, "storage_context", {})
         persist_dir = None
 
@@ -407,21 +413,39 @@ class PolarisContainer:
 
     @cached_property
     def source_document_store(self) -> Any:
-        """Return the persisted store of full source documents."""
+        """Return the persisted store of full source documents.
+        
+        Returns
+        -------
+        Any
+            Result of the operation.
+        """
         from polaris_rag.retrieval.document_store_factory import load_or_create_source_document_store
 
         return load_or_create_source_document_store(persist_dir=self.storage_persist_dir)
 
     @cached_property
     def context_resolver(self) -> Any:
-        """Return the resolver that expands retrieved chunks into final contexts."""
+        """Return the resolver that expands retrieved chunks into final contexts.
+        
+        Returns
+        -------
+        Any
+            Result of the operation.
+        """
         from polaris_rag.retrieval.context_resolver import SupportTicketContextResolver
 
         return SupportTicketContextResolver(source_document_store=self.source_document_store)
 
     @cached_property
     def query_constraint_parser(self) -> Any:
-        """Return the registry-backed runtime query parser."""
+        """Return the registry-backed runtime query parser.
+        
+        Returns
+        -------
+        Any
+            Result of the operation.
+        """
         from polaris_rag.retrieval.metadata_enricher import resolve_authority_registry_artifact_path
         from polaris_rag.retrieval.query_constraints import AuthorityQueryConstraintParser
 
@@ -656,7 +680,7 @@ def build_container(config: Any) -> PolarisContainer:
     """Create a :class:`~polaris_rag.app.container.PolarisContainer`.
 
     This function is intentionally small so it can serve as a single entry point
-    for Streamlit apps, FastAPI lifespan hooks, CLI scripts, and tests.
+    for FastAPI lifespan hooks, CLI scripts, and tests.
 
     Parameters
     ----------

@@ -1,4 +1,20 @@
-"""Deterministic scope-family normalization helpers."""
+"""Deterministic scope-family normalization helpers.
+
+This module combines public functions and classes used by the surrounding Polaris
+subsystem.
+
+Classes
+-------
+ScopeFamilyResolver
+    Resolve normalized scope-family tokens from registry-backed entities and text.
+
+Functions
+---------
+specialized_families_for_text
+    Specialized Families For Text.
+specialized_families_for_values
+    Specialized Families For Values.
+"""
 
 from __future__ import annotations
 
@@ -17,6 +33,18 @@ class _ScopeFamilyRule:
 
 
 def _compile_patterns(patterns: Sequence[str]) -> tuple[re.Pattern[str], ...]:
+    """Compile patterns.
+    
+    Parameters
+    ----------
+    patterns : Sequence[str]
+        Value for patterns.
+    
+    Returns
+    -------
+    tuple[re.Pattern[str], ...]
+        Collected results from the operation.
+    """
     return tuple(re.compile(pattern, flags=re.IGNORECASE) for pattern in patterns)
 
 
@@ -107,10 +135,34 @@ _SCOPE_FAMILY_RULES: tuple[_ScopeFamilyRule, ...] = (
 
 
 def _sorted_unique(values: Iterable[str]) -> list[str]:
+    """Sorted Unique.
+    
+    Parameters
+    ----------
+    values : Iterable[str]
+        Value for values.
+    
+    Returns
+    -------
+    list[str]
+        Collected results from the operation.
+    """
     return sorted({str(value).strip() for value in values if str(value or "").strip()})
 
 
 def _families_for_text(text: str) -> list[str]:
+    """Families For Text.
+    
+    Parameters
+    ----------
+    text : str
+        Text value to inspect, tokenize, or encode.
+    
+    Returns
+    -------
+    list[str]
+        Collected results from the operation.
+    """
     value = str(text or "").strip()
     if not value:
         return []
@@ -123,6 +175,18 @@ def _families_for_text(text: str) -> list[str]:
 
 
 def _specialized_families_for_text(text: str) -> list[str]:
+    """Specialized Families For Text.
+    
+    Parameters
+    ----------
+    text : str
+        Text value to inspect, tokenize, or encode.
+    
+    Returns
+    -------
+    list[str]
+        Collected results from the operation.
+    """
     value = str(text or "").strip()
     if not value:
         return []
@@ -135,10 +199,34 @@ def _specialized_families_for_text(text: str) -> list[str]:
 
 
 def specialized_families_for_text(text: str) -> list[str]:
+    """Specialized Families For Text.
+    
+    Parameters
+    ----------
+    text : str
+        Text value to inspect, tokenize, or encode.
+    
+    Returns
+    -------
+    list[str]
+        Collected results from the operation.
+    """
     return _specialized_families_for_text(text)
 
 
 def specialized_families_for_values(values: Iterable[str]) -> list[str]:
+    """Specialized Families For Values.
+    
+    Parameters
+    ----------
+    values : Iterable[str]
+        Value for values.
+    
+    Returns
+    -------
+    list[str]
+        Collected results from the operation.
+    """
     families: list[str] = []
     for value in values:
         families.extend(_specialized_families_for_text(str(value or "")))
@@ -146,9 +234,37 @@ def specialized_families_for_values(values: Iterable[str]) -> list[str]:
 
 
 class ScopeFamilyResolver:
-    """Resolve normalized scope-family tokens from registry-backed entities and text."""
+    """Resolve normalized scope-family tokens from registry-backed entities and text.
+    
+    Parameters
+    ----------
+    entities : Sequence[RegistryEntity]
+        Value for entities.
+    
+    Methods
+    -------
+    families_for_entity
+        Families For Entity.
+    families_for_entities
+        Families For Entities.
+    families_for_alias
+        Families For Alias.
+    families_for_text
+        Families For Text.
+    specialized_families_for_text
+        Specialized Families For Text.
+    specialized_families_for_values
+        Specialized Families For Values.
+    """
 
     def __init__(self, entities: Sequence[RegistryEntity]) -> None:
+        """Initialize the instance.
+        
+        Parameters
+        ----------
+        entities : Sequence[RegistryEntity]
+            Value for entities.
+        """
         families_by_entity_id: dict[str, list[str]] = {}
         families_by_alias: dict[str, set[str]] = {}
 
@@ -176,18 +292,54 @@ class ScopeFamilyResolver:
         }
 
     def families_for_entity(self, entity: RegistryEntity) -> list[str]:
+        """Families For Entity.
+        
+        Parameters
+        ----------
+        entity : RegistryEntity
+            Value for entity.
+        
+        Returns
+        -------
+        list[str]
+            Collected results from the operation.
+        """
         families = self._families_by_entity_id.get(entity.entity_id)
         if families:
             return list(families)
         return _families_for_text(" ".join([entity.canonical_name, *entity.aliases]))
 
     def families_for_entities(self, entities: Iterable[RegistryEntity]) -> list[str]:
+        """Families For Entities.
+        
+        Parameters
+        ----------
+        entities : Iterable[RegistryEntity]
+            Value for entities.
+        
+        Returns
+        -------
+        list[str]
+            Collected results from the operation.
+        """
         values: list[str] = []
         for entity in entities:
             values.extend(self.families_for_entity(entity))
         return _sorted_unique(values)
 
     def families_for_alias(self, alias: str) -> list[str]:
+        """Families For Alias.
+        
+        Parameters
+        ----------
+        alias : str
+            Value for alias.
+        
+        Returns
+        -------
+        list[str]
+            Collected results from the operation.
+        """
         key = str(alias or "").strip().lower()
         if not key:
             return []
@@ -197,12 +349,48 @@ class ScopeFamilyResolver:
         return _families_for_text(alias)
 
     def families_for_text(self, text: str) -> list[str]:
+        """Families For Text.
+        
+        Parameters
+        ----------
+        text : str
+            Text value to inspect, tokenize, or encode.
+        
+        Returns
+        -------
+        list[str]
+            Collected results from the operation.
+        """
         return _families_for_text(text)
 
     def specialized_families_for_text(self, text: str) -> list[str]:
+        """Specialized Families For Text.
+        
+        Parameters
+        ----------
+        text : str
+            Text value to inspect, tokenize, or encode.
+        
+        Returns
+        -------
+        list[str]
+            Collected results from the operation.
+        """
         return specialized_families_for_text(text)
 
     def specialized_families_for_values(self, values: Iterable[str]) -> list[str]:
+        """Specialized Families For Values.
+        
+        Parameters
+        ----------
+        values : Iterable[str]
+            Value for values.
+        
+        Returns
+        -------
+        list[str]
+            Collected results from the operation.
+        """
         return specialized_families_for_values(values)
 
 

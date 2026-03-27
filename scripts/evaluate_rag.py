@@ -1,7 +1,11 @@
 """Thin wrapper for `polaris_rag.cli.evaluate_rag`.
 
-Usage:
-    python scripts/evaluate_rag.py -c config/config.yaml
+Usage: python scripts/evaluate_rag.py -c config/config.yaml
+
+Notes
+-----
+This wrapper keeps local script execution aligned with the installed console-script
+entrypoint.
 """
 
 from __future__ import annotations

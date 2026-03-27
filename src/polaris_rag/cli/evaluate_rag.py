@@ -1,4 +1,14 @@
-"""Evaluation CLI entrypoint for Polaris RAG."""
+"""Evaluation CLI entrypoint for Polaris RAG.
+
+This module exposes public helper functions used by the surrounding Polaris subsystem.
+
+Functions
+---------
+parse_args
+    Parse args.
+main
+    Run the command-line entrypoint.
+"""
 
 from __future__ import annotations
 
@@ -58,6 +68,18 @@ logger = logging.getLogger(__name__)
 
 
 def _as_mapping(obj: Any) -> Mapping[str, Any]:
+    """As Mapping.
+    
+    Parameters
+    ----------
+    obj : Any
+        Value for obj.
+    
+    Returns
+    -------
+    Mapping[str, Any]
+        Result of the operation.
+    """
     if isinstance(obj, Mapping):
         return obj
     if hasattr(obj, "__dict__"):
@@ -66,6 +88,20 @@ def _as_mapping(obj: Any) -> Mapping[str, Any]:
 
 
 def _as_bool(value: Any, default: bool) -> bool:
+    """As Bool.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    default : bool
+        Fallback value to use when normalization fails.
+    
+    Returns
+    -------
+    bool
+        `True` if as Bool; otherwise `False`.
+    """
     if value is None:
         return default
     if isinstance(value, bool):
@@ -80,6 +116,20 @@ def _as_bool(value: Any, default: bool) -> bool:
 
 
 def _as_int(value: Any, default: int) -> int:
+    """As Int.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    default : int
+        Fallback value to use when normalization fails.
+    
+    Returns
+    -------
+    int
+        Computed integer value.
+    """
     try:
         return int(value)
     except (TypeError, ValueError):
@@ -87,6 +137,20 @@ def _as_int(value: Any, default: int) -> int:
 
 
 def _as_float(value: Any, default: float) -> float:
+    """As Float.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    default : float
+        Fallback value to use when normalization fails.
+    
+    Returns
+    -------
+    float
+        Computed floating-point value.
+    """
     try:
         return float(value)
     except (TypeError, ValueError):
@@ -94,6 +158,18 @@ def _as_float(value: Any, default: float) -> float:
 
 
 def _config_base_dir(cfg: Any) -> Path | None:
+    """Config Base Dir.
+    
+    Parameters
+    ----------
+    cfg : Any
+        Configuration object or mapping used to resolve runtime settings.
+    
+    Returns
+    -------
+    Path or None
+        Result of the operation.
+    """
     cfg_path = (
         getattr(cfg, "config_path", None)
         or getattr(cfg, "_config_path", None)
@@ -108,6 +184,18 @@ def _config_base_dir(cfg: Any) -> Path | None:
 
 
 def _resolve_reranker_metadata(cfg: Any) -> tuple[dict[str, Any] | None, str | None]:
+    """Resolve reranker Metadata.
+    
+    Parameters
+    ----------
+    cfg : Any
+        Configuration object or mapping used to resolve runtime settings.
+    
+    Returns
+    -------
+    tuple[dict[str, Any] or None, str or None]
+        Collected results from the operation.
+    """
     raw_retriever_cfg = getattr(cfg, "retriever", None)
     if raw_retriever_cfg is None:
         return None, None
@@ -138,6 +226,23 @@ def _resolve_reranker_metadata(cfg: Any) -> tuple[dict[str, Any] | None, str | N
 
 
 def _prepared_rows_reranker_fingerprint(rows: list[dict[str, Any]]) -> tuple[str | None, int]:
+    """Prepared Rows Reranker Fingerprint.
+    
+    Parameters
+    ----------
+    rows : list[dict[str, Any]]
+        Value for rows.
+    
+    Returns
+    -------
+    tuple[str or None, int]
+        Collected results from the operation.
+    
+    Raises
+    ------
+    ValueError
+        If the provided value is invalid for the operation.
+    """
     fingerprints: set[str] = set()
     missing = 0
     for row in rows:
@@ -164,6 +269,20 @@ def _assert_prepared_rows_match_reranker(
     *,
     expected_fingerprint: str | None,
 ) -> None:
+    """Assert Prepared Rows Match Reranker.
+    
+    Parameters
+    ----------
+    rows : list[dict[str, Any]]
+        Value for rows.
+    expected_fingerprint : str or None, optional
+        Value for expected Fingerprint.
+    
+    Raises
+    ------
+    ValueError
+        If the provided value is invalid for the operation.
+    """
     if not expected_fingerprint:
         return
 
@@ -186,6 +305,23 @@ def _assert_prepared_rows_match_reranker(
 
 
 def _prepared_rows_condition_fingerprint(rows: list[dict[str, Any]]) -> tuple[str | None, int]:
+    """Prepared Rows Condition Fingerprint.
+    
+    Parameters
+    ----------
+    rows : list[dict[str, Any]]
+        Value for rows.
+    
+    Returns
+    -------
+    tuple[str or None, int]
+        Collected results from the operation.
+    
+    Raises
+    ------
+    ValueError
+        If the provided value is invalid for the operation.
+    """
     fingerprints: set[str] = set()
     missing = 0
     for row in rows:
@@ -212,6 +348,20 @@ def _assert_prepared_rows_match_condition(
     *,
     expected_fingerprint: str | None,
 ) -> None:
+    """Assert Prepared Rows Match Condition.
+    
+    Parameters
+    ----------
+    rows : list[dict[str, Any]]
+        Value for rows.
+    expected_fingerprint : str or None, optional
+        Value for expected Fingerprint.
+    
+    Raises
+    ------
+    ValueError
+        If the provided value is invalid for the operation.
+    """
     if not expected_fingerprint:
         return
 
@@ -238,6 +388,20 @@ def _stamp_condition_metadata(
     *,
     preset_context: PresetContext | None,
 ) -> list[dict[str, Any]]:
+    """Stamp condition Metadata.
+    
+    Parameters
+    ----------
+    rows : list[dict[str, Any]]
+        Value for rows.
+    preset_context : PresetContext or None, optional
+        Value for preset Context.
+    
+    Returns
+    -------
+    list[dict[str, Any]]
+        Collected results from the operation.
+    """
     if preset_context is None:
         return rows
 
@@ -254,6 +418,18 @@ def _stamp_condition_metadata(
 
 
 def _parse_metrics(value: str | None) -> list[str] | None:
+    """Parse metrics.
+    
+    Parameters
+    ----------
+    value : str or None, optional
+        Input value to normalize, coerce, or inspect.
+    
+    Returns
+    -------
+    list[str] or None
+        Collected results from the operation.
+    """
     if not value:
         return None
     return [x.strip() for x in value.split(",") if x.strip()]
@@ -265,6 +441,22 @@ def _write_prepared_rows_artifact(
     prepared_rows: list[dict[str, Any]],
     tracking: EvaluationTrackingContext,
 ) -> Path:
+    """Write prepared Rows Artifact.
+    
+    Parameters
+    ----------
+    output_dir : Path
+        Value for output Dir.
+    prepared_rows : list[dict[str, Any]]
+        Value for prepared Rows.
+    tracking : EvaluationTrackingContext
+        Value for tracking.
+    
+    Returns
+    -------
+    Path
+        Result of the operation.
+    """
     path = output_dir / "prepared_rows.json"
     path.write_text(
         json.dumps(prepared_rows, ensure_ascii=False, indent=2),
@@ -280,6 +472,17 @@ def _write_runtime_snapshots(
     config_payload: Mapping[str, Any],
     tracking: EvaluationTrackingContext,
 ) -> None:
+    """Write runtime Snapshots.
+    
+    Parameters
+    ----------
+    output_dir : Path
+        Value for output Dir.
+    config_payload : Mapping[str, Any]
+        Value for config Payload.
+    tracking : EvaluationTrackingContext
+        Value for tracking.
+    """
     tracking.log_json_artifact(
         build_environment_snapshot(),
         output_path=output_dir / "env_snapshot.json",
@@ -293,6 +496,20 @@ def _write_runtime_snapshots(
 
 
 def _compact_error_text(value: str | None, *, limit: int = 120) -> str | None:
+    """Compact Error Text.
+    
+    Parameters
+    ----------
+    value : str or None, optional
+        Input value to normalize, coerce, or inspect.
+    limit : int, optional
+        Maximum number of records or nodes to return.
+    
+    Returns
+    -------
+    str or None
+        Result of the operation.
+    """
     if value is None:
         return None
     compact = " ".join(str(value).split())
@@ -311,6 +528,17 @@ class _PrepProgressRenderer:
         interactive: bool = True,
         log_interval_seconds: float = 30.0,
     ):
+        """Initialize the instance.
+        
+        Parameters
+        ----------
+        width : int, optional
+            Value for width.
+        interactive : bool, optional
+            Value for interactive.
+        log_interval_seconds : float, optional
+            log Interval Seconds expressed in seconds.
+        """
         self.width = max(8, int(width))
         self.interactive = bool(interactive)
         self.log_interval_seconds = max(1.0, float(log_interval_seconds))
@@ -319,6 +547,13 @@ class _PrepProgressRenderer:
         self._last_event: PrepProgressEvent | None = None
 
     def update(self, event: PrepProgressEvent) -> None:
+        """Update.
+        
+        Parameters
+        ----------
+        event : PrepProgressEvent
+            Value for event.
+        """
         self._last_event = event
         total = event.total if event.total > 0 else 1
         fraction = event.completed / total
@@ -349,6 +584,10 @@ class _PrepProgressRenderer:
             logger.info("%s", line)
 
     def finish(self) -> None:
+        """Finish.
+        
+        This helper is internal to the surrounding module.
+        """
         if self.interactive and self._active:
             print(file=sys.stderr, flush=True)
             self._active = False
@@ -362,6 +601,13 @@ class _PrepProgressRenderer:
 
 
 def _configure_logging(level_name: str = "INFO") -> None:
+    """Configure Logging.
+    
+    Parameters
+    ----------
+    level_name : str, optional
+        Value for level Name.
+    """
     level = getattr(logging, str(level_name).upper(), logging.INFO)
     package_logger = logging.getLogger("polaris_rag")
     package_logger.setLevel(level)
@@ -376,10 +622,28 @@ def _configure_logging(level_name: str = "INFO") -> None:
 
 @contextmanager
 def _phase_heartbeat(label: str, *, interval_seconds: float = 60.0) -> Iterator[None]:
+    """Phase Heartbeat.
+    
+    Parameters
+    ----------
+    label : str
+        Value for label.
+    interval_seconds : float, optional
+        interval Seconds expressed in seconds.
+    
+    Returns
+    -------
+    Iterator[None]
+        Result of the operation.
+    """
     stop_event = threading.Event()
     started_at = time.perf_counter()
 
     def _worker() -> None:
+        """Worker.
+        
+        This helper is internal to the surrounding module.
+        """
         while not stop_event.wait(interval_seconds):
             elapsed = max(0.0, time.perf_counter() - started_at)
             logger.info("%s still running (elapsed=%.1fs).", label, elapsed)
@@ -406,6 +670,18 @@ def _phase_heartbeat(label: str, *, interval_seconds: float = 60.0) -> Iterator[
 
 
 def _source_error(row: Mapping[str, Any]) -> str | None:
+    """Source Error.
+    
+    Parameters
+    ----------
+    row : Mapping[str, Any]
+        Value for row.
+    
+    Returns
+    -------
+    str or None
+        Result of the operation.
+    """
     metadata = row.get("metadata")
     if not isinstance(metadata, Mapping):
         return None
@@ -417,16 +693,52 @@ def _source_error(row: Mapping[str, Any]) -> str | None:
 
 
 def _row_metadata(row: Mapping[str, Any]) -> Mapping[str, Any]:
+    """Row Metadata.
+    
+    Parameters
+    ----------
+    row : Mapping[str, Any]
+        Value for row.
+    
+    Returns
+    -------
+    Mapping[str, Any]
+        Result of the operation.
+    """
     metadata = row.get("metadata")
     return metadata if isinstance(metadata, Mapping) else {}
 
 
 def _error_class(source_error: str) -> str:
+    """Error Class.
+    
+    Parameters
+    ----------
+    source_error : str
+        Error text associated with the source row.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     head = source_error.split(":", 1)[0].strip()
     return head or "UnknownError"
 
 
 def _failure_class(row: Mapping[str, Any]) -> str | None:
+    """Failure Class.
+    
+    Parameters
+    ----------
+    row : Mapping[str, Any]
+        Value for row.
+    
+    Returns
+    -------
+    str or None
+        Result of the operation.
+    """
     value = _row_metadata(row).get("failure_class")
     if value is None:
         return None
@@ -435,6 +747,18 @@ def _failure_class(row: Mapping[str, Any]) -> str | None:
 
 
 def _failure_stage(row: Mapping[str, Any]) -> str | None:
+    """Failure Stage.
+    
+    Parameters
+    ----------
+    row : Mapping[str, Any]
+        Value for row.
+    
+    Returns
+    -------
+    str or None
+        Result of the operation.
+    """
     value = _row_metadata(row).get("failure_stage")
     if value is None:
         return None
@@ -443,6 +767,18 @@ def _failure_stage(row: Mapping[str, Any]) -> str | None:
 
 
 def _response_status(row: Mapping[str, Any]) -> str | None:
+    """Response Status.
+    
+    Parameters
+    ----------
+    row : Mapping[str, Any]
+        Value for row.
+    
+    Returns
+    -------
+    str or None
+        Result of the operation.
+    """
     value = _row_metadata(row).get("response_status")
     if value is None:
         return None
@@ -451,6 +787,18 @@ def _response_status(row: Mapping[str, Any]) -> str | None:
 
 
 def _elapsed_ms(row: Mapping[str, Any]) -> int | None:
+    """Elapsed Ms.
+    
+    Parameters
+    ----------
+    row : Mapping[str, Any]
+        Value for row.
+    
+    Returns
+    -------
+    int or None
+        Result of the operation.
+    """
     value = _row_metadata(row).get("elapsed_ms")
     if value is None:
         return None
@@ -461,6 +809,18 @@ def _elapsed_ms(row: Mapping[str, Any]) -> int | None:
 
 
 def _budget_ms(row: Mapping[str, Any]) -> int | None:
+    """Budget Ms.
+    
+    Parameters
+    ----------
+    row : Mapping[str, Any]
+        Value for row.
+    
+    Returns
+    -------
+    int or None
+        Result of the operation.
+    """
     value = _row_metadata(row).get("budget_ms")
     if value is None:
         return None
@@ -471,6 +831,20 @@ def _budget_ms(row: Mapping[str, Any]) -> int | None:
 
 
 def _percentile(values: list[float], quantile: float) -> float:
+    """Percentile.
+    
+    Parameters
+    ----------
+    values : list[float]
+        Value for values.
+    quantile : float
+        Value for quantile.
+    
+    Returns
+    -------
+    float
+        Computed floating-point value.
+    """
     if not values:
         return 0.0
     if len(values) == 1:
@@ -486,6 +860,18 @@ def _percentile(values: list[float], quantile: float) -> float:
 
 
 def _latency_budget_report(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """Latency Budget Report.
+    
+    Parameters
+    ----------
+    rows : list[dict[str, Any]]
+        Value for rows.
+    
+    Returns
+    -------
+    dict[str, Any]
+        Structured result of the operation.
+    """
     elapsed_values: list[float] = []
     utilization_values: list[float] = []
     for row in rows:
@@ -522,6 +908,18 @@ def _latency_budget_report(rows: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def _max_infra_failure_rate(eval_cfg: Mapping[str, Any]) -> float:
+    """Max Infra Failure Rate.
+    
+    Parameters
+    ----------
+    eval_cfg : Mapping[str, Any]
+        Configuration mapping for eval.
+    
+    Returns
+    -------
+    float
+        Computed floating-point value.
+    """
     validity_cfg = _as_mapping(eval_cfg.get("validity", {}))
     return max(0.0, _as_float(validity_cfg.get("max_infra_failure_rate"), 0.01))
 
@@ -533,6 +931,24 @@ def _prep_stats(
     evaluation_policy: str,
     max_infra_failure_rate: float,
 ) -> dict[str, Any]:
+    """Prep Stats.
+    
+    Parameters
+    ----------
+    rows : list[dict[str, Any]]
+        Value for rows.
+    elapsed_seconds : float
+        elapsed Seconds expressed in seconds.
+    evaluation_policy : str
+        Value for evaluation Policy.
+    max_infra_failure_rate : float
+        Value for max Infra Failure Rate.
+    
+    Returns
+    -------
+    dict[str, Any]
+        Structured result of the operation.
+    """
     total = len(rows)
     failures = 0
     error_classes: Counter[str] = Counter()
@@ -600,6 +1016,13 @@ def _prep_stats(
 
 
 def _print_prep_summary(stats: Mapping[str, Any]) -> None:
+    """Print Prep Summary.
+    
+    Parameters
+    ----------
+    stats : Mapping[str, Any]
+        Value for stats.
+    """
     total = int(stats.get("prep_total_rows", 0))
     success = int(stats.get("prep_success_rows", 0))
     failed = int(stats.get("prep_failed_rows", 0))
@@ -630,6 +1053,13 @@ def _print_prep_summary(stats: Mapping[str, Any]) -> None:
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse args.
+    
+    Returns
+    -------
+    argparse.Namespace
+        Parsed args.
+    """
     parser = argparse.ArgumentParser(description="Run Polaris RAG evaluation with modern RAGAS metrics")
 
     parser.add_argument(
@@ -789,6 +1219,20 @@ def parse_args() -> argparse.Namespace:
 
 
 def _resolve_output_dir(eval_cfg: Mapping[str, Any], cli_value: str | None) -> Path:
+    """Resolve output Dir.
+    
+    Parameters
+    ----------
+    eval_cfg : Mapping[str, Any]
+        Configuration mapping for eval.
+    cli_value : str or None, optional
+        Optional value provided via the command line.
+    
+    Returns
+    -------
+    Path
+        Result of the operation.
+    """
     if cli_value:
         return Path(cli_value).expanduser().resolve()
 
@@ -803,6 +1247,20 @@ def _resolve_output_dir(eval_cfg: Mapping[str, Any], cli_value: str | None) -> P
 def _resolve_generation_retry_policy(
     generation_cfg: Mapping[str, Any], args: argparse.Namespace
 ) -> PrepRetryPolicy:
+    """Resolve generation Retry Policy.
+    
+    Parameters
+    ----------
+    generation_cfg : Mapping[str, Any]
+        Generation configuration mapping containing deadline settings.
+    args : argparse.Namespace
+        Value for args.
+    
+    Returns
+    -------
+    PrepRetryPolicy
+        Result of the operation.
+    """
     retry_cfg = _as_mapping(generation_cfg.get("retries", {}))
 
     max_attempts = (
@@ -844,6 +1302,20 @@ def _resolve_evaluation_policy(
     generation_cfg: Mapping[str, Any],
     args: argparse.Namespace,
 ) -> str:
+    """Resolve evaluation Policy.
+    
+    Parameters
+    ----------
+    generation_cfg : Mapping[str, Any]
+        Generation configuration mapping containing deadline settings.
+    args : argparse.Namespace
+        Value for args.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     configured = getattr(args, "evaluation_policy", None) or generation_cfg.get("policy")
     return normalize_evaluation_policy(configured, default=EVAL_POLICY_OFFICIAL)
 
@@ -852,6 +1324,20 @@ def _resolve_evaluator_llm_tracing(
     eval_cfg: Mapping[str, Any],
     args: argparse.Namespace,
 ) -> bool:
+    """Resolve evaluator LLM Tracing.
+    
+    Parameters
+    ----------
+    eval_cfg : Mapping[str, Any]
+        Configuration mapping for eval.
+    args : argparse.Namespace
+        Value for args.
+    
+    Returns
+    -------
+    bool
+        `True` if resolve Evaluator LLM Tracing; otherwise `False`.
+    """
     tracing_cfg = _as_mapping(eval_cfg.get("tracing", {}))
     cli_value = getattr(args, "trace_evaluator_llm", None)
     if cli_value is not None:
@@ -864,6 +1350,15 @@ def _build_evaluator_trace_factory(
     *,
     enabled: bool,
 ):
+    """Build evaluator Trace Factory.
+    
+    Parameters
+    ----------
+    stage_context : EvaluationStageContext or None, optional
+        Value for stage Context.
+    enabled : bool
+        Value for enabled.
+    """
     if not enabled or stage_context is None:
         return None
 
@@ -881,6 +1376,17 @@ def _resolve_generation_deadlines(
     *,
     evaluation_policy: str,
 ):
+    """Resolve generation Deadlines.
+    
+    Parameters
+    ----------
+    generation_cfg : Mapping[str, Any]
+        Generation configuration mapping containing deadline settings.
+    args : argparse.Namespace
+        Value for args.
+    evaluation_policy : str
+        Value for evaluation Policy.
+    """
     client_total_override = getattr(args, "query_api_timeout", None)
     return resolve_evaluation_deadlines(
         generation_cfg,
@@ -895,6 +1401,22 @@ def _effective_retry_policy(
     evaluation_policy: str,
     generation_mode: str,
 ) -> PrepRetryPolicy:
+    """Effective Retry Policy.
+    
+    Parameters
+    ----------
+    retry_policy : PrepRetryPolicy
+        Value for retry Policy.
+    evaluation_policy : str
+        Value for evaluation Policy.
+    generation_mode : str
+        Value for generation Mode.
+    
+    Returns
+    -------
+    PrepRetryPolicy
+        Result of the operation.
+    """
     if normalize_evaluation_policy(evaluation_policy, default=EVAL_POLICY_OFFICIAL) != EVAL_POLICY_OFFICIAL:
         return retry_policy
     if generation_mode != "api":
@@ -915,6 +1437,24 @@ def _raw_examples_from_replay_rows(
     reference_field: str,
     id_field: str,
 ) -> list[dict[str, Any]]:
+    """Raw Examples From Replay Rows.
+    
+    Parameters
+    ----------
+    rows : list[dict[str, Any]]
+        Value for rows.
+    query_field : str
+        Value for query Field.
+    reference_field : str
+        Value for reference Field.
+    id_field : str
+        Value for ID Field.
+    
+    Returns
+    -------
+    list[dict[str, Any]]
+        Collected results from the operation.
+    """
     replay_rows: list[dict[str, Any]] = []
     for row in rows:
         if not _source_error(row):
@@ -937,6 +1477,22 @@ def _join_annotation_metadata(
     annotations_path: Path,
     validate_summaries: bool,
 ) -> list[dict[str, Any]]:
+    """Join Annotation Metadata.
+    
+    Parameters
+    ----------
+    rows : list[dict[str, Any]]
+        Value for rows.
+    annotations_path : Path
+        Filesystem path used by the operation.
+    validate_summaries : bool
+        Value for validate Summaries.
+    
+    Returns
+    -------
+    list[dict[str, Any]]
+        Collected results from the operation.
+    """
     annotation_rows = load_annotation_rows(annotations_path)
 
     if validate_summaries:
@@ -981,6 +1537,35 @@ def _resolve_prepared_rows(
     stage_context: EvaluationStageContext | None = None,
     preset_context: PresetContext | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Resolve prepared Rows.
+    
+    Parameters
+    ----------
+    cfg : GlobalConfig
+        Configuration object or mapping used to resolve runtime settings.
+    args : argparse.Namespace
+        Value for args.
+    eval_cfg : Mapping[str, Any]
+        Configuration mapping for eval.
+    show_progress : bool
+        Value for show Progress.
+    extra_api_headers : Mapping[str, str] or None, optional
+        Value for extra API Headers.
+    stage_context : EvaluationStageContext or None, optional
+        Value for stage Context.
+    preset_context : PresetContext or None, optional
+        Value for preset Context.
+    
+    Returns
+    -------
+    tuple[list[dict[str, Any]], dict[str, Any]]
+        Collected results from the operation.
+    
+    Raises
+    ------
+    ValueError
+        If the provided value is invalid for the operation.
+    """
     dataset_cfg = _as_mapping(eval_cfg.get("dataset", {}))
     generation_cfg = _as_mapping(eval_cfg.get("generation", {}))
     replay_failures_from = getattr(args, "replay_failures_from", None)
@@ -1220,6 +1805,18 @@ def _resolve_prepared_rows(
 
 
 def _collect_quality_metric_aggregates(result: Any) -> dict[str, float]:
+    """Collect Quality Metric Aggregates.
+    
+    Parameters
+    ----------
+    result : Any
+        Evaluation or backend result object to summarize.
+    
+    Returns
+    -------
+    dict[str, float]
+        Structured result of the operation.
+    """
     metrics: dict[str, float] = {}
 
     scores_df = getattr(result, "scores_df", None)
@@ -1261,6 +1858,22 @@ def _collect_system_metrics(
     dataset_manifest: Mapping[str, Any],
     tune_concurrency: bool,
 ) -> dict[str, float]:
+    """Collect System Metrics.
+    
+    Parameters
+    ----------
+    result : Any
+        Evaluation or backend result object to summarize.
+    dataset_manifest : Mapping[str, Any]
+        Value for dataset Manifest.
+    tune_concurrency : bool
+        Value for tune Concurrency.
+    
+    Returns
+    -------
+    dict[str, float]
+        Structured result of the operation.
+    """
     metrics: dict[str, float] = {
         "system.eval.duration_seconds": float(getattr(result, "duration_seconds", 0.0)),
         "system.eval.failure_rate": float(getattr(result, "failure_rate", 0.0)),
@@ -1299,6 +1912,18 @@ def _collect_system_metrics(
 
 
 def _import_pandas() -> Any:
+    """Import Pandas.
+    
+    Returns
+    -------
+    Any
+        Result of the operation.
+    
+    Raises
+    ------
+    RuntimeError
+        If `RuntimeError` is raised while executing the operation.
+    """
     try:
         import pandas as pd
     except Exception as exc:
@@ -1315,6 +1940,24 @@ def _build_mlflow_dataset(
     source: Path,
     dataset_name: str,
 ) -> Any:
+    """Build mlflow Dataset.
+    
+    Parameters
+    ----------
+    mlflow : Any
+        Value for mlflow.
+    rows : list[dict[str, Any]]
+        Value for rows.
+    source : Path
+        Source definition, source name, or source identifier to process.
+    dataset_name : str
+        Value for dataset Name.
+    
+    Returns
+    -------
+    Any
+        Result of the operation.
+    """
     pd = _import_pandas()
     frame = pd.DataFrame.from_records(rows)
     return mlflow.data.from_pandas(
@@ -1325,6 +1968,18 @@ def _build_mlflow_dataset(
 
 
 def _infer_mlflow_dataset_context(dataset_path: Path) -> tuple[str, str]:
+    """Infer mlflow Dataset Context.
+    
+    Parameters
+    ----------
+    dataset_path : Path
+        Filesystem path used by the operation.
+    
+    Returns
+    -------
+    tuple[str, str]
+        Collected results from the operation.
+    """
     stem = dataset_path.stem.lower()
     validation_suffixes = (".dev", "_dev", "-dev", ".validation", "_validation", "-validation", ".val", "_val", "-val")
     testing_suffixes = (".test", "_test", "-test", ".testing", "_testing", "-testing")
@@ -1340,6 +1995,15 @@ def _log_input_dataset_to_mlflow(
     tracking: EvaluationTrackingContext,
     dataset_manifest: Mapping[str, Any],
 ) -> None:
+    """Log Input Dataset To MLflow.
+    
+    Parameters
+    ----------
+    tracking : EvaluationTrackingContext
+        Value for tracking.
+    dataset_manifest : Mapping[str, Any]
+        Value for dataset Manifest.
+    """
     if not tracking.enabled:
         return
 
@@ -1388,6 +2052,13 @@ def _log_input_dataset_to_mlflow(
 
 
 def main() -> None:
+    """Run the command-line entrypoint.
+
+    Notes
+    -----
+    Parses CLI arguments, executes the configured evaluation workflow, and
+    writes run artifacts and summaries for downstream analysis.
+    """
     _configure_logging()
     args = parse_args()
     show_progress = not args.no_progress

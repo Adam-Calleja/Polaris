@@ -1,4 +1,18 @@
-"""Markdown-first token chunking utilities."""
+"""Markdown-first token chunking utilities.
+
+This module combines public functions and classes used by the surrounding Polaris
+subsystem.
+
+Classes
+-------
+MarkdownTokenChunker
+    Naive token-window chunker for markdown-normalized documents.
+
+Functions
+---------
+get_chunks_from_markdown_documents
+    Return chunks From Markdown Documents.
+"""
 
 from __future__ import annotations
 
@@ -10,11 +24,40 @@ from polaris_rag.retrieval.ingestion_settings import MARKDOWN_TOKEN_CHUNKING_STR
 
 
 def _markdown_chunk_id(parent_id: str, chunk_index: int) -> str:
+    """Markdown Chunk ID.
+    
+    Parameters
+    ----------
+    parent_id : str
+        Stable identifier for parent.
+    chunk_index : int
+        Value for chunk Index.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     return f"{parent_id}::chunk::{int(chunk_index):04d}"
 
 
 class MarkdownTokenChunker:
-    """Naive token-window chunker for markdown-normalized documents."""
+    """Naive token-window chunker for markdown-normalized documents.
+    
+    Parameters
+    ----------
+    token_counter : TokenCounter
+        Value for token Counter.
+    chunk_size_tokens : int, optional
+        Value for chunk Size Tokens.
+    overlap_tokens : int, optional
+        Number of tokens to overlap between adjacent chunks.
+    
+    Methods
+    -------
+    chunk
+        Chunk.
+    """
 
     def __init__(
         self,
@@ -23,6 +66,22 @@ class MarkdownTokenChunker:
         chunk_size_tokens: int = 800,
         overlap_tokens: int = 80,
     ) -> None:
+        """Initialize the instance.
+        
+        Parameters
+        ----------
+        token_counter : TokenCounter
+            Value for token Counter.
+        chunk_size_tokens : int, optional
+            Value for chunk Size Tokens.
+        overlap_tokens : int, optional
+            Number of tokens to overlap between adjacent chunks.
+        
+        Raises
+        ------
+        ValueError
+            If the provided value is invalid for the operation.
+        """
         self.token_counter = token_counter
         self.chunk_size_tokens = int(chunk_size_tokens)
         self.overlap_tokens = max(0, int(overlap_tokens))
@@ -32,6 +91,18 @@ class MarkdownTokenChunker:
             raise ValueError("overlap_tokens must be smaller than chunk_size_tokens")
 
     def chunk(self, document: MarkdownDocument) -> list[DocumentChunk]:
+        """Chunk.
+        
+        Parameters
+        ----------
+        document : MarkdownDocument
+            Value for document.
+        
+        Returns
+        -------
+        list[DocumentChunk]
+            Collected results from the operation.
+        """
         windows = self.token_counter.split(
             document.text,
             max_tokens=self.chunk_size_tokens,
@@ -77,6 +148,24 @@ def get_chunks_from_markdown_documents(
     chunk_size: int = 800,
     overlap: int = 80,
 ) -> list[DocumentChunk]:
+    """Return chunks From Markdown Documents.
+    
+    Parameters
+    ----------
+    documents : Iterable[MarkdownDocument]
+        Document objects to enrich, convert, or inspect.
+    token_counter : TokenCounter
+        Value for token Counter.
+    chunk_size : int, optional
+        Value for chunk Size.
+    overlap : int, optional
+        Value for overlap.
+    
+    Returns
+    -------
+    list[DocumentChunk]
+        Requested chunks From Markdown Documents.
+    """
     chunker = MarkdownTokenChunker(
         token_counter=token_counter,
         chunk_size_tokens=chunk_size,

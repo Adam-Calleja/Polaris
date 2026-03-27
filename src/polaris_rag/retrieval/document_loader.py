@@ -99,7 +99,18 @@ def remove_link_fragment(link: str) -> str:
 
 
 def canonicalize_url(url: str) -> str:
-    """Return a stable canonical representation for an HTTP(S) URL."""
+    """Return a stable canonical representation for an HTTP(S) URL.
+    
+    Parameters
+    ----------
+    url : str
+        URL used by the operation.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     parts = urlsplit(remove_link_fragment(url.strip()))
     scheme = parts.scheme.lower()
     netloc = parts.netloc.lower()

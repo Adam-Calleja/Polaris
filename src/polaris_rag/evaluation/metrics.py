@@ -1,16 +1,27 @@
-"""polaris_rag.evaluation.metrics
+"""polaris_rag.evaluation.metrics.
 
 Modern RAGAS metric registry for Polaris evaluation.
 
-This module exposes a small factory/registry API for resolving and building
-RAGAS 0.4 metric instances from ``ragas.metrics.collections``.
+This module exposes a small factory/registry API for resolving and building RAGAS 0.4
+metric instances from ``ragas.metrics.collections``.
 
-Design goals
-------------
-- Use modern metric names only.
-- Keep metric configuration declarative and explicit.
-- Auto-gate metrics based on available dataset columns.
-- Avoid legacy/deprecated ``ragas.metrics`` import surfaces.
+Design goals ------------ - Use modern metric names only. - Keep metric configuration
+declarative and explicit. - Auto-gate metrics based on available dataset columns. -
+Avoid legacy/deprecated ``ragas.metrics`` import surfaces.
+
+Classes
+-------
+MetricSpec
+    Configuration and constructor for one evaluation metric.
+
+Functions
+---------
+list_available_metric_names
+    Return all metric names known to the registry.
+resolve_metric_specs
+    Resolve requested metric names into buildable metric specs.
+instantiate_metrics
+    Instantiate concrete RAGAS metric objects from resolved specs.
 """
 
 from __future__ import annotations
@@ -36,7 +47,17 @@ MetricBuilder = Callable[[Any, Any], Any]
 
 @dataclass(frozen=True)
 class MetricSpec:
-    """Configuration and constructor for one evaluation metric."""
+    """Configuration and constructor for one evaluation metric.
+    
+    Attributes
+    ----------
+    name : str
+        Human-readable name for the resource or tracing span.
+    required_columns : frozenset[str]
+        Value for required Columns.
+    builder : MetricBuilder
+        Value for builder.
+    """
 
     name: str
     required_columns: frozenset[str]
@@ -112,7 +133,13 @@ METRIC_REGISTRY: dict[str, MetricSpec] = {
 
 
 def list_available_metric_names() -> list[str]:
-    """Return all metric names known to the registry."""
+    """Return all metric names known to the registry.
+    
+    Returns
+    -------
+    list[str]
+        Available available Metric Names.
+    """
 
     return sorted(METRIC_REGISTRY.keys())
 
@@ -186,7 +213,22 @@ def resolve_metric_specs(
 
 
 def instantiate_metrics(specs: list[MetricSpec], *, llm: Any, embeddings: Any) -> list[Any]:
-    """Instantiate concrete RAGAS metric objects from resolved specs."""
+    """Instantiate concrete RAGAS metric objects from resolved specs.
+    
+    Parameters
+    ----------
+    specs : list[MetricSpec]
+        Value for specs.
+    llm : Any
+        Value for LLM.
+    embeddings : Any
+        Value for embeddings.
+    
+    Returns
+    -------
+    list[Any]
+        Collected results from the operation.
+    """
 
     return [spec.builder(llm, embeddings) for spec in specs]
 

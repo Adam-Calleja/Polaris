@@ -1,4 +1,22 @@
-"""Helpers for resolving ingestion conversion and chunking settings."""
+"""Helpers for resolving ingestion conversion and chunking settings.
+
+This module combines public functions and classes used by the surrounding Polaris
+subsystem.
+
+Classes
+-------
+ChunkingSettings
+    Chunking Settings.
+ConversionSettings
+    Conversion Settings.
+
+Functions
+---------
+resolve_chunking_settings
+    Resolve chunking Settings.
+resolve_conversion_settings
+    Resolve conversion Settings.
+"""
 
 from __future__ import annotations
 
@@ -18,6 +36,17 @@ DEFAULT_OVERLAP_TOKENS = 80
 
 @dataclass(frozen=True)
 class ChunkingSettings:
+    """Chunking Settings.
+    
+    Attributes
+    ----------
+    strategy : str
+        Value for strategy.
+    chunk_size_tokens : int
+        Value for chunk Size Tokens.
+    overlap_tokens : int
+        Number of tokens to overlap between adjacent chunks.
+    """
     strategy: str
     chunk_size_tokens: int
     overlap_tokens: int
@@ -25,11 +54,32 @@ class ChunkingSettings:
 
 @dataclass(frozen=True)
 class ConversionSettings:
+    """Conversion Settings.
+    
+    Attributes
+    ----------
+    engine : str
+        Value for engine.
+    options : dict[str, Any]
+        Value for options.
+    """
     engine: str
     options: dict[str, Any] = field(default_factory=dict)
 
 
 def _as_mapping(value: Any) -> Mapping[str, Any]:
+    """As Mapping.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    
+    Returns
+    -------
+    Mapping[str, Any]
+        Result of the operation.
+    """
     if isinstance(value, Mapping):
         return value
     if hasattr(value, "__dict__"):
@@ -38,6 +88,20 @@ def _as_mapping(value: Any) -> Mapping[str, Any]:
 
 
 def _resolve_int(value: Any, default: int) -> int:
+    """Resolve int.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    default : int
+        Fallback value to use when normalization fails.
+    
+    Returns
+    -------
+    int
+        Computed integer value.
+    """
     try:
         resolved = int(value)
     except (TypeError, ValueError):
@@ -46,10 +110,34 @@ def _resolve_int(value: Any, default: int) -> int:
 
 
 def _default_chunking_strategy(source: str) -> str:
+    """Default Chunking Strategy.
+    
+    Parameters
+    ----------
+    source : str
+        Source definition, source name, or source identifier to process.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     return MARKDOWN_TOKEN_CHUNKING_STRATEGY
 
 
 def _default_conversion_engine(source: str) -> str:
+    """Default Conversion Engine.
+    
+    Parameters
+    ----------
+    source : str
+        Source definition, source name, or source identifier to process.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     if source == "tickets":
         return NATIVE_JIRA_CONVERSION_ENGINE
     return MARKITDOWN_CONVERSION_ENGINE
@@ -63,6 +151,31 @@ def resolve_chunking_settings(
     chunk_size_override: int | None = None,
     overlap_override: int | None = None,
 ) -> ChunkingSettings:
+    """Resolve chunking Settings.
+    
+    Parameters
+    ----------
+    cfg : Any
+        Configuration object or mapping used to resolve runtime settings.
+    source : str
+        Source definition, source name, or source identifier to process.
+    strategy_override : str or None, optional
+        Value for strategy Override.
+    chunk_size_override : int or None, optional
+        Value for chunk Size Override.
+    overlap_override : int or None, optional
+        Value for overlap Override.
+    
+    Returns
+    -------
+    ChunkingSettings
+        Resolved chunking Settings.
+    
+    Raises
+    ------
+    ValueError
+        If the provided value is invalid for the operation.
+    """
     ingestion_cfg = _as_mapping(getattr(cfg, "ingestion", None))
     chunking_cfg = _as_mapping(ingestion_cfg.get("chunking"))
     default_cfg = _as_mapping(chunking_cfg.get("default"))
@@ -105,6 +218,22 @@ def resolve_conversion_settings(
     source: str,
     engine_override: str | None = None,
 ) -> ConversionSettings:
+    """Resolve conversion Settings.
+    
+    Parameters
+    ----------
+    cfg : Any
+        Configuration object or mapping used to resolve runtime settings.
+    source : str
+        Source definition, source name, or source identifier to process.
+    engine_override : str or None, optional
+        Value for engine Override.
+    
+    Returns
+    -------
+    ConversionSettings
+        Resolved conversion Settings.
+    """
     ingestion_cfg = _as_mapping(getattr(cfg, "ingestion", None))
     conversion_cfg = _as_mapping(ingestion_cfg.get("conversion"))
     default_cfg = _as_mapping(conversion_cfg.get("default"))

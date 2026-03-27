@@ -52,6 +52,10 @@ class Document:
     metadata: Dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self):
+        """Normalize instance state after initialization.
+        
+        This helper is internal to `Document`.
+        """
         if self.node_id is None:
             self.node_id = self.id
 
@@ -85,6 +89,10 @@ class MarkdownDocument:
     source_node: Any = None
 
     def __post_init__(self):
+        """Normalize instance state after initialization.
+        
+        This helper is internal to `MarkdownDocument`.
+        """
         if self.node_id is None:
             self.node_id = self.id
         self.metadata = dict(self.metadata or {})
@@ -130,5 +138,9 @@ class DocumentChunk:
     source_node: Document = None
 
     def __post_init__(self):
+        """Normalize instance state after initialization.
+        
+        This helper is internal to `DocumentChunk`.
+        """
         if self.node_id is None:
             self.node_id = self.id

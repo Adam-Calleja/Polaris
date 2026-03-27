@@ -93,6 +93,18 @@ def _coerce_transport_kwarg(key: str, value: Any) -> Any:
 
 
 def _coerce_timeout_seconds(value: Any) -> float | None:
+    """Coerce timeout Seconds.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    
+    Returns
+    -------
+    float or None
+        Result of the operation.
+    """
     if value is None:
         return None
     try:
@@ -103,6 +115,18 @@ def _coerce_timeout_seconds(value: Any) -> float | None:
 
 
 def _coerce_retry_count(value: Any) -> int | None:
+    """Coerce retry Count.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    
+    Returns
+    -------
+    int or None
+        Result of the operation.
+    """
     if value is None:
         return None
     try:
@@ -113,6 +137,18 @@ def _coerce_retry_count(value: Any) -> int | None:
 
 
 def _strip_runtime_only_kwargs(kwargs: dict[str, Any]) -> dict[str, Any]:
+    """Strip Runtime Only Kwargs.
+    
+    Parameters
+    ----------
+    kwargs : dict[str, Any]
+        Value for kwargs.
+    
+    Returns
+    -------
+    dict[str, Any]
+        Structured result of the operation.
+    """
     sanitized = dict(kwargs)
     for key in ("callbacks", "callback_manager", "request_timeout", "timeout", "max_retries"):
         sanitized.pop(key, None)
@@ -120,6 +156,18 @@ def _strip_runtime_only_kwargs(kwargs: dict[str, Any]) -> dict[str, Any]:
 
 
 def _chat_completion_to_text(response: Any) -> str:
+    """Chat Completion To Text.
+    
+    Parameters
+    ----------
+    response : Any
+        HTTP response object or normalized backend response.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     choices = getattr(response, "choices", None) or []
     if not choices:
         return ""
@@ -141,6 +189,18 @@ def _chat_completion_to_text(response: Any) -> str:
 
 
 def _completion_to_text(response: Any) -> str:
+    """Completion To Text.
+    
+    Parameters
+    ----------
+    response : Any
+        HTTP response object or normalized backend response.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     choices = getattr(response, "choices", None) or []
     if not choices:
         return ""
@@ -251,9 +311,20 @@ class _SimpleResult:
 
 class BaseLLM(ABC):
     """Abstract interface for LLM text generation.
-
-    Concrete implementations wrap provider-specific clients and expose a
-    small, consistent API used by the Polaris RAG pipeline.
+    
+    Concrete implementations wrap provider-specific clients and expose a small,
+    consistent API used by the Polaris RAG pipeline.
+    
+    Methods
+    -------
+    from_config
+        Create an LLM instance from a YAML configuration file.
+    from_config_dict
+        Create an LLM instance from a configuration mapping.
+    get_llm
+        Return the underlying LangChain LLM object.
+    generate
+        Generate text for a single prompt.
     """
     @classmethod
     @abstractmethod
@@ -353,9 +424,43 @@ class BaseLLM(ABC):
 
 class OpenAILikeLLM(BaseLLM):
     """LLM interface using an OpenAI-compatible API.
-
-    This implementation wraps :class:`langchain_openai.OpenAI` and exposes a
-    small synchronous/async surface used throughout the codebase.
+    
+    This implementation wraps :class:`langchain_openai.OpenAI` and exposes a small
+    synchronous/async surface used throughout the codebase.
+    
+    Parameters
+    ----------
+    model_name : str
+        Value for model Name.
+    api_base : str
+        Base URL of the configured HTTP dependency.
+    api_key : str, optional
+        Value for API Key.
+    callback_manager : BaseCallbackHandler, optional
+        Value for callback Manager.
+    **model_kwargs : Any
+        Value for model Kwargs.
+    
+    Methods
+    -------
+    get_stop_list
+        Return the configured default stop sequences.
+    from_config
+        Create an :class:`~polaris_rag.generation.llm_interface.OpenAILikeLLM`
+        from YAML.
+    from_config_dict
+        Create an :class:`~polaris_rag.generation.llm_interface.OpenAILikeLLM`
+        from a mapping.
+    get_llm
+        Return the underlying LangChain LLM object.
+    generate
+        Generate text for a single prompt.
+    generate_prompt
+        Generate text for a single prompt.
+    acomplete
+        Asynchronously generate text for a single prompt.
+    agenerate_prompt
+        Asynchronously generate text for a batch of prompts.
     """
 
     def __init__(
@@ -425,12 +530,38 @@ class OpenAILikeLLM(BaseLLM):
         )
 
     def _client_timeout_seconds(self, timeout_seconds: float | None, run_kwargs: dict[str, Any]) -> float | None:
+        """Client Timeout Seconds.
+        
+        Parameters
+        ----------
+        timeout_seconds : float or None, optional
+            timeout Seconds expressed in seconds.
+        run_kwargs : dict[str, Any]
+            Value for run Kwargs.
+        
+        Returns
+        -------
+        float or None
+            Result of the operation.
+        """
         per_call_timeout = _coerce_timeout_seconds(
             run_kwargs.pop("timeout", run_kwargs.pop("request_timeout", None))
         )
         return _coerce_timeout_seconds(timeout_seconds) or per_call_timeout or self.default_timeout_seconds
 
     def _build_openai_client(self, *, timeout_seconds: float | None = None) -> OpenAIClient:
+        """Build openai Client.
+        
+        Parameters
+        ----------
+        timeout_seconds : float or None, optional
+            timeout Seconds expressed in seconds.
+        
+        Returns
+        -------
+        OpenAIClient
+            Result of the operation.
+        """
         client_kwargs: dict[str, Any] = {
             "api_key": self.api_key,
             "base_url": self.api_base,
@@ -713,8 +844,40 @@ class OpenAILikeLLM(BaseLLM):
 
 class OpenAIChatLikeLLM(BaseLLM):
     """LLM interface using an OpenAI-compatible Chat Completions API via LangChain.
-
+    
     This implementation wraps :class:`langchain_openai.ChatOpenAI`.
+    
+    Parameters
+    ----------
+    model_name : str
+        Value for model Name.
+    api_base : str
+        Base URL of the configured HTTP dependency.
+    api_key : str, optional
+        Value for API Key.
+    callback_manager : BaseCallbackHandler, optional
+        Value for callback Manager.
+    **model_kwargs : Any
+        Value for model Kwargs.
+    
+    Methods
+    -------
+    get_stop_list
+        Return the configured default stop sequences.
+    from_config
+        Create an OpenAI-compatible chat LLM from YAML.
+    from_config_dict
+        Create an OpenAI-compatible chat LLM from a mapping.
+    get_llm
+        Return the underlying LangChain chat model object.
+    generate
+        Generate text for a single prompt.
+    generate_prompt
+        Alias for ``generate`` kept for compatibility.
+    acomplete
+        Asynchronously generate text for a single prompt.
+    agenerate_prompt
+        Asynchronously generate text for a batch of prompts.
     """
 
     def __init__(
@@ -799,12 +962,38 @@ class OpenAIChatLikeLLM(BaseLLM):
         self.llm = ChatOpenAI(**init_kwargs)
 
     def _client_timeout_seconds(self, timeout_seconds: float | None, run_kwargs: dict[str, Any]) -> float | None:
+        """Client Timeout Seconds.
+        
+        Parameters
+        ----------
+        timeout_seconds : float or None, optional
+            timeout Seconds expressed in seconds.
+        run_kwargs : dict[str, Any]
+            Value for run Kwargs.
+        
+        Returns
+        -------
+        float or None
+            Result of the operation.
+        """
         per_call_timeout = _coerce_timeout_seconds(
             run_kwargs.pop("timeout", run_kwargs.pop("request_timeout", None))
         )
         return _coerce_timeout_seconds(timeout_seconds) or per_call_timeout or self.default_timeout_seconds
 
     def _build_openai_client(self, *, timeout_seconds: float | None = None) -> OpenAIClient:
+        """Build openai Client.
+        
+        Parameters
+        ----------
+        timeout_seconds : float or None, optional
+            timeout Seconds expressed in seconds.
+        
+        Returns
+        -------
+        OpenAIClient
+            Result of the operation.
+        """
         client_kwargs: dict[str, Any] = {
             "api_key": self.api_key,
             "base_url": self.api_base,
@@ -818,7 +1007,13 @@ class OpenAIChatLikeLLM(BaseLLM):
         return OpenAIClient(**client_kwargs)
 
     def get_stop_list(self) -> list[str] | None:
-        """Return the configured default stop sequences."""
+        """Return the configured default stop sequences.
+        
+        Returns
+        -------
+        list[str] or None
+            Requested stop List.
+        """
         return self.default_stop_list
 
     @classmethod
@@ -827,7 +1022,15 @@ class OpenAIChatLikeLLM(BaseLLM):
         config_path: str,
         callback_manager: BaseCallbackHandler = None,
     ):
-        """Create an OpenAI-compatible chat LLM from YAML."""
+        """Create an OpenAI-compatible chat LLM from YAML.
+        
+        Parameters
+        ----------
+        config_path : str
+            Filesystem path used by the operation.
+        callback_manager : BaseCallbackHandler, optional
+            Value for callback Manager.
+        """
         with open(config_path, 'r') as f:
             cfg = yaml.safe_load(f)
         return cls.from_config_dict(cfg, callback_manager)
@@ -838,7 +1041,20 @@ class OpenAIChatLikeLLM(BaseLLM):
         config: dict,
         callback_manager: BaseCallbackHandler = None,
     ) -> "OpenAIChatLikeLLM":
-        """Create an OpenAI-compatible chat LLM from a mapping."""
+        """Create an OpenAI-compatible chat LLM from a mapping.
+        
+        Parameters
+        ----------
+        config : dict
+            Configuration object or mapping used by the operation.
+        callback_manager : BaseCallbackHandler, optional
+            Value for callback Manager.
+        
+        Returns
+        -------
+        OpenAIChatLikeLLM
+            Result of the operation.
+        """
         model_name = config.get('model_name')
         api_base = config.get('api_base')
         model_kwargs = _merge_supported_transport_kwargs(
@@ -856,7 +1072,13 @@ class OpenAIChatLikeLLM(BaseLLM):
         )
 
     def get_llm(self) -> Any:
-        """Return the underlying LangChain chat model object."""
+        """Return the underlying LangChain chat model object.
+        
+        Returns
+        -------
+        Any
+            Requested LLM.
+        """
         return self.llm
 
     def generate(
@@ -866,7 +1088,27 @@ class OpenAIChatLikeLLM(BaseLLM):
         timeout_seconds: float | None = None,
         **kwargs,
     ) -> Any:
-        """Generate text for a single prompt."""
+        """Generate text for a single prompt.
+        
+        Parameters
+        ----------
+        prompt : str
+            User prompt or query text to send to the backend.
+        timeout_seconds : float or None, optional
+            timeout Seconds expressed in seconds.
+        **kwargs : Any
+            Value for kwargs.
+        
+        Returns
+        -------
+        Any
+            Result of the operation.
+        
+        Raises
+        ------
+        GenerationTimeoutError
+            If `GenerationTimeoutError` is raised while executing the operation.
+        """
         if not isinstance(prompt, str):
             prompt = prompt.to_string() if hasattr(prompt, "to_string") else str(prompt)
 
@@ -897,11 +1139,42 @@ class OpenAIChatLikeLLM(BaseLLM):
         return _chat_completion_to_text(response)
 
     def generate_prompt(self, prompt: str, **kwargs) -> Any:
-        """Alias for ``generate`` kept for compatibility."""
+        """Alias for ``generate`` kept for compatibility.
+        
+        Parameters
+        ----------
+        prompt : str
+            User prompt or query text to send to the backend.
+        **kwargs : Any
+            Value for kwargs.
+        
+        Returns
+        -------
+        Any
+            Result of the operation.
+        """
         return self.generate(prompt, **kwargs)
 
     async def acomplete(self, prompt: str, **kwargs) -> Any:
-        """Asynchronously generate text for a single prompt."""
+        """Asynchronously generate text for a single prompt.
+        
+        Parameters
+        ----------
+        prompt : str
+            User prompt or query text to send to the backend.
+        **kwargs : Any
+            Value for kwargs.
+        
+        Returns
+        -------
+        Any
+            Result of the operation.
+        
+        Raises
+        ------
+        GenerationTimeoutError
+            If `GenerationTimeoutError` is raised while executing the operation.
+        """
         run_kwargs = dict(self.request_defaults)
         if hasattr(self, "run_config"):
             run_kwargs.update(dict(self.run_config))
@@ -942,7 +1215,20 @@ class OpenAIChatLikeLLM(BaseLLM):
         return _chat_completion_to_text(response)
 
     async def agenerate_prompt(self, prompts: list[str], **kwargs) -> list[Any]:
-        """Asynchronously generate text for a batch of prompts."""
+        """Asynchronously generate text for a batch of prompts.
+        
+        Parameters
+        ----------
+        prompts : list[str]
+            Value for prompts.
+        **kwargs : Any
+            Value for kwargs.
+        
+        Returns
+        -------
+        list[Any]
+            Collected results from the operation.
+        """
         kwargs.pop("callbacks", None)
         kwargs.pop("callback_manager", None)
 
@@ -955,8 +1241,44 @@ class OpenAIChatLikeLLM(BaseLLM):
         return _SimpleResult(gen_results)
 
 class HuggingFaceTGI(BaseLLM):
-    """
-    An LLM interface using Hugging Face Text Generation Inference (TGI).
+    """An LLM interface using Hugging Face Text Generation Inference (TGI).
+    
+    Parameters
+    ----------
+    inference_server_url : str
+        URL used by the operation.
+    callback_manager : BaseCallbackHandler, optional
+        Value for callback Manager.
+    stop_sequences : list[str] or None, optional
+        Value for stop Sequences.
+    temperature : float or None, optional
+        Value for temperature.
+    repetition_penalty : float or None, optional
+        Value for repetition Penalty.
+    max_new_tokens : int or None, optional
+        Value for max New Tokens.
+    **model_kwargs : Any
+        Value for model Kwargs.
+    
+    Methods
+    -------
+    get_stop_list
+        Return the configured default stop sequences.
+    from_config
+        Create a ``HuggingFaceTGI`` instance from a YAML configuration file.
+    from_config_dict
+        Create a ``HuggingFaceTGI`` instance from a configuration dictionary.
+    get_llm
+        Return the underlying LangChain LLM object.
+    generate
+        Generate text for a single prompt synchronously.
+    generate_prompt
+        Alias for ``generate`` kept for compatibility with callers expecting a
+        ``generate_prompt`` API.
+    acomplete
+        Asynchronously generate text for a single prompt.
+    agenerate_prompt
+        Asynchronously generate text for a batch of prompts.
     """
 
     def __init__(

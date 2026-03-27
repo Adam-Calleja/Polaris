@@ -1,4 +1,22 @@
-"""Helpers for converting Polaris documents/chunks to nodes and serializing trace metadata."""
+"""Helpers for converting Polaris documents/chunks to nodes and serializing trace metadata.
+
+This module exposes public helper functions used by the surrounding Polaris subsystem.
+
+Functions
+---------
+chunk_to_text_node
+    Convert a chunk-like object into a ``TextNode`` with source linkage.
+document_to_text_node
+    Convert a document-like object into a ``TextNode``.
+extract_doc_id
+    Extract a stable document identifier from a node-like object.
+extract_text
+    Extract text content from a node-like object.
+serialize_source_nodes
+    Serialize source nodes into a deterministic, analysis-safe trace shape.
+trace_metadata_keys
+    Return metadata keys included in trace serialization.
+"""
 
 from __future__ import annotations
 
@@ -30,6 +48,18 @@ _TRACE_METADATA_KEYS: tuple[str, ...] = (
 
 
 def _source_relationship(parent_id: str | None) -> dict[NodeRelationship, RelatedNodeInfo]:
+    """Source Relationship.
+    
+    Parameters
+    ----------
+    parent_id : str or None, optional
+        Stable identifier for parent.
+    
+    Returns
+    -------
+    dict[NodeRelationship, RelatedNodeInfo]
+        Structured result of the operation.
+    """
     if not isinstance(parent_id, str) or not parent_id:
         return {}
 
@@ -44,7 +74,18 @@ def _source_relationship(parent_id: str | None) -> dict[NodeRelationship, Relate
 
 
 def chunk_to_text_node(chunk: Any) -> TextNode:
-    """Convert a chunk-like object into a ``TextNode`` with source linkage."""
+    """Convert a chunk-like object into a ``TextNode`` with source linkage.
+    
+    Parameters
+    ----------
+    chunk : Any
+        Value for chunk.
+    
+    Returns
+    -------
+    TextNode
+        Result of the operation.
+    """
     text = getattr(chunk, "text", "") or ""
     chunk_id = str(getattr(chunk, "id", "") or "")
     document_type = str(getattr(chunk, "document_type", "") or "")
@@ -65,7 +106,18 @@ def chunk_to_text_node(chunk: Any) -> TextNode:
 
 
 def document_to_text_node(document: Any) -> TextNode:
-    """Convert a document-like object into a ``TextNode``."""
+    """Convert a document-like object into a ``TextNode``.
+    
+    Parameters
+    ----------
+    document : Any
+        Value for document.
+    
+    Returns
+    -------
+    TextNode
+        Result of the operation.
+    """
     text = getattr(document, "text", "") or ""
     document_id = str(getattr(document, "id", "") or "")
     document_type = str(getattr(document, "document_type", "") or "")
@@ -78,7 +130,18 @@ def document_to_text_node(document: Any) -> TextNode:
 
 
 def extract_doc_id(node: Any) -> str:
-    """Extract a stable document identifier from a node-like object."""
+    """Extract a stable document identifier from a node-like object.
+    
+    Parameters
+    ----------
+    node : Any
+        Value for node.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
 
     for attr in ("id_", "node_id", "id"):
         value = getattr(node, attr, None)
@@ -88,7 +151,18 @@ def extract_doc_id(node: Any) -> str:
 
 
 def extract_text(node: Any) -> str:
-    """Extract text content from a node-like object."""
+    """Extract text content from a node-like object.
+    
+    Parameters
+    ----------
+    node : Any
+        Value for node.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
 
     text = getattr(node, "text", None)
     if isinstance(text, str):
@@ -107,7 +181,20 @@ def serialize_source_nodes(
     *,
     include_text: bool = True,
 ) -> list[dict[str, Any]]:
-    """Serialize source nodes into a deterministic, analysis-safe trace shape."""
+    """Serialize source nodes into a deterministic, analysis-safe trace shape.
+    
+    Parameters
+    ----------
+    source_nodes : list[Any]
+        Retrieved nodes or node wrappers to serialize.
+    include_text : bool, optional
+        Whether to include text.
+    
+    Returns
+    -------
+    list[dict[str, Any]]
+        Serialized source Nodes.
+    """
 
     records: list[dict[str, Any]] = []
     for idx, source in enumerate(source_nodes, start=1):
@@ -148,12 +235,30 @@ def serialize_source_nodes(
 
 
 def trace_metadata_keys() -> tuple[str, ...]:
-    """Return metadata keys included in trace serialization."""
+    """Return metadata keys included in trace serialization.
+    
+    Returns
+    -------
+    tuple[str, ...]
+        Result of the operation.
+    """
 
     return _TRACE_METADATA_KEYS
 
 
 def _node_metadata(node: Any) -> dict[str, Any]:
+    """Node Metadata.
+    
+    Parameters
+    ----------
+    node : Any
+        Value for node.
+    
+    Returns
+    -------
+    dict[str, Any]
+        Structured result of the operation.
+    """
     metadata = getattr(node, "metadata", None)
     if isinstance(metadata, dict):
         return dict(metadata)
@@ -161,6 +266,18 @@ def _node_metadata(node: Any) -> dict[str, Any]:
 
 
 def _optional_string(value: Any) -> str | None:
+    """Optional String.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    
+    Returns
+    -------
+    str or None
+        Result of the operation.
+    """
     if value is None:
         return None
     text = str(value).strip()
@@ -168,6 +285,18 @@ def _optional_string(value: Any) -> str | None:
 
 
 def _optional_int(value: Any) -> int | None:
+    """Optional Int.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    
+    Returns
+    -------
+    int or None
+        Result of the operation.
+    """
     if value is None:
         return None
     try:
@@ -177,12 +306,36 @@ def _optional_int(value: Any) -> int | None:
 
 
 def _string_list(value: Any) -> list[str]:
+    """String List.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    
+    Returns
+    -------
+    list[str]
+        Collected results from the operation.
+    """
     if not isinstance(value, list):
         return []
     return [str(item) for item in value if str(item).strip()]
 
 
 def _normalize_matches(value: Any) -> list[dict[str, Any]]:
+    """Normalize matches.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    
+    Returns
+    -------
+    list[dict[str, Any]]
+        Collected results from the operation.
+    """
     if not isinstance(value, list):
         return []
     matches: list[dict[str, Any]] = []
@@ -205,6 +358,18 @@ def _normalize_matches(value: Any) -> list[dict[str, Any]]:
 
 
 def _normalized_value(value: Any) -> Any:
+    """Normalized Value.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    
+    Returns
+    -------
+    Any
+        Result of the operation.
+    """
     if value is None or isinstance(value, (str, int, float, bool)):
         return value
     if isinstance(value, dict):

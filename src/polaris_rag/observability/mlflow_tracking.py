@@ -1,4 +1,46 @@
-"""MLflow tracking and tracing helpers for Polaris."""
+"""MLflow tracking and tracing helpers for Polaris.
+
+This module combines public functions and classes used by the surrounding Polaris
+subsystem.
+
+Classes
+-------
+TraceRuntimeConfig
+    Tracing-specific MLflow runtime options.
+PromptRegistryRuntimeConfig
+    Prompt-registry-specific MLflow runtime options.
+MLflowRuntimeConfig
+    Resolved MLflow runtime configuration.
+EvaluationStageContext
+    Tracing and correlation helpers for one evaluation stage.
+EvaluationTrackingContext
+    Context manager wrapper for MLflow evaluation tracking.
+
+Functions
+---------
+load_mlflow_runtime_config
+    Resolve runtime MLflow configuration from global config/raw mapping.
+apply_mlflow_overrides
+    Return a copy of MLflow runtime config with CLI overrides applied.
+configure_mlflow_runtime
+    Configure MLflow tracking URI/experiment and optional tracing destination.
+flatten_for_logging
+    Flatten nested config/manifest dictionaries for param logging.
+build_environment_snapshot
+    Build a JSON-serializable environment snapshot artifact.
+start_span
+    Start an MLflow trace span when tracing is enabled; otherwise no-op.
+update_current_trace
+    Update current trace metadata/tags when supported by MLflow build.
+set_span_attributes
+    Set span attributes in a version-compatible manner.
+set_span_inputs
+    Set span inputs when supported.
+set_span_outputs
+    Set span outputs when supported.
+start_detached_span
+    Start a span without attaching it to the active tracing context.
+"""
 
 from __future__ import annotations
 
@@ -25,7 +67,15 @@ _TRACING_ENABLED = False
 
 @dataclass(frozen=True)
 class TraceRuntimeConfig:
-    """Tracing-specific MLflow runtime options."""
+    """Tracing-specific MLflow runtime options.
+    
+    Attributes
+    ----------
+    enabled : bool
+        Value for enabled.
+    destination_experiment : str or None
+        Value for destination Experiment.
+    """
 
     enabled: bool = False
     destination_experiment: str | None = None
@@ -33,7 +83,17 @@ class TraceRuntimeConfig:
 
 @dataclass(frozen=True)
 class PromptRegistryRuntimeConfig:
-    """Prompt-registry-specific MLflow runtime options."""
+    """Prompt-registry-specific MLflow runtime options.
+    
+    Attributes
+    ----------
+    enabled : bool
+        Value for enabled.
+    name : str or None
+        Human-readable name for the resource or tracing span.
+    alias : str
+        Value for alias.
+    """
 
     enabled: bool = False
     name: str | None = None
@@ -42,7 +102,23 @@ class PromptRegistryRuntimeConfig:
 
 @dataclass(frozen=True)
 class MLflowRuntimeConfig:
-    """Resolved MLflow runtime configuration."""
+    """Resolved MLflow runtime configuration.
+    
+    Attributes
+    ----------
+    enabled : bool
+        Value for enabled.
+    tracking_uri : str or None
+        Value for tracking Uri.
+    experiment_name : str
+        Value for experiment Name.
+    tags : dict[str, str] or None
+        Value for tags.
+    tracing : TraceRuntimeConfig
+        Value for tracing.
+    prompt_registry : PromptRegistryRuntimeConfig
+        Value for prompt Registry.
+    """
 
     enabled: bool = False
     tracking_uri: str | None = None
@@ -56,18 +132,63 @@ class _NoopSpan:
     """Best-effort no-op span for environments without MLflow tracing."""
 
     def set_inputs(self, *_args: Any, **_kwargs: Any) -> None:
+        """Set Inputs.
+        
+        Parameters
+        ----------
+        *_args : Any
+            Value for args.
+        **_kwargs : Any
+            Value for kwargs.
+        """
         return None
 
     def set_outputs(self, *_args: Any, **_kwargs: Any) -> None:
+        """Set Outputs.
+        
+        Parameters
+        ----------
+        *_args : Any
+            Value for args.
+        **_kwargs : Any
+            Value for kwargs.
+        """
         return None
 
     def set_attributes(self, *_args: Any, **_kwargs: Any) -> None:
+        """Set Attributes.
+        
+        Parameters
+        ----------
+        *_args : Any
+            Value for args.
+        **_kwargs : Any
+            Value for kwargs.
+        """
         return None
 
     def set_attribute(self, *_args: Any, **_kwargs: Any) -> None:
+        """Set Attribute.
+        
+        Parameters
+        ----------
+        *_args : Any
+            Value for args.
+        **_kwargs : Any
+            Value for kwargs.
+        """
         return None
 
     def end(self, *_args: Any, **_kwargs: Any) -> None:
+        """End.
+        
+        Parameters
+        ----------
+        *_args : Any
+            Value for args.
+        **_kwargs : Any
+            Value for kwargs.
+        """
         return None
 
 
@@ -75,28 +196,79 @@ class _SpanGroup:
     """Fan-out span helper for mirrored tracing."""
 
     def __init__(self, spans: list[Any]):
+        """Initialize the instance.
+        
+        Parameters
+        ----------
+        spans : list[Any]
+            Value for spans.
+        """
         self._spans = [span for span in spans if span is not None]
 
     def set_inputs(self, inputs: Any) -> None:
+        """Set Inputs.
+        
+        Parameters
+        ----------
+        inputs : Any
+            Input payload to record or pass through the operation.
+        """
         for span in self._spans:
             set_span_inputs(span, inputs)
 
     def set_outputs(self, outputs: Any) -> None:
+        """Set Outputs.
+        
+        Parameters
+        ----------
+        outputs : Any
+            Output payload to record or propagate.
+        """
         for span in self._spans:
             set_span_outputs(span, outputs)
 
     def set_attributes(self, attributes: Mapping[str, Any]) -> None:
+        """Set Attributes.
+        
+        Parameters
+        ----------
+        attributes : Mapping[str, Any]
+            Tracing attributes to attach to the current span or recorder.
+        """
         for span in self._spans:
             set_span_attributes(span, attributes)
 
     def set_attribute(self, key: str, value: Any) -> None:
+        """Set Attribute.
+        
+        Parameters
+        ----------
+        key : str
+            Value for key.
+        value : Any
+            Input value to normalize, coerce, or inspect.
+        """
         for span in self._spans:
             set_span_attributes(span, {key: value})
 
 
 @dataclass(frozen=True)
 class EvaluationStageContext:
-    """Tracing and correlation helpers for one evaluation stage."""
+    """Tracing and correlation helpers for one evaluation stage.
+    
+    Attributes
+    ----------
+    name : str
+        Human-readable name for the resource or tracing span.
+    parent_run_id : str or None
+        Stable identifier for parent Run.
+    child_run_id : str or None
+        Stable identifier for child Run.
+    stage_root_span : Any or None
+        Value for stage Root Span.
+    aggregate_stage_span : Any or None
+        Value for aggregate Stage Span.
+    """
 
     name: str
     parent_run_id: str | None
@@ -105,6 +277,13 @@ class EvaluationStageContext:
     aggregate_stage_span: Any | None = None
 
     def correlation_headers(self) -> dict[str, str]:
+        """Correlation Headers.
+        
+        Returns
+        -------
+        dict[str, str]
+            Structured result of the operation.
+        """
         headers: dict[str, str] = {}
         if self.parent_run_id:
             headers[TRACE_PARENT_RUN_HEADER] = self.parent_run_id
@@ -122,7 +301,24 @@ class EvaluationStageContext:
         inputs: Any | None = None,
         outputs: Any | None = None,
     ) -> Iterator[_SpanGroup]:
-        """Open a child span in the active child trace and mirror it to the parent trace."""
+        """Open a child span in the active child trace and mirror it to the parent trace.
+        
+        Parameters
+        ----------
+        name : str
+            Human-readable name for the resource or tracing span.
+        attributes : Mapping[str, Any] or None, optional
+            Tracing attributes to attach to the current span or recorder.
+        inputs : Any or None, optional
+            Input payload to record or pass through the operation.
+        outputs : Any or None, optional
+            Output payload to record or propagate.
+        
+        Returns
+        -------
+        Iterator[_SpanGroup]
+            Result of the operation.
+        """
 
         with contextlib.ExitStack() as stack:
             child_span = stack.enter_context(
@@ -154,7 +350,26 @@ class EvaluationStageContext:
         outputs: Any | None = None,
         include_child_trace: bool = True,
     ) -> Iterator[_SpanGroup]:
-        """Open mirrored detached spans for worker-thread or cross-cutting events."""
+        """Open mirrored detached spans for worker-thread or cross-cutting events.
+        
+        Parameters
+        ----------
+        name : str
+            Human-readable name for the resource or tracing span.
+        attributes : Mapping[str, Any] or None, optional
+            Tracing attributes to attach to the current span or recorder.
+        inputs : Any or None, optional
+            Input payload to record or pass through the operation.
+        outputs : Any or None, optional
+            Output payload to record or propagate.
+        include_child_trace : bool, optional
+            Whether to create a child-trace span in addition to the aggregate trace.
+        
+        Returns
+        -------
+        Iterator[_SpanGroup]
+            Result of the operation.
+        """
 
         with contextlib.ExitStack() as stack:
             child_span = None
@@ -181,6 +396,18 @@ class EvaluationStageContext:
 
 
 def _as_mapping(obj: Any) -> Mapping[str, Any]:
+    """As Mapping.
+    
+    Parameters
+    ----------
+    obj : Any
+        Value for obj.
+    
+    Returns
+    -------
+    Mapping[str, Any]
+        Result of the operation.
+    """
     if isinstance(obj, Mapping):
         return obj
     if hasattr(obj, "__dict__"):
@@ -189,6 +416,20 @@ def _as_mapping(obj: Any) -> Mapping[str, Any]:
 
 
 def _as_bool(value: Any, default: bool) -> bool:
+    """As Bool.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    default : bool
+        Fallback value to use when normalization fails.
+    
+    Returns
+    -------
+    bool
+        `True` if as Bool; otherwise `False`.
+    """
     if value is None:
         return default
     if isinstance(value, bool):
@@ -203,6 +444,13 @@ def _as_bool(value: Any, default: bool) -> bool:
 
 
 def _import_mlflow() -> Any | None:
+    """Import MLflow.
+    
+    Returns
+    -------
+    Any or None
+        Result of the operation.
+    """
     try:
         import mlflow  # type: ignore
 
@@ -212,6 +460,20 @@ def _import_mlflow() -> Any | None:
 
 
 def _filter_supported_kwargs(func: Any, kwargs: Mapping[str, Any]) -> dict[str, Any]:
+    """Filter Supported Kwargs.
+    
+    Parameters
+    ----------
+    func : Any
+        Value for func.
+    kwargs : Mapping[str, Any]
+        Value for kwargs.
+    
+    Returns
+    -------
+    dict[str, Any]
+        Structured result of the operation.
+    """
     try:
         sig = inspect.signature(func)
     except (TypeError, ValueError):
@@ -226,6 +488,24 @@ def _filter_supported_kwargs(func: Any, kwargs: Mapping[str, Any]) -> dict[str, 
 
 
 def _call_if_available(obj: Any, method_name: str, *args: Any, **kwargs: Any) -> Any | None:
+    """Call If Available.
+    
+    Parameters
+    ----------
+    obj : Any
+        Value for obj.
+    method_name : str
+        Value for method Name.
+    *args : Any
+        Value for args.
+    **kwargs : Any
+        Value for kwargs.
+    
+    Returns
+    -------
+    Any or None
+        Result of the operation.
+    """
     method = getattr(obj, method_name, None)
     if method is None:
         return None
@@ -237,7 +517,18 @@ def _call_if_available(obj: Any, method_name: str, *args: Any, **kwargs: Any) ->
 
 
 def load_mlflow_runtime_config(cfg: Any) -> MLflowRuntimeConfig:
-    """Resolve runtime MLflow configuration from global config/raw mapping."""
+    """Resolve runtime MLflow configuration from global config/raw mapping.
+    
+    Parameters
+    ----------
+    cfg : Any
+        Configuration object or mapping used to resolve runtime settings.
+    
+    Returns
+    -------
+    MLflowRuntimeConfig
+        Loaded mlflow Runtime Config.
+    """
 
     raw = _as_mapping(getattr(cfg, "raw", cfg))
     mlflow_cfg = _as_mapping(raw.get("mlflow", {}))
@@ -288,7 +579,22 @@ def apply_mlflow_overrides(
     enabled: bool | None = None,
     experiment_name: str | None = None,
 ) -> MLflowRuntimeConfig:
-    """Return a copy of MLflow runtime config with CLI overrides applied."""
+    """Return a copy of MLflow runtime config with CLI overrides applied.
+    
+    Parameters
+    ----------
+    config : MLflowRuntimeConfig
+        Configuration object or mapping used by the operation.
+    enabled : bool or None, optional
+        Value for enabled.
+    experiment_name : str or None, optional
+        Value for experiment Name.
+    
+    Returns
+    -------
+    MLflowRuntimeConfig
+        Result of the operation.
+    """
 
     updated = config
     if enabled is not None:
@@ -299,6 +605,20 @@ def apply_mlflow_overrides(
 
 
 def _resolve_experiment_id(mlflow: Any, experiment_name: str) -> str | None:
+    """Resolve experiment ID.
+    
+    Parameters
+    ----------
+    mlflow : Any
+        Value for mlflow.
+    experiment_name : str
+        Value for experiment Name.
+    
+    Returns
+    -------
+    str or None
+        Result of the operation.
+    """
     get_experiment_by_name = getattr(mlflow, "get_experiment_by_name", None)
     if get_experiment_by_name is None:
         return None
@@ -317,6 +637,15 @@ def _resolve_experiment_id(mlflow: Any, experiment_name: str) -> str | None:
 
 
 def _configure_trace_destination(mlflow: Any, destination_experiment: str) -> None:
+    """Configure Trace Destination.
+    
+    Parameters
+    ----------
+    mlflow : Any
+        Value for mlflow.
+    destination_experiment : str
+        Value for destination Experiment.
+    """
     tracing_api = getattr(mlflow, "tracing", None)
     set_destination = getattr(tracing_api, "set_destination", None)
     if set_destination is None:
@@ -357,7 +686,25 @@ def configure_mlflow_runtime(
     *,
     strict: bool = False,
 ) -> Any | None:
-    """Configure MLflow tracking URI/experiment and optional tracing destination."""
+    """Configure MLflow tracking URI/experiment and optional tracing destination.
+    
+    Parameters
+    ----------
+    config : MLflowRuntimeConfig
+        Configuration object or mapping used by the operation.
+    strict : bool, optional
+        Value for strict.
+    
+    Returns
+    -------
+    Any or None
+        Result of the operation.
+    
+    Raises
+    ------
+    RuntimeError
+        If `RuntimeError` is raised while executing the operation.
+    """
 
     global _TRACING_ENABLED
     _TRACING_ENABLED = bool(config.enabled and config.tracing.enabled)
@@ -398,6 +745,31 @@ def _start_run(
     nested: bool,
     log_system_metrics: bool,
 ) -> Iterator[Any]:
+    """Start Run.
+    
+    Parameters
+    ----------
+    mlflow : Any
+        Value for mlflow.
+    run_name : str or None, optional
+        Value for run Name.
+    tags : Mapping[str, str] or None, optional
+        Value for tags.
+    nested : bool
+        Value for nested.
+    log_system_metrics : bool
+        Value for log System Metrics.
+    
+    Returns
+    -------
+    Iterator[Any]
+        Result of the operation.
+    
+    Raises
+    ------
+    RuntimeError
+        If `RuntimeError` is raised while executing the operation.
+    """
     start_run = getattr(mlflow, "start_run", None)
     if start_run is None:
         raise RuntimeError("MLflow module does not provide start_run().")
@@ -430,6 +802,18 @@ def _start_run(
 
 
 def _to_serializable(value: Any) -> Any:
+    """To Serializable.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    
+    Returns
+    -------
+    Any
+        Result of the operation.
+    """
     if value is None:
         return None
     if isinstance(value, (bool, int, float, str)):
@@ -448,11 +832,33 @@ def flatten_for_logging(
     *,
     prefix: str = "",
 ) -> dict[str, Any]:
-    """Flatten nested config/manifest dictionaries for param logging."""
+    """Flatten nested config/manifest dictionaries for param logging.
+    
+    Parameters
+    ----------
+    data : Mapping[str, Any]
+        Response payload to inspect or normalize.
+    prefix : str, optional
+        Value for prefix.
+    
+    Returns
+    -------
+    dict[str, Any]
+        Structured result of the operation.
+    """
 
     flat: dict[str, Any] = {}
 
     def _walk(node: Any, base: str) -> None:
+        """Walk.
+        
+        Parameters
+        ----------
+        node : Any
+            Value for node.
+        base : str
+            Value for base.
+        """
         if isinstance(node, Mapping):
             if not node:
                 flat[base] = "{}"
@@ -479,6 +885,18 @@ def flatten_for_logging(
 
 
 def _normalize_param_value(value: Any) -> str:
+    """Normalize param Value.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     if value is None:
         return "null"
     if isinstance(value, bool):
@@ -494,6 +912,18 @@ def _normalize_param_value(value: Any) -> str:
 
 
 def _is_sensitive_key(key: str) -> bool:
+    """Return whether sensitive Key.
+    
+    Parameters
+    ----------
+    key : str
+        Value for key.
+    
+    Returns
+    -------
+    bool
+        `True` if is Sensitive Key; otherwise `False`.
+    """
     lowered = key.lower()
     sensitive_tokens = (
         "api_key",
@@ -506,6 +936,18 @@ def _is_sensitive_key(key: str) -> bool:
 
 
 def _metric_value(value: Any) -> float | None:
+    """Metric Value.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    
+    Returns
+    -------
+    float or None
+        Result of the operation.
+    """
     if isinstance(value, bool):
         return float(int(value))
     if isinstance(value, (int, float)):
@@ -514,7 +956,13 @@ def _metric_value(value: Any) -> float | None:
 
 
 def build_environment_snapshot() -> dict[str, Any]:
-    """Build a JSON-serializable environment snapshot artifact."""
+    """Build a JSON-serializable environment snapshot artifact.
+    
+    Returns
+    -------
+    dict[str, Any]
+        Constructed environment Snapshot.
+    """
 
     tracked_env = {
         key: os.environ.get(key)
@@ -553,7 +1001,26 @@ def start_span(
     outputs: Any | None = None,
     tags: Mapping[str, str] | None = None,
 ) -> Iterator[Any]:
-    """Start an MLflow trace span when tracing is enabled; otherwise no-op."""
+    """Start an MLflow trace span when tracing is enabled; otherwise no-op.
+    
+    Parameters
+    ----------
+    name : str
+        Human-readable name for the resource or tracing span.
+    attributes : Mapping[str, Any] or None, optional
+        Tracing attributes to attach to the current span or recorder.
+    inputs : Any or None, optional
+        Input payload to record or pass through the operation.
+    outputs : Any or None, optional
+        Output payload to record or propagate.
+    tags : Mapping[str, str] or None, optional
+        Value for tags.
+    
+    Returns
+    -------
+    Iterator[Any]
+        Result of the operation.
+    """
 
     if not _TRACING_ENABLED:
         yield _NoopSpan()
@@ -589,7 +1056,13 @@ def start_span(
 
 
 def update_current_trace(*, tags: Mapping[str, str] | None = None) -> None:
-    """Update current trace metadata/tags when supported by MLflow build."""
+    """Update current trace metadata/tags when supported by MLflow build.
+    
+    Parameters
+    ----------
+    tags : Mapping[str, str] or None, optional
+        Value for tags.
+    """
 
     if not _TRACING_ENABLED:
         return
@@ -616,7 +1089,15 @@ def update_current_trace(*, tags: Mapping[str, str] | None = None) -> None:
 
 
 def set_span_attributes(span: Any, attributes: Mapping[str, Any]) -> None:
-    """Set span attributes in a version-compatible manner."""
+    """Set span attributes in a version-compatible manner.
+    
+    Parameters
+    ----------
+    span : Any
+        Value for span.
+    attributes : Mapping[str, Any]
+        Tracing attributes to attach to the current span or recorder.
+    """
 
     normalized = {str(k): _to_serializable(v) for k, v in attributes.items()}
 
@@ -639,7 +1120,15 @@ def set_span_attributes(span: Any, attributes: Mapping[str, Any]) -> None:
 
 
 def set_span_inputs(span: Any, inputs: Any) -> None:
-    """Set span inputs when supported."""
+    """Set span inputs when supported.
+    
+    Parameters
+    ----------
+    span : Any
+        Value for span.
+    inputs : Any
+        Input payload to record or pass through the operation.
+    """
 
     if hasattr(span, "set_inputs"):
         try:
@@ -649,7 +1138,15 @@ def set_span_inputs(span: Any, inputs: Any) -> None:
 
 
 def set_span_outputs(span: Any, outputs: Any) -> None:
-    """Set span outputs when supported."""
+    """Set span outputs when supported.
+    
+    Parameters
+    ----------
+    span : Any
+        Value for span.
+    outputs : Any
+        Output payload to record or propagate.
+    """
 
     if hasattr(span, "set_outputs"):
         try:
@@ -659,6 +1156,18 @@ def set_span_outputs(span: Any, outputs: Any) -> None:
 
 
 def _trace_identifier(span: Any) -> str | None:
+    """Trace Identifier.
+    
+    Parameters
+    ----------
+    span : Any
+        Value for span.
+    
+    Returns
+    -------
+    str or None
+        Result of the operation.
+    """
     for attr in ("request_id", "trace_id"):
         value = getattr(span, attr, None)
         if value:
@@ -667,6 +1176,17 @@ def _trace_identifier(span: Any) -> str | None:
 
 
 def _associate_trace_with_run(mlflow: Any, span: Any, run_id: str | None) -> None:
+    """Associate Trace With Run.
+    
+    Parameters
+    ----------
+    mlflow : Any
+        Value for mlflow.
+    span : Any
+        Value for span.
+    run_id : str or None, optional
+        Stable identifier for run.
+    """
     trace_id = _trace_identifier(span)
     if not trace_id or not run_id:
         return
@@ -702,7 +1222,30 @@ def start_detached_span(
     tags: Mapping[str, str] | None = None,
     run_id: str | None = None,
 ) -> Iterator[Any]:
-    """Start a span without attaching it to the active tracing context."""
+    """Start a span without attaching it to the active tracing context.
+    
+    Parameters
+    ----------
+    name : str
+        Human-readable name for the resource or tracing span.
+    parent_span : Any or None, optional
+        Value for parent Span.
+    attributes : Mapping[str, Any] or None, optional
+        Tracing attributes to attach to the current span or recorder.
+    inputs : Any or None, optional
+        Input payload to record or pass through the operation.
+    outputs : Any or None, optional
+        Output payload to record or propagate.
+    tags : Mapping[str, str] or None, optional
+        Value for tags.
+    run_id : str or None, optional
+        Stable identifier for run.
+    
+    Returns
+    -------
+    Iterator[Any]
+        Result of the operation.
+    """
 
     if not _TRACING_ENABLED:
         yield _NoopSpan()
@@ -759,7 +1302,42 @@ def start_detached_span(
 
 
 class EvaluationTrackingContext:
-    """Context manager wrapper for MLflow evaluation tracking."""
+    """Context manager wrapper for MLflow evaluation tracking.
+    
+    Parameters
+    ----------
+    runtime_config : MLflowRuntimeConfig
+        Value for runtime Config.
+    enabled_override : bool or None, optional
+        Value for enabled Override.
+    experiment_override : str or None, optional
+        Value for experiment Override.
+    
+    Methods
+    -------
+    enabled
+        Return enabled.
+    run_id
+        Return run ID.
+    trace_headers
+        Trace Headers.
+    open
+        Open.
+    stage
+        Stage.
+    log_params
+        Log Params.
+    log_flat_params
+        Log Flat Params.
+    log_metrics
+        Log Metrics.
+    log_artifact
+        Log Artifact.
+    log_input
+        Log Input.
+    log_json_artifact
+        Log JSON Artifact.
+    """
 
     def __init__(
         self,
@@ -768,6 +1346,17 @@ class EvaluationTrackingContext:
         enabled_override: bool | None = None,
         experiment_override: str | None = None,
     ) -> None:
+        """Initialize the instance.
+        
+        Parameters
+        ----------
+        runtime_config : MLflowRuntimeConfig
+            Value for runtime Config.
+        enabled_override : bool or None, optional
+            Value for enabled Override.
+        experiment_override : str or None, optional
+            Value for experiment Override.
+        """
         updated_config = apply_mlflow_overrides(
             runtime_config,
             enabled=enabled_override,
@@ -789,13 +1378,34 @@ class EvaluationTrackingContext:
 
     @property
     def enabled(self) -> bool:
+        """Return enabled.
+        
+        Returns
+        -------
+        bool
+            Computed enabled.
+        """
         return bool(self.runtime_config.enabled)
 
     @property
     def run_id(self) -> str | None:
+        """Return run ID.
+        
+        Returns
+        -------
+        str or None
+            Computed run ID.
+        """
         return self._run_id
 
     def trace_headers(self) -> dict[str, str]:
+        """Trace Headers.
+        
+        Returns
+        -------
+        dict[str, str]
+            Structured result of the operation.
+        """
         if not self._run_id:
             return {}
         return {TRACE_PARENT_RUN_HEADER: self._run_id}
@@ -808,6 +1418,22 @@ class EvaluationTrackingContext:
         extra_tags: Mapping[str, str] | None = None,
         strict: bool = True,
     ) -> Iterator["EvaluationTrackingContext"]:
+        """Open.
+        
+        Parameters
+        ----------
+        run_name : str or None, optional
+            Value for run Name.
+        extra_tags : Mapping[str, str] or None, optional
+            Value for extra Tags.
+        strict : bool, optional
+            Value for strict.
+        
+        Returns
+        -------
+        Iterator['EvaluationTrackingContext']
+            Result of the operation.
+        """
         if not self.enabled:
             self._active = False
             yield self
@@ -861,6 +1487,20 @@ class EvaluationTrackingContext:
         *,
         tags: Mapping[str, str] | None = None,
     ) -> Iterator[EvaluationStageContext]:
+        """Stage.
+        
+        Parameters
+        ----------
+        name : str
+            Human-readable name for the resource or tracing span.
+        tags : Mapping[str, str] or None, optional
+            Value for tags.
+        
+        Returns
+        -------
+        Iterator[EvaluationStageContext]
+            Result of the operation.
+        """
         if not self._active or self._mlflow is None:
             yield EvaluationStageContext(
                 name=name,
@@ -912,6 +1552,13 @@ class EvaluationTrackingContext:
                     )
 
     def log_params(self, params: Mapping[str, Any]) -> None:
+        """Log Params.
+        
+        Parameters
+        ----------
+        params : Mapping[str, Any]
+            Value for params.
+        """
         if not self._active or self._mlflow is None or not params:
             return
 
@@ -937,9 +1584,27 @@ class EvaluationTrackingContext:
                 logger.warning("Failed to log MLflow params batch", exc_info=True)
 
     def log_flat_params(self, data: Mapping[str, Any], *, prefix: str = "") -> None:
+        """Log Flat Params.
+        
+        Parameters
+        ----------
+        data : Mapping[str, Any]
+            Response payload to inspect or normalize.
+        prefix : str, optional
+            Value for prefix.
+        """
         self.log_params(flatten_for_logging(data, prefix=prefix))
 
     def log_metrics(self, metrics: Mapping[str, Any], *, step: int | None = None) -> None:
+        """Log Metrics.
+        
+        Parameters
+        ----------
+        metrics : Mapping[str, Any]
+            Value for metrics.
+        step : int or None, optional
+            Value for step.
+        """
         if not self._active or self._mlflow is None or not metrics:
             return
 
@@ -964,6 +1629,15 @@ class EvaluationTrackingContext:
             logger.warning("Failed to log MLflow metrics", exc_info=True)
 
     def log_artifact(self, path: str | Path, *, artifact_path: str | None = None) -> None:
+        """Log Artifact.
+        
+        Parameters
+        ----------
+        path : str or Path
+            Filesystem path used by the operation.
+        artifact_path : str or None, optional
+            Filesystem path used by the operation.
+        """
         if not self._active or self._mlflow is None:
             return
 
@@ -1003,6 +1677,17 @@ class EvaluationTrackingContext:
         context: str | None = None,
         tags: Mapping[str, Any] | None = None,
     ) -> None:
+        """Log Input.
+        
+        Parameters
+        ----------
+        dataset : Any
+            Value for dataset.
+        context : str or None, optional
+            Value for context.
+        tags : Mapping[str, Any] or None, optional
+            Value for tags.
+        """
         if not self._active or self._mlflow is None or dataset is None:
             return
 
@@ -1040,6 +1725,22 @@ class EvaluationTrackingContext:
         output_path: str | Path,
         artifact_path: str | None = None,
     ) -> Path:
+        """Log JSON Artifact.
+        
+        Parameters
+        ----------
+        payload : Mapping[str, Any] or list[Any]
+            Structured payload for the operation.
+        output_path : str or Path
+            Filesystem path used by the operation.
+        artifact_path : str or None, optional
+            Filesystem path used by the operation.
+        
+        Returns
+        -------
+        Path
+            Result of the operation.
+        """
         path = Path(output_path).expanduser().resolve()
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(_to_serializable(payload), indent=2), encoding="utf-8")

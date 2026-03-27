@@ -63,6 +63,18 @@ _EXPORTS: dict[str, tuple[str, str]] = {
 
 
 def __getattr__(name: str):
+    """Resolve lazily exposed attributes.
+    
+    Parameters
+    ----------
+    name : str
+        Human-readable name for the resource or tracing span.
+    
+    Raises
+    ------
+    AttributeError
+        If the requested attribute cannot be resolved.
+    """
     target = _EXPORTS.get(name)
     if target is None:
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
@@ -74,6 +86,13 @@ def __getattr__(name: str):
 
 
 def __dir__() -> list[str]:
+    """Return available attribute names for interactive discovery.
+    
+    Returns
+    -------
+    list[str]
+        Available attribute names for the object or module.
+    """
     return sorted(set(globals().keys()) | set(_EXPORTS.keys()))
 
 __all__ = [

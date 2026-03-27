@@ -1,4 +1,24 @@
-"""Authority-aware metadata enrichment for documents and ticket corpora."""
+"""Authority-aware metadata enrichment for documents and ticket corpora.
+
+This module combines public functions and classes used by the surrounding Polaris
+subsystem.
+
+Classes
+-------
+AuthorityRegistryIndex
+    Authority Registry Index.
+AuthorityMetadataEnricher
+    Attach registry-backed authority metadata to documents prior to chunking.
+
+Functions
+---------
+resolve_authority_registry_artifact_path
+    Resolve authority Registry Artifact Path.
+enrich_documents_with_authority_metadata
+    Enrich documents With Authority Metadata.
+localize_doc_chunk_scope_family_metadata
+    Localize Doc Chunk Scope Family Metadata.
+"""
 
 from __future__ import annotations
 
@@ -76,6 +96,31 @@ class _EntityMatch:
 
 @dataclass(frozen=True)
 class AuthorityRegistryIndex:
+    """Authority Registry Index.
+    
+    Attributes
+    ----------
+    artifact_path : str
+        Filesystem path used by the operation.
+    build : dict[str, Any]
+        Value for build.
+    source_urls : frozenset[str]
+        URLs used by the operation.
+    source_documents : tuple[RegistrySourceDocument, ...]
+        Value for source Documents.
+    source_documents_by_url : Mapping[str, tuple[RegistrySourceDocument, ...]]
+        URL used by the operation.
+    entities : tuple[RegistryEntity, ...]
+        Value for entities.
+    entities_by_doc_id : Mapping[str, tuple[RegistryEntity, ...]]
+        Stable identifier for entities By Doc.
+    entities_by_alias : Mapping[str, tuple[RegistryEntity, ...]]
+        Value for entities By Alias.
+    alias_entries : tuple[_AliasEntry, ...]
+        Value for alias Entries.
+    version_entries : tuple[_VersionEntry, ...]
+        Value for version Entries.
+    """
     artifact_path: str
     build: dict[str, Any]
     source_urls: frozenset[str]
@@ -89,6 +134,18 @@ class AuthorityRegistryIndex:
 
     @classmethod
     def load(cls, path: str | Path) -> "AuthorityRegistryIndex":
+        """Load.
+        
+        Parameters
+        ----------
+        path : str or Path
+            Filesystem path used by the operation.
+        
+        Returns
+        -------
+        AuthorityRegistryIndex
+            Result of the operation.
+        """
         resolved = Path(path).expanduser().resolve()
         payload = json.loads(resolved.read_text(encoding="utf-8"))
         source_documents = tuple(
@@ -174,7 +231,24 @@ class AuthorityRegistryIndex:
 
 
 class AuthorityMetadataEnricher:
-    """Attach registry-backed authority metadata to documents prior to chunking."""
+    """Attach registry-backed authority metadata to documents prior to chunking.
+    
+    Parameters
+    ----------
+    registry_index : AuthorityRegistryIndex
+        Value for registry Index.
+    source_name : str or None, optional
+        Value for source Name.
+    
+    Methods
+    -------
+    from_registry_artifact
+        Construct an instance from registry Artifact.
+    enrich_documents
+        Enrich documents.
+    enrich_document
+        Enrich document.
+    """
 
     def __init__(
         self,
@@ -182,6 +256,15 @@ class AuthorityMetadataEnricher:
         *,
         source_name: str | None = None,
     ) -> None:
+        """Initialize the instance.
+        
+        Parameters
+        ----------
+        registry_index : AuthorityRegistryIndex
+            Value for registry Index.
+        source_name : str or None, optional
+            Value for source Name.
+        """
         self.registry_index = registry_index
         self.source_name = str(source_name or "").strip().lower() or None
         self.scope_family_resolver = ScopeFamilyResolver(registry_index.entities)
@@ -193,12 +276,50 @@ class AuthorityMetadataEnricher:
         *,
         source_name: str | None = None,
     ) -> "AuthorityMetadataEnricher":
+        """Construct an instance from registry Artifact.
+        
+        Parameters
+        ----------
+        path : str or Path
+            Filesystem path used by the operation.
+        source_name : str or None, optional
+            Value for source Name.
+        
+        Returns
+        -------
+        AuthorityMetadataEnricher
+            Result of the operation.
+        """
         return cls(AuthorityRegistryIndex.load(path), source_name=source_name)
 
     def enrich_documents(self, documents: Sequence[DocumentT]) -> list[DocumentT]:
+        """Enrich documents.
+        
+        Parameters
+        ----------
+        documents : Sequence[DocumentT]
+            Document objects to enrich, convert, or inspect.
+        
+        Returns
+        -------
+        list[DocumentT]
+            Collected results from the operation.
+        """
         return [self.enrich_document(document) for document in documents]
 
     def enrich_document(self, document: DocumentT) -> DocumentT:
+        """Enrich document.
+        
+        Parameters
+        ----------
+        document : DocumentT
+            Value for document.
+        
+        Returns
+        -------
+        DocumentT
+            Result of the operation.
+        """
         metadata = dict(getattr(document, "metadata", {}) or {})
         matches = (
             self._match_ticket_entities(document)
@@ -232,6 +353,18 @@ class AuthorityMetadataEnricher:
         return replace(document, metadata=metadata)
 
     def _source_authority_for(self, document: Any) -> str:
+        """Source Authority For.
+        
+        Parameters
+        ----------
+        document : Any
+            Value for document.
+        
+        Returns
+        -------
+        str
+            Resulting string value.
+        """
         document_type = str(getattr(document, "document_type", "") or "")
         if document_type == "helpdesk_ticket" or self.source_name == "tickets":
             return SOURCE_AUTHORITY_TICKET_MEMORY
@@ -255,12 +388,36 @@ class AuthorityMetadataEnricher:
         return SOURCE_AUTHORITY_UNKNOWN
 
     def _authority_for_source_document(self, source: str) -> str | None:
+        """Authority For Source Document.
+        
+        Parameters
+        ----------
+        source : str
+            Source definition, source name, or source identifier to process.
+        
+        Returns
+        -------
+        str or None
+            Result of the operation.
+        """
         source_documents = self.registry_index.source_documents_by_url.get(source, ())
         if not source_documents:
             return None
         return self._authority_for_scopes(item.source_scope for item in source_documents)
 
     def _authority_for_entity_matches(self, source: str) -> str | None:
+        """Authority For Entity Matches.
+        
+        Parameters
+        ----------
+        source : str
+            Source definition, source name, or source identifier to process.
+        
+        Returns
+        -------
+        str or None
+            Result of the operation.
+        """
         entities = self.registry_index.entities_by_doc_id.get(source, ())
         if not entities:
             return None
@@ -268,6 +425,18 @@ class AuthorityMetadataEnricher:
 
     @staticmethod
     def _authority_for_scopes(scopes: Iterable[str]) -> str | None:
+        """Authority For Scopes.
+        
+        Parameters
+        ----------
+        scopes : Iterable[str]
+            Value for scopes.
+        
+        Returns
+        -------
+        str or None
+            Result of the operation.
+        """
         authorities = _sorted_unique(_source_authority_from_scope(scope) for scope in scopes)
         if not authorities:
             return None
@@ -278,6 +447,18 @@ class AuthorityMetadataEnricher:
         return authorities[0]
 
     def _match_document_entities(self, document: Any) -> list[_EntityMatch]:
+        """Match Document Entities.
+        
+        Parameters
+        ----------
+        document : Any
+            Value for document.
+        
+        Returns
+        -------
+        list[_EntityMatch]
+            Collected results from the operation.
+        """
         source = self._document_source(document)
         matches: dict[str, _EntityMatch] = {}
         for entity in self.registry_index.entities_by_doc_id.get(source, ()):
@@ -285,6 +466,18 @@ class AuthorityMetadataEnricher:
         return self._sorted_matches(matches.values())
 
     def _match_ticket_entities(self, document: Any) -> list[_EntityMatch]:
+        """Match Ticket Entities.
+        
+        Parameters
+        ----------
+        document : Any
+            Value for document.
+        
+        Returns
+        -------
+        list[_EntityMatch]
+            Collected results from the operation.
+        """
         text = str(getattr(document, "text", "") or "")
         matches: dict[str, _EntityMatch] = {}
         observed_versions = self._extract_version_mentions(text)
@@ -314,6 +507,20 @@ class AuthorityMetadataEnricher:
         return self._sorted_matches(matches.values())
 
     def _matched_versions(self, entity: RegistryEntity, observed_versions: Sequence[str]) -> set[str]:
+        """Matched Versions.
+        
+        Parameters
+        ----------
+        entity : RegistryEntity
+            Value for entity.
+        observed_versions : Sequence[str]
+            Value for observed Versions.
+        
+        Returns
+        -------
+        set[str]
+            Collected results from the operation.
+        """
         observed_by_key = {version.lower(): version for version in observed_versions}
         matched: set[str] = set()
         for version in entity.known_versions:
@@ -329,6 +536,22 @@ class AuthorityMetadataEnricher:
         *,
         document: Any,
     ) -> list[str]:
+        """Versions For Type.
+        
+        Parameters
+        ----------
+        matches : Sequence[_EntityMatch]
+            Value for matches.
+        entity_type : str
+            Value for entity Type.
+        document : Any
+            Value for document.
+        
+        Returns
+        -------
+        list[str]
+            Collected results from the operation.
+        """
         document_type = str(getattr(document, "document_type", "") or "")
         if document_type == "helpdesk_ticket":
             versions = []
@@ -351,6 +574,20 @@ class AuthorityMetadataEnricher:
         *,
         document: Any,
     ) -> list[str]:
+        """Scope Family Names.
+        
+        Parameters
+        ----------
+        matches : Sequence[_EntityMatch]
+            Value for matches.
+        document : Any
+            Value for document.
+        
+        Returns
+        -------
+        list[str]
+            Collected results from the operation.
+        """
         families = set(self.scope_family_resolver.families_for_entities(match.entity for match in matches))
         text = str(getattr(document, "text", "") or "")
         for module_token in self._extract_module_tokens(text):
@@ -358,6 +595,20 @@ class AuthorityMetadataEnricher:
         return _sorted_unique(families)
 
     def _names_for_type(self, matches: Sequence[_EntityMatch], entity_type: str) -> list[str]:
+        """Names For Type.
+        
+        Parameters
+        ----------
+        matches : Sequence[_EntityMatch]
+            Value for matches.
+        entity_type : str
+            Value for entity Type.
+        
+        Returns
+        -------
+        list[str]
+            Collected results from the operation.
+        """
         return _sorted_unique(
             match.entity.canonical_name
             for match in matches
@@ -365,6 +616,18 @@ class AuthorityMetadataEnricher:
         )
 
     def _aggregate_validity_status(self, matches: Sequence[_EntityMatch]) -> str:
+        """Aggregate Validity Status.
+        
+        Parameters
+        ----------
+        matches : Sequence[_EntityMatch]
+            Value for matches.
+        
+        Returns
+        -------
+        str
+            Resulting string value.
+        """
         explicit_statuses = sorted(
             {
                 match.entity.status
@@ -377,6 +640,18 @@ class AuthorityMetadataEnricher:
         return VALIDITY_UNKNOWN
 
     def _build_validity_hint(self, matches: Sequence[_EntityMatch]) -> dict[str, Any] | None:
+        """Build validity Hint.
+        
+        Parameters
+        ----------
+        matches : Sequence[_EntityMatch]
+            Value for matches.
+        
+        Returns
+        -------
+        dict[str, Any] or None
+            Structured result of the operation.
+        """
         if not matches:
             return None
 
@@ -391,6 +666,20 @@ class AuthorityMetadataEnricher:
         }
 
     def _privacy_flags(self, document: Any, metadata: Mapping[str, Any]) -> list[str]:
+        """Privacy Flags.
+        
+        Parameters
+        ----------
+        document : Any
+            Value for document.
+        metadata : Mapping[str, Any]
+            Metadata mapping to extend or stamp.
+        
+        Returns
+        -------
+        list[str]
+            Collected results from the operation.
+        """
         flags: list[str] = []
         text = str(getattr(document, "text", "") or "")
         summary = str(metadata.get("summary", "") or "")
@@ -406,6 +695,18 @@ class AuthorityMetadataEnricher:
         return _sorted_unique(flags)
 
     def _freshness_hint(self, metadata: Mapping[str, Any]) -> str | None:
+        """Freshness Hint.
+        
+        Parameters
+        ----------
+        metadata : Mapping[str, Any]
+            Metadata mapping to extend or stamp.
+        
+        Returns
+        -------
+        str or None
+            Result of the operation.
+        """
         for key in ("resolved_at", "updated_at", "created_at", "last_modified", "modified_at", "published_at"):
             value = metadata.get(key)
             if value is not None and str(value).strip():
@@ -413,6 +714,18 @@ class AuthorityMetadataEnricher:
         return None
 
     def _build_provenance(self, matches: Sequence[_EntityMatch]) -> dict[str, Any]:
+        """Build provenance.
+        
+        Parameters
+        ----------
+        matches : Sequence[_EntityMatch]
+            Value for matches.
+        
+        Returns
+        -------
+        dict[str, Any]
+            Structured result of the operation.
+        """
         return {
             "enrichment_version": ENRICHMENT_VERSION,
             "registry_artifact_path": self.registry_index.artifact_path,
@@ -421,6 +734,18 @@ class AuthorityMetadataEnricher:
         }
 
     def _serialise_matches(self, matches: Sequence[_EntityMatch]) -> list[dict[str, Any]]:
+        """Serialise Matches.
+        
+        Parameters
+        ----------
+        matches : Sequence[_EntityMatch]
+            Value for matches.
+        
+        Returns
+        -------
+        list[dict[str, Any]]
+            Collected results from the operation.
+        """
         records: list[dict[str, Any]] = []
         for match in self._sorted_matches(matches):
             records.append(
@@ -440,6 +765,18 @@ class AuthorityMetadataEnricher:
         return records
 
     def _extract_version_mentions(self, text: str) -> list[str]:
+        """Extract version Mentions.
+        
+        Parameters
+        ----------
+        text : str
+            Text value to inspect, tokenize, or encode.
+        
+        Returns
+        -------
+        list[str]
+            Collected results from the operation.
+        """
         observed = {match.group(0) for match in _GENERIC_VERSION_PATTERN.finditer(text or "")}
         for version_entry in self.registry_index.version_entries:
             if version_entry.pattern.search(text or ""):
@@ -448,6 +785,18 @@ class AuthorityMetadataEnricher:
 
     @staticmethod
     def _extract_module_tokens(text: str) -> list[str]:
+        """Extract module Tokens.
+        
+        Parameters
+        ----------
+        text : str
+            Text value to inspect, tokenize, or encode.
+        
+        Returns
+        -------
+        list[str]
+            Collected results from the operation.
+        """
         tokens: list[str] = []
         for match in _MODULE_LOAD_PATTERN.finditer(text or ""):
             raw_segment = match.group(1) or ""
@@ -467,6 +816,21 @@ class AuthorityMetadataEnricher:
         matched_alias: str | None = None,
         matched_versions: Iterable[str] = (),
     ) -> None:
+        """Record match.
+        
+        Parameters
+        ----------
+        matches : dict[str, _EntityMatch]
+            Value for matches.
+        entity : RegistryEntity
+            Value for entity.
+        match_method : str
+            Value for match Method.
+        matched_alias : str or None, optional
+            Value for matched Alias.
+        matched_versions : Iterable[str], optional
+            Value for matched Versions.
+        """
         current = matches.get(entity.entity_id)
         if current is None:
             current = _EntityMatch(
@@ -484,12 +848,36 @@ class AuthorityMetadataEnricher:
             current.matched_versions.add(str(version))
 
     def _document_source(self, document: Any) -> str:
+        """Document Source.
+        
+        Parameters
+        ----------
+        document : Any
+            Value for document.
+        
+        Returns
+        -------
+        str
+            Resulting string value.
+        """
         metadata = dict(getattr(document, "metadata", {}) or {})
         source = str(metadata.get("source") or getattr(document, "id", "") or "").strip()
         return source
 
     @staticmethod
     def _sorted_matches(matches: Iterable[_EntityMatch]) -> list[_EntityMatch]:
+        """Sorted Matches.
+        
+        Parameters
+        ----------
+        matches : Iterable[_EntityMatch]
+            Value for matches.
+        
+        Returns
+        -------
+        list[_EntityMatch]
+            Collected results from the operation.
+        """
         return sorted(
             matches,
             key=lambda match: (
@@ -501,6 +889,18 @@ class AuthorityMetadataEnricher:
 
 
 def _compile_boundary_pattern(value: str) -> re.Pattern[str] | None:
+    """Compile boundary Pattern.
+    
+    Parameters
+    ----------
+    value : str
+        Input value to normalize, coerce, or inspect.
+    
+    Returns
+    -------
+    re.Pattern[str] or None
+        Result of the operation.
+    """
     text = str(value or "").strip()
     if not text:
         return None
@@ -508,10 +908,34 @@ def _compile_boundary_pattern(value: str) -> re.Pattern[str] | None:
 
 
 def _sorted_unique(values: Iterable[str]) -> list[str]:
+    """Sorted Unique.
+    
+    Parameters
+    ----------
+    values : Iterable[str]
+        Value for values.
+    
+    Returns
+    -------
+    list[str]
+        Collected results from the operation.
+    """
     return sorted({str(value).strip() for value in values if str(value or "").strip()})
 
 
 def _as_mapping(value: Any) -> Mapping[str, Any]:
+    """As Mapping.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    
+    Returns
+    -------
+    Mapping[str, Any]
+        Result of the operation.
+    """
     if isinstance(value, Mapping):
         return value
     if hasattr(value, "__dict__"):
@@ -520,6 +944,18 @@ def _as_mapping(value: Any) -> Mapping[str, Any]:
 
 
 def _source_authority_from_scope(source_scope: str) -> str:
+    """Source Authority From Scope.
+    
+    Parameters
+    ----------
+    source_scope : str
+        Value for source Scope.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     normalized = str(source_scope or "").strip().lower()
     if normalized in {SOURCE_SCOPE_LOCAL_OFFICIAL, SOURCE_SCOPE_LOCAL_OFFICIAL_SERVICES}:
         return SOURCE_AUTHORITY_LOCAL_OFFICIAL
@@ -529,6 +965,18 @@ def _source_authority_from_scope(source_scope: str) -> str:
 
 
 def resolve_authority_registry_artifact_path(cfg: Any) -> str:
+    """Resolve authority Registry Artifact Path.
+    
+    Parameters
+    ----------
+    cfg : Any
+        Configuration object or mapping used to resolve runtime settings.
+    
+    Returns
+    -------
+    str
+        Resolved authority Registry Artifact Path.
+    """
     ingestion_cfg = _as_mapping(getattr(cfg, "ingestion", None))
     enrichment_cfg = _as_mapping(ingestion_cfg.get("metadata_enrichment"))
     configured = enrichment_cfg.get("authority_registry_path") or DEFAULT_REGISTRY_ARTIFACT_PATH
@@ -541,6 +989,22 @@ def enrich_documents_with_authority_metadata(
     registry_artifact_path: str | Path = DEFAULT_REGISTRY_ARTIFACT_PATH,
     source_name: str | None = None,
 ) -> list[DocumentT]:
+    """Enrich documents With Authority Metadata.
+    
+    Parameters
+    ----------
+    documents : Sequence[DocumentT]
+        Document objects to enrich, convert, or inspect.
+    registry_artifact_path : str or Path, optional
+        Filesystem path used by the operation.
+    source_name : str or None, optional
+        Value for source Name.
+    
+    Returns
+    -------
+    list[DocumentT]
+        Collected results from the operation.
+    """
     enricher = AuthorityMetadataEnricher.from_registry_artifact(
         registry_artifact_path,
         source_name=source_name,
@@ -553,6 +1017,20 @@ def localize_doc_chunk_scope_family_metadata(
     *,
     registry_artifact_path: str | Path = DEFAULT_REGISTRY_ARTIFACT_PATH,
 ) -> list[DocumentT]:
+    """Localize Doc Chunk Scope Family Metadata.
+    
+    Parameters
+    ----------
+    chunks : Sequence[DocumentT]
+        Value for chunks.
+    registry_artifact_path : str or Path, optional
+        Filesystem path used by the operation.
+    
+    Returns
+    -------
+    list[DocumentT]
+        Collected results from the operation.
+    """
     registry_index = AuthorityRegistryIndex.load(registry_artifact_path)
     scope_family_resolver = ScopeFamilyResolver(registry_index.entities)
 

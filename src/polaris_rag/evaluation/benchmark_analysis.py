@@ -1,4 +1,22 @@
-"""Subgroup benchmark characterisation helpers."""
+"""Subgroup benchmark characterisation helpers.
+
+This module exposes public helper functions used by the surrounding Polaris subsystem.
+
+Functions
+---------
+build_composition_counts
+    Build long-form counts and proportions for each annotation label.
+build_combination_counts
+    Build joint-distribution counts for the core stage-3 labels.
+build_composition_summary
+    Build machine-readable summary payload.
+build_summary_markdown
+    Build a short report-ready markdown summary.
+plot_composition_figure
+    Render the subgroup-composition chart for experiment 1.
+write_analysis_outputs
+    Write experiment-1 outputs.
+"""
 
 from __future__ import annotations
 
@@ -17,6 +35,18 @@ from polaris_rag.evaluation.benchmark_annotations import (
 
 
 def _annotation_payload(row: Mapping[str, Any]) -> Mapping[str, str]:
+    """Annotation Payload.
+    
+    Parameters
+    ----------
+    row : Mapping[str, Any]
+        Value for row.
+    
+    Returns
+    -------
+    Mapping[str, str]
+        Result of the operation.
+    """
     metadata = row.get("metadata")
     if not isinstance(metadata, Mapping):
         return {}
@@ -27,13 +57,38 @@ def _annotation_payload(row: Mapping[str, Any]) -> Mapping[str, str]:
 
 
 def _split_rows(rows: list[dict[str, Any]], split_name: str) -> list[dict[str, Any]]:
+    """Split rows.
+    
+    Parameters
+    ----------
+    rows : list[dict[str, Any]]
+        Value for rows.
+    split_name : str
+        Value for split Name.
+    
+    Returns
+    -------
+    list[dict[str, Any]]
+        Collected results from the operation.
+    """
     if split_name == "all":
         return list(rows)
     return [row for row in rows if _annotation_payload(row).get("split") == split_name]
 
 
 def build_composition_counts(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Build long-form counts and proportions for each annotation label."""
+    """Build long-form counts and proportions for each annotation label.
+    
+    Parameters
+    ----------
+    rows : list[dict[str, Any]]
+        Value for rows.
+    
+    Returns
+    -------
+    list[dict[str, Any]]
+        Constructed composition Counts.
+    """
 
     records: list[dict[str, Any]] = []
     for split_name in ("all", "dev", "test"):
@@ -61,7 +116,18 @@ def build_composition_counts(rows: list[dict[str, Any]]) -> list[dict[str, Any]]
 
 
 def build_combination_counts(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Build joint-distribution counts for the core stage-3 labels."""
+    """Build joint-distribution counts for the core stage-3 labels.
+    
+    Parameters
+    ----------
+    rows : list[dict[str, Any]]
+        Value for rows.
+    
+    Returns
+    -------
+    list[dict[str, Any]]
+        Constructed combination Counts.
+    """
 
     records: list[dict[str, Any]] = []
     for split_name in ("all", "dev", "test"):
@@ -90,7 +156,18 @@ def build_combination_counts(rows: list[dict[str, Any]]) -> list[dict[str, Any]]
 
 
 def build_composition_summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
-    """Build machine-readable summary payload."""
+    """Build machine-readable summary payload.
+    
+    Parameters
+    ----------
+    rows : list[dict[str, Any]]
+        Value for rows.
+    
+    Returns
+    -------
+    dict[str, Any]
+        Constructed composition Summary.
+    """
 
     totals = {split_name: len(_split_rows(rows, split_name)) for split_name in ("all", "dev", "test")}
     count_records = build_composition_counts(rows)
@@ -134,7 +211,18 @@ def build_composition_summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def build_summary_markdown(summary: Mapping[str, Any]) -> str:
-    """Build a short report-ready markdown summary."""
+    """Build a short report-ready markdown summary.
+    
+    Parameters
+    ----------
+    summary : Mapping[str, Any]
+        Summary payload to render or persist.
+    
+    Returns
+    -------
+    str
+        Constructed summary Markdown.
+    """
 
     totals = dict(summary.get("totals", {}))
     targeted = {
@@ -179,6 +267,15 @@ def build_summary_markdown(summary: Mapping[str, Any]) -> str:
 
 
 def _write_csv_records(path: Path, records: list[Mapping[str, Any]]) -> None:
+    """Write csv Records.
+    
+    Parameters
+    ----------
+    path : Path
+        Filesystem path used by the operation.
+    records : list[Mapping[str, Any]]
+        Value for records.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
     if not records:
         path.write_text("", encoding="utf-8")
@@ -192,6 +289,10 @@ def _write_csv_records(path: Path, records: list[Mapping[str, Any]]) -> None:
 
 
 def _import_matplotlib_pyplot():
+    """Import Matplotlib Pyplot.
+    
+    This helper is internal to the surrounding module.
+    """
     import matplotlib
 
     matplotlib.use("Agg")
@@ -201,7 +302,17 @@ def _import_matplotlib_pyplot():
 
 
 def plot_composition_figure(*, count_records: list[Mapping[str, Any]], output_png: Path, output_svg: Path) -> None:
-    """Render the subgroup-composition chart for experiment 1."""
+    """Render the subgroup-composition chart for experiment 1.
+    
+    Parameters
+    ----------
+    count_records : list[Mapping[str, Any]]
+        Value for count Records.
+    output_png : Path
+        Value for output Png.
+    output_svg : Path
+        Value for output Svg.
+    """
 
     plt = _import_matplotlib_pyplot()
 
@@ -258,7 +369,20 @@ def write_analysis_outputs(
     rows: list[dict[str, Any]],
     output_dir: str | Path,
 ) -> dict[str, Path]:
-    """Write experiment-1 outputs."""
+    """Write experiment-1 outputs.
+    
+    Parameters
+    ----------
+    rows : list[dict[str, Any]]
+        Value for rows.
+    output_dir : str or Path
+        Value for output Dir.
+    
+    Returns
+    -------
+    dict[str, Path]
+        Structured result of the operation.
+    """
 
     out_dir = Path(output_dir).expanduser().resolve()
     out_dir.mkdir(parents=True, exist_ok=True)

@@ -1,10 +1,31 @@
-"""polaris_rag.evaluation.evaluator
+"""polaris_rag.evaluation.evaluator.
 
 Modern evaluation runner for Polaris on top of RAGAS 0.4 metrics collections.
 
-This module intentionally avoids deprecated ``ragas.metrics`` legacy evaluation
-surfaces and executes modern collection metrics directly with controlled
-concurrency.
+This module intentionally avoids deprecated ``ragas.metrics`` legacy evaluation surfaces
+and executes modern collection metrics directly with controlled concurrency.
+
+Classes
+-------
+EvaluatorTraceRecorder
+    Evaluator Trace Recorder.
+AdaptiveConcurrencySettings
+    Settings for adaptive max-worker tuning.
+ConcurrencyTrial
+    Measured result of a single max-worker candidate.
+EvaluationRunResult
+    Structured result for one evaluation run.
+EvaluatorMetricTraceContext
+    Evaluator Metric Trace Context.
+Evaluator
+    RAGAS metrics-collections evaluator with adaptive concurrency.
+
+Functions
+---------
+executor_results_to_dataframe
+    Convert raw executor results into a score dataframe.
+write_outputs
+    Persist standard output artifacts for an evaluation run.
 """
 
 from __future__ import annotations
@@ -42,9 +63,34 @@ logger = logging.getLogger(__name__)
 
 
 class EvaluatorTraceRecorder(Protocol):
-    def set_outputs(self, outputs: Any) -> None: ...
+    """Evaluator Trace Recorder.
+    
+    Methods
+    -------
+    set_outputs
+        Set Outputs.
+    set_attributes
+        Set Attributes.
+    """
+    def set_outputs(self, outputs: Any) -> None:
+        """Record outputs for the active evaluation trace.
 
-    def set_attributes(self, attributes: Mapping[str, Any]) -> None: ...
+        Parameters
+        ----------
+        outputs : Any
+            Output payload to record or propagate.
+        """
+        ...
+
+    def set_attributes(self, attributes: Mapping[str, Any]) -> None:
+        """Record attributes for the active evaluation trace.
+
+        Parameters
+        ----------
+        attributes : Mapping[str, Any]
+            Tracing attributes to attach to the current span or recorder.
+        """
+        ...
 
 
 EvaluatorTraceFactory = Callable[
@@ -55,7 +101,25 @@ EvaluatorTraceFactory = Callable[
 
 @dataclass(frozen=True)
 class AdaptiveConcurrencySettings:
-    """Settings for adaptive max-worker tuning."""
+    """Settings for adaptive max-worker tuning.
+    
+    Attributes
+    ----------
+    enabled : bool
+        Value for enabled.
+    worker_candidates : tuple[int, ...]
+        Value for worker Candidates.
+    worker_cap : int
+        Value for worker Cap.
+    warmup_fraction : float
+        Value for warmup Fraction.
+    warmup_min_samples : int
+        Value for warmup Min Samples.
+    warmup_max_samples : int
+        Value for warmup Max Samples.
+    failure_threshold : float
+        Value for failure Threshold.
+    """
 
     enabled: bool = True
     worker_candidates: tuple[int, ...] = (2, 4, 8, 12, 16)
@@ -68,7 +132,23 @@ class AdaptiveConcurrencySettings:
 
 @dataclass(frozen=True)
 class ConcurrencyTrial:
-    """Measured result of a single max-worker candidate."""
+    """Measured result of a single max-worker candidate.
+    
+    Attributes
+    ----------
+    workers : int
+        Value for workers.
+    duration_seconds : float
+        duration Seconds expressed in seconds.
+    failure_rate : float
+        Value for failure Rate.
+    throughput : float
+        Value for throughput.
+    failures : int
+        Value for failures.
+    total_scores : int
+        Value for total Scores.
+    """
 
     workers: int
     duration_seconds: float
@@ -80,7 +160,29 @@ class ConcurrencyTrial:
 
 @dataclass
 class EvaluationRunResult:
-    """Structured result for one evaluation run."""
+    """Structured result for one evaluation run.
+    
+    Attributes
+    ----------
+    scores_df : pd.DataFrame
+        Value for scores Df.
+    selected_metrics : list[str]
+        Value for selected Metrics.
+    skipped_metrics : list[tuple[str, str]]
+        Value for skipped Metrics.
+    selected_max_workers : int
+        Value for selected Max Workers.
+    run_config : RunConfig
+        Value for run Config.
+    batch_size : int
+        Value for batch Size.
+    tuning_trials : list[ConcurrencyTrial]
+        Value for tuning Trials.
+    duration_seconds : float
+        duration Seconds expressed in seconds.
+    failure_rate : float
+        Value for failure Rate.
+    """
 
     scores_df: pd.DataFrame
     selected_metrics: list[str]
@@ -93,7 +195,13 @@ class EvaluationRunResult:
     failure_rate: float
 
     def summary_dict(self) -> dict[str, Any]:
-        """Return a JSON-serializable summary."""
+        """Return a JSON-serializable summary.
+        
+        Returns
+        -------
+        dict[str, Any]
+            Structured result of the operation.
+        """
 
         return {
             "rows": int(len(self.scores_df)),
@@ -120,6 +228,19 @@ class EvaluationRunResult:
 
 @dataclass(frozen=True)
 class EvaluatorMetricTraceContext:
+    """Evaluator Metric Trace Context.
+    
+    Attributes
+    ----------
+    metric_name : str
+        Value for metric Name.
+    sample_id : str
+        Stable identifier for sample.
+    row_index : int
+        Value for row Index.
+    required_columns : tuple[str, ...]
+        Value for required Columns.
+    """
     metric_name: str
     sample_id: str
     row_index: int
@@ -128,9 +249,23 @@ class EvaluatorMetricTraceContext:
 
 class _NoopTraceRecorder:
     def set_outputs(self, outputs: Any) -> None:
+        """Set Outputs.
+        
+        Parameters
+        ----------
+        outputs : Any
+            Output payload to record or propagate.
+        """
         return None
 
     def set_attributes(self, attributes: Mapping[str, Any]) -> None:
+        """Set Attributes.
+        
+        Parameters
+        ----------
+        attributes : Mapping[str, Any]
+            Tracing attributes to attach to the current span or recorder.
+        """
         return None
 
 
@@ -141,6 +276,18 @@ _ACTIVE_EVALUATOR_TRACE_CONTEXT: ContextVar[EvaluatorMetricTraceContext | None] 
 
 
 def _as_mapping(obj: Any) -> Mapping[str, Any]:
+    """As Mapping.
+    
+    Parameters
+    ----------
+    obj : Any
+        Value for obj.
+    
+    Returns
+    -------
+    Mapping[str, Any]
+        Result of the operation.
+    """
     if isinstance(obj, Mapping):
         return obj
     if hasattr(obj, "__dict__"):
@@ -149,6 +296,20 @@ def _as_mapping(obj: Any) -> Mapping[str, Any]:
 
 
 def _as_bool(value: Any, default: bool) -> bool:
+    """As Bool.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    default : bool
+        Fallback value to use when normalization fails.
+    
+    Returns
+    -------
+    bool
+        `True` if as Bool; otherwise `False`.
+    """
     if value is None:
         return default
     if isinstance(value, bool):
@@ -163,6 +324,20 @@ def _as_bool(value: Any, default: bool) -> bool:
 
 
 def _coerce_int(value: Any, default: int) -> int:
+    """Coerce int.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    default : int
+        Fallback value to use when normalization fails.
+    
+    Returns
+    -------
+    int
+        Computed integer value.
+    """
     try:
         return int(value)
     except (TypeError, ValueError):
@@ -170,6 +345,20 @@ def _coerce_int(value: Any, default: int) -> int:
 
 
 def _coerce_float(value: Any, default: float) -> float:
+    """Coerce float.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    default : float
+        Fallback value to use when normalization fails.
+    
+    Returns
+    -------
+    float
+        Computed floating-point value.
+    """
     try:
         return float(value)
     except (TypeError, ValueError):
@@ -199,10 +388,34 @@ def _select_best_trial(
 
 
 def _error_text_from_exception(exc: Exception) -> str:
+    """Error Text From Exception.
+    
+    Parameters
+    ----------
+    exc : Exception
+        Value for exc.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     return f"{type(exc).__name__}: {exc}"
 
 
 def _to_trace_payload(value: Any) -> Any:
+    """To Trace Payload.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    
+    Returns
+    -------
+    Any
+        Result of the operation.
+    """
     if value is None or isinstance(value, (str, int, float, bool)):
         return value
 
@@ -233,6 +446,18 @@ def _to_trace_payload(value: Any) -> Any:
 
 
 def _trace_context_payload(context: EvaluatorMetricTraceContext | None) -> dict[str, Any] | None:
+    """Trace Context Payload.
+    
+    Parameters
+    ----------
+    context : EvaluatorMetricTraceContext or None, optional
+        Value for context.
+    
+    Returns
+    -------
+    dict[str, Any] or None
+        Structured result of the operation.
+    """
     if context is None:
         return None
     return {
@@ -251,6 +476,19 @@ def _open_evaluator_trace(
     inputs: Mapping[str, Any],
     attributes: Mapping[str, Any] | None = None,
 ):
+    """Open Evaluator Trace.
+    
+    Parameters
+    ----------
+    trace_factory : EvaluatorTraceFactory or None, optional
+        Value for trace Factory.
+    name : str
+        Human-readable name for the resource or tracing span.
+    inputs : Mapping[str, Any]
+        Input payload to record or pass through the operation.
+    attributes : Mapping[str, Any] or None, optional
+        Tracing attributes to attach to the current span or recorder.
+    """
     if trace_factory is None:
         yield _NoopTraceRecorder()
         return
@@ -265,6 +503,17 @@ def _install_traced_create(
     endpoint_name: str,
     trace_factory: EvaluatorTraceFactory | None,
 ) -> None:
+    """Install Traced Create.
+    
+    Parameters
+    ----------
+    resource : Any
+        Value for resource.
+    endpoint_name : str
+        Value for endpoint Name.
+    trace_factory : EvaluatorTraceFactory or None, optional
+        Value for trace Factory.
+    """
     if resource is None or trace_factory is None:
         return
 
@@ -273,6 +522,20 @@ def _install_traced_create(
         return
 
     async def _traced_create(*args: Any, **kwargs: Any) -> Any:
+        """Traced Create.
+        
+        Parameters
+        ----------
+        *args : Any
+            Value for args.
+        **kwargs : Any
+            Value for kwargs.
+        
+        Returns
+        -------
+        Any
+            Result of the operation.
+        """
         context = _ACTIVE_EVALUATOR_TRACE_CONTEXT.get()
         trace_inputs = {
             "endpoint": endpoint_name,
@@ -323,6 +586,20 @@ def _TracedAsyncOpenAIClient(
     *,
     trace_factory: EvaluatorTraceFactory | None,
 ) -> AsyncOpenAI:
+    """Traced Async Open AI Client.
+    
+    Parameters
+    ----------
+    client : AsyncOpenAI
+        Value for client.
+    trace_factory : EvaluatorTraceFactory or None, optional
+        Value for trace Factory.
+    
+    Returns
+    -------
+    AsyncOpenAI
+        Result of the operation.
+    """
     chat = getattr(client, "chat", None)
     _install_traced_create(
         getattr(chat, "completions", None),
@@ -393,7 +670,22 @@ def executor_results_to_dataframe(
     metric_names: list[str],
     results: list[Any],
 ) -> pd.DataFrame:
-    """Convert raw executor results into a score dataframe."""
+    """Convert raw executor results into a score dataframe.
+    
+    Parameters
+    ----------
+    rows : list[dict[str, Any]]
+        Value for rows.
+    metric_names : list[str]
+        Value for metric Names.
+    results : list[Any]
+        Value for results.
+    
+    Returns
+    -------
+    pd.DataFrame
+        Result of the operation.
+    """
 
     return pd.DataFrame(
         _rows_from_executor_results(
@@ -405,7 +697,62 @@ def executor_results_to_dataframe(
 
 
 class Evaluator:
-    """RAGAS metrics-collections evaluator with adaptive concurrency."""
+    """RAGAS metrics-collections evaluator with adaptive concurrency.
+    
+    Parameters
+    ----------
+    llm_model : str
+        Value for LLM Model.
+    llm_api_base : str
+        Value for LLM API Base.
+    llm_api_key : str or None, optional
+        Value for LLM API Key.
+    llm_kwargs : Mapping[str, Any] or None, optional
+        Value for LLM Kwargs.
+    embedding_model : str
+        Value for embedding Model.
+    embedding_api_base : str
+        Value for embedding API Base.
+    embedding_api_key : str or None, optional
+        Value for embedding API Key.
+    embedding_kwargs : Mapping[str, Any] or None, optional
+        Value for embedding Kwargs.
+    requested_metrics : Iterable[str] or None, optional
+        Value for requested Metrics.
+    auto_gate_metrics : bool, optional
+        Value for auto Gate Metrics.
+    run_config : RunConfig or None, optional
+        Value for run Config.
+    batch_size : int or None, optional
+        Value for batch Size.
+    adaptive_concurrency : AdaptiveConcurrencySettings or None, optional
+        Value for adaptive Concurrency.
+    raise_exceptions : bool, optional
+        Value for raise Exceptions.
+    use_cache : bool, optional
+        Value for use Cache.
+    cache_dir : str, optional
+        Value for cache Dir.
+    trace_evaluator_llm : bool, optional
+        Value for trace Evaluator LLM.
+    trace_factory : EvaluatorTraceFactory or None, optional
+        Value for trace Factory.
+    
+    Methods
+    -------
+    register_metric
+        Add a metric to the active requested metric list.
+    clear_registered_metrics
+        Reset metric selection to the default metric order.
+    list_metric_names
+        List requested/default metric names, optionally after auto-gating.
+    from_global_config
+        Build an evaluator from ``GlobalConfig``.
+    evaluate
+        Run evaluation and return scores plus execution metadata.
+    build_executor
+        Build an executor for cancellable metric execution.
+    """
 
     def __init__(
         self,
@@ -429,6 +776,47 @@ class Evaluator:
         trace_evaluator_llm: bool = False,
         trace_factory: EvaluatorTraceFactory | None = None,
     ):
+        """Initialize the instance.
+        
+        Parameters
+        ----------
+        llm_model : str
+            Value for LLM Model.
+        llm_api_base : str
+            Value for LLM API Base.
+        llm_api_key : str or None, optional
+            Value for LLM API Key.
+        llm_kwargs : Mapping[str, Any] or None, optional
+            Value for LLM Kwargs.
+        embedding_model : str
+            Value for embedding Model.
+        embedding_api_base : str
+            Value for embedding API Base.
+        embedding_api_key : str or None, optional
+            Value for embedding API Key.
+        embedding_kwargs : Mapping[str, Any] or None, optional
+            Value for embedding Kwargs.
+        requested_metrics : Iterable[str] or None, optional
+            Value for requested Metrics.
+        auto_gate_metrics : bool, optional
+            Value for auto Gate Metrics.
+        run_config : RunConfig or None, optional
+            Value for run Config.
+        batch_size : int or None, optional
+            Value for batch Size.
+        adaptive_concurrency : AdaptiveConcurrencySettings or None, optional
+            Value for adaptive Concurrency.
+        raise_exceptions : bool, optional
+            Value for raise Exceptions.
+        use_cache : bool, optional
+            Value for use Cache.
+        cache_dir : str, optional
+            Value for cache Dir.
+        trace_evaluator_llm : bool, optional
+            Value for trace Evaluator LLM.
+        trace_factory : EvaluatorTraceFactory or None, optional
+            Value for trace Factory.
+        """
         self.requested_metrics = list(requested_metrics) if requested_metrics is not None else None
         self.auto_gate_metrics = auto_gate_metrics
         self.raise_exceptions = raise_exceptions
@@ -467,7 +855,18 @@ class Evaluator:
         )
 
     def register_metric(self, metric_name: str) -> None:
-        """Add a metric to the active requested metric list."""
+        """Add a metric to the active requested metric list.
+        
+        Parameters
+        ----------
+        metric_name : str
+            Value for metric Name.
+        
+        Raises
+        ------
+        KeyError
+            If a required mapping entry is missing.
+        """
 
         if metric_name not in METRIC_REGISTRY:
             available = ", ".join(sorted(METRIC_REGISTRY.keys()))
@@ -479,12 +878,29 @@ class Evaluator:
             self.requested_metrics.append(metric_name)
 
     def clear_registered_metrics(self) -> None:
-        """Reset metric selection to the default metric order."""
+        """Reset metric selection to the default metric order.
+
+        Notes
+        -----
+        Subsequent evaluations will fall back to the default metric registry
+        ordering until new metrics are explicitly registered again.
+        """
 
         self.requested_metrics = None
 
     def list_metric_names(self, dataset_columns: set[str] | None = None) -> list[str]:
-        """List requested/default metric names, optionally after auto-gating."""
+        """List requested/default metric names, optionally after auto-gating.
+        
+        Parameters
+        ----------
+        dataset_columns : set[str] or None, optional
+            Value for dataset Columns.
+        
+        Returns
+        -------
+        list[str]
+            Available metric Names.
+        """
 
         names = list(self.requested_metrics) if self.requested_metrics is not None else list(DEFAULT_METRIC_ORDER)
         if dataset_columns is None:
@@ -506,7 +922,24 @@ class Evaluator:
         trace_evaluator_llm: bool = False,
         trace_factory: EvaluatorTraceFactory | None = None,
     ) -> "Evaluator":
-        """Build an evaluator from ``GlobalConfig``."""
+        """Build an evaluator from ``GlobalConfig``.
+        
+        Parameters
+        ----------
+        cfg : Any
+            Configuration object or mapping used to resolve runtime settings.
+        requested_metrics : Iterable[str] or None, optional
+            Value for requested Metrics.
+        trace_evaluator_llm : bool, optional
+            Value for trace Evaluator LLM.
+        trace_factory : EvaluatorTraceFactory or None, optional
+            Value for trace Factory.
+        
+        Returns
+        -------
+        Evaluator
+            Result of the operation.
+        """
 
         raw = _as_mapping(getattr(cfg, "raw", cfg))
         eval_cfg = _as_mapping(raw.get("evaluation", {}))
@@ -571,6 +1004,24 @@ class Evaluator:
         api_key: str | None,
         llm_kwargs: Mapping[str, Any],
     ) -> Any:
+        """Build LLM.
+        
+        Parameters
+        ----------
+        model : str
+            Value for model.
+        api_base : str
+            Base URL of the configured HTTP dependency.
+        api_key : str or None, optional
+            Value for API Key.
+        llm_kwargs : Mapping[str, Any]
+            Value for LLM Kwargs.
+        
+        Returns
+        -------
+        Any
+            Result of the operation.
+        """
         kwargs = dict(llm_kwargs)
         # Remove legacy stop-hack settings that hurt structured output paths.
         kwargs.pop("stop", None)
@@ -608,6 +1059,24 @@ class Evaluator:
         api_key: str | None,
         embedding_kwargs: Mapping[str, Any],
     ) -> Any:
+        """Build embeddings.
+        
+        Parameters
+        ----------
+        model : str
+            Value for model.
+        api_base : str
+            Base URL of the configured HTTP dependency.
+        api_key : str or None, optional
+            Value for API Key.
+        embedding_kwargs : Mapping[str, Any]
+            Value for embedding Kwargs.
+        
+        Returns
+        -------
+        Any
+            Result of the operation.
+        """
         kwargs = dict(embedding_kwargs)
 
         client = AsyncOpenAI(
@@ -636,6 +1105,18 @@ class Evaluator:
         *,
         dataset: EvaluationDataset,
     ) -> tuple[list[tuple[MetricSpec, Any]], list[tuple[str, str]]]:
+        """Resolve runtime Metrics.
+        
+        Parameters
+        ----------
+        dataset : EvaluationDataset
+            Value for dataset.
+        
+        Returns
+        -------
+        tuple[list[tuple[MetricSpec, Any]], list[tuple[str, str]]]
+            Collected results from the operation.
+        """
         columns = set(dataset.features())
         specs, skipped = resolve_metric_specs(
             dataset_columns=columns,
@@ -646,6 +1127,18 @@ class Evaluator:
         return list(zip(specs, instances)), skipped
 
     def _clone_run_config(self, *, max_workers: int) -> RunConfig:
+        """Clone Run Config.
+        
+        Parameters
+        ----------
+        max_workers : int
+            Value for max Workers.
+        
+        Returns
+        -------
+        RunConfig
+            Result of the operation.
+        """
         return RunConfig(
             timeout=int(self.run_config.timeout),
             max_retries=int(self.run_config.max_retries),
@@ -658,6 +1151,20 @@ class Evaluator:
 
     @staticmethod
     def _batch_size_for_workers(workers: int, explicit: int | None) -> int:
+        """Batch Size For Workers.
+        
+        Parameters
+        ----------
+        workers : int
+            Value for workers.
+        explicit : int or None, optional
+            Value for explicit.
+        
+        Returns
+        -------
+        int
+            Computed integer value.
+        """
         if explicit is not None:
             return int(explicit)
         return min(64, max(8, workers * 2))
@@ -672,6 +1179,28 @@ class Evaluator:
         show_progress: bool,
         source_rows: list[dict[str, Any]] | None = None,
     ) -> pd.DataFrame:
+        """Score Dataset Async.
+        
+        Parameters
+        ----------
+        dataset : EvaluationDataset
+            Value for dataset.
+        metrics : list[tuple[MetricSpec, Any]]
+            Value for metrics.
+        run_config : RunConfig
+            Value for run Config.
+        batch_size : int
+            Value for batch Size.
+        show_progress : bool
+            Value for show Progress.
+        source_rows : list[dict[str, Any]] or None, optional
+            Value for source Rows.
+        
+        Returns
+        -------
+        pd.DataFrame
+            Result of the operation.
+        """
         executor, rows, metric_names = self._create_executor(
             dataset=dataset,
             metrics=metrics,
@@ -740,6 +1269,28 @@ class Evaluator:
         show_progress: bool,
         source_rows: list[dict[str, Any]] | None = None,
     ) -> pd.DataFrame:
+        """Score Dataset.
+        
+        Parameters
+        ----------
+        dataset : EvaluationDataset
+            Value for dataset.
+        metrics : list[tuple[MetricSpec, Any]]
+            Value for metrics.
+        run_config : RunConfig
+            Value for run Config.
+        batch_size : int
+            Value for batch Size.
+        show_progress : bool
+            Value for show Progress.
+        source_rows : list[dict[str, Any]] or None, optional
+            Value for source Rows.
+        
+        Returns
+        -------
+        pd.DataFrame
+            Result of the operation.
+        """
         return asyncio.run(
             self._score_dataset_async(
                 dataset=dataset,
@@ -758,6 +1309,22 @@ class Evaluator:
         metrics: list[tuple[MetricSpec, Any]],
         source_rows: list[dict[str, Any]] | None = None,
     ) -> tuple[int, list[ConcurrencyTrial]]:
+        """Tune Max Workers.
+        
+        Parameters
+        ----------
+        dataset : EvaluationDataset
+            Value for dataset.
+        metrics : list[tuple[MetricSpec, Any]]
+            Value for metrics.
+        source_rows : list[dict[str, Any]] or None, optional
+            Value for source Rows.
+        
+        Returns
+        -------
+        tuple[int, list[ConcurrencyTrial]]
+            Collected results from the operation.
+        """
         settings = self.adaptive_concurrency
 
         if not settings.enabled:
@@ -844,7 +1411,24 @@ class Evaluator:
         tune_concurrency: bool = True,
         show_progress: bool = True,
     ) -> EvaluationRunResult:
-        """Run evaluation and return scores plus execution metadata."""
+        """Run evaluation and return scores plus execution metadata.
+        
+        Parameters
+        ----------
+        dataset : EvaluationDataset
+            Value for dataset.
+        source_rows : list[dict[str, Any]] or None, optional
+            Value for source Rows.
+        tune_concurrency : bool, optional
+            Value for tune Concurrency.
+        show_progress : bool, optional
+            Value for show Progress.
+        
+        Returns
+        -------
+        EvaluationRunResult
+            Result of the operation.
+        """
 
         runtime_metrics, skipped_metrics = self._resolve_runtime_metrics(dataset=dataset)
         logger.info(
@@ -989,9 +1573,23 @@ class Evaluator:
         show_progress: bool = True,
     ) -> tuple[Executor, dict[str, Any]]:
         """Build an executor for cancellable metric execution.
-
-        The caller can run ``executor.results()`` and call ``executor.cancel()``
-        from another thread/context to request cancellation.
+        
+        The caller can run ``executor.results()`` and call ``executor.cancel()`` from
+        another thread/context to request cancellation.
+        
+        Parameters
+        ----------
+        dataset : EvaluationDataset
+            Value for dataset.
+        tune_concurrency : bool, optional
+            Value for tune Concurrency.
+        show_progress : bool, optional
+            Value for show Progress.
+        
+        Returns
+        -------
+        tuple[Executor, dict[str, Any]]
+            Constructed executor.
         """
 
         runtime_metrics, skipped_metrics = self._resolve_runtime_metrics(dataset=dataset)
@@ -1034,7 +1632,24 @@ def write_outputs(
     extra_manifest: Mapping[str, Any] | None = None,
     source_rows: list[dict[str, Any]] | None = None,
 ) -> dict[str, Path]:
-    """Persist standard output artifacts for an evaluation run."""
+    """Persist standard output artifacts for an evaluation run.
+    
+    Parameters
+    ----------
+    result : EvaluationRunResult
+        Evaluation or backend result object to summarize.
+    output_dir : str or Path
+        Value for output Dir.
+    extra_manifest : Mapping[str, Any] or None, optional
+        Value for extra Manifest.
+    source_rows : list[dict[str, Any]] or None, optional
+        Value for source Rows.
+    
+    Returns
+    -------
+    dict[str, Path]
+        Structured result of the operation.
+    """
 
     out_dir = Path(output_dir).expanduser().resolve()
     out_dir.mkdir(parents=True, exist_ok=True)

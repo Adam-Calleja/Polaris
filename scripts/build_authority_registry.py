@@ -1,3 +1,14 @@
+"""Thin wrapper for the packaged authority-registry builder.
+
+This wrapper preserves direct script execution by delegating to the corresponding
+packaged CLI entrypoint under `polaris_rag.cli`.
+
+Notes
+-----
+This wrapper keeps local script execution aligned with the installed console-script
+entrypoint.
+"""
+
 from __future__ import annotations
 
 import sys
@@ -5,6 +16,18 @@ from pathlib import Path
 
 
 def _find_repo_root(start: Path) -> Path:
+    """Find Repo Root.
+    
+    Parameters
+    ----------
+    start : Path
+        Value for start.
+    
+    Returns
+    -------
+    Path
+        Result of the operation.
+    """
     for candidate in (start, *start.parents):
         if (candidate / "pyproject.toml").exists() and (candidate / "src").exists():
             return candidate

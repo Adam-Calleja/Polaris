@@ -1,4 +1,14 @@
-"""Jira ticket ingestion entrypoint."""
+"""Jira ticket ingestion entrypoint.
+
+This module exposes public helper functions used by the surrounding Polaris subsystem.
+
+Functions
+---------
+parse_args
+    Parse args.
+main
+    Run the command-line entrypoint.
+"""
 
 from __future__ import annotations
 
@@ -10,6 +20,18 @@ from typing import Any, Mapping
 
 
 def _find_repo_root(start: Path) -> Path:
+    """Find Repo Root.
+    
+    Parameters
+    ----------
+    start : Path
+        Value for start.
+    
+    Returns
+    -------
+    Path
+        Result of the operation.
+    """
     for candidate in (start, *start.parents):
         if (candidate / "pyproject.toml").exists() and (candidate / "src").exists():
             return candidate
@@ -48,6 +70,18 @@ from polaris_rag.retrieval.markdown_converter import convert_tickets_to_markdown
 
 
 def _as_mapping(obj: Any) -> Mapping[str, Any]:
+    """As Mapping.
+    
+    Parameters
+    ----------
+    obj : Any
+        Value for obj.
+    
+    Returns
+    -------
+    Mapping[str, Any]
+        Result of the operation.
+    """
     if isinstance(obj, Mapping):
         return obj
     if hasattr(obj, "__dict__"):
@@ -56,6 +90,13 @@ def _as_mapping(obj: Any) -> Mapping[str, Any]:
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse args.
+    
+    Returns
+    -------
+    argparse.Namespace
+        Parsed args.
+    """
     parser = argparse.ArgumentParser(description="Ingest Jira tickets into the RAG stores")
 
     parser.add_argument(
@@ -180,17 +221,55 @@ def parse_args() -> argparse.Namespace:
 
 
 def _get_ingestion_cfg(cfg: GlobalConfig) -> Mapping[str, Any]:
+    """Return ingestion Cfg.
+    
+    Parameters
+    ----------
+    cfg : GlobalConfig
+        Configuration object or mapping used to resolve runtime settings.
+    
+    Returns
+    -------
+    Mapping[str, Any]
+        Result of the operation.
+    """
     ingestion = getattr(cfg, "ingestion", None)
     return _as_mapping(ingestion)
 
 
 def _get_jira_ingestion_cfg(cfg: GlobalConfig) -> Mapping[str, Any]:
+    """Return jira Ingestion Cfg.
+    
+    Parameters
+    ----------
+    cfg : GlobalConfig
+        Configuration object or mapping used to resolve runtime settings.
+    
+    Returns
+    -------
+    Mapping[str, Any]
+        Result of the operation.
+    """
     ingestion = _get_ingestion_cfg(cfg)
     jira = ingestion.get("jira") if isinstance(ingestion, Mapping) else None
     return jira if isinstance(jira, Mapping) else {}
 
 
 def _resolve_persist_dir(cfg: GlobalConfig, cli_value: str | None) -> str:
+    """Resolve persist Dir.
+    
+    Parameters
+    ----------
+    cfg : GlobalConfig
+        Configuration object or mapping used to resolve runtime settings.
+    cli_value : str or None, optional
+        Optional value provided via the command line.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     if cli_value:
         return cli_value
 
@@ -206,6 +285,22 @@ def _resolve_persist_dir(cfg: GlobalConfig, cli_value: str | None) -> str:
 
 
 def _resolve_dates(cfg: GlobalConfig, start_cli: str | None, end_cli: str | None) -> tuple[str, str]:
+    """Resolve dates.
+    
+    Parameters
+    ----------
+    cfg : GlobalConfig
+        Configuration object or mapping used to resolve runtime settings.
+    start_cli : str or None, optional
+        Value for start CLI.
+    end_cli : str or None, optional
+        Value for end CLI.
+    
+    Returns
+    -------
+    tuple[str, str]
+        Collected results from the operation.
+    """
     jira_cfg = _get_jira_ingestion_cfg(cfg)
     today = datetime.now().strftime("%Y-%m-%d")
 
@@ -215,6 +310,20 @@ def _resolve_dates(cfg: GlobalConfig, start_cli: str | None, end_cli: str | None
 
 
 def _resolve_limit(cfg: GlobalConfig, limit_cli: int | None) -> int | None:
+    """Resolve limit.
+    
+    Parameters
+    ----------
+    cfg : GlobalConfig
+        Configuration object or mapping used to resolve runtime settings.
+    limit_cli : int or None, optional
+        Value for limit CLI.
+    
+    Returns
+    -------
+    int or None
+        Result of the operation.
+    """
     if limit_cli is not None:
         return limit_cli
     jira_cfg = _get_jira_ingestion_cfg(cfg)
@@ -223,6 +332,18 @@ def _resolve_limit(cfg: GlobalConfig, limit_cli: int | None) -> int | None:
 
 
 def _resolve_unwanted_summaries(cfg: GlobalConfig) -> list[str]:
+    """Resolve unwanted Summaries.
+    
+    Parameters
+    ----------
+    cfg : GlobalConfig
+        Configuration object or mapping used to resolve runtime settings.
+    
+    Returns
+    -------
+    list[str]
+        Collected results from the operation.
+    """
     jira_cfg = _get_jira_ingestion_cfg(cfg)
     summaries = jira_cfg.get("exclude_summaries")
     if isinstance(summaries, list) and all(isinstance(x, str) for x in summaries):
@@ -236,6 +357,18 @@ def _resolve_unwanted_summaries(cfg: GlobalConfig) -> list[str]:
 
 
 def _read_exclude_keys_file(path: Path) -> list[str]:
+    """Read exclude Keys File.
+    
+    Parameters
+    ----------
+    path : Path
+        Filesystem path used by the operation.
+    
+    Returns
+    -------
+    list[str]
+        Collected results from the operation.
+    """
     if not path.exists():
         return []
 
@@ -250,6 +383,20 @@ def _read_exclude_keys_file(path: Path) -> list[str]:
 
 
 def _resolve_exclude_keys(cfg: GlobalConfig, cli_value: str | None) -> list[str]:
+    """Resolve exclude Keys.
+    
+    Parameters
+    ----------
+    cfg : GlobalConfig
+        Configuration object or mapping used to resolve runtime settings.
+    cli_value : str or None, optional
+        Optional value provided via the command line.
+    
+    Returns
+    -------
+    list[str]
+        Collected results from the operation.
+    """
     jira_cfg = _get_jira_ingestion_cfg(cfg)
     cfg_inline_keys = jira_cfg.get("exclude_keys")
     cfg_file = jira_cfg.get("exclude_keys_file")
@@ -269,6 +416,20 @@ def _resolve_exclude_keys(cfg: GlobalConfig, cli_value: str | None) -> list[str]
 
 
 def _resolve_embedding_workers(cfg: GlobalConfig, cli_value: int | None) -> int | None:
+    """Resolve embedding Workers.
+    
+    Parameters
+    ----------
+    cfg : GlobalConfig
+        Configuration object or mapping used to resolve runtime settings.
+    cli_value : int or None, optional
+        Optional value provided via the command line.
+    
+    Returns
+    -------
+    int or None
+        Result of the operation.
+    """
     if cli_value is not None:
         return int(cli_value)
 
@@ -283,6 +444,15 @@ def _resolve_embedding_workers(cfg: GlobalConfig, cli_value: int | None) -> int 
 
 
 def _dump_processed_tickets(processed_tickets: list[Any], dump_path: Path) -> None:
+    """Dump Processed Tickets.
+    
+    Parameters
+    ----------
+    processed_tickets : list[Any]
+        Value for processed Tickets.
+    dump_path : Path
+        Filesystem path used by the operation.
+    """
     dump_path.parent.mkdir(parents=True, exist_ok=True)
     sep = "\n\n" + ("-" * 10) + "\n\n"
     with dump_path.open("a", encoding="utf-8") as handle:
@@ -292,6 +462,24 @@ def _dump_processed_tickets(processed_tickets: list[Any], dump_path: Path) -> No
 
 
 def _override_qdrant_collection_name(cfg: GlobalConfig, source: str, cli_value: str | None) -> None:
+    """Override Qdrant Collection Name.
+    
+    Parameters
+    ----------
+    cfg : GlobalConfig
+        Configuration object or mapping used to resolve runtime settings.
+    source : str
+        Source definition, source name, or source identifier to process.
+    cli_value : str or None, optional
+        Optional value provided via the command line.
+    
+    Raises
+    ------
+    TypeError
+        If the provided value has an unexpected type.
+    KeyError
+        If a required mapping entry is missing.
+    """
     if not cli_value:
         return
 
@@ -307,6 +495,25 @@ def _override_qdrant_collection_name(cfg: GlobalConfig, source: str, cli_value: 
 
 
 def _build_source_storage_context(container: Any, source: str) -> Any:
+    """Build source Storage Context.
+    
+    Parameters
+    ----------
+    container : Any
+        Value for container.
+    source : str
+        Source definition, source name, or source identifier to process.
+    
+    Returns
+    -------
+    Any
+        Result of the operation.
+    
+    Raises
+    ------
+    KeyError
+        If a required mapping entry is missing.
+    """
     stores = container.vector_stores
     if source not in stores:
         raise KeyError(f"Unknown source {source!r}. Available sources: {sorted(stores.keys())}")
@@ -319,6 +526,13 @@ def _build_source_storage_context(container: Any, source: str) -> Any:
 
 
 def main() -> None:
+    """Run the command-line entrypoint.
+    
+    Raises
+    ------
+    ValueError
+        If the provided value is invalid for the operation.
+    """
     args = parse_args()
     from polaris_rag.retrieval.document_loader import load_support_tickets
     from polaris_rag.retrieval.document_preprocessor import preprocess_jira_tickets

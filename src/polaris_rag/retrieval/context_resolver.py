@@ -1,4 +1,13 @@
-"""Resolve raw retrieved chunks into the final context passed to generation."""
+"""Resolve raw retrieved chunks into the final context passed to generation.
+
+This module exposes public classes and structured types used by the surrounding Polaris
+subsystem.
+
+Classes
+-------
+SupportTicketContextResolver
+    Expand retrieved ticket chunks to full tickets and deduplicate them.
+"""
 
 from __future__ import annotations
 
@@ -9,6 +18,18 @@ from llama_index.core.storage.docstore import BaseDocumentStore
 
 
 def _to_float_or_none(value: Any) -> float | None:
+    """To Float Or None.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    
+    Returns
+    -------
+    float or None
+        Result of the operation.
+    """
     if value is None:
         return None
     try:
@@ -18,12 +39,36 @@ def _to_float_or_none(value: Any) -> float | None:
 
 
 def _coerce_node_with_score(item: Any) -> NodeWithScore:
+    """Coerce node With Score.
+    
+    Parameters
+    ----------
+    item : Any
+        Value for item.
+    
+    Returns
+    -------
+    NodeWithScore
+        Result of the operation.
+    """
     if isinstance(item, NodeWithScore):
         return item
     return NodeWithScore(node=getattr(item, "node", item), score=_to_float_or_none(getattr(item, "score", None)))
 
 
 def _extract_text(node: Any) -> str:
+    """Extract text.
+    
+    Parameters
+    ----------
+    node : Any
+        Value for node.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     text = getattr(node, "text", None)
     if isinstance(text, str):
         return text
@@ -37,7 +82,20 @@ def _extract_text(node: Any) -> str:
 
 
 class SupportTicketContextResolver:
-    """Expand retrieved ticket chunks to full tickets and deduplicate them."""
+    """Expand retrieved ticket chunks to full tickets and deduplicate them.
+    
+    Parameters
+    ----------
+    source_document_store : BaseDocumentStore or None, optional
+        Value for source Document Store.
+    ticket_document_types : Iterable[str] or None, optional
+        Value for ticket Document Types.
+    
+    Methods
+    -------
+    resolve
+        Resolve.
+    """
 
     def __init__(
             self,
@@ -45,10 +103,31 @@ class SupportTicketContextResolver:
             source_document_store: BaseDocumentStore | None = None,
             ticket_document_types: Iterable[str] | None = None,
         ) -> None:
+        """Initialize the instance.
+        
+        Parameters
+        ----------
+        source_document_store : BaseDocumentStore or None, optional
+            Value for source Document Store.
+        ticket_document_types : Iterable[str] or None, optional
+            Value for ticket Document Types.
+        """
         self._source_document_store = source_document_store
         self._ticket_document_types = frozenset(ticket_document_types or {"helpdesk_ticket"})
 
     def resolve(self, source_nodes: list[Any]) -> list[NodeWithScore]:
+        """Resolve.
+        
+        Parameters
+        ----------
+        source_nodes : list[Any]
+            Retrieved nodes or node wrappers to serialize.
+        
+        Returns
+        -------
+        list[NodeWithScore]
+            Collected results from the operation.
+        """
         if not source_nodes:
             return []
 
@@ -79,6 +158,18 @@ class SupportTicketContextResolver:
         return resolved
 
     def _load_full_ticket_node(self, ticket_id: str) -> TextNode | None:
+        """Load full Ticket Node.
+        
+        Parameters
+        ----------
+        ticket_id : str
+            Stable identifier for ticket.
+        
+        Returns
+        -------
+        TextNode or None
+            Result of the operation.
+        """
         if self._source_document_store is None:
             return None
 

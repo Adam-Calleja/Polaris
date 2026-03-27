@@ -9,7 +9,7 @@ from polaris_rag.app import api
 def test_configure_cors_allows_frontend_origin_and_headers(monkeypatch) -> None:
     monkeypatch.setenv(
         "POLARIS_UI_CORS_ALLOWED_ORIGINS",
-        "http://localhost:8500,http://localhost:8501,http://example.test:9000",
+        "http://localhost:8500,http://example.test:9000",
     )
 
     test_app = FastAPI()

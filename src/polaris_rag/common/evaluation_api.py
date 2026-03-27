@@ -1,4 +1,12 @@
-"""Shared evaluation-specific API constants."""
+"""Shared evaluation-specific API constants.
+
+This module provides package-level helpers for the surrounding Polaris subsystem.
+
+Notes
+-----
+This module currently exposes its behavior through module-level side effects or imported
+symbols.
+"""
 
 from __future__ import annotations
 

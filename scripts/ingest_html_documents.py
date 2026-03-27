@@ -1,4 +1,13 @@
-"""Thin wrapper for the packaged HTML ingestion entrypoint."""
+"""Thin wrapper for the packaged HTML ingestion entrypoint.
+
+This wrapper preserves direct script execution by delegating to the corresponding
+packaged CLI entrypoint under `polaris_rag.cli`.
+
+Notes
+-----
+This wrapper keeps local script execution aligned with the installed console-script
+entrypoint.
+"""
 
 from __future__ import annotations
 

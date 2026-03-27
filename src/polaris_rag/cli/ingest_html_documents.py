@@ -1,4 +1,18 @@
-"""HTML ingestion entrypoint."""
+"""HTML ingestion entrypoint.
+
+This module exposes public helper functions used by the surrounding Polaris subsystem.
+
+Functions
+---------
+get_internal_links
+    Return internal Links.
+load_website_docs
+    Load website Docs.
+parse_args
+    Parse args.
+main
+    Run the command-line entrypoint.
+"""
 
 from __future__ import annotations
 
@@ -9,6 +23,18 @@ from typing import Any, Mapping
 
 
 def _find_repo_root(start: Path) -> Path:
+    """Find Repo Root.
+    
+    Parameters
+    ----------
+    start : Path
+        Value for start.
+    
+    Returns
+    -------
+    Path
+        Result of the operation.
+    """
     for candidate in (start, *start.parents):
         if (candidate / "pyproject.toml").exists() and (candidate / "src").exists():
             return candidate
@@ -46,18 +72,49 @@ from polaris_rag.retrieval.text_splitter import get_chunks_from_documents
 
 
 def get_internal_links(homepage: str) -> list[str]:
+    """Return internal Links.
+    
+    Parameters
+    ----------
+    homepage : str
+        Value for homepage.
+    
+    Returns
+    -------
+    list[str]
+        Requested internal Links.
+    """
     from polaris_rag.retrieval.document_loader import get_internal_links as _get_internal_links
 
     return _get_internal_links(homepage)
 
 
 def load_website_docs(links: list[str]) -> list[Any]:
+    """Load website Docs.
+    
+    Parameters
+    ----------
+    links : list[str]
+        Value for links.
+    
+    Returns
+    -------
+    list[Any]
+        Loaded website Docs.
+    """
     from polaris_rag.retrieval.document_loader import load_website_docs as _load_website_docs
 
     return _load_website_docs(links)
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse args.
+    
+    Returns
+    -------
+    argparse.Namespace
+        Parsed args.
+    """
     parser = argparse.ArgumentParser(description="Ingest HTML documents into the RAG stores")
 
     parser.add_argument(
@@ -154,6 +211,18 @@ def parse_args() -> argparse.Namespace:
 
 
 def _as_mapping(obj: Any) -> Mapping[str, Any]:
+    """As Mapping.
+    
+    Parameters
+    ----------
+    obj : Any
+        Value for obj.
+    
+    Returns
+    -------
+    Mapping[str, Any]
+        Result of the operation.
+    """
     if isinstance(obj, Mapping):
         return obj
     if hasattr(obj, "__dict__"):
@@ -162,6 +231,20 @@ def _as_mapping(obj: Any) -> Mapping[str, Any]:
 
 
 def _resolve_persist_dir(cfg: GlobalConfig, cli_value: str | None) -> str:
+    """Resolve persist Dir.
+    
+    Parameters
+    ----------
+    cfg : GlobalConfig
+        Configuration object or mapping used to resolve runtime settings.
+    cli_value : str or None, optional
+        Optional value provided via the command line.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     if cli_value:
         return cli_value
 
@@ -177,6 +260,24 @@ def _resolve_persist_dir(cfg: GlobalConfig, cli_value: str | None) -> str:
 
 
 def _override_qdrant_collection_name(cfg: GlobalConfig, source: str, cli_value: str | None) -> None:
+    """Override Qdrant Collection Name.
+    
+    Parameters
+    ----------
+    cfg : GlobalConfig
+        Configuration object or mapping used to resolve runtime settings.
+    source : str
+        Source definition, source name, or source identifier to process.
+    cli_value : str or None, optional
+        Optional value provided via the command line.
+    
+    Raises
+    ------
+    TypeError
+        If the provided value has an unexpected type.
+    KeyError
+        If a required mapping entry is missing.
+    """
     if not cli_value:
         return
 
@@ -192,6 +293,25 @@ def _override_qdrant_collection_name(cfg: GlobalConfig, source: str, cli_value: 
 
 
 def _build_source_storage_context(container: Any, source: str) -> Any:
+    """Build source Storage Context.
+    
+    Parameters
+    ----------
+    container : Any
+        Value for container.
+    source : str
+        Source definition, source name, or source identifier to process.
+    
+    Returns
+    -------
+    Any
+        Result of the operation.
+    
+    Raises
+    ------
+    KeyError
+        If a required mapping entry is missing.
+    """
     stores = container.vector_stores
     if source not in stores:
         raise KeyError(f"Unknown source {source!r}. Available sources: {sorted(stores.keys())}")
@@ -204,6 +324,20 @@ def _build_source_storage_context(container: Any, source: str) -> Any:
 
 
 def _resolve_embedding_workers(cfg: GlobalConfig, cli_value: int | None) -> int | None:
+    """Resolve embedding Workers.
+    
+    Parameters
+    ----------
+    cfg : GlobalConfig
+        Configuration object or mapping used to resolve runtime settings.
+    cli_value : int or None, optional
+        Optional value provided via the command line.
+    
+    Returns
+    -------
+    int or None
+        Result of the operation.
+    """
     if cli_value is not None:
         return int(cli_value)
 
@@ -218,6 +352,15 @@ def _resolve_embedding_workers(cfg: GlobalConfig, cli_value: int | None) -> int 
 
 
 def main() -> None:
+    """Run the command-line entrypoint.
+    
+    Raises
+    ------
+    RuntimeError
+        If `RuntimeError` is raised while executing the operation.
+    ValueError
+        If the provided value is invalid for the operation.
+    """
     args = parse_args()
 
     cfg = GlobalConfig.load(args.config_file)

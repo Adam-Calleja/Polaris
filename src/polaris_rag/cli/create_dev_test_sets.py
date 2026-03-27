@@ -1,4 +1,14 @@
-"""CLI entrypoint for splitting raw evaluation examples into dev and test sets."""
+"""CLI entrypoint for splitting raw evaluation examples into dev and test sets.
+
+This module exposes public helper functions used by the surrounding Polaris subsystem.
+
+Functions
+---------
+parse_args
+    Parse args.
+main
+    Run the command-line entrypoint.
+"""
 
 from __future__ import annotations
 
@@ -23,6 +33,13 @@ from polaris_rag.observability import EvaluationTrackingContext, load_mlflow_run
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse args.
+    
+    Returns
+    -------
+    argparse.Namespace
+        Parsed args.
+    """
     parser = argparse.ArgumentParser(description="Create dev and test datasets from a full raw dataset")
     parser.add_argument(
         "--config-file",
@@ -141,15 +158,57 @@ def parse_args() -> argparse.Namespace:
 
 
 def _default_output_path(dataset_path: Path, split_name: str) -> Path:
+    """Default Output Path.
+    
+    Parameters
+    ----------
+    dataset_path : Path
+        Filesystem path used by the operation.
+    split_name : str
+        Value for split Name.
+    
+    Returns
+    -------
+    Path
+        Result of the operation.
+    """
     suffix = dataset_path.suffix
     return dataset_path.with_name(f"{dataset_path.stem}.{split_name}{suffix}")
 
 
 def _default_sidecar_path(dataset_path: Path, suffix: str) -> Path:
+    """Default Sidecar Path.
+    
+    Parameters
+    ----------
+    dataset_path : Path
+        Filesystem path used by the operation.
+    suffix : str
+        Value for suffix.
+    
+    Returns
+    -------
+    Path
+        Result of the operation.
+    """
     return dataset_path.with_name(f"{dataset_path.stem}.{suffix}")
 
 
 def _persist_sample_ids(sample_ids: list[str], path: Path) -> Path:
+    """Persist sample IDs.
+    
+    Parameters
+    ----------
+    sample_ids : list[str]
+        Stable identifiers for sample.
+    path : Path
+        Filesystem path used by the operation.
+    
+    Returns
+    -------
+    Path
+        Result of the operation.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
     body = "\n".join(str(sample_id).strip() for sample_id in sample_ids if str(sample_id).strip())
     if body:
@@ -159,12 +218,38 @@ def _persist_sample_ids(sample_ids: list[str], path: Path) -> Path:
 
 
 def _persist_split_report(report: dict[str, Any], path: Path) -> Path:
+    """Persist split Report.
+    
+    Parameters
+    ----------
+    report : dict[str, Any]
+        Value for report.
+    path : Path
+        Filesystem path used by the operation.
+    
+    Returns
+    -------
+    Path
+        Result of the operation.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True), encoding="utf-8")
     return path
 
 
 def _import_pandas() -> Any:
+    """Import Pandas.
+    
+    Returns
+    -------
+    Any
+        Result of the operation.
+    
+    Raises
+    ------
+    RuntimeError
+        If `RuntimeError` is raised while executing the operation.
+    """
     try:
         import pandas as pd
     except Exception as exc:
@@ -181,6 +266,24 @@ def _build_mlflow_dataset(
     source: Path,
     dataset_name: str,
 ) -> Any:
+    """Build mlflow Dataset.
+    
+    Parameters
+    ----------
+    mlflow : Any
+        Value for mlflow.
+    rows : list[dict[str, Any]]
+        Value for rows.
+    source : Path
+        Source definition, source name, or source identifier to process.
+    dataset_name : str
+        Value for dataset Name.
+    
+    Returns
+    -------
+    Any
+        Result of the operation.
+    """
     pd = _import_pandas()
     frame = pd.DataFrame.from_records(rows)
     return mlflow.data.from_pandas(
@@ -191,6 +294,18 @@ def _build_mlflow_dataset(
 
 
 def _resolve_tracking(args: argparse.Namespace) -> EvaluationTrackingContext:
+    """Resolve tracking.
+    
+    Parameters
+    ----------
+    args : argparse.Namespace
+        Value for args.
+    
+    Returns
+    -------
+    EvaluationTrackingContext
+        Result of the operation.
+    """
     cfg: Any = {}
     if args.config_file:
         cfg = GlobalConfig.load(args.config_file)
@@ -219,6 +334,36 @@ def _log_split_datasets_to_mlflow(
     test_context: str,
     run_name: str | None,
 ) -> str | None:
+    """Log Split Datasets To MLflow.
+    
+    Parameters
+    ----------
+    tracking : EvaluationTrackingContext
+        Value for tracking.
+    dataset_path : Path
+        Filesystem path used by the operation.
+    dataset_name : str or None, optional
+        Value for dataset Name.
+    dev_rows : list[dict[str, Any]]
+        Value for dev Rows.
+    test_rows : list[dict[str, Any]]
+        Value for test Rows.
+    dev_output_path : Path
+        Filesystem path used by the operation.
+    test_output_path : Path
+        Filesystem path used by the operation.
+    dev_context : str
+        Value for dev Context.
+    test_context : str
+        Value for test Context.
+    run_name : str or None, optional
+        Value for run Name.
+    
+    Returns
+    -------
+    str or None
+        Result of the operation.
+    """
     if not tracking.enabled:
         return None
 
@@ -286,6 +431,13 @@ def _log_split_datasets_to_mlflow(
 
 
 def main() -> None:
+    """Run the command-line entrypoint.
+    
+    Raises
+    ------
+    ValueError
+        If the provided value is invalid for the operation.
+    """
     args = parse_args()
 
     dataset_path = Path(args.dataset_file).expanduser().resolve()

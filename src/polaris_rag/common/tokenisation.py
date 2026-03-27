@@ -29,20 +29,67 @@ from typing import Any, Protocol
 
 class TokenCounter(Protocol):
     """A minimal interface for token-based sizing.
-
-    Implementations provide a consistent way to estimate or compute the number
-    of tokens in a string, and to extract the trailing portion of text by token
-    count.
+    
+    Implementations provide a consistent way to estimate or compute the number of
+    tokens in a string, and to extract the trailing portion of text by token count.
+    
+    Methods
+    -------
+    count
+        Return the number of tokens in ``text``.
+    tail
+        Return the last ``n_tokens`` tokens of ``text`` as text.
+    split
+        Split ``text`` into overlapping windows of at most ``max_tokens``.
     """
 
     def count(self, text: str) -> int:
-        """Return the number of tokens in ``text``."""
+        """Return the number of tokens in ``text``.
+        
+        Parameters
+        ----------
+        text : str
+            Text value to inspect, tokenize, or encode.
+        
+        Returns
+        -------
+        int
+            Computed integer value.
+        """
 
     def tail(self, text: str, n_tokens: int) -> str:
-        """Return the last ``n_tokens`` tokens of ``text`` as text."""
+        """Return the last ``n_tokens`` tokens of ``text`` as text.
+        
+        Parameters
+        ----------
+        text : str
+            Text value to inspect, tokenize, or encode.
+        n_tokens : int
+            Value for N Tokens.
+        
+        Returns
+        -------
+        str
+            Resulting string value.
+        """
 
     def split(self, text: str, max_tokens: int, overlap_tokens: int = 0) -> list[str]:
-        """Split ``text`` into overlapping windows of at most ``max_tokens``."""
+        """Split ``text`` into overlapping windows of at most ``max_tokens``.
+        
+        Parameters
+        ----------
+        text : str
+            Text value to inspect, tokenize, or encode.
+        max_tokens : int
+            Maximum number of tokens permitted in each chunk.
+        overlap_tokens : int, optional
+            Number of tokens to overlap between adjacent chunks.
+        
+        Returns
+        -------
+        list[str]
+            Collected results from the operation.
+        """
 
 
 @dataclass(frozen=True)
@@ -62,18 +109,65 @@ class HeuristicTokenCounter:
     chars_per_token: int = 4
 
     def count(self, text: str) -> int:
+        """Count.
+        
+        Parameters
+        ----------
+        text : str
+            Text value to inspect, tokenize, or encode.
+        
+        Returns
+        -------
+        int
+            Computed integer value.
+        """
         if not text:
             return 0
         cpt = max(1, int(self.chars_per_token))
         return max(1, len(text) // cpt)
 
     def tail(self, text: str, n_tokens: int) -> str:
+        """Tail.
+        
+        Parameters
+        ----------
+        text : str
+            Text value to inspect, tokenize, or encode.
+        n_tokens : int
+            Value for N Tokens.
+        
+        Returns
+        -------
+        str
+            Resulting string value.
+        """
         if not text or n_tokens <= 0:
             return ""
         cpt = max(1, int(self.chars_per_token))
         return text[-(n_tokens * cpt) :]
 
     def split(self, text: str, max_tokens: int, overlap_tokens: int = 0) -> list[str]:
+        """Split.
+        
+        Parameters
+        ----------
+        text : str
+            Text value to inspect, tokenize, or encode.
+        max_tokens : int
+            Maximum number of tokens permitted in each chunk.
+        overlap_tokens : int, optional
+            Number of tokens to overlap between adjacent chunks.
+        
+        Returns
+        -------
+        list[str]
+            Collected results from the operation.
+        
+        Raises
+        ------
+        ValueError
+            If the provided value is invalid for the operation.
+        """
         if not text:
             return []
 
@@ -154,11 +248,37 @@ class TiktokenTokenCounter:
         return cls(encoding_name=encoding_name, _enc=enc)
 
     def count(self, text: str) -> int:
+        """Count.
+        
+        Parameters
+        ----------
+        text : str
+            Text value to inspect, tokenize, or encode.
+        
+        Returns
+        -------
+        int
+            Computed integer value.
+        """
         if not text:
             return 0
         return len(self._enc.encode(text))
 
     def tail(self, text: str, n_tokens: int) -> str:
+        """Tail.
+        
+        Parameters
+        ----------
+        text : str
+            Text value to inspect, tokenize, or encode.
+        n_tokens : int
+            Value for N Tokens.
+        
+        Returns
+        -------
+        str
+            Resulting string value.
+        """
         if not text or n_tokens <= 0:
             return ""
         toks = self._enc.encode(text)
@@ -167,6 +287,27 @@ class TiktokenTokenCounter:
         return self._enc.decode(toks[-n_tokens:])
 
     def split(self, text: str, max_tokens: int, overlap_tokens: int = 0) -> list[str]:
+        """Split.
+        
+        Parameters
+        ----------
+        text : str
+            Text value to inspect, tokenize, or encode.
+        max_tokens : int
+            Maximum number of tokens permitted in each chunk.
+        overlap_tokens : int, optional
+            Number of tokens to overlap between adjacent chunks.
+        
+        Returns
+        -------
+        list[str]
+            Collected results from the operation.
+        
+        Raises
+        ------
+        ValueError
+            If the provided value is invalid for the operation.
+        """
         if not text:
             return []
 
@@ -206,11 +347,37 @@ class HuggingFaceTokenCounter:
     tokenizer: Any
 
     def count(self, text: str) -> int:
+        """Count.
+        
+        Parameters
+        ----------
+        text : str
+            Text value to inspect, tokenize, or encode.
+        
+        Returns
+        -------
+        int
+            Computed integer value.
+        """
         if not text:
             return 0
         return len(self.tokenizer.encode(text))
 
     def tail(self, text: str, n_tokens: int) -> str:
+        """Tail.
+        
+        Parameters
+        ----------
+        text : str
+            Text value to inspect, tokenize, or encode.
+        n_tokens : int
+            Value for N Tokens.
+        
+        Returns
+        -------
+        str
+            Resulting string value.
+        """
         if not text or n_tokens <= 0:
             return ""
         toks = self.tokenizer.encode(text)
@@ -219,6 +386,27 @@ class HuggingFaceTokenCounter:
         return self.tokenizer.decode(toks[-n_tokens:])
 
     def split(self, text: str, max_tokens: int, overlap_tokens: int = 0) -> list[str]:
+        """Split.
+        
+        Parameters
+        ----------
+        text : str
+            Text value to inspect, tokenize, or encode.
+        max_tokens : int
+            Maximum number of tokens permitted in each chunk.
+        overlap_tokens : int, optional
+            Number of tokens to overlap between adjacent chunks.
+        
+        Returns
+        -------
+        list[str]
+            Collected results from the operation.
+        
+        Raises
+        ------
+        ValueError
+            If the provided value is invalid for the operation.
+        """
         if not text:
             return []
 

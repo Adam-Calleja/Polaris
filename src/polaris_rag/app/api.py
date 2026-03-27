@@ -1,4 +1,57 @@
 # polaris_rag/app/api.py
+"""FastAPI application for Polaris RAG.
+
+This module configures the public HTTP API, defines request and response models, and
+exposes the query, readiness, and feedback endpoints used by the UI and evaluation
+tooling.
+
+Classes
+-------
+QueryConstraintsPayload
+    Payload model for query Constraints.
+RetrievedContextChunk
+    Structured chunk for retrieved Context.
+QueryAnswerStatus
+    Status payload for query Answer.
+QueryTimings
+    Timing data for query.
+QueryRequest
+    Request model for query.
+QueryResponse
+    Response model for query.
+UiRuntimeResponse
+    Response model for UI Runtime.
+UiFeedbackSummaryResponse
+    Response model for UI Feedback Summary.
+UiFeedbackSubmissionRequest
+    Request model for UI Feedback Submission.
+UiFeedbackSubmissionResponse
+    Response model for UI Feedback Submission.
+
+Functions
+---------
+parse_cors_allowed_origins
+    Parse the configured UI CORS allowlist.
+configure_cors
+    Attach CORS middleware to the target FastAPI application.
+get_feedback_log_path
+    Return the configured feedback log path.
+startup
+    Initialize application state during FastAPI startup.
+health
+    Return a basic liveness response for the API service.
+ready
+    Return a readiness report for configured runtime dependencies.
+ui_runtime
+    Return runtime settings consumed by the UI.
+ui_feedback_summary
+    Return aggregated UI feedback statistics.
+submit_ui_feedback
+    Persist a UI feedback submission.
+query
+    Handle a Polaris RAG query request.
+"""
+
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -50,8 +103,6 @@ logger = logging.getLogger("polaris_rag.api")
 DEFAULT_UI_CORS_ALLOWED_ORIGINS = (
     "http://localhost:8500",
     "http://127.0.0.1:8500",
-    "http://localhost:8501",
-    "http://127.0.0.1:8501",
 )
 UI_CORS_ALLOWED_HEADERS = (
     "Content-Type",
@@ -62,6 +113,35 @@ UI_CORS_ALLOWED_HEADERS = (
 
 
 class QueryConstraintsPayload(BaseModel):
+    """Payload model for query Constraints.
+    
+    Attributes
+    ----------
+    query_type : str or None
+        Value for query Type.
+    system_names : list[str]
+        Value for system Names.
+    partition_names : list[str]
+        Value for partition Names.
+    service_names : list[str]
+        Value for service Names.
+    scope_family_names : list[str]
+        Value for scope Family Names.
+    software_names : list[str]
+        Value for software Names.
+    software_versions : list[str]
+        Value for software Versions.
+    module_names : list[str]
+        Value for module Names.
+    toolchain_names : list[str]
+        Value for toolchain Names.
+    toolchain_versions : list[str]
+        Value for toolchain Versions.
+    scope_required : bool or None
+        Value for scope Required.
+    version_sensitive_guess : bool or None
+        Value for version Sensitive Guess.
+    """
     query_type: str | None = None
     system_names: list[str] = Field(default_factory=list)
     partition_names: list[str] = Field(default_factory=list)
@@ -77,6 +157,21 @@ class QueryConstraintsPayload(BaseModel):
 
 
 class RetrievedContextChunk(BaseModel):
+    """Structured chunk for retrieved Context.
+    
+    Attributes
+    ----------
+    rank : int
+        Value for rank.
+    doc_id : str
+        Stable identifier for doc.
+    text : str
+        Text value to inspect, tokenize, or encode.
+    score : float or None
+        Value for score.
+    source : str or None
+        Source definition, source name, or source identifier to process.
+    """
     rank: int
     doc_id: str
     text: str
@@ -85,22 +180,68 @@ class RetrievedContextChunk(BaseModel):
 
 
 class QueryAnswerStatus(BaseModel):
+    """Status payload for query Answer.
+    
+    Attributes
+    ----------
+    code : str
+        Value for code.
+    detail : str
+        Structured failure detail payload from the backend.
+    """
     code: str
     detail: str
 
 
 class QueryTimings(BaseModel):
+    """Timing data for query.
+    
+    Attributes
+    ----------
+    retrieval_elapsed_ms : int or None
+        retrieval Elapsed Ms expressed in milliseconds.
+    generation_elapsed_ms : int or None
+        generation Elapsed Ms expressed in milliseconds.
+    """
     retrieval_elapsed_ms: int | None = None
     generation_elapsed_ms: int | None = None
 
 
 class QueryRequest(BaseModel):
+    """Request model for query.
+    
+    Attributes
+    ----------
+    query : str
+        User query text.
+    query_constraints : QueryConstraintsPayload or None
+        Optional structured retrieval constraints.
+    include_evaluation_metadata : bool
+        Whether to include evaluation metadata in the response.
+    """
     query: str
     query_constraints: QueryConstraintsPayload | None = None
     include_evaluation_metadata: bool = False
 
 
 class QueryResponse(BaseModel):
+    """Response model for query.
+    
+    Attributes
+    ----------
+    answer : str
+        Value for answer.
+    context : list[RetrievedContextChunk]
+        Value for context.
+    query_constraints : QueryConstraintsPayload or None
+        Optional structured retrieval constraints.
+    evaluation_metadata : dict[str, Any] or None
+        Value for evaluation Metadata.
+    answer_status : QueryAnswerStatus
+        Value for answer Status.
+    timings : QueryTimings
+        Value for timings.
+    """
     answer: str
     context: list[RetrievedContextChunk] = Field(default_factory=list)
     query_constraints: QueryConstraintsPayload | None = None
@@ -110,6 +251,19 @@ class QueryResponse(BaseModel):
 
 
 class UiRuntimeResponse(BaseModel):
+    """Response model for UI Runtime.
+    
+    Attributes
+    ----------
+    query_endpoint_path : str
+        Filesystem path used by the operation.
+    health_endpoint_path : str
+        Filesystem path used by the operation.
+    ready_endpoint_path : str
+        Filesystem path used by the operation.
+    feedback_log_path : str
+        Filesystem path used by the operation.
+    """
     query_endpoint_path: str = "/v1/query"
     health_endpoint_path: str = "/health"
     ready_endpoint_path: str = "/ready"
@@ -117,6 +271,21 @@ class UiRuntimeResponse(BaseModel):
 
 
 class UiFeedbackSummaryResponse(BaseModel):
+    """Response model for UI Feedback Summary.
+    
+    Attributes
+    ----------
+    total : int
+        Value for total.
+    helpful_yes : int
+        Value for helpful Yes.
+    grounded_yes : int
+        Value for grounded Yes.
+    by_scenario : list[dict[str, Any]]
+        Value for by Scenario.
+    failure_types : list[dict[str, Any]]
+        Value for failure Types.
+    """
     total: int = 0
     helpful_yes: int = 0
     grounded_yes: int = 0
@@ -125,6 +294,31 @@ class UiFeedbackSummaryResponse(BaseModel):
 
 
 class UiFeedbackSubmissionRequest(BaseModel):
+    """Request model for UI Feedback Submission.
+    
+    Attributes
+    ----------
+    response_fingerprint : str
+        Value for response Fingerprint.
+    query : str
+        User query text.
+    scenario_id : str or None
+        Stable identifier for scenario.
+    answer_status_code : str
+        Value for answer Status Code.
+    evidence_count : int
+        Value for evidence Count.
+    helpful : str
+        Value for helpful.
+    grounded : str
+        Value for grounded.
+    citation_quality : str
+        Value for citation Quality.
+    failure_type : str
+        Value for failure Type.
+    notes : str
+        Value for notes.
+    """
     response_fingerprint: str
     query: str
     scenario_id: str | None = None
@@ -138,11 +332,32 @@ class UiFeedbackSubmissionRequest(BaseModel):
 
 
 class UiFeedbackSubmissionResponse(BaseModel):
+    """Response model for UI Feedback Submission.
+    
+    Attributes
+    ----------
+    created_at : str
+        Value for created At.
+    response_fingerprint : str
+        Value for response Fingerprint.
+    """
     created_at: str
     response_fingerprint: str
 
 
 def parse_cors_allowed_origins(raw_value: str | None) -> list[str]:
+    """Parse the configured UI CORS allowlist.
+    
+    Parameters
+    ----------
+    raw_value : str or None, optional
+        Raw value value to normalize.
+    
+    Returns
+    -------
+    list[str]
+        Parsed CORS Allowed Origins.
+    """
     if raw_value is None:
         return list(DEFAULT_UI_CORS_ALLOWED_ORIGINS)
 
@@ -153,6 +368,15 @@ def parse_cors_allowed_origins(raw_value: str | None) -> list[str]:
 
 
 def configure_cors(target_app: FastAPI, allowed_origins: list[str] | None = None) -> None:
+    """Attach CORS middleware to the target FastAPI application.
+    
+    Parameters
+    ----------
+    target_app : FastAPI
+        FastAPI application instance to configure.
+    allowed_origins : list[str] or None, optional
+        Allowed origins that may access the API from a browser context.
+    """
     origins = allowed_origins or parse_cors_allowed_origins(os.getenv("POLARIS_UI_CORS_ALLOWED_ORIGINS"))
     target_app.add_middleware(
         CORSMiddleware,
@@ -165,6 +389,13 @@ def configure_cors(target_app: FastAPI, allowed_origins: list[str] | None = None
 
 
 def get_feedback_log_path() -> str:
+    """Return the configured feedback log path.
+    
+    Returns
+    -------
+    str
+        Requested feedback Log Path.
+    """
     return os.getenv("POLARIS_FEEDBACK_LOG_PATH", "/app/data/ui_feedback/feedback.jsonl")
 
 
@@ -172,6 +403,18 @@ configure_cors(app)
 
 
 def _serialize_context(source_nodes: list[Any]) -> list[RetrievedContextChunk]:
+    """Serialize context.
+    
+    Parameters
+    ----------
+    source_nodes : list[Any]
+        Retrieved nodes or node wrappers to serialize.
+    
+    Returns
+    -------
+    list[RetrievedContextChunk]
+        Collected results from the operation.
+    """
     chunks: list[RetrievedContextChunk] = []
     for idx, source in enumerate(source_nodes, start=1):
         node = getattr(source, "node", source)
@@ -205,6 +448,18 @@ def _serialize_context(source_nodes: list[Any]) -> list[RetrievedContextChunk]:
 
 
 def _as_mapping(value: Any) -> Mapping[str, Any]:
+    """As Mapping.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    
+    Returns
+    -------
+    Mapping[str, Any]
+        Result of the operation.
+    """
     if isinstance(value, Mapping):
         return value
     if hasattr(value, "__dict__"):
@@ -213,6 +468,18 @@ def _as_mapping(value: Any) -> Mapping[str, Any]:
 
 
 def _coerce_query_constraints(value: Any) -> QueryConstraintsPayload | None:
+    """Coerce query Constraints.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    
+    Returns
+    -------
+    QueryConstraintsPayload or None
+        Result of the operation.
+    """
     payload = serialize_query_constraints(value)
     if payload is None:
         return None
@@ -220,12 +487,36 @@ def _coerce_query_constraints(value: Any) -> QueryConstraintsPayload | None:
 
 
 def _coerce_eval_metadata(value: Any) -> dict[str, Any] | None:
+    """Coerce eval Metadata.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    
+    Returns
+    -------
+    dict[str, Any] or None
+        Structured result of the operation.
+    """
     if not isinstance(value, Mapping):
         return None
     return {str(key): value[key] for key in value.keys()}
 
 
 def _coerce_optional_int(value: Any) -> int | None:
+    """Coerce optional Int.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    
+    Returns
+    -------
+    int or None
+        Result of the operation.
+    """
     if value is None:
         return None
     try:
@@ -235,6 +526,18 @@ def _coerce_optional_int(value: Any) -> int | None:
 
 
 def _coerce_timings(value: Any) -> QueryTimings:
+    """Coerce timings.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    
+    Returns
+    -------
+    QueryTimings
+        Result of the operation.
+    """
     payload = _as_mapping(value)
     return QueryTimings(
         retrieval_elapsed_ms=_coerce_optional_int(payload.get("retrieval_elapsed_ms")),
@@ -243,6 +546,18 @@ def _coerce_timings(value: Any) -> QueryTimings:
 
 
 def _derive_answer_status(context_items: list[RetrievedContextChunk]) -> QueryAnswerStatus:
+    """Derive Answer Status.
+    
+    Parameters
+    ----------
+    context_items : list[RetrievedContextChunk]
+        Normalized retrieved context items associated with the answer.
+    
+    Returns
+    -------
+    QueryAnswerStatus
+        Result of the operation.
+    """
     context_count = len(context_items)
     if context_count <= 0:
         return QueryAnswerStatus(
@@ -261,10 +576,34 @@ def _derive_answer_status(context_items: list[RetrievedContextChunk]) -> QueryAn
 
 
 def _serialize_context_metadata(source_nodes: list[Any]) -> list[dict[str, Any]]:
+    """Serialize context Metadata.
+    
+    Parameters
+    ----------
+    source_nodes : list[Any]
+        Retrieved nodes or node wrappers to serialize.
+    
+    Returns
+    -------
+    list[dict[str, Any]]
+        Collected results from the operation.
+    """
     return serialize_source_nodes(source_nodes, include_text=False)
 
 
 def _include_eval_metadata(request: Request) -> bool:
+    """Include Eval Metadata.
+    
+    Parameters
+    ----------
+    request : Request
+        Incoming request object or request payload.
+    
+    Returns
+    -------
+    bool
+        `True` if include Eval Metadata; otherwise `False`.
+    """
     raw = request.headers.get(POLARIS_EVAL_INCLUDE_METADATA_HEADER)
     if raw is None:
         return False
@@ -273,6 +612,18 @@ def _include_eval_metadata(request: Request) -> bool:
 
 
 def _resolve_request_budget(request: Request) -> RequestBudget | None:
+    """Resolve request Budget.
+    
+    Parameters
+    ----------
+    request : Request
+        Incoming request object or request payload.
+    
+    Returns
+    -------
+    RequestBudget or None
+        Result of the operation.
+    """
     timeout_header = request.headers.get(POLARIS_TIMEOUT_HEADER)
     if timeout_header is None:
         return None
@@ -301,6 +652,13 @@ def _resolve_request_budget(request: Request) -> RequestBudget | None:
 @app.on_event("startup")
 def startup():
     # Use env var so Docker can pass config location
+    """Initialize application state during FastAPI startup.
+
+    Notes
+    -----
+    Loads the configured `GlobalConfig`, configures MLflow runtime behavior,
+    and stores the assembled dependency container on `app.state`.
+    """
     cfg_path = os.environ.get("POLARIS_CONFIG", "/app/config/config.yaml")
     cfg = GlobalConfig.load(cfg_path)
     runtime_tracking_cfg = load_mlflow_runtime_config(cfg)
@@ -310,11 +668,26 @@ def startup():
 
 @app.get("/health")
 def health():
+    """Return a basic liveness response for the API service.
+
+    Returns
+    -------
+    dict[str, str]
+        Static health payload indicating that the API process is running.
+    """
     return {"status": "ok"}
 
 
 @app.get("/ready")
 def ready():
+    """Return a readiness report for configured runtime dependencies.
+
+    Returns
+    -------
+    JSONResponse
+        Readiness payload with HTTP 200 when dependencies are ready and HTTP
+        503 otherwise.
+    """
     report = build_readiness_report(app.state.container.config)
     signature = json.dumps(report, sort_keys=True, default=str)
     last_logged_signature = getattr(app.state, "_last_readiness_failure_signature", None)
@@ -331,16 +704,42 @@ def ready():
 
 @app.get("/v1/ui/runtime", response_model=UiRuntimeResponse)
 def ui_runtime() -> UiRuntimeResponse:
+    """Return runtime settings consumed by the UI.
+    
+    Returns
+    -------
+    UiRuntimeResponse
+        Result of the operation.
+    """
     return UiRuntimeResponse(feedback_log_path=get_feedback_log_path())
 
 
 @app.get("/v1/ui/feedback/summary", response_model=UiFeedbackSummaryResponse)
 def ui_feedback_summary() -> UiFeedbackSummaryResponse:
+    """Return aggregated UI feedback statistics.
+    
+    Returns
+    -------
+    UiFeedbackSummaryResponse
+        Result of the operation.
+    """
     return UiFeedbackSummaryResponse(**feedback_summary(get_feedback_log_path()))
 
 
 @app.post("/v1/ui/feedback", response_model=UiFeedbackSubmissionResponse)
 def submit_ui_feedback(payload: UiFeedbackSubmissionRequest) -> UiFeedbackSubmissionResponse:
+    """Persist a UI feedback submission.
+    
+    Parameters
+    ----------
+    payload : UiFeedbackSubmissionRequest
+        Structured payload for the operation.
+    
+    Returns
+    -------
+    UiFeedbackSubmissionResponse
+        Result of the operation.
+    """
     created_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
     record = FeedbackRecord(
         created_at=created_at,
@@ -364,6 +763,20 @@ def submit_ui_feedback(payload: UiFeedbackSubmissionRequest) -> UiFeedbackSubmis
 
 @app.post("/v1/query", response_model=QueryResponse, response_model_exclude_none=True)
 def query(req: QueryRequest, request: Request):
+    """Handle a Polaris RAG query request.
+    
+    Parameters
+    ----------
+    req : QueryRequest
+        Value for req.
+    request : Request
+        Incoming FastAPI request object or request payload.
+    
+    Raises
+    ------
+    HTTPException
+        If the request is invalid or the backend operation fails.
+    """
     parent_run_id = request.headers.get(TRACE_PARENT_RUN_HEADER)
     child_run_id = request.headers.get(TRACE_CHILD_RUN_HEADER)
     stage_name = request.headers.get(TRACE_STAGE_HEADER)

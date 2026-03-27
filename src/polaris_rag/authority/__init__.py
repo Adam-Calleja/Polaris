@@ -1,4 +1,17 @@
-"""Authority-registry utilities for offline source-of-truth artifacts."""
+"""Authority-registry utilities for offline source-of-truth artifacts.
+
+This package groups the public helpers and types that belong to this subsystem of the
+Polaris RAG codebase.
+
+See Also
+--------
+registry_builder
+    Related module for registry Builder.
+service_catalog
+    Related module for service Catalog.
+source_register
+    Related module for source Register.
+"""
 
 from __future__ import annotations
 

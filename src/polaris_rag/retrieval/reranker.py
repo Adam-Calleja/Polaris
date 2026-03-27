@@ -1,13 +1,30 @@
-"""polaris_rag.retrieval.reranker
+"""polaris_rag.retrieval.reranker.
 
 Reranker abstractions and implementations for multi-source retrieval.
 
-This module provides:
-- a normalized merged-candidate container
-- an abstract reranker interface
-- a reciprocal-rank-fusion (RRF) reranker
-- a validity-aware reranker built on top of RRF
-- profile/fingerprint helpers for experiment-safe configuration changes
+This module provides: - a normalized merged-candidate container - an abstract reranker
+interface - a reciprocal-rank-fusion (RRF) reranker - a validity-aware reranker built on
+top of RRF - profile/fingerprint helpers for experiment-safe configuration changes
+
+Classes
+-------
+MergedCandidate
+    Merged retrieval candidate across one or more sources.
+ValidityRerankerConfig
+    Resolved validity-aware reranker configuration.
+BaseReranker
+    Abstract interface for reranking merged multi-source candidates.
+RRFReranker
+    Reciprocal-rank-fusion reranker.
+ValidityAwareReranker
+    Validity-aware reranker using RRF as the semantic base signal.
+
+Functions
+---------
+reranker_fingerprint
+    Return a stable SHA256 fingerprint for a reranker profile.
+create_reranker
+    Create a reranker from configuration.
 """
 
 from __future__ import annotations
@@ -59,7 +76,17 @@ _DEFAULT_STATUS_VALUES: dict[str, float] = {
 
 @dataclass
 class MergedCandidate:
-    """Merged retrieval candidate across one or more sources."""
+    """Merged retrieval candidate across one or more sources.
+    
+    Attributes
+    ----------
+    node : Any
+        Value for node.
+    best_score : float or None
+        Value for best Score.
+    source_ranks : dict[str, int]
+        Value for source Ranks.
+    """
 
     node: Any
     best_score: float | None
@@ -68,7 +95,29 @@ class MergedCandidate:
 
 @dataclass(frozen=True)
 class ValidityRerankerConfig:
-    """Resolved validity-aware reranker configuration."""
+    """Resolved validity-aware reranker configuration.
+    
+    Attributes
+    ----------
+    trace_enabled : bool
+        Value for trace Enabled.
+    semantic_base_type : str
+        Value for semantic Base Type.
+    rrf_k : int
+        Value for RRF K.
+    source_weights : dict[str, float]
+        Value for source Weights.
+    weights : dict[str, float]
+        Weight values to evaluate or persist.
+    authority_values : dict[str, float]
+        Value for authority Values.
+    status_values : dict[str, float]
+        Value for status Values.
+    freshness_mode : str
+        Value for freshness Mode.
+    weights_source : dict[str, Any]
+        Value for weights Source.
+    """
 
     trace_enabled: bool
     semantic_base_type: str
@@ -81,6 +130,13 @@ class ValidityRerankerConfig:
     weights_source: dict[str, Any]
 
     def profile(self) -> dict[str, Any]:
+        """Profile.
+        
+        Returns
+        -------
+        dict[str, Any]
+            Structured result of the operation.
+        """
         return {
             "type": "validity_aware",
             "trace_enabled": self.trace_enabled,
@@ -98,7 +154,17 @@ class ValidityRerankerConfig:
 
 
 class BaseReranker(ABC):
-    """Abstract interface for reranking merged multi-source candidates."""
+    """Abstract interface for reranking merged multi-source candidates.
+    
+    Methods
+    -------
+    rerank
+        Return reranked candidates as ``NodeWithScore`` items.
+    profile
+        Return a stable JSON-serializable reranker profile.
+    fingerprint
+        Return a stable fingerprint for experiment compatibility checks.
+    """
 
     @abstractmethod
     def rerank(
@@ -107,22 +173,74 @@ class BaseReranker(ABC):
         *,
         query_constraints: QueryConstraints | Mapping[str, Any] | None = None,
     ) -> list[NodeWithScore]:
-        """Return reranked candidates as ``NodeWithScore`` items."""
+        """Return reranked candidates as ``NodeWithScore`` items.
+        
+        Parameters
+        ----------
+        candidates : Sequence[MergedCandidate]
+            Value for candidates.
+        query_constraints : QueryConstraints or Mapping[str, Any] or None, optional
+            Optional structured retrieval constraints.
+        
+        Returns
+        -------
+        list[NodeWithScore]
+            Collected results from the operation.
+        
+        Raises
+        ------
+        NotImplementedError
+            If `NotImplementedError` is raised while executing the operation.
+        """
         raise NotImplementedError
 
     @abstractmethod
     def profile(self) -> dict[str, Any]:
-        """Return a stable JSON-serializable reranker profile."""
+        """Return a stable JSON-serializable reranker profile.
+        
+        Returns
+        -------
+        dict[str, Any]
+            Structured result of the operation.
+        
+        Raises
+        ------
+        NotImplementedError
+            If `NotImplementedError` is raised while executing the operation.
+        """
         raise NotImplementedError
 
     def fingerprint(self) -> str:
-        """Return a stable fingerprint for experiment compatibility checks."""
+        """Return a stable fingerprint for experiment compatibility checks.
+        
+        Returns
+        -------
+        str
+            Resulting string value.
+        """
 
         return reranker_fingerprint(self.profile())
 
 
 class RRFReranker(BaseReranker):
-    """Reciprocal-rank-fusion reranker."""
+    """Reciprocal-rank-fusion reranker.
+    
+    Parameters
+    ----------
+    rrf_k : int, optional
+        Value for RRF K.
+    source_weights : Mapping[str, float] or None, optional
+        Value for source Weights.
+    trace_enabled : bool, optional
+        Value for trace Enabled.
+    
+    Methods
+    -------
+    rerank
+        Rerank merged candidates using reciprocal-rank fusion.
+    profile
+        Profile.
+    """
 
     def __init__(
         self,
@@ -131,6 +249,22 @@ class RRFReranker(BaseReranker):
         source_weights: Mapping[str, float] | None = None,
         trace_enabled: bool = False,
     ):
+        """Initialize the instance.
+        
+        Parameters
+        ----------
+        rrf_k : int, optional
+            Value for RRF K.
+        source_weights : Mapping[str, float] or None, optional
+            Value for source Weights.
+        trace_enabled : bool, optional
+            Value for trace Enabled.
+        
+        Raises
+        ------
+        ValueError
+            If the provided value is invalid for the operation.
+        """
         self.rrf_k = int(rrf_k)
         if self.rrf_k <= 0:
             raise ValueError("'rerank.rrf_k' must be a positive integer.")
@@ -146,7 +280,20 @@ class RRFReranker(BaseReranker):
         *,
         query_constraints: QueryConstraints | Mapping[str, Any] | None = None,
     ) -> list[NodeWithScore]:
-        """Rerank merged candidates using reciprocal-rank fusion."""
+        """Rerank merged candidates using reciprocal-rank fusion.
+        
+        Parameters
+        ----------
+        candidates : Sequence[MergedCandidate]
+            Value for candidates.
+        query_constraints : QueryConstraints or Mapping[str, Any] or None, optional
+            Optional structured retrieval constraints.
+        
+        Returns
+        -------
+        list[NodeWithScore]
+            Collected results from the operation.
+        """
         _ = query_constraints
         scored = _score_candidates_with_rrf(
             candidates,
@@ -181,6 +328,13 @@ class RRFReranker(BaseReranker):
         return [item[3] for item in items]
 
     def profile(self) -> dict[str, Any]:
+        """Profile.
+        
+        Returns
+        -------
+        dict[str, Any]
+            Structured result of the operation.
+        """
         return {
             "type": "rrf",
             "rrf_k": self.rrf_k,
@@ -190,9 +344,34 @@ class RRFReranker(BaseReranker):
 
 
 class ValidityAwareReranker(BaseReranker):
-    """Validity-aware reranker using RRF as the semantic base signal."""
+    """Validity-aware reranker using RRF as the semantic base signal.
+    
+    Parameters
+    ----------
+    config : ValidityRerankerConfig
+        Configuration object or mapping used by the operation.
+    
+    Methods
+    -------
+    profile
+        Profile.
+    rerank
+        Rerank.
+    """
 
     def __init__(self, config: ValidityRerankerConfig) -> None:
+        """Initialize the instance.
+        
+        Parameters
+        ----------
+        config : ValidityRerankerConfig
+            Configuration object or mapping used by the operation.
+        
+        Raises
+        ------
+        ValueError
+            If the provided value is invalid for the operation.
+        """
         if config.semantic_base_type != "rrf":
             raise ValueError(
                 "Unsupported validity-aware semantic base "
@@ -201,6 +380,13 @@ class ValidityAwareReranker(BaseReranker):
         self.config = config
 
     def profile(self) -> dict[str, Any]:
+        """Profile.
+        
+        Returns
+        -------
+        dict[str, Any]
+            Structured result of the operation.
+        """
         return self.config.profile()
 
     def rerank(
@@ -209,6 +395,20 @@ class ValidityAwareReranker(BaseReranker):
         *,
         query_constraints: QueryConstraints | Mapping[str, Any] | None = None,
     ) -> list[NodeWithScore]:
+        """Rerank.
+        
+        Parameters
+        ----------
+        candidates : Sequence[MergedCandidate]
+            Value for candidates.
+        query_constraints : QueryConstraints or Mapping[str, Any] or None, optional
+            Optional structured retrieval constraints.
+        
+        Returns
+        -------
+        list[NodeWithScore]
+            Collected results from the operation.
+        """
         normalized_constraints = _normalize_query_constraints(query_constraints)
         scored = _score_candidates_with_rrf(
             candidates,
@@ -309,7 +509,18 @@ class _RRFScore:
 
 
 def reranker_fingerprint(profile: Mapping[str, Any] | None) -> str:
-    """Return a stable SHA256 fingerprint for a reranker profile."""
+    """Return a stable SHA256 fingerprint for a reranker profile.
+    
+    Parameters
+    ----------
+    profile : Mapping[str, Any] or None, optional
+        Value for profile.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
 
     payload = json.dumps(_stable_json_value(profile or {}), sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
@@ -321,7 +532,27 @@ def create_reranker(
     source_settings: Mapping[str, Mapping[str, Any]] | None = None,
     config_base_dir: str | Path | None = None,
 ) -> BaseReranker:
-    """Create a reranker from configuration."""
+    """Create a reranker from configuration.
+    
+    Parameters
+    ----------
+    config : Mapping[str, Any] or None, optional
+        Configuration object or mapping used by the operation.
+    source_settings : Mapping[str, Mapping[str, Any]] or None, optional
+        Value for source Settings.
+    config_base_dir : str or Path or None, optional
+        Value for config Base Dir.
+    
+    Returns
+    -------
+    BaseReranker
+        Created reranker.
+    
+    Raises
+    ------
+    ValueError
+        If the provided value is invalid for the operation.
+    """
 
     cfg = dict(config or {})
     kind = str(cfg.get("type", "rrf")).lower().strip()
@@ -352,6 +583,31 @@ def _resolve_validity_reranker_config(
     source_weights: Mapping[str, float],
     config_base_dir: str | Path | None,
 ) -> ValidityRerankerConfig:
+    """Resolve validity Reranker Config.
+    
+    Parameters
+    ----------
+    cfg : Mapping[str, Any]
+        Configuration object or mapping used to resolve runtime settings.
+    source_weights : Mapping[str, float]
+        Value for source Weights.
+    config_base_dir : str or Path or None, optional
+        Value for config Base Dir.
+    
+    Returns
+    -------
+    ValidityRerankerConfig
+        Result of the operation.
+    
+    Raises
+    ------
+    ValueError
+        If the provided value is invalid for the operation.
+    FileNotFoundError
+        If the requested file does not exist.
+    TypeError
+        If the provided value has an unexpected type.
+    """
     semantic_base_cfg = _as_mapping(cfg.get("semantic_base"))
     semantic_base_type = str(semantic_base_cfg.get("type", "rrf")).strip().lower()
     if semantic_base_type != "rrf":
@@ -432,6 +688,22 @@ def _score_candidates_with_rrf(
     rrf_k: int,
     source_weights: Mapping[str, float],
 ) -> list[_RRFScore]:
+    """Score Candidates With RRF.
+    
+    Parameters
+    ----------
+    candidates : Sequence[MergedCandidate]
+        Value for candidates.
+    rrf_k : int
+        Value for RRF K.
+    source_weights : Mapping[str, float]
+        Value for source Weights.
+    
+    Returns
+    -------
+    list[_RRFScore]
+        Collected results from the operation.
+    """
     scored: list[_RRFScore] = []
     for candidate in candidates:
         node_id = _node_id(candidate.node)
@@ -458,6 +730,20 @@ def _normalized_score_map(
     *,
     default_when_uniform: float,
 ) -> dict[str, float]:
+    """Normalized Score Map.
+    
+    Parameters
+    ----------
+    items : Iterable[tuple[str, float]]
+        Value for items.
+    default_when_uniform : float
+        Value for default When Uniform.
+    
+    Returns
+    -------
+    dict[str, float]
+        Structured result of the operation.
+    """
     values = list(items)
     if not values:
         return {}
@@ -473,6 +759,20 @@ def _normalized_score_map(
 
 
 def _authority_feature(metadata: Mapping[str, Any], values: Mapping[str, float]) -> float:
+    """Authority Feature.
+    
+    Parameters
+    ----------
+    metadata : Mapping[str, Any]
+        Metadata mapping to extend or stamp.
+    values : Mapping[str, float]
+        Value for values.
+    
+    Returns
+    -------
+    float
+        Computed floating-point value.
+    """
     authority = str(metadata.get("source_authority", "unknown") or "unknown").strip().lower()
     return _coerce_float(values.get(authority), 0.0)
 
@@ -481,6 +781,20 @@ def _scope_feature(
     constraints: Mapping[str, Any] | None,
     metadata: Mapping[str, Any],
 ) -> float:
+    """Scope Feature.
+    
+    Parameters
+    ----------
+    constraints : Mapping[str, Any] or None, optional
+        Value for constraints.
+    metadata : Mapping[str, Any]
+        Metadata mapping to extend or stamp.
+    
+    Returns
+    -------
+    float
+        Computed floating-point value.
+    """
     if not constraints:
         return 0.0
 
@@ -499,6 +813,20 @@ def _scope_family_feature(
     constraints: Mapping[str, Any] | None,
     metadata: Mapping[str, Any],
 ) -> float:
+    """Scope Family Feature.
+    
+    Parameters
+    ----------
+    constraints : Mapping[str, Any] or None, optional
+        Value for constraints.
+    metadata : Mapping[str, Any]
+        Metadata mapping to extend or stamp.
+    
+    Returns
+    -------
+    float
+        Computed floating-point value.
+    """
     if not constraints:
         return 0.0
 
@@ -513,6 +841,20 @@ def _software_feature(
     constraints: Mapping[str, Any] | None,
     metadata: Mapping[str, Any],
 ) -> float:
+    """Software Feature.
+    
+    Parameters
+    ----------
+    constraints : Mapping[str, Any] or None, optional
+        Value for constraints.
+    metadata : Mapping[str, Any]
+        Metadata mapping to extend or stamp.
+    
+    Returns
+    -------
+    float
+        Computed floating-point value.
+    """
     if not constraints:
         return 0.0
 
@@ -530,6 +872,24 @@ def _effective_scope_family_feature(
     raw_scope_family_feature: float,
     software_feature: float,
 ) -> tuple[float, str]:
+    """Effective Scope Family Feature.
+    
+    Parameters
+    ----------
+    constraints : Mapping[str, Any] or None, optional
+        Value for constraints.
+    metadata : Mapping[str, Any]
+        Metadata mapping to extend or stamp.
+    raw_scope_family_feature : float
+        Raw scope Family Feature value to normalize.
+    software_feature : float
+        Value for software Feature.
+    
+    Returns
+    -------
+    tuple[float, str]
+        Collected results from the operation.
+    """
     if raw_scope_family_feature <= 0.0:
         return raw_scope_family_feature, "applied"
     if not constraints or not _query_is_software_constrained(constraints):
@@ -547,6 +907,20 @@ def _version_feature(
     constraints: Mapping[str, Any] | None,
     metadata: Mapping[str, Any],
 ) -> float:
+    """Version Feature.
+    
+    Parameters
+    ----------
+    constraints : Mapping[str, Any] or None, optional
+        Value for constraints.
+    metadata : Mapping[str, Any]
+        Metadata mapping to extend or stamp.
+    
+    Returns
+    -------
+    float
+        Computed floating-point value.
+    """
     if not constraints:
         return 0.0
 
@@ -562,11 +936,37 @@ def _version_feature(
 
 
 def _status_feature(metadata: Mapping[str, Any], values: Mapping[str, float]) -> float:
+    """Status Feature.
+    
+    Parameters
+    ----------
+    metadata : Mapping[str, Any]
+        Metadata mapping to extend or stamp.
+    values : Mapping[str, float]
+        Value for values.
+    
+    Returns
+    -------
+    float
+        Computed floating-point value.
+    """
     status = str(metadata.get("validity_status", "unknown") or "unknown").strip().lower()
     return _coerce_float(values.get(status), 0.0)
 
 
 def _freshness_feature_map(scored_candidates: Sequence[_RRFScore]) -> dict[str, float]:
+    """Freshness Feature Map.
+    
+    Parameters
+    ----------
+    scored_candidates : Sequence[_RRFScore]
+        Value for scored Candidates.
+    
+    Returns
+    -------
+    dict[str, float]
+        Structured result of the operation.
+    """
     by_authority: dict[str, list[tuple[str, float]]] = {}
     for item in scored_candidates:
         metadata = _node_metadata(item.candidate.node)
@@ -589,6 +989,18 @@ def _freshness_feature_map(scored_candidates: Sequence[_RRFScore]) -> dict[str, 
 
 
 def _parse_timestamp(value: Any) -> float | None:
+    """Parse timestamp.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    
+    Returns
+    -------
+    float or None
+        Result of the operation.
+    """
     text = str(value or "").strip()
     if not text:
         return None
@@ -623,6 +1035,18 @@ def _parse_timestamp(value: Any) -> float | None:
 
 
 def _normalized_text_set(value: Any) -> set[str]:
+    """Normalized Text Set.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    
+    Returns
+    -------
+    set[str]
+        Collected results from the operation.
+    """
     if not isinstance(value, (list, tuple, set)):
         return set()
     normalized: set[str] = set()
@@ -634,6 +1058,18 @@ def _normalized_text_set(value: Any) -> set[str]:
 
 
 def _normalized_text_list(value: Any) -> list[str]:
+    """Normalized Text List.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    
+    Returns
+    -------
+    list[str]
+        Collected results from the operation.
+    """
     if not isinstance(value, (list, tuple, set)):
         return []
     normalized: list[str] = []
@@ -648,6 +1084,20 @@ def _normalized_text_list(value: Any) -> list[str]:
 
 
 def _match_component_score(query_values: set[str], candidate_values: set[str]) -> float:
+    """Match Component Score.
+    
+    Parameters
+    ----------
+    query_values : set[str]
+        Value for query Values.
+    candidate_values : set[str]
+        Value for candidate Values.
+    
+    Returns
+    -------
+    float
+        Computed floating-point value.
+    """
     if not query_values:
         return 0.0
     if not candidate_values:
@@ -658,16 +1108,52 @@ def _match_component_score(query_values: set[str], candidate_values: set[str]) -
 
 
 def _average_or_zero(values: Sequence[float]) -> float:
+    """Average Or Zero.
+    
+    Parameters
+    ----------
+    values : Sequence[float]
+        Value for values.
+    
+    Returns
+    -------
+    float
+        Computed floating-point value.
+    """
     if not values:
         return 0.0
     return sum(values) / len(values)
 
 
 def _query_is_software_constrained(constraints: Mapping[str, Any]) -> bool:
+    """Query Is Software Constrained.
+    
+    Parameters
+    ----------
+    constraints : Mapping[str, Any]
+        Value for constraints.
+    
+    Returns
+    -------
+    bool
+        `True` if query Is Software Constrained; otherwise `False`.
+    """
     return bool(_normalized_text_set(constraints.get("software_names")))
 
 
 def _query_has_exact_scope(constraints: Mapping[str, Any]) -> bool:
+    """Query Has Exact Scope.
+    
+    Parameters
+    ----------
+    constraints : Mapping[str, Any]
+        Value for constraints.
+    
+    Returns
+    -------
+    bool
+        `True` if query Has Exact Scope; otherwise `False`.
+    """
     return any(
         _normalized_text_set(constraints.get(field))
         for field in ("system_names", "partition_names", "service_names")
@@ -675,6 +1161,18 @@ def _query_has_exact_scope(constraints: Mapping[str, Any]) -> bool:
 
 
 def _scope_variant_values(payload: Mapping[str, Any]) -> list[str]:
+    """Scope Variant Values.
+    
+    Parameters
+    ----------
+    payload : Mapping[str, Any]
+        Structured payload for the operation.
+    
+    Returns
+    -------
+    list[str]
+        Collected results from the operation.
+    """
     values: list[str] = []
     for field in ("system_names", "partition_names", "service_names", "module_names"):
         values.extend(_normalized_text_list(payload.get(field)))
@@ -685,6 +1183,20 @@ def _candidate_has_specialized_family_variant(
     constraints: Mapping[str, Any],
     metadata: Mapping[str, Any],
 ) -> bool:
+    """Candidate Has Specialized Family Variant.
+    
+    Parameters
+    ----------
+    constraints : Mapping[str, Any]
+        Value for constraints.
+    metadata : Mapping[str, Any]
+        Metadata mapping to extend or stamp.
+    
+    Returns
+    -------
+    bool
+        `True` if candidate Has Specialized Family Variant; otherwise `False`.
+    """
     query_families = _normalized_text_set(constraints.get("scope_family_names"))
     if not query_families:
         return False
@@ -700,6 +1212,18 @@ def _candidate_has_specialized_family_variant(
 def _normalize_query_constraints(
     value: QueryConstraints | Mapping[str, Any] | None,
 ) -> Mapping[str, Any] | None:
+    """Normalize query Constraints.
+    
+    Parameters
+    ----------
+    value : QueryConstraints or Mapping[str, Any] or None, optional
+        Input value to normalize, coerce, or inspect.
+    
+    Returns
+    -------
+    Mapping[str, Any] or None
+        Result of the operation.
+    """
     if value is None:
         return None
     from_value = getattr(QueryConstraints, "from_value", None)
@@ -718,6 +1242,15 @@ def _normalize_query_constraints(
 
 
 def _stamp_rerank_trace(node: Any, payload: Mapping[str, Any]) -> None:
+    """Stamp rerank Trace.
+    
+    Parameters
+    ----------
+    node : Any
+        Value for node.
+    payload : Mapping[str, Any]
+        Structured payload for the operation.
+    """
     metadata = getattr(node, "metadata", None)
     if not isinstance(metadata, dict):
         return
@@ -725,6 +1258,18 @@ def _stamp_rerank_trace(node: Any, payload: Mapping[str, Any]) -> None:
 
 
 def _node_metadata(node: Any) -> dict[str, Any]:
+    """Node Metadata.
+    
+    Parameters
+    ----------
+    node : Any
+        Value for node.
+    
+    Returns
+    -------
+    dict[str, Any]
+        Structured result of the operation.
+    """
     metadata = getattr(node, "metadata", None)
     if isinstance(metadata, Mapping):
         return dict(metadata)
@@ -732,6 +1277,18 @@ def _node_metadata(node: Any) -> dict[str, Any]:
 
 
 def _node_id(node: Any) -> str:
+    """Node ID.
+    
+    Parameters
+    ----------
+    node : Any
+        Value for node.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     for attr in ("id_", "node_id", "id"):
         value = getattr(node, attr, None)
         if isinstance(value, str) and value:
@@ -742,6 +1299,18 @@ def _node_id(node: Any) -> str:
 def _source_weights_from_settings(
     source_settings: Mapping[str, Mapping[str, Any]] | None,
 ) -> dict[str, float]:
+    """Source Weights From Settings.
+    
+    Parameters
+    ----------
+    source_settings : Mapping[str, Mapping[str, Any]] or None, optional
+        Value for source Settings.
+    
+    Returns
+    -------
+    dict[str, float]
+        Structured result of the operation.
+    """
     weights: dict[str, float] = {}
     for source_name, source_cfg in (source_settings or {}).items():
         weights[str(source_name)] = _coerce_float(_as_mapping(source_cfg).get("weight"), 1.0)
@@ -753,6 +1322,20 @@ def _resolve_config_relative_path(
     *,
     config_base_dir: str | Path | None,
 ) -> Path:
+    """Resolve config Relative Path.
+    
+    Parameters
+    ----------
+    path_value : Any
+        Value for path Value.
+    config_base_dir : str or Path or None, optional
+        Value for config Base Dir.
+    
+    Returns
+    -------
+    Path
+        Result of the operation.
+    """
     path = Path(str(path_value)).expanduser()
     if path.is_absolute():
         return path.resolve()
@@ -762,12 +1345,38 @@ def _resolve_config_relative_path(
 
 
 def _as_mapping(value: Any) -> Mapping[str, Any]:
+    """As Mapping.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    
+    Returns
+    -------
+    Mapping[str, Any]
+        Result of the operation.
+    """
     if isinstance(value, Mapping):
         return value
     return {}
 
 
 def _coerce_float(value: Any, default: float) -> float:
+    """Coerce float.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    default : float
+        Fallback value to use when normalization fails.
+    
+    Returns
+    -------
+    float
+        Computed floating-point value.
+    """
     try:
         return float(value)
     except Exception:
@@ -775,6 +1384,20 @@ def _coerce_float(value: Any, default: float) -> float:
 
 
 def _coerce_bool(value: Any, default: bool) -> bool:
+    """Coerce bool.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    default : bool
+        Fallback value to use when normalization fails.
+    
+    Returns
+    -------
+    bool
+        `True` if coerce Bool; otherwise `False`.
+    """
     if value is None:
         return bool(default)
     if isinstance(value, bool):
@@ -789,6 +1412,18 @@ def _coerce_bool(value: Any, default: bool) -> bool:
 
 
 def _stable_json_value(value: Any) -> Any:
+    """Stable JSON Value.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    
+    Returns
+    -------
+    Any
+        Result of the operation.
+    """
     if value is None or isinstance(value, (str, int, float, bool)):
         return value
     if isinstance(value, Mapping):
@@ -806,6 +1441,18 @@ def _stable_json_value(value: Any) -> Any:
 
 
 def _sha256_text(text: str) -> str:
+    """Sha 256 Text.
+    
+    Parameters
+    ----------
+    text : str
+        Text value to inspect, tokenize, or encode.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 

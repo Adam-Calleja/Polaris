@@ -1,4 +1,21 @@
-"""Evaluation utilities for Polaris RAG."""
+"""Evaluation utilities for Polaris RAG.
+
+This package groups the public helpers and types that belong to this subsystem of the
+Polaris RAG codebase.
+
+See Also
+--------
+benchmark_analysis
+    Related module for benchmark Analysis.
+benchmark_annotations
+    Related module for benchmark Annotations.
+evaluation_dataset
+    Related module for evaluation Dataset.
+evaluator
+    Related module for evaluator.
+experiment_presets
+    Related module for experiment Presets.
+"""
 
 from __future__ import annotations
 
@@ -68,6 +85,23 @@ _EXPORTS: dict[str, tuple[str, str]] = {
 
 
 def __getattr__(name: str) -> Any:
+    """Resolve lazily exposed attributes.
+    
+    Parameters
+    ----------
+    name : str
+        Human-readable name for the resource or tracing span.
+    
+    Returns
+    -------
+    Any
+        Result of the operation.
+    
+    Raises
+    ------
+    AttributeError
+        If the requested attribute cannot be resolved.
+    """
     target = _EXPORTS.get(name)
     if target is None:
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
@@ -79,6 +113,13 @@ def __getattr__(name: str) -> Any:
 
 
 def __dir__() -> list[str]:
+    """Return available attribute names for interactive discovery.
+    
+    Returns
+    -------
+    list[str]
+        Available attribute names for the object or module.
+    """
     return sorted(set(globals().keys()) | set(_EXPORTS.keys()))
 
 

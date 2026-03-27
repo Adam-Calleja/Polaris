@@ -1,5 +1,14 @@
 #!/usr/bin/env python
-"""Thin wrapper for the packaged prompt registration entrypoint."""
+"""Thin wrapper for the packaged prompt registration entrypoint.
+
+This wrapper preserves direct script execution by delegating to the corresponding
+packaged CLI entrypoint under `polaris_rag.cli`.
+
+Notes
+-----
+This wrapper keeps local script execution aligned with the installed console-script
+entrypoint.
+"""
 
 from __future__ import annotations
 

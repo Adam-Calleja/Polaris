@@ -17,3 +17,4 @@ data/eval_runs
 frontend/node_modules/
 frontend/dist/
 coverage/
+build/

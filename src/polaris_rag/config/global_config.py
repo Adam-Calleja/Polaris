@@ -276,12 +276,24 @@ class GlobalConfig:
 
     @cached_property
     def ingestion(self) -> dict:
-        """Return the ingestion configuration section."""
+        """Return the ingestion configuration section.
+        
+        Returns
+        -------
+        dict
+            Structured result of the operation.
+        """
         return self.raw.get("ingestion", {})
 
     @cached_property
     def tokenization(self) -> dict:
-        """Return the tokenization configuration section."""
+        """Return the tokenization configuration section.
+        
+        Returns
+        -------
+        dict
+            Structured result of the operation.
+        """
         return self.raw.get("tokenization", {})
 
     @cached_property

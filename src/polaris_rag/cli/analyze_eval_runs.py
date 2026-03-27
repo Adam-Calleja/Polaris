@@ -1,4 +1,14 @@
-"""CLI entrypoint for Stage 5 run-comparison artifacts."""
+"""CLI entrypoint for Stage 5 run-comparison artifacts.
+
+This module exposes public helper functions used by the surrounding Polaris subsystem.
+
+Functions
+---------
+parse_args
+    Parse args.
+main
+    Run the command-line entrypoint.
+"""
 
 from __future__ import annotations
 
@@ -9,6 +19,13 @@ from polaris_rag.evaluation.run_analysis import load_run_input, write_run_compar
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse args.
+    
+    Returns
+    -------
+    argparse.Namespace
+        Parsed args.
+    """
     parser = argparse.ArgumentParser(
         description="Compare saved evaluation runs and emit dissertation-ready analysis artifacts."
     )
@@ -33,6 +50,23 @@ def parse_args() -> argparse.Namespace:
 
 
 def _parse_run_specs(values: list[str]) -> list[tuple[str, Path]]:
+    """Parse run Specs.
+    
+    Parameters
+    ----------
+    values : list[str]
+        Value for values.
+    
+    Returns
+    -------
+    list[tuple[str, Path]]
+        Collected results from the operation.
+    
+    Raises
+    ------
+    ValueError
+        If the provided value is invalid for the operation.
+    """
     runs: list[tuple[str, Path]] = []
     seen_conditions: set[str] = set()
     for raw in values:
@@ -51,6 +85,13 @@ def _parse_run_specs(values: list[str]) -> list[tuple[str, Path]]:
 
 
 def main() -> None:
+    """Run the command-line entrypoint.
+
+    Notes
+    -----
+    Parses CLI arguments, loads the requested evaluation runs, and writes the
+    generated comparison artifact paths to standard output.
+    """
     args = parse_args()
     run_specs = _parse_run_specs(list(args.run))
     runs = [load_run_input(condition_name, run_dir) for condition_name, run_dir in run_specs]

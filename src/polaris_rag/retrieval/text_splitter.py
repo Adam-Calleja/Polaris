@@ -64,6 +64,18 @@ def _ticket_chunk_metadata(ticket: Document, **chunk_metadata: Any) -> dict[str,
 
 
 def _ticket_document_type(ticket: Document) -> str:
+    """Ticket Document Type.
+    
+    Parameters
+    ----------
+    ticket : Document
+        Value for ticket.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     return str(ticket.metadata.get("document_type") or ticket.document_type)
 
 class HTMLHeirarchicalSplitter(HTMLNodeParser):
@@ -660,6 +672,18 @@ class JIRATicketChunker:
         current: str = ""
 
         def _fits_body_budget(text: str) -> bool:
+            """Fits Body Budget.
+            
+            Parameters
+            ----------
+            text : str
+                Text value to inspect, tokenize, or encode.
+            
+            Returns
+            -------
+            bool
+                `True` if fits Body Budget; otherwise `False`.
+            """
             return self._num_tokens(text) <= body_budget
 
         for para in paragraphs:
@@ -754,6 +778,10 @@ class JIRATicketChunker:
         current_prefix: Optional[str] = None
 
         def finalize_current_chunk() -> None:
+            """Finalize Current Chunk.
+            
+            This helper is internal to the surrounding module.
+            """
             nonlocal prev_conv_body, current_body, current_turns, current_speakers, current_prefix
             if not current_body:
                 return

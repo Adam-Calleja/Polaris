@@ -1,4 +1,37 @@
-"""Stage 5 analysis artifacts and run-comparison exports."""
+"""Stage 5 analysis artifacts and run-comparison exports.
+
+This module combines public functions and classes used by the surrounding Polaris
+subsystem.
+
+Classes
+-------
+RunInput
+    Resolved run input used by the analysis CLI.
+
+Functions
+---------
+build_analysis_rows
+    Join prepared rows, automatic scores, and condition metadata into a stable
+    artifact.
+persist_analysis_rows
+    Persist analysis rows as JSONL.
+load_analysis_rows
+    Load persisted analysis rows from JSONL.
+load_run_input
+    Load analysis rows for one saved run directory.
+write_run_comparison_outputs
+    Write cross-run comparison artifacts for dissertation analysis.
+build_condition_summary_rows
+    Build condition Summary Rows.
+build_subgroup_metric_rows
+    Build subgroup Metric Rows.
+build_source_distribution_rows
+    Build source Distribution Rows.
+build_query_review_rows
+    Build query Review Rows.
+build_manual_eval_outputs
+    Build manual evaluation Outputs.
+"""
 
 from __future__ import annotations
 
@@ -25,7 +58,17 @@ MANUAL_RATING_COLUMNS: tuple[str, ...] = (
 
 @dataclass(frozen=True)
 class RunInput:
-    """Resolved run input used by the analysis CLI."""
+    """Resolved run input used by the analysis CLI.
+    
+    Attributes
+    ----------
+    condition_name : str
+        Value for condition Name.
+    run_dir : Path
+        Value for run Dir.
+    analysis_rows : list[dict[str, Any]]
+        Value for analysis Rows.
+    """
 
     condition_name: str
     run_dir: Path
@@ -38,7 +81,27 @@ def build_analysis_rows(
     scores_df: Any,
     condition_fields: Mapping[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
-    """Join prepared rows, automatic scores, and condition metadata into a stable artifact."""
+    """Join prepared rows, automatic scores, and condition metadata into a stable artifact.
+    
+    Parameters
+    ----------
+    source_rows : list[dict[str, Any]]
+        Value for source Rows.
+    scores_df : Any
+        Value for scores Df.
+    condition_fields : Mapping[str, Any] or None, optional
+        Value for condition Fields.
+    
+    Returns
+    -------
+    list[dict[str, Any]]
+        Constructed analysis Rows.
+    
+    Raises
+    ------
+    ValueError
+        If the provided value is invalid for the operation.
+    """
 
     score_rows = _score_records(scores_df)
     if len(score_rows) != len(source_rows):
@@ -90,7 +153,20 @@ def build_analysis_rows(
 
 
 def persist_analysis_rows(rows: Iterable[Mapping[str, Any]], path: str | Path) -> Path:
-    """Persist analysis rows as JSONL."""
+    """Persist analysis rows as JSONL.
+    
+    Parameters
+    ----------
+    rows : Iterable[Mapping[str, Any]]
+        Value for rows.
+    path : str or Path
+        Filesystem path used by the operation.
+    
+    Returns
+    -------
+    Path
+        Result of the operation.
+    """
 
     resolved = Path(path).expanduser().resolve()
     resolved.parent.mkdir(parents=True, exist_ok=True)
@@ -102,7 +178,23 @@ def persist_analysis_rows(rows: Iterable[Mapping[str, Any]], path: str | Path) -
 
 
 def load_analysis_rows(path: str | Path) -> list[dict[str, Any]]:
-    """Load persisted analysis rows from JSONL."""
+    """Load persisted analysis rows from JSONL.
+    
+    Parameters
+    ----------
+    path : str or Path
+        Filesystem path used by the operation.
+    
+    Returns
+    -------
+    list[dict[str, Any]]
+        Loaded analysis Rows.
+    
+    Raises
+    ------
+    ValueError
+        If the provided value is invalid for the operation.
+    """
 
     resolved = Path(path).expanduser().resolve()
     text = resolved.read_text(encoding="utf-8").strip()
@@ -118,7 +210,25 @@ def load_analysis_rows(path: str | Path) -> list[dict[str, Any]]:
 
 
 def load_run_input(condition_name: str, run_dir: str | Path) -> RunInput:
-    """Load analysis rows for one saved run directory."""
+    """Load analysis rows for one saved run directory.
+    
+    Parameters
+    ----------
+    condition_name : str
+        Value for condition Name.
+    run_dir : str or Path
+        Value for run Dir.
+    
+    Returns
+    -------
+    RunInput
+        Loaded run Input.
+    
+    Raises
+    ------
+    FileNotFoundError
+        If the requested file does not exist.
+    """
 
     resolved_dir = Path(run_dir).expanduser().resolve()
     analysis_path = resolved_dir / "analysis_rows.jsonl"
@@ -158,7 +268,27 @@ def write_run_comparison_outputs(
     output_dir: str | Path,
     manual_eval_seed: int = 42,
 ) -> dict[str, Path]:
-    """Write cross-run comparison artifacts for dissertation analysis."""
+    """Write cross-run comparison artifacts for dissertation analysis.
+    
+    Parameters
+    ----------
+    runs : list[RunInput]
+        Value for runs.
+    output_dir : str or Path
+        Value for output Dir.
+    manual_eval_seed : int, optional
+        Value for manual evaluation Seed.
+    
+    Returns
+    -------
+    dict[str, Path]
+        Structured result of the operation.
+    
+    Raises
+    ------
+    ValueError
+        If the provided value is invalid for the operation.
+    """
 
     if not runs:
         raise ValueError("At least one run is required to write comparison outputs.")
@@ -198,6 +328,18 @@ def write_run_comparison_outputs(
 
 
 def build_condition_summary_rows(by_condition: Mapping[str, list[dict[str, Any]]]) -> list[dict[str, Any]]:
+    """Build condition Summary Rows.
+    
+    Parameters
+    ----------
+    by_condition : Mapping[str, list[dict[str, Any]]]
+        Value for by Condition.
+    
+    Returns
+    -------
+    list[dict[str, Any]]
+        Constructed condition Summary Rows.
+    """
     metric_names = _metric_names(by_condition)
     rows: list[dict[str, Any]] = []
     for condition_name, records in by_condition.items():
@@ -220,6 +362,18 @@ def build_condition_summary_rows(by_condition: Mapping[str, list[dict[str, Any]]
 
 
 def build_subgroup_metric_rows(by_condition: Mapping[str, list[dict[str, Any]]]) -> list[dict[str, Any]]:
+    """Build subgroup Metric Rows.
+    
+    Parameters
+    ----------
+    by_condition : Mapping[str, list[dict[str, Any]]]
+        Value for by Condition.
+    
+    Returns
+    -------
+    list[dict[str, Any]]
+        Constructed subgroup Metric Rows.
+    """
     metric_names = _metric_names(by_condition)
     rows: list[dict[str, Any]] = []
     for condition_name, records in by_condition.items():
@@ -234,6 +388,18 @@ def build_subgroup_metric_rows(by_condition: Mapping[str, list[dict[str, Any]]])
 
 
 def build_source_distribution_rows(by_condition: Mapping[str, list[dict[str, Any]]]) -> list[dict[str, Any]]:
+    """Build source Distribution Rows.
+    
+    Parameters
+    ----------
+    by_condition : Mapping[str, list[dict[str, Any]]]
+        Value for by Condition.
+    
+    Returns
+    -------
+    list[dict[str, Any]]
+        Constructed source Distribution Rows.
+    """
     rows: list[dict[str, Any]] = []
     for condition_name, records in by_condition.items():
         counts: dict[tuple[int, str, str], int] = {}
@@ -270,6 +436,18 @@ def build_source_distribution_rows(by_condition: Mapping[str, list[dict[str, Any
 
 
 def build_query_review_rows(by_condition: Mapping[str, list[dict[str, Any]]]) -> list[dict[str, Any]]:
+    """Build query Review Rows.
+    
+    Parameters
+    ----------
+    by_condition : Mapping[str, list[dict[str, Any]]]
+        Value for by Condition.
+    
+    Returns
+    -------
+    list[dict[str, Any]]
+        Constructed query Review Rows.
+    """
     metric_names = _metric_names(by_condition)
     rows: list[dict[str, Any]] = []
     for condition_name, records in by_condition.items():
@@ -306,6 +484,27 @@ def build_manual_eval_outputs(
     seed: int,
     runs: list[RunInput],
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, Any]]:
+    """Build manual evaluation Outputs.
+    
+    Parameters
+    ----------
+    by_condition : Mapping[str, list[dict[str, Any]]]
+        Value for by Condition.
+    seed : int
+        Value for seed.
+    runs : list[RunInput]
+        Value for runs.
+    
+    Returns
+    -------
+    tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, Any]]
+        Constructed manual evaluation Outputs.
+    
+    Raises
+    ------
+    ValueError
+        If the provided value is invalid for the operation.
+    """
     condition_names = list(by_condition.keys())
     labels = [f"system_{chr(ord('A') + index)}" for index in range(len(condition_names))]
     records_by_condition_and_id = {
@@ -366,6 +565,18 @@ def build_manual_eval_outputs(
 
 
 def _rows_with_condition_name(run: RunInput) -> list[dict[str, Any]]:
+    """Rows With Condition Name.
+    
+    Parameters
+    ----------
+    run : RunInput
+        Value for run.
+    
+    Returns
+    -------
+    list[dict[str, Any]]
+        Collected results from the operation.
+    """
     rows: list[dict[str, Any]] = []
     for record in run.analysis_rows:
         updated = dict(record)
@@ -375,11 +586,37 @@ def _rows_with_condition_name(run: RunInput) -> list[dict[str, Any]]:
 
 
 def _ordered_query_ids(by_condition: Mapping[str, list[dict[str, Any]]]) -> list[str]:
+    """Ordered Query IDs.
+    
+    Parameters
+    ----------
+    by_condition : Mapping[str, list[dict[str, Any]]]
+        Value for by Condition.
+    
+    Returns
+    -------
+    list[str]
+        Collected results from the operation.
+    """
     first_condition = next(iter(by_condition.values()))
     return [str(record.get("id", "") or "") for record in first_condition]
 
 
 def _per_query_rng(*, seed: int, query_id: str) -> random.Random:
+    """Per Query Rng.
+    
+    Parameters
+    ----------
+    seed : int
+        Value for seed.
+    query_id : str
+        Stable identifier for query.
+    
+    Returns
+    -------
+    random.Random
+        Result of the operation.
+    """
     digest = hashlib.sha256(f"{seed}:{query_id}".encode("utf-8")).digest()
     return random.Random(int.from_bytes(digest[:8], "big"))
 
@@ -390,6 +627,22 @@ def _subgroup_rows_for_records(
     records: list[dict[str, Any]],
     metric_names: list[str],
 ) -> list[dict[str, Any]]:
+    """Subgroup Rows For Records.
+    
+    Parameters
+    ----------
+    condition_name : str
+        Value for condition Name.
+    records : list[dict[str, Any]]
+        Value for records.
+    metric_names : list[str]
+        Value for metric Names.
+    
+    Returns
+    -------
+    list[dict[str, Any]]
+        Collected results from the operation.
+    """
     rows: list[dict[str, Any]] = []
     rows.append(
         _subgroup_metric_row(
@@ -430,6 +683,26 @@ def _subgroup_metric_row(
     records: list[dict[str, Any]],
     metric_names: list[str],
 ) -> dict[str, Any]:
+    """Subgroup Metric Row.
+    
+    Parameters
+    ----------
+    condition_name : str
+        Value for condition Name.
+    label_name : str
+        Value for label Name.
+    label_value : str
+        Value for label Value.
+    records : list[dict[str, Any]]
+        Value for records.
+    metric_names : list[str]
+        Value for metric Names.
+    
+    Returns
+    -------
+    dict[str, Any]
+        Structured result of the operation.
+    """
     row = {
         "condition_name": condition_name,
         "label_name": label_name,
@@ -445,6 +718,18 @@ def _subgroup_metric_row(
 
 
 def _condition_meta(records: list[dict[str, Any]]) -> Mapping[str, Any]:
+    """Condition Meta.
+    
+    Parameters
+    ----------
+    records : list[dict[str, Any]]
+        Value for records.
+    
+    Returns
+    -------
+    Mapping[str, Any]
+        Result of the operation.
+    """
     if not records:
         return {}
     value = records[0].get("condition")
@@ -452,11 +737,35 @@ def _condition_meta(records: list[dict[str, Any]]) -> Mapping[str, Any]:
 
 
 def _annotation(record: Mapping[str, Any]) -> Mapping[str, Any]:
+    """Annotation.
+    
+    Parameters
+    ----------
+    record : Mapping[str, Any]
+        Value for record.
+    
+    Returns
+    -------
+    Mapping[str, Any]
+        Result of the operation.
+    """
     value = record.get("benchmark_annotation")
     return value if isinstance(value, Mapping) else {}
 
 
 def _ranked_source_summary(record: Mapping[str, Any]) -> str:
+    """Ranked Source Summary.
+    
+    Parameters
+    ----------
+    record : Mapping[str, Any]
+        Value for record.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     contexts = record.get("ranked_context_metadata")
     if not isinstance(contexts, list):
         return ""
@@ -473,6 +782,18 @@ def _ranked_source_summary(record: Mapping[str, Any]) -> str:
 
 
 def _retrieval_feature_summary(record: Mapping[str, Any]) -> str:
+    """Retrieval Feature Summary.
+    
+    Parameters
+    ----------
+    record : Mapping[str, Any]
+        Value for record.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
     features = record.get("retrieval_features")
     if not isinstance(features, list):
         return ""
@@ -496,6 +817,18 @@ def _retrieval_feature_summary(record: Mapping[str, Any]) -> str:
 
 
 def _metric_names(by_condition: Mapping[str, list[dict[str, Any]]]) -> list[str]:
+    """Metric Names.
+    
+    Parameters
+    ----------
+    by_condition : Mapping[str, list[dict[str, Any]]]
+        Value for by Condition.
+    
+    Returns
+    -------
+    list[str]
+        Collected results from the operation.
+    """
     names: set[str] = set()
     for records in by_condition.values():
         for record in records:
@@ -506,6 +839,18 @@ def _metric_names(by_condition: Mapping[str, list[dict[str, Any]]]) -> list[str]
 
 
 def _mean(values: Iterable[float | None]) -> float | None:
+    """Mean.
+    
+    Parameters
+    ----------
+    values : Iterable[float or None]
+        Value for values.
+    
+    Returns
+    -------
+    float or None
+        Result of the operation.
+    """
     usable = [value for value in values if value is not None]
     if not usable:
         return None
@@ -513,6 +858,18 @@ def _mean(values: Iterable[float | None]) -> float | None:
 
 
 def _score_records(scores_df: Any) -> list[dict[str, Any]]:
+    """Score Records.
+    
+    Parameters
+    ----------
+    scores_df : Any
+        Value for scores Df.
+    
+    Returns
+    -------
+    list[dict[str, Any]]
+        Collected results from the operation.
+    """
     if isinstance(scores_df, list):
         return [dict(row) for row in scores_df if isinstance(row, Mapping)]
     to_dict = getattr(scores_df, "to_dict", None)
@@ -539,11 +896,35 @@ def _score_records(scores_df: Any) -> list[dict[str, Any]]:
 
 
 def _metadata(row: Mapping[str, Any]) -> Mapping[str, Any]:
+    """Metadata.
+    
+    Parameters
+    ----------
+    row : Mapping[str, Any]
+        Value for row.
+    
+    Returns
+    -------
+    Mapping[str, Any]
+        Result of the operation.
+    """
     value = row.get("metadata")
     return value if isinstance(value, Mapping) else {}
 
 
 def _normalized_scalar(value: Any) -> Any:
+    """Normalized Scalar.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    
+    Returns
+    -------
+    Any
+        Result of the operation.
+    """
     numeric = _coerce_numeric(value)
     if numeric is not None:
         return numeric
@@ -555,6 +936,18 @@ def _normalized_scalar(value: Any) -> Any:
 
 
 def _coerce_numeric(value: Any) -> float | None:
+    """Coerce numeric.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    
+    Returns
+    -------
+    float or None
+        Result of the operation.
+    """
     if value is None or value == "":
         return None
     if isinstance(value, bool):
@@ -566,6 +959,18 @@ def _coerce_numeric(value: Any) -> float | None:
 
 
 def _optional_text(value: Any) -> str | None:
+    """Optional Text.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    
+    Returns
+    -------
+    str or None
+        Result of the operation.
+    """
     if value is None:
         return None
     text = str(value).strip()
@@ -573,6 +978,18 @@ def _optional_text(value: Any) -> str | None:
 
 
 def _normalized_value(value: Any) -> Any:
+    """Normalized Value.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    
+    Returns
+    -------
+    Any
+        Result of the operation.
+    """
     if value is None or isinstance(value, (str, int, float, bool)):
         return value
     if isinstance(value, Mapping):
@@ -583,12 +1000,38 @@ def _normalized_value(value: Any) -> Any:
 
 
 def _load_csv_records(path: Path) -> list[dict[str, Any]]:
+    """Load csv Records.
+    
+    Parameters
+    ----------
+    path : Path
+        Filesystem path used by the operation.
+    
+    Returns
+    -------
+    list[dict[str, Any]]
+        Collected results from the operation.
+    """
     with path.open("r", encoding="utf-8", newline="") as handle:
         reader = csv.DictReader(handle)
         return [dict(row) for row in reader]
 
 
 def _write_csv_records(path: Path, rows: list[Mapping[str, Any]]) -> Path:
+    """Write csv Records.
+    
+    Parameters
+    ----------
+    path : Path
+        Filesystem path used by the operation.
+    rows : list[Mapping[str, Any]]
+        Value for rows.
+    
+    Returns
+    -------
+    Path
+        Result of the operation.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
     if not rows:
         path.write_text("", encoding="utf-8")
@@ -602,6 +1045,20 @@ def _write_csv_records(path: Path, rows: list[Mapping[str, Any]]) -> Path:
 
 
 def _write_json(path: Path, payload: Any) -> Path:
+    """Write JSON.
+    
+    Parameters
+    ----------
+    path : Path
+        Filesystem path used by the operation.
+    payload : Any
+        Structured payload for the operation.
+    
+    Returns
+    -------
+    Path
+        Result of the operation.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(_normalized_value(payload), ensure_ascii=False, indent=2), encoding="utf-8")
     return path

@@ -1,4 +1,14 @@
-"""CLI entrypoint for benchmark subgroup characterisation."""
+"""CLI entrypoint for benchmark subgroup characterisation.
+
+This module exposes public helper functions used by the surrounding Polaris subsystem.
+
+Functions
+---------
+parse_args
+    Parse args.
+main
+    Run the command-line entrypoint.
+"""
 
 from __future__ import annotations
 
@@ -16,6 +26,13 @@ from polaris_rag.evaluation.benchmark_annotations import (
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse args.
+    
+    Returns
+    -------
+    argparse.Namespace
+        Parsed args.
+    """
     parser = argparse.ArgumentParser(
         description="Characterise benchmark annotation subgroups and emit experiment-1 artifacts"
     )
@@ -38,6 +55,13 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> None:
+    """Run the command-line entrypoint.
+
+    Notes
+    -----
+    Parses CLI arguments, builds benchmark analysis outputs, and reports the
+    generated artifact locations to standard output.
+    """
     args = parse_args()
 
     raw_examples = load_raw_examples(args.dataset_file)
