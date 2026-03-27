@@ -1,8 +1,7 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useAppState } from "../app/state";
 
 export function Brand() {
-  const location = useLocation();
   const { dispatch } = useAppState();
 
   return (
@@ -11,9 +10,6 @@ export function Brand() {
       className="brand"
       onClick={() => {
         dispatch({ type: "set-drawer-open", open: false });
-        if (location.pathname.startsWith("/assistant")) {
-          dispatch({ type: "clear-assistant-session" });
-        }
       }}
       to="/assistant"
     >

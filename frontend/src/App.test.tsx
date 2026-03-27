@@ -72,7 +72,7 @@ describe("App shell routing", () => {
     });
   });
 
-  it("resets the assistant landing view when the brand is clicked on the assistant page", async () => {
+  it("preserves the current assistant session when the brand is clicked on the assistant page", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
       const url = String(input);
       if (url.endsWith("/v1/query")) {
@@ -104,7 +104,10 @@ describe("App shell routing", () => {
     await userEvent.click(screen.getByRole("link", { name: "Polaris" }));
 
     await waitFor(() => {
-      expect(screen.getByText("How can I help you today?")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Clear Assistant" })).toBeInTheDocument();
     });
+
+    expect(screen.getByText("Open the relevant documentation.")).toBeInTheDocument();
+    expect(screen.queryByText("How can I help you today?")).not.toBeInTheDocument();
   });
 });
