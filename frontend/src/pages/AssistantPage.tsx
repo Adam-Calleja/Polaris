@@ -27,7 +27,8 @@ function apiConfigFromState(state: ReturnType<typeof useAppState>["state"]): Api
 export function AssistantPage() {
   const { state, dispatch } = useAppState();
   const [submitting, setSubmitting] = useState(false);
-  const displayName = state.displayName.trim().split(/\s+/)[0] || "there";
+  const firstName = state.displayName.trim().split(/\s+/)[0];
+  const greeting = firstName && firstName !== "You" ? `Hello ${firstName}` : "Hello";
 
   function clearAssistantSession() {
     dispatch({ type: "clear-assistant-session" });
@@ -116,7 +117,7 @@ export function AssistantPage() {
         <div className="assistant-page__landing-inner assistant-hero surface-card">
           <div className="assistant-hero__copy">
             <div className="assistant-hero__eyebrow">Assistant</div>
-            <h1 className="assistant-hero__title">Hello</h1>
+            <h1 className="assistant-hero__title">{greeting}</h1>
             <p className="assistant-hero__subtitle">How can I help you today?</p>
           </div>
 

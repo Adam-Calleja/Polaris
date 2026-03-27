@@ -1868,6 +1868,24 @@ def _source_scope_priority(source_scope: str) -> tuple[int, str]:
     return (9, source_scope)
 
 
+def _candidate_merge_scope(source_scope: str) -> str:
+    """Normalize source scopes for candidate merging.
+
+    Parameters
+    ----------
+    source_scope : str
+        Source scope associated with the extracted candidate.
+
+    Returns
+    -------
+    str
+        Merge-group scope key used to coalesce compatible candidates.
+    """
+    if source_scope in {SOURCE_SCOPE_LOCAL_OFFICIAL, SOURCE_SCOPE_LOCAL_OFFICIAL_SERVICES}:
+        return "local_official_family"
+    return source_scope
+
+
 def _merge_candidates(
     candidates: Iterable[_Candidate],
 ) -> tuple[list[RegistryEntity], list[ReviewQueueRow]]:
@@ -1885,7 +1903,7 @@ def _merge_candidates(
     """
     grouped: dict[tuple[str, str, str], list[_Candidate]] = defaultdict(list)
     for candidate in candidates:
-        key = (candidate.source_scope, candidate.entity_type, _normalize_key(candidate.canonical_name))
+        key = (_candidate_merge_scope(candidate.source_scope), candidate.entity_type, _normalize_key(candidate.canonical_name))
         grouped[key].append(candidate)
 
     entities: list[RegistryEntity] = []
