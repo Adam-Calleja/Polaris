@@ -117,6 +117,10 @@ export function SystemPage() {
   return (
     <section className="system-page">
       <div className="page-workspace surface-card">
+        <div className="page-intro">
+          <div className="page-workspace__eyebrow">System overview</div>
+        </div>
+
         <section className="card-cluster">
           <h2 className="section-heading">Architecture Flow</h2>
           <div className="stage-grid">
