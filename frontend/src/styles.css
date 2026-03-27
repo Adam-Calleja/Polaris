@@ -546,7 +546,7 @@ button {
   line-height: 0.98;
   letter-spacing: -0.05em;
   color: transparent;
-  background: linear-gradient(90deg, var(--bg-bright) 0%, var(--accent) 52%, #8e61ff 100%);
+  background: linear-gradient(100deg, var(--bg-dark) 0%, var(--bg-mid) 50%, var(--bg-bright) 100%);
   -webkit-background-clip: text;
   background-clip: text;
 }
