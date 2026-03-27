@@ -26,6 +26,7 @@ export function AppShell() {
 
   useEffect(() => {
     dispatch({ type: "set-workspace", workspace: workspaceFromPath(location.pathname) });
+    dispatch({ type: "set-drawer-open", open: false });
   }, [dispatch, location.pathname]);
 
   return (
