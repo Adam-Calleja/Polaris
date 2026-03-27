@@ -437,7 +437,7 @@ button {
 }
 
 .assistant-page__landing-inner {
-  width: min(100%, 64rem);
+  width: min(100%, 72rem);
   margin: 0 auto;
 }
 
