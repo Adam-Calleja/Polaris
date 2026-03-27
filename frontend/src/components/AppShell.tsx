@@ -101,14 +101,20 @@ export function AppShell() {
             </div>
           </div>
 
-          <label className="toggle-row">
-            <input
-              checked={state.debugMode}
-              onChange={(event) => dispatch({ type: "set-debug-mode", value: event.target.checked })}
-              type="checkbox"
-            />
-            <span>Debug mode</span>
-          </label>
+          <button
+            aria-pressed={state.debugMode}
+            className={`sidebar__toggle-card ${state.debugMode ? "sidebar__toggle-card--active" : ""}`}
+            onClick={() => dispatch({ type: "set-debug-mode", value: !state.debugMode })}
+            type="button"
+          >
+            <span className="sidebar__toggle-copy">
+              <span className="sidebar__toggle-title">Debug mode</span>
+              <span className="sidebar__toggle-state">{state.debugMode ? "Enabled" : "Off"}</span>
+            </span>
+            <span className={`sidebar__switch ${state.debugMode ? "sidebar__switch--active" : ""}`} aria-hidden="true">
+              <span className="sidebar__switch-thumb" />
+            </span>
+          </button>
           <p className="sidebar__caption">
             Debug mode requests evaluation metadata from the API and exposes raw diagnostic payloads in the
             interface.
