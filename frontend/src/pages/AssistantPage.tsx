@@ -166,14 +166,14 @@ export function AssistantPage() {
 
         {latestUser ? (
           <div className="assistant-page__conversation-intro">
-            <div className="assistant-page__user-label">Your question</div>
+            <div className="assistant-page__section-label">Your question</div>
             <div className="assistant-page__query-pill">{latestUser.content}</div>
           </div>
         ) : null}
 
         <div className="assistant-page__grid assistant-page__grid--workspace">
           <div className="assistant-page__primary">
-            <div className="assistant-page__assistant-label">Polaris</div>
+            <div className="assistant-page__section-label">Polaris</div>
             {latestAssistant?.pending ? (
               <article className="surface-card answer-card answer-card--pending">
                 <h3 className="answer-card__title">
