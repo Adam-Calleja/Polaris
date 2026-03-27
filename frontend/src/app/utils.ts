@@ -14,6 +14,27 @@ export const EXAMPLE_QUERIES = [
   "How do I check why my Slurm job is stuck in the queue?",
 ];
 
+const QUICK_PROMPT_CARDS = [
+  {
+    title: "Storage renewal",
+    description: "Handle renewals, ownership transfers, and project storage changes with policy-backed guidance.",
+    icon: "✦",
+    prompt: EXAMPLE_QUERIES[0],
+  },
+  {
+    title: "Software update",
+    description: "Check software availability, exact versions, and the right module path for your target system.",
+    icon: "◌",
+    prompt: EXAMPLE_QUERIES[2],
+  },
+  {
+    title: "Queue debugging",
+    description: "Understand why a Slurm job is pending and what to inspect next before escalating.",
+    icon: "⌘",
+    prompt: EXAMPLE_QUERIES[3],
+  },
+] as const;
+
 export const SECTION_LABELS: Record<string, string> = {
   CLASSIFICATION: "Classification",
   "QUICK ASSESSMENT": "Quick Assessment",
@@ -25,8 +46,8 @@ export const SECTION_LABELS: Record<string, string> = {
   "REFERENCE KEY": "Reference Key",
 };
 
-export function quickPromptCards(): string[] {
-  return EXAMPLE_QUERIES.slice(0, 2);
+export function quickPromptCards() {
+  return QUICK_PROMPT_CARDS;
 }
 
 export function parseAnswerSections(answer: string): AnswerSection[] {

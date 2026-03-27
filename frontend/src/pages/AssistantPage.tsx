@@ -27,6 +27,7 @@ function apiConfigFromState(state: ReturnType<typeof useAppState>["state"]): Api
 export function AssistantPage() {
   const { state, dispatch } = useAppState();
   const [submitting, setSubmitting] = useState(false);
+  const displayName = state.displayName.trim().split(/\s+/)[0] || "there";
 
   function clearAssistantSession() {
     dispatch({ type: "clear-assistant-session" });
@@ -112,29 +113,39 @@ export function AssistantPage() {
   if (viewState === "landing") {
     return (
       <section className="assistant-page assistant-page--landing">
-        <div className="assistant-page__landing-spacer" />
-        <div className="assistant-page__landing-inner">
-          <h2 className="section-label">Quick Prompts</h2>
-          <div className="quick-prompt-grid">
+        <div className="assistant-page__landing-inner assistant-hero surface-card">
+          <div className="assistant-hero__copy">
+            <div className="assistant-hero__eyebrow">Assistant</div>
+            <h1 className="assistant-hero__title">Hello {displayName}</h1>
+            <p className="assistant-hero__subtitle">How can I help you today?</p>
+          </div>
+
+          <div className="quick-prompt-grid quick-prompt-grid--hero">
             {quickPromptCards().map((prompt) => (
               <button
-                className="quick-prompt-card"
-                key={prompt}
+                className="quick-prompt-card quick-prompt-card--hero"
+                key={prompt.title}
                 onClick={() => {
-                  void submitPrompt(prompt);
+                  void submitPrompt(prompt.prompt);
                 }}
                 type="button"
               >
-                <span>{prompt}</span>
-                <span className="quick-prompt-card__arrow">›</span>
+                <span className="quick-prompt-card__icon" aria-hidden="true">
+                  {prompt.icon}
+                </span>
+                <span className="quick-prompt-card__title">{prompt.title}</span>
+                <span className="quick-prompt-card__body">{prompt.description}</span>
               </button>
             ))}
           </div>
-          <PromptComposer
-            disabled={submitting}
-            onSubmit={submitPrompt}
-            placeholder="Ask a question..."
-          />
+
+          <div className="assistant-hero__composer">
+            <PromptComposer
+              disabled={submitting}
+              onSubmit={submitPrompt}
+              placeholder="Ask about tickets, docs, services, or queue issues..."
+            />
+          </div>
         </div>
       </section>
     );

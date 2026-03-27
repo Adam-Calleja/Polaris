@@ -367,44 +367,152 @@ button {
 }
 
 .assistant-page--landing {
-  min-height: calc(100vh - 9rem);
-}
-
-.assistant-page__landing-spacer {
-  height: min(18vh, 9rem);
+  display: grid;
+  align-items: center;
+  min-height: calc(100vh - 8.5rem);
 }
 
 .assistant-page__landing-inner {
-  width: min(100%, 58rem);
+  width: min(100%, 64rem);
   margin: 0 auto;
 }
 
+.assistant-hero {
+  position: relative;
+  overflow: hidden;
+  padding: clamp(2rem, 4vw, 3rem);
+  border-radius: 2.25rem;
+  background:
+    radial-gradient(circle at top right, rgba(81, 78, 231, 0.15), transparent 26%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 244, 255, 0.94));
+  box-shadow: 0 28px 80px rgba(4, 5, 21, 0.2);
+}
+
+.assistant-hero::after {
+  content: "";
+  position: absolute;
+  inset: auto -8rem -9rem auto;
+  width: 18rem;
+  height: 18rem;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(81, 78, 231, 0.14), transparent 68%);
+  pointer-events: none;
+}
+
+.assistant-hero__copy,
+.assistant-hero__composer,
+.quick-prompt-grid--hero {
+  position: relative;
+  z-index: 1;
+}
+
+.assistant-hero__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  padding: 0 0.85rem;
+  border-radius: 999px;
+  background: rgba(81, 78, 231, 0.1);
+  color: var(--accent);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.assistant-hero__title {
+  margin: 1.1rem 0 0;
+  font-size: clamp(2.9rem, 7vw, 4.8rem);
+  line-height: 0.98;
+  letter-spacing: -0.05em;
+  color: transparent;
+  background: linear-gradient(90deg, #8e61ff 0%, #c36fd9 45%, #f1b1c8 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.assistant-hero__subtitle {
+  margin: 0.55rem 0 0;
+  font-size: clamp(2rem, 5vw, 3.7rem);
+  line-height: 1.02;
+  letter-spacing: -0.05em;
+  color: rgba(23, 21, 63, 0.2);
+  font-weight: 700;
+}
+
 .quick-prompt-grid {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1rem;
-  margin-bottom: 2rem;
+  margin: 2.3rem 0 2rem;
 }
 
 .quick-prompt-card {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 1.25rem;
-  width: min(100%, 14.5rem);
-  min-height: 5.8rem;
-  padding: 1rem 1rem 1rem 1.1rem;
+  display: grid;
+  align-content: start;
+  gap: 0.72rem;
+  width: 100%;
+  min-height: 10.25rem;
+  padding: 1rem 1rem 1.15rem 1.1rem;
   border: 0;
-  border-radius: 2rem;
-  background: #ffffff;
+  border-radius: 1.55rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(249, 246, 255, 0.94)),
+    linear-gradient(120deg, rgba(195, 111, 217, 0.12), rgba(81, 78, 231, 0.08));
   color: var(--text-dark);
-  box-shadow: var(--shadow-heavy);
+  box-shadow: 0 18px 34px rgba(20, 18, 58, 0.08);
   text-align: left;
+  transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
 }
 
-.quick-prompt-card__arrow {
-  font-size: 1.6rem;
-  color: var(--accent);
+.quick-prompt-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 22px 42px rgba(20, 18, 58, 0.14);
+}
+
+.quick-prompt-card__icon {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.72rem;
+  background: linear-gradient(180deg, rgba(142, 97, 255, 0.22), rgba(81, 78, 231, 0.16));
+  color: #8e61ff;
+  font-size: 1rem;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.quick-prompt-card__title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.quick-prompt-card__body {
+  color: rgba(23, 21, 63, 0.46);
+  line-height: 1.5;
+  font-size: 0.92rem;
+}
+
+.assistant-hero__composer {
+  width: min(100%, 39rem);
+}
+
+.assistant-hero__composer .prompt-composer {
+  width: 100%;
+}
+
+.assistant-hero__composer .prompt-composer__input {
+  min-height: 4rem;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(81, 78, 231, 0.1);
+  box-shadow: 0 16px 36px rgba(20, 18, 58, 0.1);
+}
+
+.assistant-hero__composer .prompt-composer__button {
+  background: linear-gradient(135deg, #514ee7, #8e61ff);
+  color: #ffffff;
+  box-shadow: 0 16px 32px rgba(81, 78, 231, 0.28);
 }
 
 .prompt-composer {
@@ -945,6 +1053,18 @@ button {
 
   .assistant-page__query-pill {
     max-width: none;
+  }
+
+  .assistant-page--landing {
+    min-height: auto;
+  }
+
+  .assistant-hero {
+    padding: 1.5rem;
+  }
+
+  .quick-prompt-grid {
+    grid-template-columns: 1fr;
   }
 }
 

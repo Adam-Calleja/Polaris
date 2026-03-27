@@ -107,7 +107,9 @@ describe("AssistantPage", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Clear Assistant" }));
 
-    expect(screen.getByText("Quick Prompts")).toBeInTheDocument();
+    expect(screen.getByText("Hello Adam")).toBeInTheDocument();
+    expect(screen.getByText("How can I help you today?")).toBeInTheDocument();
+    expect(screen.getByText("Storage renewal")).toBeInTheDocument();
     expect(screen.queryByText("Diagnostics")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Clear Assistant" })).not.toBeInTheDocument();
   });
