@@ -254,81 +254,84 @@ export function EvaluationPage() {
 
   return (
     <section className="evaluation-page">
-      <div className="page-intro">
-        <h1 className="page-intro__title">Evaluation</h1>
-        <p className="page-intro__body">
-          Curated live scenarios for your screencast, report screenshots, and lightweight usability
-          evidence.
-        </p>
-      </div>
-
-      <div className="metric-grid">
-        <SummaryCard label="Saved Feedback" value={summary?.total ?? (loadingSummary ? "…" : 0)} />
-        <SummaryCard label="Helpful = yes" value={summary?.helpful_yes ?? (loadingSummary ? "…" : 0)} />
-        <SummaryCard label="Grounded = yes" value={summary?.grounded_yes ?? (loadingSummary ? "…" : 0)} />
-      </div>
-
-      {summaryError ? <div className="surface-card status-card">{summaryError}</div> : null}
-
-      {summary && summary.total > 0 ? (
-        <div className="evaluation-page__summary-grid">
-          <div className="surface-card summary-table">
-            <h3 className="summary-table__title">By Scenario</h3>
-            {summary.by_scenario.map((row) => (
-              <div className="summary-table__row" key={row.scenario_id}>
-                <span>{row.scenario_id}</span>
-                <span>{row.count}</span>
-              </div>
-            ))}
-          </div>
-          <div className="surface-card summary-table">
-            <h3 className="summary-table__title">Failure Types</h3>
-            {summary.failure_types.map((row) => (
-              <div className="summary-table__row" key={row.failure_type}>
-                <span>{row.failure_type}</span>
-                <span>{row.count}</span>
-              </div>
-            ))}
-          </div>
+      <div className="page-workspace surface-card">
+        <div className="page-intro">
+          <div className="page-workspace__eyebrow">Live evaluation</div>
+          <h1 className="page-intro__title">Evaluation</h1>
+          <p className="page-intro__body">
+            Curated live scenarios for your screencast, report screenshots, and lightweight usability
+            evidence.
+          </p>
         </div>
-      ) : !loadingSummary ? (
-        <div className="surface-card status-card">No persistent evaluation feedback has been recorded yet.</div>
-      ) : null}
 
-      <div className="evaluation-page__scenario-list">
-        {demoScenarios.map((scenario) => {
-          const result = state.evaluationResults[scenario.scenarioId];
+        <div className="metric-grid">
+          <SummaryCard label="Saved Feedback" value={summary?.total ?? (loadingSummary ? "…" : 0)} />
+          <SummaryCard label="Helpful = yes" value={summary?.helpful_yes ?? (loadingSummary ? "…" : 0)} />
+          <SummaryCard label="Grounded = yes" value={summary?.grounded_yes ?? (loadingSummary ? "…" : 0)} />
+        </div>
 
-          return (
-            <section className="surface-card scenario-card" key={scenario.scenarioId}>
-              <div className="scenario-card__header">
-                <div>
-                  <h2 className="scenario-card__title">{scenario.title}</h2>
-                  <p className="scenario-card__description">{scenario.description}</p>
+        {summaryError ? <div className="surface-card status-card">{summaryError}</div> : null}
+
+        {summary && summary.total > 0 ? (
+          <div className="evaluation-page__summary-grid">
+            <div className="surface-card summary-table">
+              <h3 className="summary-table__title">By Scenario</h3>
+              {summary.by_scenario.map((row) => (
+                <div className="summary-table__row" key={row.scenario_id}>
+                  <span>{row.scenario_id}</span>
+                  <span>{row.count}</span>
                 </div>
-                <button
-                  className="scenario-card__run"
-                  disabled={runningScenarioId === scenario.scenarioId}
-                  onClick={() => {
-                    void runScenario(scenario);
-                  }}
-                  type="button"
-                >
-                  {runningScenarioId === scenario.scenarioId ? <LoadingLabel label="Running" /> : "Run"}
-                </button>
-              </div>
-              <p className="scenario-card__focus">Focus: {scenario.focus}</p>
-              <pre className="code-block scenario-card__query">{scenario.query}</pre>
+              ))}
+            </div>
+            <div className="surface-card summary-table">
+              <h3 className="summary-table__title">Failure Types</h3>
+              {summary.failure_types.map((row) => (
+                <div className="summary-table__row" key={row.failure_type}>
+                  <span>{row.failure_type}</span>
+                  <span>{row.count}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : !loadingSummary ? (
+          <div className="surface-card status-card">No persistent evaluation feedback has been recorded yet.</div>
+        ) : null}
 
-              {result ? (
-                <>
-                  <ScenarioResult result={result} />
-                  <FeedbackForm onSaved={loadSummary} result={result} scenario={scenario} />
-                </>
-              ) : null}
-            </section>
-          );
-        })}
+        <div className="evaluation-page__scenario-list">
+          {demoScenarios.map((scenario) => {
+            const result = state.evaluationResults[scenario.scenarioId];
+
+            return (
+              <section className="surface-card scenario-card" key={scenario.scenarioId}>
+                <div className="scenario-card__header">
+                  <div>
+                    <h2 className="scenario-card__title">{scenario.title}</h2>
+                    <p className="scenario-card__description">{scenario.description}</p>
+                  </div>
+                  <button
+                    className="scenario-card__run"
+                    disabled={runningScenarioId === scenario.scenarioId}
+                    onClick={() => {
+                      void runScenario(scenario);
+                    }}
+                    type="button"
+                  >
+                    {runningScenarioId === scenario.scenarioId ? <LoadingLabel label="Running" /> : "Run"}
+                  </button>
+                </div>
+                <p className="scenario-card__focus">Focus: {scenario.focus}</p>
+                <pre className="code-block scenario-card__query">{scenario.query}</pre>
+
+                {result ? (
+                  <>
+                    <ScenarioResult result={result} />
+                    <FeedbackForm onSaved={loadSummary} result={result} scenario={scenario} />
+                  </>
+                ) : null}
+              </section>
+            );
+          })}
+        </div>
       </div>
     </section>
   );

@@ -171,6 +171,10 @@ export function AssistantPage() {
           </div>
         ) : null}
 
+        <div className="assistant-page__workspace-labels">
+          <div className="assistant-page__section-label">Polaris</div>
+        </div>
+
         <div className="assistant-page__grid assistant-page__grid--workspace">
           <div className="assistant-page__primary">
             {latestAssistant?.pending ? (
