@@ -151,6 +151,8 @@ button {
   font-size: 2rem;
   line-height: 1;
   padding: 1.4rem 2rem 2rem 0rem;
+  color: var(--text-light);
+  text-decoration: none;
 }
 
 .brand__icon {
