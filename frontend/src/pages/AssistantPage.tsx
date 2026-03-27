@@ -166,7 +166,7 @@ export function AssistantPage() {
         </div>
 
         {latestUser ? (
-          <div className="assistant-page__conversation-intro">
+          <div className="assistant-page__conversation-intro assistant-page__workspace-labels">
             <div className="assistant-page__section-label">Your question</div>
             <div className="assistant-page__query-pill">{latestUser.content}</div>
           </div>

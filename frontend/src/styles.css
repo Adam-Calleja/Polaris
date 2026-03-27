@@ -671,7 +671,6 @@ button {
   display: grid;
   justify-items: end;
   margin-top: 1.1rem;
-  margin-bottom: 0.9rem;
 }
 
 .assistant-page__workspace-labels {
