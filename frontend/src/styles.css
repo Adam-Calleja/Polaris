@@ -432,7 +432,7 @@ button {
 .assistant-page--landing {
   display: grid;
   align-items: start;
-  min-height: calc(100vh - 9.6rem);
+  min-height: 0;
   padding-top: clamp(0.35rem, 1vh, 0.9rem);
 }
 
