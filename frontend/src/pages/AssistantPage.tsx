@@ -153,70 +153,77 @@ export function AssistantPage() {
 
   return (
     <section className="assistant-page">
-      {latestUser ? (
-        <>
-          <div className="assistant-page__user-label">{state.displayName}</div>
-          <div className="assistant-page__query-pill">{latestUser.content}</div>
-        </>
-      ) : null}
+      <div className="assistant-workspace surface-card">
+        <div className="assistant-workspace__header">
+          <div className="assistant-workspace__header-copy">
+            <div className="assistant-hero__eyebrow">Assistant session</div>
+            <h2 className="assistant-workspace__title">Polaris response</h2>
+          </div>
+          <button className="secondary-button secondary-button--light" onClick={clearAssistantSession} type="button">
+            Clear Assistant
+          </button>
+        </div>
 
-      <div className="assistant-page__grid">
-        <div className="assistant-page__primary">
-          <div className="assistant-page__assistant-label">Polaris</div>
-          {latestAssistant?.pending ? (
-            <article className="surface-card answer-card answer-card--pending">
-              <h3 className="answer-card__title">
-                <LoadingLabel label="Retrieving evidence and drafting an answer" />
-              </h3>
-            </article>
-          ) : latestAssistant?.response ? (
-            <AnswerCard response={latestAssistant.response} />
-          ) : latestAssistant?.error ? (
-            <ErrorCard error={latestAssistant.error} />
-          ) : (
-            <article className="surface-card answer-card">
-              <div className="answer-card__empty">No assistant content available.</div>
-            </article>
-          )}
+        {latestUser ? (
+          <div className="assistant-page__conversation-intro">
+            <div className="assistant-page__user-label">Your question</div>
+            <div className="assistant-page__query-pill">{latestUser.content}</div>
+          </div>
+        ) : null}
 
-          {olderMessages.length > 0 ? (
-            <div className="history-panel">
-              <button
-                className="history-panel__toggle"
-                onClick={() => dispatch({ type: "toggle-assistant-history" })}
-                type="button"
-              >
-                {state.assistantHistoryOpen ? "Hide Conversation History" : "Conversation History"}
-              </button>
-              {state.assistantHistoryOpen ? (
-                <div className="surface-card history-panel__content">
-                  {olderMessages.map((message) => (
-                    <article className="history-row" key={message.id}>
-                      <div className="history-row__role">{message.role === "assistant" ? "Assistant" : "User"}</div>
-                      <div className="history-row__body">{message.content}</div>
-                    </article>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          ) : null}
+        <div className="assistant-page__grid assistant-page__grid--workspace">
+          <div className="assistant-page__primary">
+            <div className="assistant-page__assistant-label">Polaris</div>
+            {latestAssistant?.pending ? (
+              <article className="surface-card answer-card answer-card--pending">
+                <h3 className="answer-card__title">
+                  <LoadingLabel label="Retrieving evidence and drafting an answer" />
+                </h3>
+              </article>
+            ) : latestAssistant?.response ? (
+              <AnswerCard response={latestAssistant.response} />
+            ) : latestAssistant?.error ? (
+              <ErrorCard error={latestAssistant.error} />
+            ) : (
+              <article className="surface-card answer-card">
+                <div className="answer-card__empty">No assistant content available.</div>
+              </article>
+            )}
 
-          <div className="assistant-page__footer">
-            <PromptComposer
-              disabled={submitting}
-              onSubmit={submitPrompt}
-              placeholder="Enter a new question..."
-            />
-            <div className="assistant-page__actions">
-              <button className="secondary-button" onClick={clearAssistantSession} type="button">
-                Clear Assistant
-              </button>
-            </div>
+            {olderMessages.length > 0 ? (
+              <div className="history-panel">
+                <button
+                  className="history-panel__toggle"
+                  onClick={() => dispatch({ type: "toggle-assistant-history" })}
+                  type="button"
+                >
+                  {state.assistantHistoryOpen ? "Hide Conversation History" : "Conversation History"}
+                </button>
+                {state.assistantHistoryOpen ? (
+                  <div className="surface-card history-panel__content">
+                    {olderMessages.map((message) => (
+                      <article className="history-row" key={message.id}>
+                        <div className="history-row__role">{message.role === "assistant" ? "Assistant" : "User"}</div>
+                        <div className="history-row__body">{message.content}</div>
+                      </article>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+
+          <div className="assistant-page__secondary">
+            <DiagnosticsPanel error={latestAssistant?.error} response={latestAssistant?.response} />
           </div>
         </div>
 
-        <div className="assistant-page__secondary">
-          <DiagnosticsPanel error={latestAssistant?.error} response={latestAssistant?.response} />
+        <div className="assistant-page__footer assistant-page__footer--workspace">
+          <PromptComposer
+            disabled={submitting}
+            onSubmit={submitPrompt}
+            placeholder="Enter a new question..."
+          />
         </div>
       </div>
     </section>
