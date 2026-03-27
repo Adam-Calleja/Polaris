@@ -108,82 +108,85 @@ export function SystemPage() {
 
   return (
     <section className="system-page">
-      <div className="page-intro">
-        <h1 className="page-intro__title">System</h1>
-        <p className="page-intro__body">
-          System overview, source legend, and live backend readiness checks.
-        </p>
+      <div className="page-workspace surface-card">
+        <div className="page-intro">
+          <div className="page-workspace__eyebrow">System overview</div>
+          <h1 className="page-intro__title">System</h1>
+          <p className="page-intro__body">
+            System overview, source legend, and live backend readiness checks.
+          </p>
+        </div>
+
+        <section className="card-cluster">
+          <h2 className="section-heading">Architecture Flow</h2>
+          <div className="stage-grid">
+            {ARCHITECTURE_STAGES.map(([title, body]) => (
+              <article className="surface-card stage-card" key={title}>
+                <h3 className="stage-card__title">{title}</h3>
+                <p className="stage-card__body">{body}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="card-cluster">
+          <h2 className="section-heading">Corpus Legend</h2>
+          <div className="legend-grid">
+            {SOURCE_LEGEND.map(([title, body]) => (
+              <article className="surface-card stage-card" key={title}>
+                <h3 className="stage-card__title">{title}</h3>
+                <p className="stage-card__body">{body}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="card-cluster">
+          <div className="section-heading-row">
+            <h2 className="section-heading">Live Backend Checks</h2>
+            <button
+              className="secondary-button secondary-button--light"
+              disabled={refreshing}
+              onClick={() => setRefreshToken((value) => value + 1)}
+              type="button"
+            >
+              {refreshing ? <LoadingLabel label="Refreshing status" /> : "Refresh Status"}
+            </button>
+          </div>
+          <div className="probe-grid">
+            <ProbeCard loading={refreshing} probe={healthProbe} title="Health" />
+            <ProbeCard loading={refreshing} probe={readyProbe} title="Readiness" />
+          </div>
+        </section>
+
+        <section className="card-cluster">
+          <h2 className="section-heading">Frontend Runtime Summary</h2>
+          <div className="surface-card runtime-card">
+            <div className="runtime-card__row">
+              <span>API base URL</span>
+              <code>{state.apiBaseUrl}</code>
+            </div>
+            <div className="runtime-card__row">
+              <span>Query endpoint</span>
+              <code>{state.apiEndpointPath}</code>
+            </div>
+            <div className="runtime-card__row">
+              <span>HTTP timeout</span>
+              <code>{state.timeoutS} seconds</code>
+            </div>
+            <div className="runtime-card__row">
+              <span>Debug mode</span>
+              <code>{String(state.debugMode)}</code>
+            </div>
+            <div className="runtime-card__row">
+              <span>Feedback log</span>
+              <code>
+                {runtime?.feedback_log_path ?? (runtimeError ? runtimeError : refreshing ? "Refreshing..." : "Loading...")}
+              </code>
+            </div>
+          </div>
+        </section>
       </div>
-
-      <section className="card-cluster">
-        <h2 className="section-heading">Architecture Flow</h2>
-        <div className="stage-grid">
-          {ARCHITECTURE_STAGES.map(([title, body]) => (
-            <article className="surface-card stage-card" key={title}>
-              <h3 className="stage-card__title">{title}</h3>
-              <p className="stage-card__body">{body}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="card-cluster">
-        <h2 className="section-heading">Corpus Legend</h2>
-        <div className="legend-grid">
-          {SOURCE_LEGEND.map(([title, body]) => (
-            <article className="surface-card stage-card" key={title}>
-              <h3 className="stage-card__title">{title}</h3>
-              <p className="stage-card__body">{body}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="card-cluster">
-        <div className="section-heading-row">
-          <h2 className="section-heading">Live Backend Checks</h2>
-          <button
-            className="secondary-button"
-            disabled={refreshing}
-            onClick={() => setRefreshToken((value) => value + 1)}
-            type="button"
-          >
-            {refreshing ? <LoadingLabel label="Refreshing status" /> : "Refresh Status"}
-          </button>
-        </div>
-        <div className="probe-grid">
-          <ProbeCard loading={refreshing} probe={healthProbe} title="Health" />
-          <ProbeCard loading={refreshing} probe={readyProbe} title="Readiness" />
-        </div>
-      </section>
-
-      <section className="card-cluster">
-        <h2 className="section-heading">Frontend Runtime Summary</h2>
-        <div className="surface-card runtime-card">
-          <div className="runtime-card__row">
-            <span>API base URL</span>
-            <code>{state.apiBaseUrl}</code>
-          </div>
-          <div className="runtime-card__row">
-            <span>Query endpoint</span>
-            <code>{state.apiEndpointPath}</code>
-          </div>
-          <div className="runtime-card__row">
-            <span>HTTP timeout</span>
-            <code>{state.timeoutS} seconds</code>
-          </div>
-          <div className="runtime-card__row">
-            <span>Debug mode</span>
-            <code>{String(state.debugMode)}</code>
-          </div>
-          <div className="runtime-card__row">
-            <span>Feedback log</span>
-            <code>
-              {runtime?.feedback_log_path ?? (runtimeError ? runtimeError : refreshing ? "Refreshing..." : "Loading...")}
-            </code>
-          </div>
-        </div>
-      </section>
     </section>
   );
 }

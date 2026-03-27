@@ -377,7 +377,8 @@ button {
   margin: 0 auto;
 }
 
-.assistant-workspace {
+.assistant-workspace,
+.page-workspace {
   position: relative;
   overflow: hidden;
   width: min(100%, 72rem);
@@ -445,7 +446,8 @@ button {
   z-index: 1;
 }
 
-.assistant-hero__eyebrow {
+.assistant-hero__eyebrow,
+.page-workspace__eyebrow {
   display: inline-flex;
   align-items: center;
   min-height: 2rem;
@@ -457,6 +459,21 @@ button {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.page-workspace .page-intro {
+  max-width: 48rem;
+  margin-bottom: 1.6rem;
+}
+
+.page-workspace .page-intro__title,
+.page-workspace .section-heading {
+  color: var(--text-dark);
+}
+
+.page-workspace .page-intro__body {
+  margin-top: 0.45rem;
+  color: rgba(23, 21, 63, 0.68);
 }
 
 .assistant-hero__title {
@@ -595,6 +612,10 @@ button {
   margin-top: 1.1rem;
 }
 
+.assistant-page__workspace-labels {
+  margin-bottom: 0.9rem;
+}
+
 .assistant-page__section-label {
   display: inline-flex;
   align-items: center;
@@ -640,10 +661,25 @@ button {
 
 .assistant-workspace .answer-card,
 .assistant-workspace .diagnostics,
-.assistant-workspace .history-panel__content {
+.assistant-workspace .history-panel__content,
+.page-workspace .metric-card,
+.page-workspace .summary-table,
+.page-workspace .probe-card,
+.page-workspace .runtime-card,
+.page-workspace .status-card,
+.page-workspace .scenario-card,
+.page-workspace .stage-card,
+.page-workspace .feedback-form,
+.page-workspace .diagnostics {
   border-color: rgba(81, 78, 231, 0.08);
   background: rgba(255, 255, 255, 0.78);
   box-shadow: 0 18px 36px rgba(20, 18, 58, 0.08);
+}
+
+.page-workspace .scenario-card__query {
+  border-color: rgba(81, 78, 231, 0.12);
+  background: rgba(81, 78, 231, 0.06);
+  color: var(--text-dark);
 }
 
 .answer-card {
@@ -1010,33 +1046,7 @@ button {
 }
 
 .evaluation-page__diagnostics .diagnostics {
-  border-color: rgba(255, 255, 255, 0.08);
-  background:
-    radial-gradient(circle at 82% 18%, rgba(117, 127, 255, 0.2), transparent 22%),
-    linear-gradient(100deg, var(--bg-dark) 0%, var(--bg-mid) 50%, var(--bg-bright) 100%);
-  color: var(--text-light);
-}
-
-.evaluation-page__diagnostics .diagnostics__title,
-.evaluation-page__diagnostics .diagnostics__section-title,
-.evaluation-page__diagnostics .diagnostics__metric-label,
-.evaluation-page__diagnostics .diagnostics__mini-label {
-  color: var(--text-light);
-}
-
-.evaluation-page__diagnostics .diagnostics__message,
-.evaluation-page__diagnostics .diagnostics__empty,
-.evaluation-page__diagnostics .constraint-row__label,
-.evaluation-page__diagnostics .constraint-row__value {
-  color: rgba(246, 245, 255, 0.86);
-}
-
-.evaluation-page__diagnostics .evidence-card {
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.evaluation-page__diagnostics .evidence-card__meta {
-  color: rgba(246, 245, 255, 0.8);
+  min-height: 100%;
 }
 
 .evaluation-page__scenario-list,
