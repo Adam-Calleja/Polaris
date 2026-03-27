@@ -671,6 +671,7 @@ button {
   display: grid;
   justify-items: end;
   margin-top: 1.1rem;
+  margin-bottom: 0.9rem;
 }
 
 .assistant-page__workspace-labels {
@@ -694,7 +695,7 @@ button {
 
 .assistant-page__query-pill {
   margin-left: auto;
-  margin-bottom: 2rem;
+  margin-bottom: 0;
   max-width: min(100%, 44rem);
   padding: 0.9rem 1.25rem;
   border: 1px solid rgba(81, 78, 231, 0.12);
