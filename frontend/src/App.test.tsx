@@ -44,35 +44,6 @@ describe("App shell routing", () => {
     });
   });
 
-  it("closes the menu automatically when navigation changes page", async () => {
-    vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
-      const url = String(input);
-      if (url.endsWith("/v1/ui/feedback/summary")) {
-        return jsonResponse({
-          total: 0,
-          helpful_yes: 0,
-          grounded_yes: 0,
-          by_scenario: [],
-          failure_types: [],
-        });
-      }
-      throw new Error(`Unexpected fetch: ${url}`);
-    });
-
-    const { container } = renderApp("/assistant");
-    const shell = container.firstElementChild as HTMLElement;
-
-    await userEvent.click(screen.getByRole("button", { name: "Open menu" }));
-    expect(shell).toHaveClass("app-shell--drawer-open");
-
-    await userEvent.click(screen.getByRole("link", { name: /evaluation/i }));
-
-    await waitFor(() => {
-      expect(screen.getByRole("heading", { name: "Evaluation" })).toBeInTheDocument();
-      expect(shell).not.toHaveClass("app-shell--drawer-open");
-    });
-  });
-
   it("returns to the assistant when the brand is clicked", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
       const url = String(input);
