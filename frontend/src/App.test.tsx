@@ -65,7 +65,43 @@ describe("App shell routing", () => {
       expect(screen.getByRole("heading", { name: "Evaluation" })).toBeInTheDocument();
     });
 
-    await userEvent.click(screen.getByRole("link", { name: /polaris/i }));
+    await userEvent.click(screen.getByRole("link", { name: "Polaris" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("How can I help you today?")).toBeInTheDocument();
+    });
+  });
+
+  it("resets the assistant landing view when the brand is clicked on the assistant page", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
+      const url = String(input);
+      if (url.endsWith("/v1/query")) {
+        return jsonResponse({
+          answer: "ACTION\nOpen the relevant documentation.",
+          context: [],
+          answer_status: {
+            code: "grounded",
+            detail: "Answer generated.",
+          },
+          timings: {
+            retrieval_elapsed_ms: 12,
+            generation_elapsed_ms: 34,
+          },
+        });
+      }
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+
+    renderApp("/assistant");
+
+    await userEvent.type(screen.getByRole("textbox", { name: "Prompt" }), "Take me away from landing");
+    await userEvent.click(screen.getByRole("button", { name: "➜" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Clear Assistant" })).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByRole("link", { name: "Polaris" }));
 
     await waitFor(() => {
       expect(screen.getByText("How can I help you today?")).toBeInTheDocument();
