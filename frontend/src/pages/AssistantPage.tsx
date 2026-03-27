@@ -116,7 +116,7 @@ export function AssistantPage() {
         <div className="assistant-page__landing-inner assistant-hero surface-card">
           <div className="assistant-hero__copy">
             <div className="assistant-hero__eyebrow">Assistant</div>
-            <h1 className="assistant-hero__title">Hello {displayName}</h1>
+            <h1 className="assistant-hero__title">Hello</h1>
             <p className="assistant-hero__subtitle">How can I help you today?</p>
           </div>
 
