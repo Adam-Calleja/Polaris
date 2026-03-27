@@ -173,7 +173,6 @@ export function AssistantPage() {
 
         <div className="assistant-page__grid assistant-page__grid--workspace">
           <div className="assistant-page__primary">
-            <div className="assistant-page__section-label">Polaris</div>
             {latestAssistant?.pending ? (
               <article className="surface-card answer-card answer-card--pending">
                 <h3 className="answer-card__title">
