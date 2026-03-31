@@ -28,6 +28,16 @@ class _FakeRetriever:
         return [_FakeSource(_FakeNode("doc-1", "ctx-1"))]
 
 
+class _MultiNodeRetriever:
+    def __init__(self, nodes: list[_FakeSource]) -> None:
+        self.nodes = list(nodes)
+        self.calls: list[dict[str, object]] = []
+
+    def retrieve(self, query: str, **kwargs):
+        self.calls.append({"query": query, "kwargs": dict(kwargs)})
+        return list(self.nodes)
+
+
 class _FakePromptBuilder:
     def __init__(self) -> None:
         self.calls: list[dict[str, object]] = []
@@ -193,3 +203,85 @@ def test_pipeline_includes_and_forwards_query_constraints() -> None:
         "scope_required": None,
         "version_sensitive_guess": True,
     }
+
+
+def test_pipeline_sanitizes_reference_key_and_trailing_repetition() -> None:
+    retriever = _MultiNodeRetriever(
+        [
+            _FakeSource(_FakeNode("HPCSSUP-81211", "ctx-1")),
+            _FakeSource(_FakeNode("a03b4ce7-a07d-47fd-b5d2-ad1cb1c84b47", "ctx-2")),
+            _FakeSource(_FakeNode("9ecc5a67-40b6-42f7-8dba-beb304414ea6", "ctx-3")),
+            _FakeSource(_FakeNode("HPCSSUP-87120", "ctx-4")),
+            _FakeSource(_FakeNode("767259c7-b7f8-4f0f-a71f-27c965f69a3c", "ctx-5")),
+        ]
+    )
+    prompt_builder = _FakePromptBuilder()
+
+    class _RepeatingLLM:
+        def generate(self, prompt: str, **kwargs):  # noqa: ANN001
+            return (
+                "CLASSIFICATION\n"
+                "Category: Software / GROMACS Version\n"
+                "Technical Action Required: No\n"
+                "Portal Action Required: No\n"
+                "Urgency: Low\n\n"
+                "QUICK ASSESSMENT\n"
+                "The latest version of GROMACS available on CCLake is 2025.1 [4].\n\n"
+                "REFERENCE KEY\n"
+                "[4] : HPCSSUP-87120\n"
+                "[1] : HPCSSUP-81211\n"
+                "[2] : a03b4ce7-a07d-47fd-b5d2-ad1cb1c84b47\n"
+                "The correct response is provided above.\n"
+                "The correct response is provided above.\n"
+            )
+
+    pipeline = RAGPipeline(
+        retriever=retriever,
+        prompt_builder=prompt_builder,
+        prompt_name="hpc_prompt",
+        llm=_RepeatingLLM(),
+    )
+
+    result = pipeline.run("What is the latest GROMACS version available on CCLake?")
+
+    assert result["raw_response"].endswith("The correct response is provided above.\n")
+    assert result["response"] == (
+        "CLASSIFICATION\n"
+        "Category: Software / GROMACS Version\n"
+        "Technical Action Required: No\n"
+        "Portal Action Required: No\n"
+        "Urgency: Low\n\n"
+        "QUICK ASSESSMENT\n"
+        "The latest version of GROMACS available on CCLake is 2025.1 [4].\n\n"
+        "REFERENCE KEY\n"
+        "[4] : HPCSSUP-87120"
+    )
+
+
+def test_pipeline_keeps_empty_reference_key_when_no_citations_are_used() -> None:
+    retriever = _FakeRetriever()
+    prompt_builder = _FakePromptBuilder()
+
+    class _ReferenceKeyOnlyLLM:
+        def generate(self, prompt: str, **kwargs):  # noqa: ANN001
+            return (
+                "QUICK ASSESSMENT\n"
+                "There is not enough retrieved evidence to confirm the path safely.\n\n"
+                "REFERENCE KEY\n"
+                "The final answer is provided above.\n"
+            )
+
+    pipeline = RAGPipeline(
+        retriever=retriever,
+        prompt_builder=prompt_builder,
+        prompt_name="hpc_prompt",
+        llm=_ReferenceKeyOnlyLLM(),
+    )
+
+    result = pipeline.run("Can you confirm the exact new path for my project data?")
+
+    assert result["response"] == (
+        "QUICK ASSESSMENT\n"
+        "There is not enough retrieved evidence to confirm the path safely.\n\n"
+        "REFERENCE KEY"
+    )

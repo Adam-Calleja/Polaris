@@ -13,11 +13,12 @@ RAGPipeline
 
 Notes
 -----
-Post-processing hooks are not yet implemented; the pipeline currently
-returns raw model output alongside the final resolved source nodes used
-for prompt rendering.
+The pipeline applies a small post-processing pass to trim trailing
+generation drift from ticket-assistant responses and to rebuild the
+reference key from citations actually used in the answer body.
 """
 
+import re
 import time
 from typing import TYPE_CHECKING, Any, Mapping
 
@@ -27,7 +28,7 @@ from polaris_rag.common.request_budget import (
     RequestBudgetExceededError,
     RetrievalTimeoutError,
 )
-from polaris_rag.retrieval.node_utils import serialize_source_nodes
+from polaris_rag.retrieval.node_utils import extract_doc_id, serialize_source_nodes
 from polaris_rag.retrieval.query_constraints import QueryConstraints, serialize_query_constraints
 from polaris_rag.retrieval.types import Retriever
 from polaris_rag.generation.prompt_builder import PromptBuilder
@@ -39,6 +40,50 @@ from polaris_rag.observability.mlflow_tracking import (
 
 if TYPE_CHECKING:
     from polaris_rag.generation.llm_interface import BaseLLM
+
+
+_REFERENCE_KEY_HEADING = "REFERENCE KEY"
+_REFERENCE_KEY_PATTERN = re.compile(r"^\s*REFERENCE KEY\s*:?\s*$", re.IGNORECASE)
+_CITATION_PATTERN = re.compile(r"\[(\d+)\]")
+
+
+def _sanitize_generated_response(raw_output: Any, source_nodes: list[Any]) -> str:
+    """Trim post-answer drift and rebuild the reference key from cited documents."""
+    text = str(raw_output or "").strip()
+    if not text:
+        return text
+
+    lines = text.splitlines()
+    reference_key_index = next(
+        (index for index, line in enumerate(lines) if _REFERENCE_KEY_PATTERN.match(line)),
+        None,
+    )
+    if reference_key_index is None:
+        return text
+
+    body_lines = lines[:reference_key_index]
+    while body_lines and not body_lines[-1].strip():
+        body_lines.pop()
+
+    cited_numbers = sorted({int(match) for match in _CITATION_PATTERN.findall("\n".join(body_lines))})
+    doc_id_map = {
+        index: extract_doc_id(getattr(source, "node", source))
+        for index, source in enumerate(source_nodes, start=1)
+    }
+
+    reference_key_lines = [_REFERENCE_KEY_HEADING]
+    for citation_number in cited_numbers:
+        doc_id = doc_id_map.get(citation_number)
+        if doc_id:
+            reference_key_lines.append(f"[{citation_number}] : {doc_id}")
+
+    rebuilt = "\n".join(body_lines)
+    if rebuilt:
+        rebuilt = f"{rebuilt}\n\n" + "\n".join(reference_key_lines)
+    else:
+        rebuilt = "\n".join(reference_key_lines)
+    return rebuilt.strip()
+
 
 class RAGPipeline:
     """Retrieval-Augmented Generation (RAG) orchestrator.
@@ -126,7 +171,8 @@ class RAGPipeline:
         dict
             Dictionary containing:
             - ``"prompt"``: the rendered prompt string
-            - ``"response"``: the raw model output
+            - ``"raw_response"``: the raw model output
+            - ``"response"``: the sanitized model output
             - ``"source_nodes"``: final resolved context nodes passed to the model
             - ``"raw_source_nodes"``: raw retrieved nodes prior to context resolution
         """
@@ -328,11 +374,12 @@ class RAGPipeline:
                     )
                     raise GenerationTimeoutError("generation exceeded request deadline") from exc
 
+                response = _sanitize_generated_response(raw_output, resolved_contexts)
                 generation_elapsed_ms = max(
                     0,
                     int(round((time.perf_counter() - generation_started_at) * 1000.0)),
                 )
-                response_status = "ok" if str(raw_output or "").strip() else "empty_response"
+                response_status = "ok" if response.strip() else "empty_response"
                 set_span_attributes(
                     generation_span,
                     {
@@ -343,7 +390,8 @@ class RAGPipeline:
                 set_span_outputs(
                     generation_span,
                     {
-                        "response": raw_output,
+                        "raw_response": raw_output,
+                        "response": response,
                         "generation_elapsed_ms": generation_elapsed_ms,
                     },
                 )
@@ -352,7 +400,8 @@ class RAGPipeline:
                 pipeline_span,
                 {
                     "prompt": prompt,
-                    "response": raw_output,
+                    "raw_response": raw_output,
+                    "response": response,
                     "retrieved_contexts": self._serialize_nodes(resolved_contexts),
                     "raw_retrieved_contexts": self._serialize_nodes(retrieved_chunks),
                     "query_constraints": serialized_query_constraints,
@@ -370,14 +419,15 @@ class RAGPipeline:
                 {
                     "retrieval_elapsed_ms": retrieval_elapsed_ms,
                     "generation_elapsed_ms": generation_elapsed_ms,
-                    "response_status": "ok" if str(raw_output or "").strip() else "empty_response",
+                    "response_status": response_status,
                     "budget_remaining_ms": request_budget.remaining_ms() if request_budget is not None else None,
                 },
             )
 
         return {
             "prompt": prompt,
-            "response": raw_output,
+            "raw_response": raw_output,
+            "response": response,
             "source_nodes": resolved_contexts,
             "raw_source_nodes": retrieved_chunks,
             "query_constraints": serialized_query_constraints,
