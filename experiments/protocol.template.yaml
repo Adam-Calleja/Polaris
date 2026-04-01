@@ -1,0 +1,404 @@
+# Starter manifest for the dissertation protocol.
+#
+# This file is intentionally a template rather than a frozen experiment ledger.
+# Fill in the larger grids from the protocol by duplicating condition blocks.
+
+artifacts_root: "../artifacts/experiments"
+base_config: "../config/config.yaml"
+
+defaults:
+  config_overrides:
+    generator_llm:
+      model_kwargs:
+        temperature: 0
+        top_p: 1.0
+    evaluation:
+      generation:
+        mode: "pipeline"
+        workers: 1
+      dataset:
+        reuse_prepared: false
+  run_options:
+    generation_mode: "pipeline"
+    generation_workers: 1
+    evaluation_policy: "official"
+    no_progress: true
+
+stages:
+  split_dev_test:
+    type: "split"
+    dataset_file: "../data/test/ragas_one_hop_eval_dataset_final.jsonl"
+    annotations_file: "../data/test/benchmark_annotations_final.csv"
+    test_fraction: 0.30
+    random_state: 42
+    dev_output_file: "../data/test/ragas_one_hop_eval_dataset_final.dev.jsonl"
+    test_output_file: "../data/test/ragas_one_hop_eval_dataset_final.test.jsonl"
+    test_ids_output_file: "../data/test/ragas_one_hop_eval_dataset_final.test_ids.txt"
+    split_report_output_file: "../data/test/ragas_one_hop_eval_dataset_final.split_report.json"
+
+  stability_check:
+    type: "evaluation_grid"
+    dataset_path: "../data/test/ragas_one_hop_eval_dataset_final.dev.jsonl"
+    annotations_file: "../data/test/benchmark_annotations_final.csv"
+    repeats: 3
+    conditions:
+      - name: "fixed_validity_aware"
+        preset: "validity_aware"
+
+  stage0a_generator_pilot:
+    type: "evaluation_grid"
+    dataset_path: "../data/test/ragas_one_hop_eval_dataset_final.dev.jsonl"
+    annotations_file: "../data/test/benchmark_annotations_final.csv"
+    repeats: 1
+    conditions:
+      - name: "gemini25flash_naive_combined"
+        preset: "naive_combined"
+        config_overrides:
+          generator_llm:
+            type: "openai_chat"
+            model_name: "gemini-2.5-flash"
+            api_base: "https://generativelanguage.googleapis.com/v1beta/openai/"
+            api_key: "${GEMINI_API_KEY}"
+            request_timeout: 90
+            max_retries: 1
+            model_kwargs:
+              max_tokens: 384
+              temperature: 0
+              top_p: 1.0
+      - name: "llama33_validity_aware"
+        preset: "validity_aware"
+        config_overrides:
+          generator_llm:
+            type: "openai_like"
+            model_name: "meta-llama/Llama-3.3-70B-Instruct"
+            api_base: "http://vllm:8080/v1"
+            api_key: "${POLARIS_LLM_API_KEY}"
+            request_timeout: 90
+            max_retries: 1
+            model_kwargs:
+              max_tokens: 1024
+              temperature: 0
+              top_p: 1.0
+
+  stage0b_docs_chunking:
+    type: "evaluation_grid"
+    dataset_path: "../data/test/ragas_one_hop_eval_dataset_final.dev.jsonl"
+    annotations_file: "../data/test/benchmark_annotations_final.csv"
+    repeats: 1
+    conditions:
+      - name: "docs_cs400_ov0"
+        preset: "docs_only"
+        ingest:
+          kind: "html"
+          homepage: "https://docs.hpc.cam.ac.uk/hpc/index.html"
+          ingest_internal_links: true
+          source: "docs"
+          qdrant_collection_name: "exp_docs_cs400_ov0"
+          persist_dir: "../data/storage/exp_docs_cs400_ov0"
+          chunking_strategy: "markdown_token"
+          chunk_size_tokens: 400
+          chunk_overlap_tokens: 0
+        config_overrides:
+          vector_stores:
+            docs:
+              collection_name: "exp_docs_cs400_ov0"
+          storage_context:
+            persist_dir: "../data/storage/exp_docs_cs400_ov0"
+          ingestion:
+            chunking:
+              sources:
+                docs:
+                  strategy: "markdown_token"
+                  chunk_size_tokens: 400
+                  overlap_tokens: 0
+      - name: "docs_cs800_ov80"
+        preset: "docs_only"
+        ingest:
+          kind: "html"
+          homepage: "https://docs.hpc.cam.ac.uk/hpc/index.html"
+          ingest_internal_links: true
+          source: "docs"
+          qdrant_collection_name: "exp_docs_cs800_ov80"
+          persist_dir: "../data/storage/exp_docs_cs800_ov80"
+          chunking_strategy: "markdown_token"
+          chunk_size_tokens: 800
+          chunk_overlap_tokens: 80
+        config_overrides:
+          vector_stores:
+            docs:
+              collection_name: "exp_docs_cs800_ov80"
+          storage_context:
+            persist_dir: "../data/storage/exp_docs_cs800_ov80"
+          ingestion:
+            chunking:
+              sources:
+                docs:
+                  strategy: "markdown_token"
+                  chunk_size_tokens: 800
+                  overlap_tokens: 80
+    # Duplicate the docs condition block to cover the full Stage 0B.1 grid,
+    # for example chunk sizes 400, 800, 1200 and overlaps 0, 80.
+
+  stage0b_ticket_chunking:
+    type: "evaluation_grid"
+    dataset_path: "../data/test/ragas_one_hop_eval_dataset_final.dev.jsonl"
+    annotations_file: "../data/test/benchmark_annotations_final.csv"
+    repeats: 1
+    conditions:
+      - name: "tickets_cs600_ov0"
+        preset: "tickets_only"
+        ingest:
+          kind: "jira"
+          source: "tickets"
+          qdrant_collection_name: "exp_tickets_cs600_ov0"
+          persist_dir: "../data/storage/exp_tickets_cs600_ov0"
+          start_date: "2024-01-01"
+          chunking_strategy: "jira_turns_token"
+          chunk_size_tokens: 600
+          chunk_overlap_tokens: 0
+        config_overrides:
+          vector_stores:
+            tickets:
+              collection_name: "exp_tickets_cs600_ov0"
+          storage_context:
+            persist_dir: "../data/storage/exp_tickets_cs600_ov0"
+          ingestion:
+            chunking:
+              sources:
+                tickets:
+                  strategy: "jira_turns_token"
+                  chunk_size_tokens: 600
+                  overlap_tokens: 0
+      - name: "tickets_cs800_ov80"
+        preset: "tickets_only"
+        ingest:
+          kind: "jira"
+          source: "tickets"
+          qdrant_collection_name: "exp_tickets_cs800_ov80"
+          persist_dir: "../data/storage/exp_tickets_cs800_ov80"
+          start_date: "2024-01-01"
+          chunking_strategy: "jira_turns_token"
+          chunk_size_tokens: 800
+          chunk_overlap_tokens: 80
+        config_overrides:
+          vector_stores:
+            tickets:
+              collection_name: "exp_tickets_cs800_ov80"
+          storage_context:
+            persist_dir: "../data/storage/exp_tickets_cs800_ov80"
+          ingestion:
+            chunking:
+              sources:
+                tickets:
+                  strategy: "jira_turns_token"
+                  chunk_size_tokens: 800
+                  overlap_tokens: 80
+    # Duplicate the ticket condition block to cover the full Stage 0B.2 grid,
+    # for example chunk sizes 600, 800, 1000 and overlaps 0, 80.
+
+  stage0b_combined_sanity:
+    type: "evaluation_grid"
+    dataset_path: "../data/test/ragas_one_hop_eval_dataset_final.dev.jsonl"
+    annotations_file: "../data/test/benchmark_annotations_final.csv"
+    repeats: 1
+    conditions:
+      - name: "combined_selected_chunking"
+        preset: "naive_combined"
+        ingest:
+          - kind: "html"
+            homepage: "https://docs.hpc.cam.ac.uk/hpc/index.html"
+            ingest_internal_links: true
+            source: "docs"
+            qdrant_collection_name: "exp_docs_cs800_ov80"
+            persist_dir: "../data/storage/exp_combined_selected"
+            chunking_strategy: "markdown_token"
+            chunk_size_tokens: 800
+            chunk_overlap_tokens: 80
+          - kind: "jira"
+            source: "tickets"
+            qdrant_collection_name: "exp_tickets_cs800_ov80"
+            persist_dir: "../data/storage/exp_combined_selected"
+            start_date: "2024-01-01"
+            chunking_strategy: "jira_turns_token"
+            chunk_size_tokens: 800
+            chunk_overlap_tokens: 80
+        config_overrides:
+          vector_stores:
+            docs:
+              collection_name: "exp_docs_cs800_ov80"
+            tickets:
+              collection_name: "exp_tickets_cs800_ov80"
+          storage_context:
+            persist_dir: "../data/storage/exp_combined_selected"
+          ingestion:
+            chunking:
+              sources:
+                docs:
+                  strategy: "markdown_token"
+                  chunk_size_tokens: 800
+                  overlap_tokens: 80
+                tickets:
+                  strategy: "jira_turns_token"
+                  chunk_size_tokens: 800
+                  overlap_tokens: 80
+
+  stage1_shared_budget:
+    type: "evaluation_grid"
+    dataset_path: "../data/test/ragas_one_hop_eval_dataset_final.dev.jsonl"
+    annotations_file: "../data/test/benchmark_annotations_final.csv"
+    repeats: 1
+    conditions:
+      - name: "naive_combined_topk3_final4"
+        preset: "naive_combined"
+        config_overrides:
+          retriever:
+            top_k: 3
+            final_top_k: 4
+            sources:
+              - name: "docs"
+                top_k: 3
+                weight: 1.0
+                filters: {}
+              - name: "tickets"
+                top_k: 3
+                weight: 1.0
+                filters: {}
+      - name: "naive_combined_topk5_final6"
+        preset: "naive_combined"
+        config_overrides:
+          retriever:
+            top_k: 5
+            final_top_k: 6
+            sources:
+              - name: "docs"
+                top_k: 5
+                weight: 1.0
+                filters: {}
+              - name: "tickets"
+                top_k: 5
+                weight: 1.0
+                filters: {}
+      - name: "naive_combined_topk8_final8"
+        preset: "naive_combined"
+        config_overrides:
+          retriever:
+            top_k: 8
+            final_top_k: 8
+            sources:
+              - name: "docs"
+                top_k: 8
+                weight: 1.0
+                filters: {}
+              - name: "tickets"
+                top_k: 8
+                weight: 1.0
+                filters: {}
+    # For the full protocol, repeat the budget blocks across docs_only,
+    # tickets_only, naive_combined, and validity_aware, then choose one shared
+    # operating point across those systems.
+
+  stage2_validity_tuning:
+    type: "tune_validity_reranker"
+    dataset_path: "../data/test/ragas_one_hop_eval_dataset_final.dev.jsonl"
+    output_path: "../config/weights/validity_reranker.protocol.yaml"
+    manifest_path: "../artifacts/experiments/stage2_validity_tuning/validity_reranker.protocol.manifest.json"
+    generation_workers: 1
+
+  stage3_benchmark_characterisation:
+    type: "benchmark_analysis"
+    dataset_file: "../data/test/ragas_one_hop_eval_dataset_final.jsonl"
+    dev_dataset_file: "../data/test/ragas_one_hop_eval_dataset_final.dev.jsonl"
+    test_dataset_file: "../data/test/ragas_one_hop_eval_dataset_final.test.jsonl"
+    annotations_file: "../data/test/benchmark_annotations_final.csv"
+    output_dir: "../data/test/benchmark_analysis_protocol"
+
+  stage4_source_ablation:
+    type: "evaluation_grid"
+    dataset_path: "../data/test/ragas_one_hop_eval_dataset_final.test.jsonl"
+    annotations_file: "../data/test/benchmark_annotations_final.csv"
+    repeats: 1
+    conditions:
+      - name: "docs_only"
+        preset: "docs_only"
+      - name: "tickets_only"
+        preset: "tickets_only"
+      - name: "naive_combined"
+        preset: "naive_combined"
+
+  stage5_validity_ablation:
+    type: "evaluation_grid"
+    dataset_path: "../data/test/ragas_one_hop_eval_dataset_final.test.jsonl"
+    annotations_file: "../data/test/benchmark_annotations_final.csv"
+    repeats: 1
+    conditions:
+      - name: "naive_combined"
+        preset: "naive_combined"
+      - name: "source_aware"
+        preset: "source_aware"
+      - name: "freshness_only"
+        preset: "freshness_only"
+      - name: "validity_aware"
+        preset: "validity_aware"
+
+  stage6_external_docs_ablation:
+    type: "evaluation_grid"
+    dataset_path: "../data/test/ragas_one_hop_eval_dataset_final.test.jsonl"
+    annotations_file: "../data/test/benchmark_annotations_final.csv"
+    repeats: 1
+    conditions:
+      - name: "validity_aware"
+        preset: "validity_aware"
+      - name: "all_docs_validity_aware"
+        preset: "all_docs_validity_aware"
+    # Run this stage only after the external docs corpus has been ingested and verified.
+
+  stage7_prompt_ablation:
+    type: "evaluation_grid"
+    dataset_path: "../data/test/ragas_one_hop_eval_dataset_final.test.jsonl"
+    annotations_file: "../data/test/benchmark_annotations_final.csv"
+    repeats: 1
+    conditions:
+      - name: "generic_prompt"
+        preset: "validity_aware"
+        config_overrides:
+          prompts:
+            - "pkg:polaris_rag.prompts:hpc_rag_assistant_v1.json"
+            - "pkg:polaris_rag.prompts:hpc_rag_assistant_v3_ticket_refs.json"
+            - "pkg:polaris_rag.prompts:hpc_ticket_summarizer_v1.json"
+          prompt_name: "hpc_rag_assistant"
+          mlflow:
+            prompt_registry:
+              enabled: false
+      - name: "ticket_style_prompt"
+        preset: "validity_aware"
+        config_overrides:
+          prompts:
+            - "pkg:polaris_rag.prompts:hpc_rag_assistant_v1.json"
+            - "pkg:polaris_rag.prompts:hpc_rag_assistant_v3_ticket_refs.json"
+            - "pkg:polaris_rag.prompts:hpc_ticket_summarizer_v1.json"
+          prompt_name: "hpc_rag_assistant_ticket_refs"
+          mlflow:
+            prompt_registry:
+              enabled: false
+
+  stage8_finalist_comparison:
+    type: "evaluation_grid"
+    dataset_path: "../data/test/ragas_one_hop_eval_dataset_final.test.jsonl"
+    annotations_file: "../data/test/benchmark_annotations_final.csv"
+    repeats: 3
+    conditions:
+      - name: "naive_combined"
+        preset: "naive_combined"
+      - name: "validity_aware"
+        preset: "validity_aware"
+      - name: "all_docs_validity_aware"
+        preset: "all_docs_validity_aware"
+
+# Stage 9 manual evaluation:
+#   Run `python scripts/experiments/summarize_stage.py --manifest experiments/protocol.template.yaml --stage stage7_prompt_ablation --run-comparison`
+#   or the equivalent command for your finalist stage, then use the generated
+#   manual_eval_sheet.csv and manual_eval_key.csv.
+#
+# Stage 10 error analysis:
+#   Use the combined_analysis_rows.jsonl plus the manual review sheet to code
+#   your fixed error taxonomy outside the automation layer.

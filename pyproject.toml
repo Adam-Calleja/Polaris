@@ -98,6 +98,9 @@ polaris-eval = "polaris_rag.cli.evaluate_rag:main"
 polaris-tune-validity-reranker = "polaris_rag.cli.tune_validity_reranker:main"
 polaris-register-prompts-mlflow = "polaris_rag.cli.register_prompts_mlflow:main"
 polaris-create-dev-test-sets = "polaris_rag.cli.create_dev_test_sets:main"
+polaris-render-experiment-config = "polaris_rag.cli.render_experiment_config:main"
+polaris-run-experiment-stage = "polaris_rag.cli.run_experiment_stage:main"
+polaris-summarize-experiment-stage = "polaris_rag.cli.summarize_experiment_stage:main"
 
 [tool.setuptools]
 package-dir = { "" = "src" }

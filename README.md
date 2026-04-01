@@ -574,6 +574,65 @@ This writes:
 - `composition_figure.png`
 - `composition_figure.svg`
 
+### Manifest-Driven Experiment Automation
+
+For the dissertation protocol, the repo now includes a thin automation layer
+under `scripts/experiments/` plus a starter manifest at
+`experiments/protocol.template.yaml`.
+
+Render one generated config overlay:
+
+```bash
+python scripts/experiments/render_config.py \
+  --manifest experiments/protocol.template.yaml \
+  --stage stage4_source_ablation \
+  --condition naive_combined
+```
+
+Run one stage from the manifest:
+
+```bash
+python scripts/experiments/run_stage.py \
+  --manifest experiments/protocol.template.yaml \
+  --stage stage4_source_ablation
+```
+
+Preview commands without executing them:
+
+```bash
+python scripts/experiments/run_stage.py \
+  --manifest experiments/protocol.template.yaml \
+  --stage stage0b_docs_chunking \
+  --dry-run
+```
+
+Summarize completed runs for one stage:
+
+```bash
+python scripts/experiments/summarize_stage.py \
+  --manifest experiments/protocol.template.yaml \
+  --stage stage4_source_ablation
+```
+
+Generate dissertation-ready comparison sheets from one selected repeat per
+condition:
+
+```bash
+python scripts/experiments/summarize_stage.py \
+  --manifest experiments/protocol.template.yaml \
+  --stage stage7_prompt_ablation \
+  --run-comparison
+```
+
+The automation layer is intentionally thin:
+- existing Polaris CLIs still do the real work for ingestion, evaluation, split creation, tuning, and benchmark analysis
+- the manifest controls stage structure, config overlays, output locations, and repeats
+- prompt ablation can disable the MLflow prompt registry inside the manifest so `prompt_name` changes take effect
+
+The starter manifest is deliberately readable rather than exhaustive. Expand the
+larger Stage 0B and Stage 1 grids by duplicating condition blocks so they match
+your final protocol exactly.
+
 ## Prompt Registry Workflow
 Runtime prompt loading is registry-first (`mlflow.prompt_registry.enabled: true`).
 Register/update prompt versions from repo templates, then set alias:
