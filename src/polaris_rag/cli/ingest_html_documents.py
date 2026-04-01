@@ -61,6 +61,10 @@ from polaris_rag.retrieval.ingestion_settings import (
     resolve_chunking_settings,
     resolve_conversion_settings,
 )
+from polaris_rag.retrieval.internal_link_crawler import (
+    crawl_internal_links,
+    is_allowed_docs_subtree_url,
+)
 from polaris_rag.retrieval.metadata_enricher import (
     enrich_documents_with_authority_metadata,
     localize_doc_chunk_scope_family_metadata,
@@ -69,6 +73,13 @@ from polaris_rag.retrieval.metadata_enricher import (
 from polaris_rag.retrieval.markdown_chunker import get_chunks_from_markdown_documents
 from polaris_rag.retrieval.markdown_converter import convert_documents_to_markdown
 from polaris_rag.retrieval.text_splitter import get_chunks_from_documents
+
+
+def _get_internal_links_one_hop(homepage: str) -> list[str]:
+    """Return one-hop internal links for a single page."""
+    from polaris_rag.retrieval.document_loader import get_internal_links as _get_internal_links
+
+    return _get_internal_links(homepage)
 
 
 def get_internal_links(homepage: str) -> list[str]:
@@ -84,9 +95,11 @@ def get_internal_links(homepage: str) -> list[str]:
     list[str]
         Requested internal Links.
     """
-    from polaris_rag.retrieval.document_loader import get_internal_links as _get_internal_links
-
-    return _get_internal_links(homepage)
+    return crawl_internal_links(
+        homepage,
+        get_internal_links_one_hop=_get_internal_links_one_hop,
+        is_allowed_url=is_allowed_docs_subtree_url,
+    )
 
 
 def load_website_docs(links: list[str]) -> list[Any]:
@@ -128,7 +141,7 @@ def parse_args() -> argparse.Namespace:
         "--ingest-internal-links",
         "-i",
         action="store_true",
-        help="If set, ingest internal links discovered from the homepage.",
+        help="If set, recursively ingest internal links discovered within the homepage subtree.",
     )
     parser.add_argument(
         "--config-file",

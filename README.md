@@ -80,6 +80,10 @@ docker compose run --rm rag-api polaris-ingest-html \
   --ingest-internal-links
 ```
 
+`--ingest-internal-links` recursively follows linked HTML pages on the same
+scheme/host within the supplied homepage path subtree. It does not discover
+unlinked sections or rewrite invalid seed URLs.
+
 The ingestion commands also accept chunking overrides for experiments:
 
 ```bash

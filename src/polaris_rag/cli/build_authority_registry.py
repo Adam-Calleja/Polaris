@@ -21,23 +21,6 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
-from urllib.parse import urlsplit
-
-MAX_INTERNAL_LINKS = 512
-_STATIC_ASSET_EXTENSIONS = (
-    ".png",
-    ".jpg",
-    ".jpeg",
-    ".gif",
-    ".svg",
-    ".webp",
-    ".pdf",
-    ".ico",
-    ".css",
-    ".js",
-    ".xml",
-    ".txt",
-)
 
 
 def _find_repo_root(start: Path) -> Path:
@@ -81,6 +64,10 @@ from polaris_rag.authority.service_catalog import (
 from polaris_rag.config import GlobalConfig
 from polaris_rag.retrieval.document_preprocessor import preprocess_html_documents
 from polaris_rag.retrieval.ingestion_settings import resolve_conversion_settings
+from polaris_rag.retrieval.internal_link_crawler import (
+    crawl_internal_links,
+    is_allowed_docs_subtree_url,
+)
 from polaris_rag.retrieval.markdown_converter import convert_documents_to_markdown
 
 
@@ -102,95 +89,6 @@ def _get_internal_links_one_hop(homepage: str) -> list[str]:
     return _get_internal_links(homepage)
 
 
-def _is_allowed_authority_url(homepage: str, url: str) -> bool:
-    """Return whether allowed Authority URL.
-    
-    Parameters
-    ----------
-    homepage : str
-        Value for homepage.
-    url : str
-        URL used by the operation.
-    
-    Returns
-    -------
-    bool
-        `True` if is Allowed Authority URL; otherwise `False`.
-    """
-    homepage_parts = urlsplit(homepage)
-    candidate_parts = urlsplit(url)
-    if not candidate_parts.scheme or not candidate_parts.netloc:
-        return False
-    if candidate_parts.scheme != homepage_parts.scheme or candidate_parts.netloc != homepage_parts.netloc:
-        return False
-
-    homepage_path = homepage_parts.path or "/"
-    allowed_prefix = homepage_path.rsplit("/", 1)[0] + "/"
-    candidate_path = candidate_parts.path or "/"
-    candidate_path_lower = candidate_path.lower()
-
-    if not candidate_path.startswith(allowed_prefix):
-        return False
-    if "/_sources/" in candidate_path_lower or "/_images/" in candidate_path_lower or "/images/" in candidate_path_lower:
-        return False
-    if "/storage/" in candidate_path_lower:
-        return False
-    if candidate_path_lower.endswith(_STATIC_ASSET_EXTENSIONS):
-        return False
-    return True
-
-
-def _crawl_internal_links(
-    homepage: str,
-    *,
-    is_allowed_url,
-    max_depth: int | None = None,
-) -> list[str]:
-    """Crawl Internal Links.
-    
-    Parameters
-    ----------
-    homepage : str
-        Value for homepage.
-    is_allowed_url : Any
-        URL used by the operation.
-    max_depth : int or None, optional
-        Value for max Depth.
-    
-    Returns
-    -------
-    list[str]
-        Collected results from the operation.
-    """
-    queue: list[tuple[str, int]] = [(homepage, 0)]
-    seen: set[str] = set()
-    ordered: list[str] = []
-
-    while queue and len(seen) < MAX_INTERNAL_LINKS:
-        current, depth = queue.pop(0)
-        if current in seen:
-            continue
-        seen.add(current)
-
-        discovered = _get_internal_links_one_hop(current)
-        if not discovered:
-            discovered = [current]
-
-        for link in discovered:
-            if not is_allowed_url(homepage, link):
-                continue
-            if link not in ordered:
-                ordered.append(link)
-            if max_depth is not None and depth + 1 > max_depth:
-                continue
-            if link not in seen and link not in [candidate for candidate, _ in queue] and len(seen) + len(queue) < MAX_INTERNAL_LINKS:
-                queue.append((link, depth + 1))
-
-    if homepage not in ordered and is_allowed_url(homepage, homepage):
-        ordered.insert(0, homepage)
-    return ordered
-
-
 def get_internal_links(homepage: str) -> list[str]:
     """Return internal Links.
     
@@ -204,9 +102,10 @@ def get_internal_links(homepage: str) -> list[str]:
     list[str]
         Requested internal Links.
     """
-    return _crawl_internal_links(
+    return crawl_internal_links(
         homepage,
-        is_allowed_url=_is_allowed_authority_url,
+        get_internal_links_one_hop=_get_internal_links_one_hop,
+        is_allowed_url=is_allowed_docs_subtree_url,
     )
 
 
@@ -223,8 +122,9 @@ def get_service_catalog_links(homepage: str) -> list[str]:
     list[str]
         Requested service Catalog Links.
     """
-    return _crawl_internal_links(
+    return crawl_internal_links(
         homepage,
+        get_internal_links_one_hop=_get_internal_links_one_hop,
         is_allowed_url=is_allowed_service_catalog_url,
         max_depth=SERVICE_CATALOG_MAX_DEPTH,
     )
@@ -351,7 +251,7 @@ def main() -> None:
     cfg = GlobalConfig.load(args.config_file)
 
     discovered_links = get_internal_links(args.homepage) if args.ingest_internal_links else [args.homepage]
-    links = [link for link in discovered_links if _is_allowed_authority_url(args.homepage, link)]
+    links = [link for link in discovered_links if is_allowed_docs_subtree_url(args.homepage, link)]
 
     service_links: list[str] = []
     service_candidates = []
