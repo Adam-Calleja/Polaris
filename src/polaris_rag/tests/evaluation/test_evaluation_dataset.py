@@ -123,6 +123,11 @@ class _TracePipeline:
                     },
                 }
             ],
+            "retriever_profile": {
+                "type": "hybrid",
+                "fusion": {"type": "rrf", "rrf_k": 60},
+            },
+            "retriever_fingerprint": "retriever-fingerprint-123",
             "reranker_profile": {"type": "validity_aware"},
             "reranker_fingerprint": "fingerprint-123",
         }
@@ -525,7 +530,14 @@ def test_build_prepared_rows_persists_query_constraints_in_metadata() -> None:
 
 
 def test_build_prepared_rows_persists_reranker_metadata_and_trace() -> None:
-    raw_examples = [{"id": "ex-1", "query": "Q1", "expected_answer": "A1"}]
+    raw_examples = [
+        {
+            "id": "ex-1",
+            "query": "Q1",
+            "expected_answer": "A1",
+            "reference_context_ids": ["doc-1"],
+        }
+    ]
 
     rows = build_prepared_rows(
         raw_examples=raw_examples,
@@ -533,6 +545,12 @@ def test_build_prepared_rows_persists_reranker_metadata_and_trace() -> None:
         generation_workers=1,
     )
 
+    assert rows[0]["reference_context_ids"] == ["doc-1"]
+    assert rows[0]["metadata"]["retriever_profile"] == {
+        "type": "hybrid",
+        "fusion": {"type": "rrf", "rrf_k": 60},
+    }
+    assert rows[0]["metadata"]["retriever_fingerprint"] == "retriever-fingerprint-123"
     assert rows[0]["metadata"]["reranker_profile"] == {"type": "validity_aware"}
     assert rows[0]["metadata"]["reranker_fingerprint"] == "fingerprint-123"
     assert rows[0]["metadata"]["retrieval_trace"][0]["doc_id"] == "doc-1"
@@ -589,10 +607,14 @@ def test_build_prepared_rows_from_api_uses_default_reranker_metadata() -> None:
         api_url="http://unused.local/v1/query",
         generation_workers=1,
         requester=_ok_requester,
+        retriever_profile={"type": "hybrid"},
+        retriever_fingerprint="retriever-fingerprint",
         reranker_profile={"type": "rrf", "rrf_k": 60},
         reranker_fingerprint="rrf-fingerprint",
     )
 
+    assert rows[0]["metadata"]["retriever_profile"] == {"type": "hybrid"}
+    assert rows[0]["metadata"]["retriever_fingerprint"] == "retriever-fingerprint"
     assert rows[0]["metadata"]["reranker_profile"] == {"type": "rrf", "rrf_k": 60}
     assert rows[0]["metadata"]["reranker_fingerprint"] == "rrf-fingerprint"
 
@@ -605,6 +627,8 @@ def test_build_prepared_rows_from_api_persists_analysis_ready_metadata() -> None
             "answer": f"answer::{query}",
             "context": [{"doc_id": "doc-1", "text": "ctx-1"}],
             "evaluation_metadata": {
+                "retriever_profile": {"type": "hybrid"},
+                "retriever_fingerprint": "retriever-fingerprint-123",
                 "reranker_profile": {"type": "validity_aware"},
                 "reranker_fingerprint": "fingerprint-123",
                 "retrieval_trace": [
@@ -646,6 +670,8 @@ def test_build_prepared_rows_from_api_persists_analysis_ready_metadata() -> None
         requester=_requester,
     )
 
+    assert rows[0]["metadata"]["retriever_profile"] == {"type": "hybrid"}
+    assert rows[0]["metadata"]["retriever_fingerprint"] == "retriever-fingerprint-123"
     assert rows[0]["metadata"]["reranker_profile"] == {"type": "validity_aware"}
     assert rows[0]["metadata"]["reranker_fingerprint"] == "fingerprint-123"
     assert rows[0]["metadata"]["retrieval_sources"] == ["docs"]

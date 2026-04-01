@@ -225,6 +225,91 @@ def _resolve_reranker_metadata(cfg: Any) -> tuple[dict[str, Any] | None, str | N
     return dict(reranker.profile()), str(reranker.fingerprint())
 
 
+def _resolve_retriever_metadata(cfg: Any) -> tuple[dict[str, Any] | None, str | None]:
+    """Resolve retriever Metadata."""
+    try:
+        container = build_container(cfg)
+    except Exception:
+        return None, None
+
+    pipeline = getattr(container, "pipeline", None)
+    profile_getter = getattr(pipeline, "_retriever_profile", None)
+    fingerprint_getter = getattr(pipeline, "_retriever_fingerprint", None)
+    if callable(profile_getter) and callable(fingerprint_getter):
+        try:
+            profile = profile_getter()
+            fingerprint = fingerprint_getter()
+            if profile is None and fingerprint is None:
+                return None, None
+            return dict(profile or {}), str(fingerprint or "").strip() or None
+        except Exception:
+            return None, None
+
+    retriever = getattr(container, "retriever", None)
+    profile_getter = getattr(retriever, "retriever_profile", None)
+    fingerprint_getter = getattr(retriever, "retriever_fingerprint", None)
+    if callable(profile_getter) and callable(fingerprint_getter):
+        try:
+            profile = profile_getter()
+            fingerprint = fingerprint_getter()
+            if profile is None and fingerprint is None:
+                return None, None
+            return dict(profile or {}), str(fingerprint or "").strip() or None
+        except Exception:
+            return None, None
+    return None, None
+
+
+def _prepared_rows_retriever_fingerprint(rows: list[dict[str, Any]]) -> tuple[str | None, int]:
+    """Return the unique retriever fingerprint recorded in prepared rows."""
+    fingerprints: set[str] = set()
+    missing = 0
+    for row in rows:
+        metadata = _row_metadata(row)
+        value = metadata.get("retriever_fingerprint")
+        text = str(value or "").strip()
+        if text:
+            fingerprints.add(text)
+        else:
+            missing += 1
+
+    if not fingerprints:
+        return None, missing
+    if len(fingerprints) != 1:
+        raise ValueError(
+            "Prepared rows contain multiple retriever fingerprints. Regenerate prepared rows "
+            "before running this evaluation."
+        )
+    return next(iter(fingerprints)), missing
+
+
+def _assert_prepared_rows_match_retriever(
+    rows: list[dict[str, Any]],
+    *,
+    expected_fingerprint: str | None,
+) -> None:
+    """Assert that prepared rows match the active retriever configuration."""
+    if not expected_fingerprint:
+        return
+
+    observed_fingerprint, missing_count = _prepared_rows_retriever_fingerprint(rows)
+    if observed_fingerprint is None:
+        raise ValueError(
+            "Prepared rows do not record a retriever fingerprint. Regenerate prepared rows "
+            "with the current retrieval pipeline before reuse."
+        )
+    if missing_count > 0:
+        raise ValueError(
+            "Prepared rows are missing retriever fingerprints on some rows. Regenerate prepared rows "
+            "with the current retrieval pipeline before reuse."
+        )
+    if observed_fingerprint != expected_fingerprint:
+        raise ValueError(
+            "Prepared rows were generated with a different retriever configuration. "
+            "Regenerate prepared rows before running this evaluation."
+        )
+
+
 def _prepared_rows_reranker_fingerprint(rows: list[dict[str, Any]]) -> tuple[str | None, int]:
     """Prepared Rows Reranker Fingerprint.
     
@@ -1606,6 +1691,7 @@ def _resolve_prepared_rows(
         evaluation_policy=evaluation_policy,
         generation_mode=generation_mode,
     )
+    retriever_profile, retriever_fingerprint = _resolve_retriever_metadata(cfg)
     reranker_profile, reranker_fingerprint = _resolve_reranker_metadata(cfg)
 
     manifest: dict[str, Any] = {
@@ -1628,6 +1714,8 @@ def _resolve_prepared_rows(
             "jitter_seconds": float(retry_policy.jitter_seconds),
             "retry_on_empty_response": bool(retry_policy.retry_on_empty_response),
         },
+        "retriever_profile": retriever_profile,
+        "retriever_fingerprint": retriever_fingerprint,
         "reranker_profile": reranker_profile,
         "reranker_fingerprint": reranker_fingerprint,
     }
@@ -1669,6 +1757,10 @@ def _resolve_prepared_rows(
         _assert_prepared_rows_match_reranker(
             rows,
             expected_fingerprint=reranker_fingerprint,
+        )
+        _assert_prepared_rows_match_retriever(
+            rows,
+            expected_fingerprint=retriever_fingerprint,
         )
         _assert_prepared_rows_match_condition(
             rows,
@@ -1754,6 +1846,8 @@ def _resolve_prepared_rows(
                 trace_factory=request_trace_factory,
                 policy=evaluation_policy,
                 budget_ms=deadlines.server_total_ms,
+                retriever_profile=retriever_profile,
+                retriever_fingerprint=retriever_fingerprint,
                 reranker_profile=reranker_profile,
                 reranker_fingerprint=reranker_fingerprint,
             )
@@ -1777,6 +1871,8 @@ def _resolve_prepared_rows(
                 trace_factory=request_trace_factory,
                 policy=evaluation_policy,
                 budget_ms=deadlines.server_total_ms,
+                retriever_profile=retriever_profile,
+                retriever_fingerprint=retriever_fingerprint,
                 reranker_profile=reranker_profile,
                 reranker_fingerprint=reranker_fingerprint,
             )

@@ -332,6 +332,60 @@ def test_resolve_prepared_rows_passes_reranker_metadata_to_preparation(monkeypat
     assert manifest["reranker_profile"]["rrf_k"] == 60
 
 
+def test_resolve_prepared_rows_passes_retriever_metadata_to_preparation(monkeypatch, tmp_path) -> None:
+    dataset_path = tmp_path / "dataset.jsonl"
+    dataset_path.write_text('{"id":"1","query":"Q1","expected_answer":"A1"}\n', encoding="utf-8")
+    seen_retriever_profiles: list[object] = []
+    seen_retriever_fingerprints: list[object] = []
+
+    def _capture_build_prepared_rows(**kwargs):  # noqa: ANN003
+        seen_retriever_profiles.append(kwargs.get("retriever_profile"))
+        seen_retriever_fingerprints.append(kwargs.get("retriever_fingerprint"))
+        return _fake_build_prepared_rows(**kwargs)
+
+    monkeypatch.setattr(
+        evaluate_rag,
+        "build_container",
+        lambda cfg: SimpleNamespace(
+            pipeline=object(),
+            retriever_source_settings={"docs": {"weight": 1.0}, "tickets": {"weight": 1.0}},
+        ),
+    )
+    monkeypatch.setattr(
+        evaluate_rag,
+        "_resolve_retriever_metadata",
+        lambda cfg: ({"type": "hybrid", "fusion": {"type": "rrf"}}, "retriever-fingerprint"),
+    )
+    monkeypatch.setattr(evaluate_rag, "build_prepared_rows", _capture_build_prepared_rows)
+
+    args = Namespace(
+        dataset_path=str(dataset_path),
+        prepared_path=None,
+        reuse_prepared=False,
+        generation_workers=1,
+        generation_mode="pipeline",
+        generation_max_attempts=None,
+        generation_retry_initial_backoff=None,
+        generation_retry_max_backoff=None,
+        generation_retry_jitter=None,
+        generation_retry_on_empty_response=None,
+        replay_failures_from=None,
+    )
+
+    cfg = _cfg_with_reranker(tmp_path, {"type": "rrf", "rrf_k": 60})
+
+    _, manifest = evaluate_rag._resolve_prepared_rows(
+        cfg=cfg,
+        args=args,
+        eval_cfg={"dataset": {}, "generation": {"workers": 1, "mode": "pipeline"}},
+        show_progress=False,
+    )
+
+    assert seen_retriever_profiles[-1] == {"type": "hybrid", "fusion": {"type": "rrf"}}
+    assert seen_retriever_fingerprints[-1] == "retriever-fingerprint"
+    assert manifest["retriever_fingerprint"] == "retriever-fingerprint"
+
+
 def test_resolve_prepared_rows_rejects_reuse_when_reranker_fingerprint_differs(monkeypatch, tmp_path) -> None:
     prepared_path = tmp_path / "prepared.json"
     prepared_path.write_text(
@@ -366,6 +420,51 @@ def test_resolve_prepared_rows_rejects_reuse_when_reranker_fingerprint_differs(m
     cfg = _cfg_with_reranker(tmp_path, {"type": "rrf", "rrf_k": 60})
 
     with pytest.raises(ValueError, match="different reranker configuration"):
+        evaluate_rag._resolve_prepared_rows(
+            cfg=cfg,
+            args=args,
+            eval_cfg={"dataset": {"prepared_path": str(prepared_path)}, "generation": {"workers": 1, "mode": "pipeline"}},
+            show_progress=False,
+        )
+
+
+def test_resolve_prepared_rows_rejects_reuse_when_retriever_fingerprint_differs(monkeypatch, tmp_path) -> None:
+    prepared_path = tmp_path / "prepared.json"
+    prepared_path.write_text(
+        '[{"id":"row-1","user_input":"Q1","reference":"A1","response":"R1","retrieved_contexts":["ctx-1"],'
+        '"retrieved_context_ids":["doc-1"],"metadata":{"retriever_fingerprint":"old-retriever","reranker_fingerprint":"'
+        'same-reranker"}}]',
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(
+        evaluate_rag,
+        "_resolve_retriever_metadata",
+        lambda cfg: ({"type": "hybrid"}, "new-retriever"),
+    )
+    monkeypatch.setattr(
+        evaluate_rag,
+        "_resolve_reranker_metadata",
+        lambda cfg: ({"type": "rrf"}, "same-reranker"),
+    )
+
+    args = Namespace(
+        dataset_path=None,
+        prepared_path=str(prepared_path),
+        reuse_prepared=True,
+        generation_workers=1,
+        generation_mode="pipeline",
+        generation_max_attempts=None,
+        generation_retry_initial_backoff=None,
+        generation_retry_max_backoff=None,
+        generation_retry_jitter=None,
+        generation_retry_on_empty_response=None,
+        replay_failures_from=None,
+    )
+
+    cfg = _cfg_with_reranker(tmp_path, {"type": "rrf", "rrf_k": 60})
+
+    with pytest.raises(ValueError, match="different retriever configuration"):
         evaluate_rag._resolve_prepared_rows(
             cfg=cfg,
             args=args,

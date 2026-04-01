@@ -460,6 +460,8 @@ def _build_row_metadata(
 def _stamp_reranker_metadata(
     metadata: dict[str, Any],
     *,
+    retriever_profile: Mapping[str, Any] | None = None,
+    retriever_fingerprint: str | None = None,
     reranker_profile: Mapping[str, Any] | None = None,
     reranker_fingerprint: str | None = None,
     retrieval_trace: Any | None = None,
@@ -482,6 +484,10 @@ def _stamp_reranker_metadata(
     dict[str, Any]
         Structured result of the operation.
     """
+    if retriever_profile is not None:
+        metadata["retriever_profile"] = _as_metadata_dict(retriever_profile)
+    if retriever_fingerprint is not None and str(retriever_fingerprint).strip():
+        metadata["retriever_fingerprint"] = str(retriever_fingerprint).strip()
     if reranker_profile is not None:
         metadata["reranker_profile"] = _as_metadata_dict(reranker_profile)
     if reranker_fingerprint is not None and str(reranker_fingerprint).strip():
@@ -489,6 +495,24 @@ def _stamp_reranker_metadata(
     if isinstance(retrieval_trace, list):
         metadata["retrieval_trace"] = list(retrieval_trace)
     return metadata
+
+
+def _extract_reference_context_ids(example: Mapping[str, Any]) -> list[str] | None:
+    """Return optional reference context ids from a raw example."""
+    candidate = example.get("reference_context_ids")
+    if candidate is None:
+        candidate = _as_metadata_dict(example.get("metadata", {})).get("reference_context_ids")
+    if not isinstance(candidate, list):
+        return None
+    values: list[str] = []
+    seen: set[str] = set()
+    for item in candidate:
+        text = str(item or "").strip()
+        if not text or text in seen:
+            continue
+        seen.add(text)
+        values.append(text)
+    return values or None
 
 
 def _normalized_trace_records(value: Any) -> list[dict[str, Any]]:
@@ -1845,6 +1869,8 @@ def _prepare_one(
     raise_exceptions: bool,
     policy: str | None = None,
     budget_ms: int | None = None,
+    default_retriever_profile: Mapping[str, Any] | None = None,
+    default_retriever_fingerprint: str | None = None,
     default_reranker_profile: Mapping[str, Any] | None = None,
     default_reranker_fingerprint: str | None = None,
 ) -> tuple[int, dict[str, Any]]:
@@ -1891,6 +1917,7 @@ def _prepare_one(
     reference = str(example.get(reference_field, "") or "").strip()
     sample_id = str(example.get(id_field, f"row-{index}"))
     base_metadata = example.get("metadata", {})
+    reference_context_ids = _extract_reference_context_ids(example)
 
     if not query:
         if raise_exceptions:
@@ -1914,9 +1941,13 @@ def _prepare_one(
         }
         row["metadata"] = _stamp_reranker_metadata(
             _as_metadata_dict(row.get("metadata", {})),
+            retriever_profile=default_retriever_profile,
+            retriever_fingerprint=default_retriever_fingerprint,
             reranker_profile=default_reranker_profile,
             reranker_fingerprint=default_reranker_fingerprint,
         )
+        if reference_context_ids is not None:
+            row["reference_context_ids"] = list(reference_context_ids)
         return index, row
 
     started_at = time.perf_counter()
@@ -1953,6 +1984,8 @@ def _prepare_one(
             row_metadata["query_constraints"] = query_constraints
         row_metadata = _stamp_reranker_metadata(
             row_metadata,
+            retriever_profile=_as_metadata_dict(result.get("retriever_profile")) or default_retriever_profile,
+            retriever_fingerprint=str(result.get("retriever_fingerprint") or default_retriever_fingerprint or "").strip() or None,
             reranker_profile=_as_metadata_dict(result.get("reranker_profile")) or default_reranker_profile,
             reranker_fingerprint=str(result.get("reranker_fingerprint") or default_reranker_fingerprint or "").strip() or None,
             retrieval_trace=result.get("retrieval_trace"),
@@ -1972,6 +2005,8 @@ def _prepare_one(
             "retrieved_context_ids": retrieved_context_ids,
             "metadata": row_metadata,
         }
+        if reference_context_ids is not None:
+            row["reference_context_ids"] = list(reference_context_ids)
         return index, row
 
     except Exception as exc:
@@ -1998,6 +2033,8 @@ def _prepare_one(
         }
         row["metadata"] = _stamp_reranker_metadata(
             _as_metadata_dict(row.get("metadata", {})),
+            retriever_profile=default_retriever_profile,
+            retriever_fingerprint=default_retriever_fingerprint,
             reranker_profile=default_reranker_profile,
             reranker_fingerprint=default_reranker_fingerprint,
         )
@@ -2006,6 +2043,8 @@ def _prepare_one(
             retrieval_trace=[],
             ranked_context_metadata=[],
         )
+        if reference_context_ids is not None:
+            row["reference_context_ids"] = list(reference_context_ids)
         return index, row
 
 
@@ -2149,6 +2188,8 @@ def _prepare_one_via_api(
     requester: ApiRequester,
     policy: str | None = None,
     budget_ms: int | None = None,
+    default_retriever_profile: Mapping[str, Any] | None = None,
+    default_retriever_fingerprint: str | None = None,
     default_reranker_profile: Mapping[str, Any] | None = None,
     default_reranker_fingerprint: str | None = None,
 ) -> tuple[int, dict[str, Any]]:
@@ -2199,6 +2240,7 @@ def _prepare_one_via_api(
     reference = str(example.get(reference_field, "") or "").strip()
     sample_id = str(example.get(id_field, f"row-{index}"))
     base_metadata = example.get("metadata", {})
+    reference_context_ids = _extract_reference_context_ids(example)
 
     if not query:
         if raise_exceptions:
@@ -2222,9 +2264,13 @@ def _prepare_one_via_api(
         }
         row["metadata"] = _stamp_reranker_metadata(
             _as_metadata_dict(row.get("metadata", {})),
+            retriever_profile=default_retriever_profile,
+            retriever_fingerprint=default_retriever_fingerprint,
             reranker_profile=default_reranker_profile,
             reranker_fingerprint=default_reranker_fingerprint,
         )
+        if reference_context_ids is not None:
+            row["reference_context_ids"] = list(reference_context_ids)
         return index, row
 
     started_at = time.perf_counter()
@@ -2250,6 +2296,16 @@ def _prepare_one_via_api(
             row_metadata["query_constraints"] = query_constraints
         row_metadata = _stamp_reranker_metadata(
             row_metadata,
+            retriever_profile=_as_metadata_dict(evaluation_metadata.get("retriever_profile"))
+            or _as_metadata_dict(result.get("retriever_profile"))
+            or default_retriever_profile,
+            retriever_fingerprint=str(
+                evaluation_metadata.get("retriever_fingerprint")
+                or result.get("retriever_fingerprint")
+                or default_retriever_fingerprint
+                or ""
+            ).strip()
+            or None,
             reranker_profile=_as_metadata_dict(evaluation_metadata.get("reranker_profile"))
             or _as_metadata_dict(result.get("reranker_profile"))
             or default_reranker_profile,
@@ -2277,6 +2333,8 @@ def _prepare_one_via_api(
             "retrieved_context_ids": retrieved_context_ids,
             "metadata": row_metadata,
         }
+        if reference_context_ids is not None:
+            row["reference_context_ids"] = list(reference_context_ids)
         return index, row
 
     except Exception as exc:
@@ -2306,6 +2364,8 @@ def _prepare_one_via_api(
         }
         row["metadata"] = _stamp_reranker_metadata(
             _as_metadata_dict(row.get("metadata", {})),
+            retriever_profile=default_retriever_profile,
+            retriever_fingerprint=default_retriever_fingerprint,
             reranker_profile=default_reranker_profile,
             reranker_fingerprint=default_reranker_fingerprint,
         )
@@ -2314,6 +2374,8 @@ def _prepare_one_via_api(
             retrieval_trace=[],
             ranked_context_metadata=[],
         )
+        if reference_context_ids is not None:
+            row["reference_context_ids"] = list(reference_context_ids)
         return index, row
 
 
@@ -2365,12 +2427,15 @@ def _row_trace_outputs(row: Mapping[str, Any]) -> dict[str, Any]:
     return {
         "response": str(row.get("response", "") or ""),
         "retrieved_context_ids": list(row.get("retrieved_context_ids", []) or []),
+        "reference_context_ids": list(row.get("reference_context_ids", []) or []),
         "retrieved_contexts": list(row.get("retrieved_contexts", []) or []),
         "query_constraints": metadata.get("query_constraints") if isinstance(metadata, Mapping) else None,
         "retrieval_sources": metadata.get("retrieval_sources") if isinstance(metadata, Mapping) else None,
         "retrieval_source_types": metadata.get("retrieval_source_types") if isinstance(metadata, Mapping) else None,
         "retrieval_features": metadata.get("retrieval_features") if isinstance(metadata, Mapping) else None,
         "ranked_context_metadata": metadata.get("ranked_context_metadata") if isinstance(metadata, Mapping) else None,
+        "retriever_profile": metadata.get("retriever_profile") if isinstance(metadata, Mapping) else None,
+        "retriever_fingerprint": metadata.get("retriever_fingerprint") if isinstance(metadata, Mapping) else None,
         "reranker_profile": metadata.get("reranker_profile") if isinstance(metadata, Mapping) else None,
         "reranker_fingerprint": metadata.get("reranker_fingerprint") if isinstance(metadata, Mapping) else None,
         "retrieval_trace": metadata.get("retrieval_trace") if isinstance(metadata, Mapping) else None,
@@ -2605,6 +2670,8 @@ def _prepare_one_with_retries(
     trace_factory: PrepAttemptTraceFactory | None = None,
     evaluation_policy: str | None = None,
     budget_ms: int | None = None,
+    default_retriever_profile: Mapping[str, Any] | None = None,
+    default_retriever_fingerprint: str | None = None,
     default_reranker_profile: Mapping[str, Any] | None = None,
     default_reranker_fingerprint: str | None = None,
 ) -> tuple[int, dict[str, Any]]:
@@ -2685,6 +2752,8 @@ def _prepare_one_with_retries(
                     raise_exceptions=raise_exceptions,
                     policy=evaluation_policy,
                     budget_ms=budget_ms,
+                    default_retriever_profile=default_retriever_profile,
+                    default_retriever_fingerprint=default_retriever_fingerprint,
                     default_reranker_profile=default_reranker_profile,
                     default_reranker_fingerprint=default_reranker_fingerprint,
                 )
@@ -2765,6 +2834,8 @@ def _prepare_one_via_api_with_retries(
     trace_factory: PrepAttemptTraceFactory | None = None,
     evaluation_policy: str | None = None,
     budget_ms: int | None = None,
+    default_retriever_profile: Mapping[str, Any] | None = None,
+    default_retriever_fingerprint: str | None = None,
     default_reranker_profile: Mapping[str, Any] | None = None,
     default_reranker_fingerprint: str | None = None,
 ) -> tuple[int, dict[str, Any]]:
@@ -2854,6 +2925,8 @@ def _prepare_one_via_api_with_retries(
                     requester=requester,
                     policy=evaluation_policy,
                     budget_ms=budget_ms,
+                    default_retriever_profile=default_retriever_profile,
+                    default_retriever_fingerprint=default_retriever_fingerprint,
                     default_reranker_profile=default_reranker_profile,
                     default_reranker_fingerprint=default_reranker_fingerprint,
                 )
@@ -2978,6 +3051,8 @@ def build_prepared_rows(
     trace_factory: PrepAttemptTraceFactory | None = None,
     policy: str | None = None,
     budget_ms: int | None = None,
+    retriever_profile: Mapping[str, Any] | None = None,
+    retriever_fingerprint: str | None = None,
     reranker_profile: Mapping[str, Any] | None = None,
     reranker_fingerprint: str | None = None,
 ) -> list[dict[str, Any]]:
@@ -3057,6 +3132,8 @@ def build_prepared_rows(
                     trace_factory=trace_factory,
                     evaluation_policy=policy,
                     budget_ms=budget_ms,
+                    default_retriever_profile=retriever_profile,
+                    default_retriever_fingerprint=retriever_fingerprint,
                     default_reranker_profile=reranker_profile,
                     default_reranker_fingerprint=reranker_fingerprint,
                 )
@@ -3082,6 +3159,8 @@ def build_prepared_rows(
                     trace_factory=trace_factory,
                     evaluation_policy=policy,
                     budget_ms=budget_ms,
+                    default_retriever_profile=retriever_profile,
+                    default_retriever_fingerprint=retriever_fingerprint,
                     default_reranker_profile=reranker_profile,
                     default_reranker_fingerprint=reranker_fingerprint,
                 )
@@ -3117,6 +3196,8 @@ def build_prepared_rows_from_api(
     trace_factory: PrepAttemptTraceFactory | None = None,
     policy: str | None = None,
     budget_ms: int | None = None,
+    retriever_profile: Mapping[str, Any] | None = None,
+    retriever_fingerprint: str | None = None,
     reranker_profile: Mapping[str, Any] | None = None,
     reranker_fingerprint: str | None = None,
 ) -> list[dict[str, Any]]:
@@ -3232,6 +3313,8 @@ def build_prepared_rows_from_api(
                     trace_factory=trace_factory,
                     evaluation_policy=policy,
                     budget_ms=budget_ms,
+                    default_retriever_profile=retriever_profile,
+                    default_retriever_fingerprint=retriever_fingerprint,
                     default_reranker_profile=reranker_profile,
                     default_reranker_fingerprint=reranker_fingerprint,
                 )
@@ -3259,6 +3342,8 @@ def build_prepared_rows_from_api(
                     trace_factory=trace_factory,
                     evaluation_policy=policy,
                     budget_ms=budget_ms,
+                    default_retriever_profile=retriever_profile,
+                    default_retriever_fingerprint=retriever_fingerprint,
                     default_reranker_profile=reranker_profile,
                     default_reranker_fingerprint=reranker_fingerprint,
                 )

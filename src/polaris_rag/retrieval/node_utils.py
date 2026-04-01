@@ -28,6 +28,8 @@ from llama_index.core.schema import NodeRelationship, ObjectType, RelatedNodeInf
 _TRACE_METADATA_KEYS: tuple[str, ...] = (
     "retrieval_source",
     "retrieval_sources",
+    "retrieval_source_ranks",
+    "retrieval_signal_trace",
     "source_authority",
     "authority_tier",
     "validity_status",
@@ -210,6 +212,8 @@ def serialize_source_nodes(
             "score": score,
             "source": _optional_string(metadata.get("retrieval_source")),
             "retrieval_sources": _string_list(metadata.get("retrieval_sources")),
+            "retrieval_source_ranks": _normalized_value(metadata.get("retrieval_source_ranks")),
+            "retrieval_signal_trace": _normalized_value(metadata.get("retrieval_signal_trace")),
             "source_authority": _optional_string(metadata.get("source_authority")),
             "authority_tier": _optional_int(metadata.get("authority_tier")),
             "validity_status": _optional_string(metadata.get("validity_status")),

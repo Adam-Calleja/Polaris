@@ -19,7 +19,11 @@ from typing import Callable, Dict, Optional
 from llama_index.core.vector_stores.types import MetadataFilters
 from llama_index.core import StorageContext
 
-from polaris_rag.retrieval.retriever import VectorIndexRetriever, HybridRetriever
+from polaris_rag.retrieval.retriever import (
+    HybridRetriever,
+    SparseIndexRetriever,
+    VectorIndexRetriever,
+)
 from polaris_rag.retrieval.types import Retriever
 
 try:
@@ -132,6 +136,17 @@ def _build_hybrid(**kw) -> Retriever:
         Hybrid retriever instance combining vector and keyword search.
     """
     return HybridRetriever(**kw)
+
+@register("sparse")
+def _build_sparse(**kw) -> Retriever:
+    """Build a sparse-only retriever.
+
+    Returns
+    -------
+    Retriever
+        Sparse retriever instance.
+    """
+    return SparseIndexRetriever(**kw)
 
 
 if MultiCollectionRetriever is not None:

@@ -826,6 +826,8 @@ def query(req: QueryRequest, request: Request):
             if include_eval_metadata:
                 evaluation_metadata = _coerce_eval_metadata(
                     {
+                        "retriever_profile": result.get("retriever_profile"),
+                        "retriever_fingerprint": result.get("retriever_fingerprint"),
                         "reranker_profile": result.get("reranker_profile"),
                         "reranker_fingerprint": result.get("reranker_fingerprint"),
                         "retrieval_trace": result.get("retrieval_trace"),

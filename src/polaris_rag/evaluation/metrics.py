@@ -27,6 +27,7 @@ instantiate_metrics
 from __future__ import annotations
 
 from dataclasses import dataclass
+import math
 from typing import Any, Callable, Iterable
 
 from ragas.metrics.collections import (
@@ -66,6 +67,8 @@ class MetricSpec:
 
 # Default metric set for single-turn RAG evaluation.
 DEFAULT_METRIC_ORDER: tuple[str, ...] = (
+    "retrieval_recall_at_k",
+    "retrieval_ndcg_at_10",
     "context_precision_without_reference",
     "context_recall",
     "context_entity_recall",
@@ -79,6 +82,22 @@ DEFAULT_METRIC_ORDER: tuple[str, ...] = (
 
 
 METRIC_REGISTRY: dict[str, MetricSpec] = {
+    "retrieval_recall_at_k": MetricSpec(
+        name="retrieval_recall_at_k",
+        required_columns=frozenset({"retrieved_context_ids", "reference_context_ids"}),
+        builder=lambda llm, embeddings: _AsyncRetrievalMetric(
+            name="retrieval_recall_at_k",
+            scorer=_retrieval_recall_at_k,
+        ),
+    ),
+    "retrieval_ndcg_at_10": MetricSpec(
+        name="retrieval_ndcg_at_10",
+        required_columns=frozenset({"retrieved_context_ids", "reference_context_ids"}),
+        builder=lambda llm, embeddings: _AsyncRetrievalMetric(
+            name="retrieval_ndcg_at_10",
+            scorer=_retrieval_ndcg_at_10,
+        ),
+    ),
     "context_precision_without_reference": MetricSpec(
         name="context_precision_without_reference",
         required_columns=frozenset({"user_input", "response", "retrieved_contexts"}),
@@ -130,6 +149,72 @@ METRIC_REGISTRY: dict[str, MetricSpec] = {
         builder=lambda llm, embeddings: SummaryScore(llm=llm),
     ),
 }
+
+
+class _AsyncRetrievalMetric:
+    """Small async-compatible metric wrapper for retrieval-only scores."""
+
+    def __init__(self, *, name: str, scorer: Callable[..., float | None]) -> None:
+        self.name = name
+        self._scorer = scorer
+
+    async def ascore(self, **kwargs: Any) -> float | None:
+        """Return the metric score for one prepared row."""
+        return self._scorer(**kwargs)
+
+
+def _normalized_context_id_list(value: Any) -> list[str]:
+    """Normalize arbitrary context-id payloads into a deduplicated list."""
+    if not isinstance(value, list):
+        return []
+    values: list[str] = []
+    seen: set[str] = set()
+    for item in value:
+        text = str(item or "").strip()
+        if not text or text in seen:
+            continue
+        seen.add(text)
+        values.append(text)
+    return values
+
+
+def _retrieval_recall_at_k(**kwargs: Any) -> float | None:
+    """Binary recall over the retrieved context id list."""
+    retrieved = _normalized_context_id_list(kwargs.get("retrieved_context_ids"))
+    reference = _normalized_context_id_list(kwargs.get("reference_context_ids"))
+    if not reference:
+        return None
+    if not retrieved:
+        return 0.0
+    reference_set = set(reference)
+    hits = sum(1 for item in retrieved if item in reference_set)
+    return hits / float(len(reference_set))
+
+
+def _retrieval_ndcg_at_10(**kwargs: Any) -> float | None:
+    """nDCG@10 over retrieved and reference context ids."""
+    retrieved = _normalized_context_id_list(kwargs.get("retrieved_context_ids"))[:10]
+    reference = _normalized_context_id_list(kwargs.get("reference_context_ids"))
+    if not reference:
+        return None
+    reference_set = set(reference)
+    if not retrieved:
+        return 0.0
+
+    dcg = 0.0
+    for rank, item in enumerate(retrieved, start=1):
+        relevance = 1.0 if item in reference_set else 0.0
+        if relevance <= 0.0:
+            continue
+        dcg += relevance / math.log2(rank + 1.0)
+
+    ideal_hits = min(len(reference_set), 10)
+    if ideal_hits <= 0:
+        return None
+    idcg = sum(1.0 / math.log2(rank + 1.0) for rank in range(1, ideal_hits + 1))
+    if idcg <= 0.0:
+        return None
+    return dcg / idcg
 
 
 def list_available_metric_names() -> list[str]:

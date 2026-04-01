@@ -140,6 +140,8 @@ def build_analysis_rows(
                 "retrieval_features": _normalized_value(metadata.get("retrieval_features")) or [],
                 "ranked_context_metadata": _normalized_value(metadata.get("ranked_context_metadata")) or [],
                 "retrieval_trace": _normalized_value(metadata.get("retrieval_trace")) or [],
+                "retriever_profile": _normalized_value(metadata.get("retriever_profile")),
+                "retriever_fingerprint": _optional_text(metadata.get("retriever_fingerprint")),
                 "reranker_profile": _normalized_value(metadata.get("reranker_profile")),
                 "reranker_fingerprint": _optional_text(metadata.get("reranker_fingerprint")),
                 "response_status": _optional_text(metadata.get("response_status")),

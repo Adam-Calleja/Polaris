@@ -30,14 +30,24 @@ storage_context:
   persist_dir: "data/storage/local"
 
 retriever:
-  # NOTE: "hybrid" (BM25 + vector) requires local documents to be loaded so BM25 can build an index.
-  # If the corpus is empty, BM25 indexing will fail. Use vector-only retrieval by default.
+  # Dense+sparse hybrid is configured below, but the checked-in runtime stays on
+  # vector-only until collections are reingested into a hybrid profile.
   type: "multi_collection"
   source_type: "vector"
   top_k: 5
   score_threshold: 0.0
   filters: {}
   final_top_k: 8
+  hybrid_profile:
+    dense_top_k: 30
+    sparse_top_k: 30
+    top_k: 20
+    fusion:
+      type: "rrf"
+      rrf_k: 60
+      signal_weights:
+        dense: 1.0
+        sparse: 1.0
   rerank:
     type: "rrf"
     rrf_k: 60
@@ -55,6 +65,11 @@ retriever:
       top_k: 5
       weight: 1.0
       filters: {}
+
+sparse_encoder:
+  type: "fastembed"
+  model_name: "prithivida/Splade_PP_en_v1"
+  batch_size: 16
 
 document_loader:
   conditions:

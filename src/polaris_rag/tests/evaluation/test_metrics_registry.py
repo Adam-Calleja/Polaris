@@ -1,4 +1,10 @@
-from polaris_rag.evaluation.metrics import resolve_metric_specs
+import asyncio
+
+import pytest
+
+pytest.importorskip("ragas.metrics.collections")
+
+from polaris_rag.evaluation.metrics import instantiate_metrics, resolve_metric_specs
 
 
 def test_auto_gates_summary_score_when_reference_contexts_missing() -> None:
@@ -31,3 +37,42 @@ def test_unknown_metric_raises_key_error() -> None:
         assert "Unknown metric" in str(exc)
     else:
         raise AssertionError("Expected KeyError for unknown metric")
+
+
+def test_retrieval_metrics_are_available_when_reference_context_ids_exist() -> None:
+    dataset_columns = {"retrieved_context_ids", "reference_context_ids"}
+
+    specs, skipped = resolve_metric_specs(
+        dataset_columns=dataset_columns,
+        requested_metrics=["retrieval_recall_at_k", "retrieval_ndcg_at_10"],
+        auto_gate=True,
+    )
+
+    assert [spec.name for spec in specs] == ["retrieval_recall_at_k", "retrieval_ndcg_at_10"]
+    assert skipped == []
+
+
+def test_retrieval_metrics_compute_expected_scores() -> None:
+    dataset_columns = {"retrieved_context_ids", "reference_context_ids"}
+    specs, _ = resolve_metric_specs(
+        dataset_columns=dataset_columns,
+        requested_metrics=["retrieval_recall_at_k", "retrieval_ndcg_at_10"],
+        auto_gate=True,
+    )
+    metrics = instantiate_metrics(specs, llm=None, embeddings=None)
+
+    async def _score():  # noqa: ANN202
+        recall = await metrics[0].ascore(
+            retrieved_context_ids=["doc-1", "doc-3", "doc-2"],
+            reference_context_ids=["doc-1", "doc-2"],
+        )
+        ndcg = await metrics[1].ascore(
+            retrieved_context_ids=["doc-1", "doc-3", "doc-2"],
+            reference_context_ids=["doc-1", "doc-2"],
+        )
+        return recall, ndcg
+
+    recall, ndcg = asyncio.run(_score())
+
+    assert recall == 1.0
+    assert 0.9 < ndcg < 1.0

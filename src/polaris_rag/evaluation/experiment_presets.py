@@ -31,6 +31,7 @@ from typing import Any, Mapping
 import yaml
 
 from polaris_rag.config import GlobalConfig
+from polaris_rag.retrieval.retriever import retriever_fingerprint
 from polaris_rag.retrieval.reranker import create_reranker
 
 
@@ -92,6 +93,10 @@ def list_preset_names() -> list[str]:
         Available preset Names.
     """
     return [
+        "dense_only",
+        "sparse_only",
+        "hybrid_rrf",
+        "hybrid_validity_aware",
         "docs_only",
         "tickets_only",
         "naive_combined",
@@ -163,6 +168,7 @@ def resolve_condition_summary(cfg: GlobalConfig) -> dict[str, Any]:
     source_settings = _source_settings_from_raw(raw)
     active_sources = list(source_settings.keys())
     rerank_cfg = _as_mapping(retriever_cfg.get("rerank", {}))
+    hybrid_profile = _as_mapping(retriever_cfg.get("hybrid_profile", {}))
 
     reranker_profile: dict[str, Any] | None = None
     if rerank_cfg:
@@ -182,13 +188,55 @@ def resolve_condition_summary(cfg: GlobalConfig) -> dict[str, Any]:
         source_cfg["collection_name"] = source_store_cfg.get("collection_name")
         sources_summary.append(source_cfg)
 
+    active_retriever_profile = {
+        "type": str(retriever_cfg.get("type", "") or ""),
+        "source_type": str(retriever_cfg.get("source_type", "") or ""),
+        "final_top_k": retriever_cfg.get("final_top_k"),
+        "hybrid_profile": hybrid_profile or None,
+        "sources": sources_summary,
+    }
+
     return {
         "retriever_type": str(retriever_cfg.get("type", "") or ""),
         "source_type": str(retriever_cfg.get("source_type", "") or ""),
         "final_top_k": retriever_cfg.get("final_top_k"),
+        "hybrid_profile": hybrid_profile or None,
         "sources": sources_summary,
+        "retriever_profile": active_retriever_profile,
+        "retriever_fingerprint": retriever_fingerprint(active_retriever_profile),
         "reranker_profile": reranker_profile,
     }
+
+
+def _apply_dense_only(raw: dict[str, Any], *, config_path: Path | None) -> str:
+    _ = config_path
+    _configure_sources(raw, ["docs", "tickets"])
+    _configure_source_type(raw, "vector")
+    _configure_rrf_reranker(raw)
+    return "Dense-only docs+tickets baseline with RRF reranking."
+
+
+def _apply_sparse_only(raw: dict[str, Any], *, config_path: Path | None) -> str:
+    _ = config_path
+    _configure_sources(raw, ["docs", "tickets"])
+    _configure_source_type(raw, "sparse")
+    _configure_rrf_reranker(raw)
+    return "Sparse-only docs+tickets baseline with RRF reranking."
+
+
+def _apply_hybrid_rrf(raw: dict[str, Any], *, config_path: Path | None) -> str:
+    _ = config_path
+    _configure_sources(raw, ["docs", "tickets"])
+    _configure_source_type(raw, "hybrid")
+    _configure_rrf_reranker(raw)
+    return "Hybrid dense+sparse docs+tickets retrieval with RRF reranking."
+
+
+def _apply_hybrid_validity_aware(raw: dict[str, Any], *, config_path: Path | None) -> str:
+    _configure_sources(raw, ["docs", "tickets"])
+    _configure_source_type(raw, "hybrid")
+    _configure_validity_reranker(raw, weights=None, config_path=config_path)
+    return "Hybrid dense+sparse retrieval with frozen validity-aware reranking over docs+tickets."
 
 
 def _apply_docs_only(raw: dict[str, Any], *, config_path: Path | None) -> str:
@@ -345,6 +393,10 @@ def _apply_all_docs_validity_aware(raw: dict[str, Any], *, config_path: Path | N
 
 
 _PRESET_HANDLERS = {
+    "dense_only": _apply_dense_only,
+    "sparse_only": _apply_sparse_only,
+    "hybrid_rrf": _apply_hybrid_rrf,
+    "hybrid_validity_aware": _apply_hybrid_validity_aware,
     "docs_only": _apply_docs_only,
     "tickets_only": _apply_tickets_only,
     "naive_combined": _apply_naive_combined,
@@ -467,6 +519,13 @@ def _configure_sources(raw: dict[str, Any], source_names: list[str]) -> None:
             + ", ".join(missing)
         )
     retriever_cfg["sources"] = [existing_by_name[name] for name in source_names]
+    raw["retriever"] = retriever_cfg
+
+
+def _configure_source_type(raw: dict[str, Any], source_type: str) -> None:
+    """Set the per-source retriever type used inside multi-collection retrieval."""
+    retriever_cfg = _as_mapping(raw.get("retriever", {}))
+    retriever_cfg["source_type"] = str(source_type or "vector")
     raw["retriever"] = retriever_cfg
 
 
@@ -675,6 +734,7 @@ def _source_settings_from_raw(raw: Mapping[str, Any]) -> dict[str, dict[str, Any
         return {}
     default_top_k = retriever_cfg.get("top_k")
     default_filters = retriever_cfg.get("filters")
+    default_profile = _as_mapping(retriever_cfg.get("hybrid_profile", {}))
     settings: dict[str, dict[str, Any]] = {}
     for item in raw_sources:
         item_map = _as_mapping(item)
@@ -685,8 +745,23 @@ def _source_settings_from_raw(raw: Mapping[str, Any]) -> dict[str, dict[str, Any
             "top_k": item_map.get("top_k", default_top_k),
             "filters": item_map.get("filters", default_filters),
             "weight": item_map.get("weight", 1.0),
+            "retrieval_profile": _deep_merge(
+                default_profile,
+                _as_mapping(item_map.get("retrieval_profile", {})),
+            ),
         }
     return settings
+
+
+def _deep_merge(base: Mapping[str, Any], override: Mapping[str, Any]) -> dict[str, Any]:
+    """Recursively merge nested mappings."""
+    merged = dict(base)
+    for key, value in override.items():
+        if isinstance(value, Mapping) and isinstance(merged.get(key), Mapping):
+            merged[key] = _deep_merge(_as_mapping(merged.get(key)), _as_mapping(value))
+        else:
+            merged[key] = value
+    return merged
 
 
 def _config_base_dir(config_path: Path | None) -> Path:

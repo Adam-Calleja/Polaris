@@ -23,7 +23,7 @@ create_vector_store
 import asyncio
 import math
 import time
-from typing import TYPE_CHECKING, Any, Iterable, Optional
+from typing import TYPE_CHECKING, Any, Iterable, Mapping, Optional
 from uuid import UUID, NAMESPACE_URL, uuid5
 from qdrant_client import QdrantClient, AsyncQdrantClient
 from qdrant_client.http import models as rest
@@ -32,7 +32,7 @@ import yaml
 from abc import ABC, abstractmethod
 from llama_index.vector_stores.qdrant import QdrantVectorStore
 from llama_index.core import VectorStoreIndex, StorageContext
-from llama_index.core.schema import NodeWithScore, TextNode
+from llama_index.core.schema import NodeRelationship, NodeWithScore, ObjectType, RelatedNodeInfo, TextNode
 from llama_index.core.base.response.schema import Response
 from llama_index.core.vector_stores.types import MetadataFilter, MetadataFilters, VectorStoreQuery
 
@@ -43,9 +43,12 @@ from polaris_rag.retrieval.node_utils import chunk_to_text_node
 if TYPE_CHECKING:
     from polaris_rag.generation.llm_interface import BaseLLM
     from polaris_rag.retrieval.embedder import BaseEmbedder
+    from polaris_rag.retrieval.sparse_encoder import BaseSparseEncoder, SparseEmbedding
 else:
     BaseLLM = Any
     BaseEmbedder = Any
+    BaseSparseEncoder = Any
+    SparseEmbedding = Any
 
 QDRANT_POINT_ID_NAMESPACE = uuid5(NAMESPACE_URL, "polaris-rag/qdrant-point-id")
 
@@ -283,57 +286,19 @@ class BaseVectorStore(ABC):
         pass
 
 class QdrantIndexStore(BaseVectorStore):
-    """Qdrant-backed vector store wrapper and LlamaIndex index manager.
+    """Qdrant-backed vector store wrapper with native dense+sparse retrieval."""
 
-    This class wraps a Qdrant collection via :class:`qdrant_client.QdrantClient`
-    and exposes methods to build an index from chunks and query it using a
-    LlamaIndex query engine.
-
-    Parameters
-    ----------
-    llm : BaseLLM
-        Generator LLM wrapper used by the query engine to synthesise responses.
-    embedder : BaseEmbedder
-        Embedder wrapper used to generate embeddings for indexing and querying.
-    host : str, optional
-        Qdrant host address. Defaults to ``"localhost"``.
-    port : int, optional
-        Qdrant port number. Defaults to ``6333``.
-    collection_name : str, optional
-        Name of the Qdrant collection. Defaults to ``"default_collection"``.
-    token : str or None, optional
-        Optional token used to configure downstream authentication (e.g., sets
-        ``HF_TOKEN``). Defaults to ``None``.
-    """
+    DEFAULT_DENSE_VECTOR_NAME = "dense"
+    DEFAULT_SPARSE_VECTOR_NAME = "sparse"
 
     @classmethod
     def from_config_dict(
-            cls, 
-            config: dict,
-            llm: "BaseLLM",
-            embedder: BaseEmbedder,
-        ) -> "QdrantIndexStore":
-        """Create a QdrantIndexStore instance from a configuration mapping.
-
-        Parameters
-        ----------
-        config : dict
-            Configuration mapping. Expected keys include:
-            - ``host`` (str, optional): Qdrant host address (default ``"localhost"``)
-            - ``port`` (int, optional): Qdrant port (default ``6333``)
-            - ``collection_name`` (str, optional): collection name
-              (default ``"default_collection"``)
-            - ``token`` (str, optional): optional token used to set ``HF_TOKEN``
-        llm : BaseLLM
-            Generator LLM wrapper used by the query engine.
-        embedder : BaseEmbedder
-            Embedder wrapper used to generate embeddings.
-
-        Returns
-        -------
-        QdrantIndexStore
-            Initialised QdrantIndexStore instance.
-        """
+        cls,
+        config: dict,
+        llm: "BaseLLM",
+        embedder: BaseEmbedder,
+        sparse_encoder: BaseSparseEncoder | None = None,
+    ) -> "QdrantIndexStore":
         host = config.get("host", "localhost")
         port = config.get("port", 6333)
         collection_name = config.get("collection_name", "default_collection")
@@ -341,87 +306,52 @@ class QdrantIndexStore(BaseVectorStore):
         return cls(
             llm=llm,
             embedder=embedder,
+            sparse_encoder=sparse_encoder,
             host=host,
             port=port,
             collection_name=collection_name,
             token=token,
+            dense_vector_name=str(config.get("dense_vector_name", cls.DEFAULT_DENSE_VECTOR_NAME)),
+            sparse_vector_name=str(config.get("sparse_vector_name", cls.DEFAULT_SPARSE_VECTOR_NAME)),
         )
 
     @classmethod
     def from_config(
-        cls, 
-        config_path: str, 
-        *, 
+        cls,
+        config_path: str,
+        *,
         llm: "BaseLLM",
         embedder: BaseEmbedder,
+        sparse_encoder: BaseSparseEncoder | None = None,
     ) -> "QdrantIndexStore":
-        """Load YAML configuration and create a QdrantIndexStore.
-
-        Parameters
-        ----------
-        config_path : str
-            Path to the YAML configuration file.
-        llm : BaseLLM
-            Generator LLM wrapper used by the query engine.
-        embedder : BaseEmbedder
-            Embedder wrapper used to generate embeddings.
-
-        Returns
-        -------
-        QdrantIndexStore
-            Initialised QdrantIndexStore instance.
-
-        Notes
-        -----
-        This method loads the YAML file and delegates to
-        :meth:`~polaris_rag.retrieval.vector_store.QdrantIndexStore.from_config_dict`.
-        """
         with open(config_path, "r") as f:
             cfg = yaml.safe_load(f) or {}
-        return cls.from_config_dict(cfg, llm=llm, embedder=embedder)
+        return cls.from_config_dict(cfg, llm=llm, embedder=embedder, sparse_encoder=sparse_encoder)
 
     def __init__(
-        self, 
+        self,
         *,
         llm: "BaseLLM" = None,
         embedder: BaseEmbedder = None,
+        sparse_encoder: BaseSparseEncoder | None = None,
         host: str = "localhost",
         port: int = 6333,
         collection_name: str = "default_collection",
         token: Optional[str] = None,
+        dense_vector_name: str = DEFAULT_DENSE_VECTOR_NAME,
+        sparse_vector_name: str = DEFAULT_SPARSE_VECTOR_NAME,
     ):
-        """Initialise a Qdrant-backed vector store index.
-
-        Parameters
-        ----------
-        llm : BaseLLM
-            Generator LLM wrapper used by the query engine.
-        embedder : BaseEmbedder
-            Embedder wrapper used to generate embeddings.
-        host : str, optional
-            Qdrant host address. Defaults to ``"localhost"``.
-        port : int, optional
-            Qdrant port number. Defaults to ``6333``.
-        collection_name : str, optional
-            Name of the Qdrant collection. Defaults to ``"default_collection"``.
-        token : str or None, optional
-            Optional token used to configure downstream authentication (e.g., sets
-            ``HF_TOKEN``). Defaults to ``None``.
-
-        Raises
-        ------
-        ValueError
-            If ``embedder`` or ``llm`` is not provided.
-        """
-
         if embedder is None:
             raise ValueError("QdrantIndexStore requires an embedder instance. Provide it via the container.")
         if llm is None:
             raise ValueError("QdrantIndexStore requires an LLM instance. Provide it via the container.")
 
         self.embedder = embedder
+        self.sparse_encoder = sparse_encoder
         self.llm = llm
-
+        self.collection_name = str(collection_name)
+        self.dense_vector_name = str(dense_vector_name or self.DEFAULT_DENSE_VECTOR_NAME)
+        self.sparse_vector_name = str(sparse_vector_name or self.DEFAULT_SPARSE_VECTOR_NAME)
         self._embed_model = self.embedder.get_embedder()
         self._llm = self.llm.get_llm()
 
@@ -433,49 +363,28 @@ class QdrantIndexStore(BaseVectorStore):
         self.vector_store = PolarisQdrantVectorStore(
             client=self.client,
             aclient=self.aclient,
-            collection_name=collection_name,
-            dense_vector_name=""
+            collection_name=self.collection_name,
+            dense_vector_name=self.dense_vector_name,
         )
-        self.storage_context = StorageContext.from_defaults(
-            vector_store=self.vector_store
-        )
+        self.storage_context = StorageContext.from_defaults(vector_store=self.vector_store)
+        self._index = None
 
-        self._index = VectorStoreIndex.from_vector_store(
-            self.vector_store,
-            embed_model=self._embed_model,
-        )
+    def profile(self) -> dict[str, Any]:
+        """Return a stable profile for retrieval fingerprinting."""
+        return {
+            "backend": "qdrant",
+            "collection_name": self.collection_name,
+            "dense_vector_name": self.dense_vector_name,
+            "sparse_vector_name": self.sparse_vector_name,
+            "dense_model": getattr(self.embedder, "model_name", type(self.embedder).__name__),
+            "sparse_model": (
+                self.sparse_encoder.profile() if self.sparse_encoder is not None else None
+            ),
+        }
 
-    def create_index(
-        self,
-        chunks: list[DocumentChunk],
-        batch_size: int,
-    ) -> None:
-        """Build (or rebuild) the vector index from document chunks.
-
-        This method embeds the provided chunks and stores the resulting vectors
-        in the configured Qdrant collection by constructing a fresh
-        :class:`llama_index.core.VectorStoreIndex`.
-
-        Parameters
-        ----------
-        chunks : list[DocumentChunk]
-            Document chunks to index.
-        batch_size : int
-            Insert batch size forwarded to LlamaIndex.
-
-        Returns
-        -------
-        None
-        """
-        nodes = self._build_nodes(chunks)
-
-        self._index = VectorStoreIndex(
-            nodes,
-            storage_context=self.storage_context,
-            show_progress=True,
-            insert_batch_size=batch_size,
-            embed_model=self._embed_model,
-        ) 
+    def create_index(self, chunks: list[DocumentChunk], batch_size: int) -> None:
+        """Compatibility wrapper: recreate by reinserting chunks."""
+        self.insert_chunks(chunks, batch_size=batch_size, use_async=False)
 
     def insert_chunks(
         self,
@@ -484,24 +393,6 @@ class QdrantIndexStore(BaseVectorStore):
         *,
         use_async: bool = False,
     ) -> None:
-        """Insert document chunks into an existing vector index.
-
-        Parameters
-        ----------
-        chunks : list[DocumentChunk]
-            Document chunks to insert.
-        batch_size : int
-            Batch size for insertion. If ``batch_size`` is not a positive integer,
-            all chunks are inserted in a single call.
-        use_async : bool, optional
-            If ``True``, use async insertion to allow concurrent embedding
-            requests when the configured embedder supports it.
-
-        Returns
-        -------
-        None
-        """
-
         if use_async:
             try:
                 asyncio.get_running_loop()
@@ -513,110 +404,150 @@ class QdrantIndexStore(BaseVectorStore):
                 "use `await ainsert_chunks(...)` instead."
             )
 
-        nodes = self._build_nodes(chunks)
-        self._insert_nodes_sync(nodes=nodes, batch_size=batch_size)
+        if not chunks:
+            return
+        texts = [str(chunk.text or "") for chunk in chunks]
+        dense_vectors = self.embedder.embed_documents(texts)
+        sparse_vectors = self._encode_sparse_documents(texts)
+        self._upsert_chunks(
+            chunks=chunks,
+            dense_vectors=dense_vectors,
+            sparse_vectors=sparse_vectors,
+            batch_size=batch_size,
+        )
 
     async def ainsert_chunks(
         self,
         chunks: list[DocumentChunk],
         batch_size: int,
     ) -> None:
-        """Asynchronously insert document chunks into the vector index.
-        
-        Parameters
-        ----------
-        chunks : list[DocumentChunk]
-            Value for chunks.
-        batch_size : int
-            Value for batch Size.
-        """
-        nodes = self._build_nodes(chunks)
+        if not chunks:
+            return
+        texts = [str(chunk.text or "") for chunk in chunks]
+        dense_vectors = await self.embedder.aembed_documents(texts)
+        sparse_vectors = self._encode_sparse_documents(texts)
+        self._upsert_chunks(
+            chunks=chunks,
+            dense_vectors=dense_vectors,
+            sparse_vectors=sparse_vectors,
+            batch_size=batch_size,
+        )
 
-        if not batch_size or batch_size <= 0 or not isinstance(batch_size, int):
-            await self._index.ainsert_nodes(nodes)
-        else:
-            for start in range(0, len(nodes), batch_size):
-                batch = nodes[start:start + batch_size]
-                await self._index.ainsert_nodes(batch)
-
-    def _insert_nodes_sync(
+    def _upsert_chunks(
         self,
         *,
-        nodes: list[TextNode],
+        chunks: list[DocumentChunk],
+        dense_vectors: list[list[float]],
+        sparse_vectors: list[SparseEmbedding | None],
         batch_size: int,
     ) -> None:
-        """Insert Nodes Sync.
-        
-        Parameters
-        ----------
-        nodes : list[TextNode]
-            Value for nodes.
-        batch_size : int
-            Value for batch Size.
-        """
-        if not batch_size or batch_size <= 0 or not isinstance(batch_size, int):
-            self._index.insert_nodes(nodes)
-        else:
-            for start in range(0, len(nodes), batch_size):
-                batch = nodes[start:start + batch_size]
-                self._index.insert_nodes(batch)
+        if not dense_vectors:
+            return
+        dense_dim = len(dense_vectors[0])
+        enable_sparse = any(vector is not None and not vector.is_empty() for vector in sparse_vectors)
+        self._ensure_collection(dense_dim=dense_dim, enable_sparse=enable_sparse)
 
-    def _build_nodes(self, chunks: list[DocumentChunk]) -> list[TextNode]:
-        """Build nodes.
-        
-        Parameters
-        ----------
-        chunks : list[DocumentChunk]
-            Value for chunks.
-        
-        Returns
-        -------
-        list[TextNode]
-            Collected results from the operation.
-        """
-        return [chunk_to_text_node(chunk) for chunk in chunks]
+        points = [
+            rest.PointStruct(
+                id=qdrant_point_id_from_node_id(chunk.id),
+                vector=self._build_point_vectors(dense=dense, sparse=sparse),
+                payload=self._chunk_payload(chunk),
+            )
+            for chunk, dense, sparse in zip(chunks, dense_vectors, sparse_vectors)
+        ]
+        step = batch_size if batch_size and batch_size > 0 else len(points)
+        for start in range(0, len(points), max(1, step)):
+            batch = points[start:start + max(1, step)]
+            self.client.upsert(
+                collection_name=self.collection_name,
+                points=batch,
+                wait=True,
+            )
+
+    def _chunk_payload(self, chunk: DocumentChunk) -> dict[str, Any]:
+        metadata = dict(getattr(chunk, "metadata", {}) or {})
+        payload = dict(metadata)
+        payload["_node_id"] = str(getattr(chunk, "id", "") or "")
+        payload["_node_text"] = str(getattr(chunk, "text", "") or "")
+        payload["_node_metadata"] = dict(metadata)
+        payload["document_type"] = str(getattr(chunk, "document_type", "") or metadata.get("document_type", ""))
+        parent_id = str(getattr(chunk, "parent_id", "") or metadata.get("parent_id", ""))
+        if parent_id:
+            payload["parent_id"] = parent_id
+        return payload
+
+    def _build_point_vectors(
+        self,
+        *,
+        dense: list[float],
+        sparse: SparseEmbedding | None,
+    ) -> dict[str, Any]:
+        vectors: dict[str, Any] = {
+            self.dense_vector_name: [float(value) for value in dense],
+        }
+        if sparse is not None and not sparse.is_empty():
+            vectors[self.sparse_vector_name] = rest.SparseVector(
+                indices=[int(item) for item in sparse.indices],
+                values=[float(item) for item in sparse.values],
+            )
+        return vectors
+
+    def _encode_sparse_documents(self, texts: list[str]) -> list[SparseEmbedding | None]:
+        if self.sparse_encoder is None:
+            return [None for _ in texts]
+        embeddings = self.sparse_encoder.encode_documents(texts)
+        if len(embeddings) != len(texts):
+            raise ValueError(
+                "Sparse encoder returned a different number of embeddings than requested "
+                f"({len(embeddings)} != {len(texts)})."
+            )
+        return list(embeddings)
+
+    def _ensure_collection(self, *, dense_dim: int, enable_sparse: bool) -> None:
+        if self.client.collection_exists(self.collection_name):
+            return
+
+        vectors_config = {
+            self.dense_vector_name: rest.VectorParams(
+                size=max(1, int(dense_dim)),
+                distance=rest.Distance.COSINE,
+            )
+        }
+        kwargs: dict[str, Any] = {}
+        if enable_sparse:
+            kwargs["sparse_vectors_config"] = {
+                self.sparse_vector_name: rest.SparseVectorParams()
+            }
+        self.client.create_collection(
+            collection_name=self.collection_name,
+            vectors_config=vectors_config,
+            **kwargs,
+        )
 
     def delete_ref_doc(self, ref_doc_id: str) -> None:
-        """Delete all chunks associated with a parent/source document id.
-        
-        Parameters
-        ----------
-        ref_doc_id : str
-            Stable identifier for ref Doc.
-        """
         ref_doc_id = str(ref_doc_id or "").strip()
         if not ref_doc_id:
             return
-
-        if not self.client.collection_exists(self.vector_store.collection_name):
+        if not self.client.collection_exists(self.collection_name):
             return
 
-        self.vector_store.delete(ref_doc_id)
         self.client.delete(
-            collection_name=self.vector_store.collection_name,
+            collection_name=self.collection_name,
             points_selector=rest.Filter(
-                must=[
+                should=[
+                    rest.FieldCondition(
+                        key="_node_id",
+                        match=rest.MatchValue(value=ref_doc_id),
+                    ),
                     rest.FieldCondition(
                         key="parent_id",
                         match=rest.MatchValue(value=ref_doc_id),
-                    )
+                    ),
                 ]
             ),
         )
 
     def delete_ref_docs(self, ref_doc_ids: Iterable[str]) -> int:
-        """Delete all chunks associated with the provided parent/source ids.
-        
-        Parameters
-        ----------
-        ref_doc_ids : Iterable[str]
-            Stable identifiers for ref Doc.
-        
-        Returns
-        -------
-        int
-            Computed integer value.
-        """
         deleted = 0
         seen: set[str] = set()
         for ref_doc_id in ref_doc_ids:
@@ -630,18 +561,6 @@ class QdrantIndexStore(BaseVectorStore):
 
     @staticmethod
     def _coerce_metadata_filters(filters: MetadataFilters | dict | None) -> MetadataFilters | None:
-        """Coerce metadata Filters.
-        
-        Parameters
-        ----------
-        filters : MetadataFilters or dict or None, optional
-            Value for filters.
-        
-        Returns
-        -------
-        MetadataFilters or None
-            Result of the operation.
-        """
         if isinstance(filters, MetadataFilters):
             return filters
         if isinstance(filters, dict):
@@ -652,6 +571,11 @@ class QdrantIndexStore(BaseVectorStore):
             )
         return None
 
+    def _query_filter(self, filters: MetadataFilters | dict | None) -> Any:
+        normalized_filters = self._coerce_metadata_filters(filters)
+        query_spec = VectorStoreQuery(query_embedding=None, similarity_top_k=1, filters=normalized_filters)
+        return self.vector_store._build_query_filter(query_spec)
+
     def query_nodes(
         self,
         query_text: str,
@@ -660,133 +584,208 @@ class QdrantIndexStore(BaseVectorStore):
         filters: MetadataFilters | dict | None = None,
         timeout_seconds: float | None = None,
     ) -> list[NodeWithScore]:
-        """Run a vector retrieval query and return LlamaIndex ``NodeWithScore`` items.
-        
-        Parameters
-        ----------
-        query_text : str
-            Value for query Text.
-        top_k : int, optional
-            Value for top K.
-        filters : MetadataFilters or dict or None, optional
-            Value for filters.
-        timeout_seconds : float or None, optional
-            timeout Seconds expressed in seconds.
-        
-        Returns
-        -------
-        list[NodeWithScore]
-            Collected results from the operation.
-        
-        Raises
-        ------
-        RetrievalTimeoutError
-            If `RetrievalTimeoutError` is raised while executing the operation.
-        """
+        return self.query_dense_nodes(
+            query_text,
+            top_k=top_k,
+            filters=filters,
+            timeout_seconds=timeout_seconds,
+        )
 
-        normalized_filters = self._coerce_metadata_filters(filters)
+    def query_dense_nodes(
+        self,
+        query_text: str,
+        *,
+        top_k: int = 5,
+        filters: MetadataFilters | dict | None = None,
+        timeout_seconds: float | None = None,
+    ) -> list[NodeWithScore]:
+        if not self.client.collection_exists(self.collection_name):
+            return []
+
         retrieval_started_at = time.perf_counter()
         query_embedding = self.embedder.embed_query(query_text, timeout_seconds=timeout_seconds)
-        query_spec = VectorStoreQuery(
-            query_embedding=query_embedding,
-            similarity_top_k=max(1, int(top_k)),
-            filters=normalized_filters,
+        qdrant_timeout = self._remaining_qdrant_timeout(
+            timeout_seconds=timeout_seconds,
+            retrieval_started_at=retrieval_started_at,
         )
-        query_filter = self.vector_store._build_query_filter(query_spec)
-        qdrant_timeout = None
-        if timeout_seconds is not None:
-            embed_elapsed = max(0.0, time.perf_counter() - retrieval_started_at)
-            remaining_timeout = float(timeout_seconds) - embed_elapsed
-            if remaining_timeout <= 0.0:
-                raise RetrievalTimeoutError(
-                    f"retrieval budget exhausted before vector-store query started ({float(timeout_seconds):.3f}s)"
-                )
-            qdrant_timeout = max(1, int(math.ceil(remaining_timeout)))
+        query_filter = self._query_filter(filters)
+        response = self._query_points(
+            query=query_embedding,
+            using=self.dense_vector_name,
+            top_k=top_k,
+            query_filter=query_filter,
+            qdrant_timeout=qdrant_timeout,
+            allow_legacy_dense_fallback=True,
+            timeout_seconds=timeout_seconds,
+        )
+        return self._points_to_scored_nodes(response.points)
 
+    def query_sparse_nodes(
+        self,
+        query_text: str,
+        *,
+        top_k: int = 5,
+        filters: MetadataFilters | dict | None = None,
+        timeout_seconds: float | None = None,
+    ) -> list[NodeWithScore]:
+        if not self.client.collection_exists(self.collection_name) or self.sparse_encoder is None:
+            return []
+        retrieval_started_at = time.perf_counter()
+        sparse_query = self.sparse_encoder.encode_query(query_text)
+        if sparse_query.is_empty():
+            return []
+        qdrant_timeout = self._remaining_qdrant_timeout(
+            timeout_seconds=timeout_seconds,
+            retrieval_started_at=retrieval_started_at,
+        )
+        query_filter = self._query_filter(filters)
+        response = self._query_points(
+            query=rest.SparseVector(
+                indices=[int(item) for item in sparse_query.indices],
+                values=[float(item) for item in sparse_query.values],
+            ),
+            using=self.sparse_vector_name,
+            top_k=top_k,
+            query_filter=query_filter,
+            qdrant_timeout=qdrant_timeout,
+            allow_legacy_dense_fallback=False,
+            timeout_seconds=timeout_seconds,
+        )
+        return self._points_to_scored_nodes(response.points)
+
+    def query(
+        self,
+        query_text: str,
+        top_k: int = 5,
+        *,
+        filter: Optional[dict] = None,
+        llm: Optional["BaseLLM"] = None,
+    ) -> Response:
+        vector_count = self.client.count(collection_name=self.collection_name)
+        if vector_count.count == 0:
+            raise ValueError("Index is empty. Call create_index() first.")
+
+        chosen_llm = llm or self._llm
+        results = self.query_nodes(query_text, top_k=top_k, filters=filter)
+        prompt_lines = [query_text, "", "CONTEXT:"]
+        for item in results:
+            prompt_lines.append(str(getattr(item.node, "text", "") or ""))
+        response_text = chosen_llm.complete("\n".join(prompt_lines))
+        return Response(response=response_text, source_nodes=results)
+
+    def persist(self, **kwargs):
+        return None
+
+    def _remaining_qdrant_timeout(
+        self,
+        *,
+        timeout_seconds: float | None,
+        retrieval_started_at: float,
+    ) -> int | None:
+        if timeout_seconds is None:
+            return None
+        elapsed = max(0.0, time.perf_counter() - retrieval_started_at)
+        remaining_timeout = float(timeout_seconds) - elapsed
+        if remaining_timeout <= 0.0:
+            raise RetrievalTimeoutError(
+                f"retrieval budget exhausted before vector-store query started ({float(timeout_seconds):.3f}s)"
+            )
+        return max(1, int(math.ceil(remaining_timeout)))
+
+    def _query_points(
+        self,
+        *,
+        query: Any,
+        using: str | None,
+        top_k: int,
+        query_filter: Any,
+        qdrant_timeout: int | None,
+        allow_legacy_dense_fallback: bool,
+        timeout_seconds: float | None,
+    ) -> Any:
         try:
-            response = self.client.query_points(
-                collection_name=self.vector_store.collection_name,
-                query=query_embedding,
-                using=self.vector_store.dense_vector_name,
+            return self.client.query_points(
+                collection_name=self.collection_name,
+                query=query,
+                using=using,
                 limit=max(1, int(top_k)),
                 query_filter=query_filter,
                 with_payload=True,
                 timeout=qdrant_timeout,
             )
         except Exception as exc:
+            if allow_legacy_dense_fallback and using:
+                try:
+                    return self.client.query_points(
+                        collection_name=self.collection_name,
+                        query=query,
+                        using=None,
+                        limit=max(1, int(top_k)),
+                        query_filter=query_filter,
+                        with_payload=True,
+                        timeout=qdrant_timeout,
+                    )
+                except Exception:
+                    pass
             if timeout_seconds is not None and is_timeout_exception(exc):
                 raise RetrievalTimeoutError(
                     f"vector-store query timed out after {float(timeout_seconds):.3f}s"
                 ) from exc
             raise
 
-        result = self.vector_store.parse_to_query_result(response.points)
-        scored_nodes: list[NodeWithScore] = []
-        similarities = list(result.similarities or [])
-        for idx, node in enumerate(result.nodes or []):
-            score = similarities[idx] if idx < len(similarities) else None
-            scored_nodes.append(NodeWithScore(node=node, score=score))
-        return scored_nodes
+    @staticmethod
+    def _metadata_from_payload(payload: Mapping[str, Any]) -> dict[str, Any]:
+        metadata = {}
+        raw_metadata = payload.get("_node_metadata")
+        if isinstance(raw_metadata, Mapping):
+            metadata.update(dict(raw_metadata))
+        for key, value in payload.items():
+            if key.startswith("_node_"):
+                continue
+            if key in {"_node_id", "_node_text"}:
+                continue
+            metadata.setdefault(key, value)
+        return metadata
 
-    def query(
-            self, 
-            query_text: str,
-            top_k: int = 5,
-            *,
-            filter: Optional[dict] = None,
-            llm: Optional["BaseLLM"] = None,
-    ) -> Response:
-        """Run a similarity query against the vector index.
+    @staticmethod
+    def _source_relationship(parent_id: str | None) -> dict[NodeRelationship, RelatedNodeInfo]:
+        if not parent_id:
+            return {}
+        return {
+            NodeRelationship.SOURCE: RelatedNodeInfo(
+                node_id=str(parent_id),
+                node_type=ObjectType.DOCUMENT,
+                metadata={},
+                hash=None,
+            )
+        }
 
-        Parameters
-        ----------
-        query_text : str
-            Natural-language query string.
-        top_k : int, optional
-            Number of top matching nodes to retrieve. Defaults to ``5``.
-        filter : dict or None, optional
-            Optional metadata filter applied to the vector store query.
-        llm : BaseLLM or None, optional
-            Optional LLM override. If provided, it is used instead of the instance
-            LLM for this call only.
-
-        Returns
-        -------
-        Response
-            LlamaIndex response containing the generated answer and retrieved context.
-
-        Raises
-        ------
-        ValueError
-            If the index is empty.
-        """
-        vector_count = self.client.count(collection_name=self.vector_store.collection_name)
-        if vector_count.count == 0:
-            raise ValueError("Index is empty. Call create_index() first.")
-        
-        chosen_llm = llm or self._llm
-        
-        query_engine = self._index.as_query_engine(
-            llm = chosen_llm,
-            similarity_top_k=top_k,
-            vector_store_kwargs={"filter": filter} if filter else {},
+    def _point_to_node(self, point: Any) -> TextNode:
+        payload = getattr(point, "payload", None) or {}
+        if not isinstance(payload, Mapping):
+            payload = {}
+        metadata = self._metadata_from_payload(payload)
+        node_id = str(payload.get("_node_id") or getattr(point, "id", ""))
+        node_text = str(payload.get("_node_text", "") or "")
+        parent_id = str(metadata.get("parent_id", "") or "")
+        return TextNode(
+            id_=node_id,
+            text=node_text,
+            metadata=metadata,
+            relationships=self._source_relationship(parent_id if parent_id else None),
         )
 
-        return query_engine.query(query_text)
-    
-    def persist(self, **kwargs):
-        """Persist vector store state.
-        
-        For Qdrant, vectors are already persisted by the database itself. StorageContext
-        still calls ``vector_store.persist(...)`` during overall persistence, so this
-        method intentionally acts as a no-op.
-        
-        Parameters
-        ----------
-        **kwargs : Any
-            Value for kwargs.
-        """
-        return None
+    def _points_to_scored_nodes(self, points: list[Any]) -> list[NodeWithScore]:
+        results: list[NodeWithScore] = []
+        for point in list(points or []):
+            score = getattr(point, "score", None)
+            results.append(
+                NodeWithScore(
+                    node=self._point_to_node(point),
+                    score=float(score) if isinstance(score, (int, float)) else None,
+                )
+            )
+        return results
 
 
 def _get_vector_store_kind(cfg):
@@ -828,7 +827,12 @@ def _normalize_vector_store_kind(kind):
         return "qdrant"
     return k
 
-def create_vector_store(config: dict, llm: BaseLLM | None = None, embedder: BaseEmbedder | None = None) -> BaseVectorStore:
+def create_vector_store(
+    config: dict,
+    llm: BaseLLM | None = None,
+    embedder: BaseEmbedder | None = None,
+    sparse_encoder: BaseSparseEncoder | None = None,
+) -> BaseVectorStore:
     """Create a vector store implementation from a configuration mapping.
 
     Parameters
@@ -859,7 +863,12 @@ def create_vector_store(config: dict, llm: BaseLLM | None = None, embedder: Base
     kind = _get_vector_store_kind(config)
     kind = _normalize_vector_store_kind(kind)
     if not kind or kind == "qdrant":
-        return QdrantIndexStore.from_config_dict(config, llm=llm, embedder=embedder)
+        return QdrantIndexStore.from_config_dict(
+            config,
+            llm=llm,
+            embedder=embedder,
+            sparse_encoder=sparse_encoder,
+        )
     raise ValueError(f"Unknown vector store kind: {kind!r}")
 
 

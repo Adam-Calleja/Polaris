@@ -285,6 +285,8 @@ class RAGPipeline:
                         "retrieved_contexts": self._serialize_nodes(retrieved_chunks),
                         "retrieval_elapsed_ms": retrieval_elapsed_ms,
                         "query_constraints": serialized_query_constraints,
+                        "retriever_profile": self._retriever_profile(),
+                        "retriever_fingerprint": self._retriever_fingerprint(),
                         "reranker_profile": self._reranker_profile(),
                         "reranker_fingerprint": self._reranker_fingerprint(),
                     },
@@ -405,6 +407,8 @@ class RAGPipeline:
                     "retrieved_contexts": self._serialize_nodes(resolved_contexts),
                     "raw_retrieved_contexts": self._serialize_nodes(retrieved_chunks),
                     "query_constraints": serialized_query_constraints,
+                    "retriever_profile": self._retriever_profile(),
+                    "retriever_fingerprint": self._retriever_fingerprint(),
                     "reranker_profile": self._reranker_profile(),
                     "reranker_fingerprint": self._reranker_fingerprint(),
                     "retrieval_trace": self._serialize_nodes(retrieved_chunks),
@@ -431,6 +435,8 @@ class RAGPipeline:
             "source_nodes": resolved_contexts,
             "raw_source_nodes": retrieved_chunks,
             "query_constraints": serialized_query_constraints,
+            "retriever_profile": self._retriever_profile(),
+            "retriever_fingerprint": self._retriever_fingerprint(),
             "reranker_profile": self._reranker_profile(),
             "reranker_fingerprint": self._reranker_fingerprint(),
             "retrieval_trace": self._serialize_nodes(retrieved_chunks),
@@ -520,6 +526,22 @@ class RAGPipeline:
                 return None
         return None
 
+    def _retriever_profile(self) -> Mapping[str, Any] | None:
+        """Retriever Profile.
+
+        Returns
+        -------
+        Mapping[str, Any] or None
+            Result of the operation.
+        """
+        getter = getattr(self.retriever, "retriever_profile", None)
+        if callable(getter):
+            try:
+                return getter()
+            except Exception:
+                return None
+        return None
+
     def _reranker_fingerprint(self) -> str | None:
         """Reranker Fingerprint.
         
@@ -529,6 +551,22 @@ class RAGPipeline:
             Result of the operation.
         """
         getter = getattr(self.retriever, "reranker_fingerprint", None)
+        if callable(getter):
+            try:
+                return getter()
+            except Exception:
+                return None
+        return None
+
+    def _retriever_fingerprint(self) -> str | None:
+        """Retriever Fingerprint.
+
+        Returns
+        -------
+        str or None
+            Result of the operation.
+        """
+        getter = getattr(self.retriever, "retriever_fingerprint", None)
         if callable(getter):
             try:
                 return getter()

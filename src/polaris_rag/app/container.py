@@ -297,6 +297,14 @@ class PolarisContainer:
         return create_embedder(section)
 
     @cached_property
+    def sparse_encoder(self) -> Any:
+        """Return the sparse encoder when configured."""
+        from polaris_rag.retrieval.sparse_encoder import create_sparse_encoder
+
+        section = _as_mapping(getattr(self.config, "sparse_encoder", {}))
+        return create_sparse_encoder(section)
+
+    @cached_property
     def vector_store(self) -> Any:
         """Return the vector store client/wrapper.
 
@@ -313,6 +321,7 @@ class PolarisContainer:
                 section,
                 llm=self.generator_llm,
                 embedder=self.embedder,
+                sparse_encoder=self.sparse_encoder,
             )
         except ImportError:
             from polaris_rag.retrieval.vector_store import create_vector_store
@@ -339,6 +348,7 @@ class PolarisContainer:
                     dict(_as_mapping(source_cfg)),
                     llm=self.generator_llm,
                     embedder=self.embedder,
+                    sparse_encoder=self.sparse_encoder,
                 )
         except ImportError:
             from polaris_rag.retrieval.vector_store import create_vector_store
@@ -453,13 +463,22 @@ class PolarisContainer:
         return AuthorityQueryConstraintParser.from_registry_artifact(registry_artifact_path)
 
     @cached_property
+    def sparse_query_expander(self) -> Any:
+        """Return the deterministic sparse-query expander."""
+        from polaris_rag.retrieval.metadata_enricher import resolve_authority_registry_artifact_path
+        from polaris_rag.retrieval.sparse_query import DeterministicSparseQueryExpander
+
+        registry_artifact_path = resolve_authority_registry_artifact_path(self.config)
+        return DeterministicSparseQueryExpander.from_registry_artifact(registry_artifact_path)
+
+    @cached_property
     def retriever_source_settings(self) -> dict[str, dict[str, Any]]:
         """Return validated per-source retriever settings.
 
         Returns
         -------
         dict[str, dict[str, Any]]
-            Mapping keyed by source name with ``top_k``, ``filters`` and ``weight``.
+            Mapping keyed by source name with retrieval settings.
 
         Raises
         ------
@@ -481,6 +500,7 @@ class PolarisContainer:
 
         default_top_k = section.get("top_k")
         default_filters = section.get("filters")
+        default_profile = _as_mapping(section.get("hybrid_profile", {}))
         settings: dict[str, dict[str, Any]] = {}
 
         for idx, item in enumerate(raw_sources):
@@ -493,6 +513,10 @@ class PolarisContainer:
                 "top_k": item_map.get("top_k", default_top_k),
                 "filters": item_map.get("filters", default_filters),
                 "weight": item_map.get("weight", 1.0),
+                "retrieval_profile": _deep_merge(
+                    default_profile,
+                    _as_mapping(item_map.get("retrieval_profile", {})),
+                ),
             }
 
         return settings
@@ -541,7 +565,7 @@ class PolarisContainer:
         section = _as_mapping(self.config.retriever)
         source_kind = section.get("source_type") or "vector"
         source_kind = str(source_kind).strip().lower().replace("-", "_")
-        if source_kind not in {"vector", "hybrid"}:
+        if source_kind not in {"vector", "hybrid", "sparse"}:
             source_kind = "vector"
 
         from polaris_rag.retrieval.retriever_factory import create
@@ -559,6 +583,8 @@ class PolarisContainer:
                 "filters": cfg.get("filters"),
                 "vector_store": stores[source_name],
                 "embedder": self.embedder,
+                "retrieval_profile": cfg.get("retrieval_profile"),
+                "sparse_query_expander": self.sparse_query_expander,
             }
             if source_kind == "hybrid":
                 create_kwargs["llm"] = self.llamaindex_llm
@@ -637,6 +663,19 @@ class PolarisContainer:
                 llm=self.llamaindex_llm,
                 vector_store=self.vector_store,
                 embedder=self.embedder,
+                retrieval_profile=section.get("hybrid_profile"),
+                sparse_query_expander=self.sparse_query_expander,
+            )
+        if kind == "sparse":
+            return create(
+                kind=kind,
+                storage_context=self.storage_context,
+                top_k=section.get("top_k"),
+                filters=section.get("filters"),
+                vector_store=self.vector_store,
+                embedder=self.embedder,
+                retrieval_profile=section.get("hybrid_profile"),
+                sparse_query_expander=self.sparse_query_expander,
             )
         else:
             return create(
@@ -721,6 +760,17 @@ def _as_mapping(obj: Any) -> Mapping[str, Any]:
         return dict(vars(obj))
 
     raise TypeError(f"Expected mapping type but got {type(obj)}")
+
+
+def _deep_merge(base: Mapping[str, Any], override: Mapping[str, Any]) -> dict[str, Any]:
+    """Recursively merge nested mappings."""
+    merged = dict(base)
+    for key, value in override.items():
+        if isinstance(value, Mapping) and isinstance(merged.get(key), Mapping):
+            merged[key] = _deep_merge(_as_mapping(merged.get(key)), value)
+        else:
+            merged[key] = value
+    return merged
 
 
 __all__ = ["PolarisContainer", "build_container"]

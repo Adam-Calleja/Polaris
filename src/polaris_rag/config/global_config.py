@@ -286,6 +286,11 @@ class GlobalConfig:
         return self.raw.get("ingestion", {})
 
     @cached_property
+    def sparse_encoder(self) -> dict:
+        """Return the sparse encoder configuration section."""
+        return self.raw.get("sparse_encoder", {})
+
+    @cached_property
     def tokenization(self) -> dict:
         """Return the tokenization configuration section.
         

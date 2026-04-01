@@ -114,3 +114,39 @@ def test_apply_evaluation_preset_requires_explicit_external_scope_metadata(monke
 
     with pytest.raises(ValueError, match="authority_scope=external_official"):
         experiment_presets.apply_evaluation_preset(cfg, "all_docs_validity_aware")
+
+
+def test_apply_evaluation_preset_hybrid_rrf_sets_hybrid_source_type(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setattr(experiment_presets, "create_reranker", lambda **kwargs: _FakeReranker(kwargs["config"]))
+    cfg = _base_cfg(tmp_path)
+    cfg.raw["retriever"]["hybrid_profile"] = {
+        "dense_top_k": 30,
+        "sparse_top_k": 30,
+        "top_k": 20,
+        "fusion": {"type": "rrf", "rrf_k": 60},
+    }
+
+    resolved, context = experiment_presets.apply_evaluation_preset(cfg, "hybrid_rrf")
+
+    assert resolved.raw["retriever"]["source_type"] == "hybrid"
+    assert context.condition_summary["hybrid_profile"]["fusion"]["rrf_k"] == 60
+    assert context.condition_summary["retriever_profile"]["source_type"] == "hybrid"
+    assert context.condition_summary["retriever_fingerprint"]
+
+
+def test_apply_evaluation_preset_sparse_only_sets_sparse_source_type(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setattr(experiment_presets, "create_reranker", lambda **kwargs: _FakeReranker(kwargs["config"]))
+
+    resolved, context = experiment_presets.apply_evaluation_preset(_base_cfg(tmp_path), "sparse_only")
+
+    assert resolved.raw["retriever"]["source_type"] == "sparse"
+    assert context.condition_summary["source_type"] == "sparse"
+
+
+def test_condition_fingerprint_changes_between_dense_and_hybrid(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setattr(experiment_presets, "create_reranker", lambda **kwargs: _FakeReranker(kwargs["config"]))
+
+    _, dense_context = experiment_presets.apply_evaluation_preset(_base_cfg(tmp_path), "dense_only")
+    _, hybrid_context = experiment_presets.apply_evaluation_preset(_base_cfg(tmp_path), "hybrid_rrf")
+
+    assert dense_context.condition_fingerprint != hybrid_context.condition_fingerprint
