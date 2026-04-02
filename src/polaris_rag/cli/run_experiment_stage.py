@@ -4,7 +4,11 @@ from __future__ import annotations
 
 import argparse
 
-from polaris_rag.evaluation.experiment_automation import run_experiment_stage
+from polaris_rag.evaluation.experiment_automation import (
+    BOTH_PHASE,
+    SUPPORTED_EXECUTION_PHASES,
+    run_experiment_stage,
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -28,6 +32,12 @@ def parse_args() -> argparse.Namespace:
         help="Optional condition name to run. Repeat to run multiple conditions.",
     )
     parser.add_argument(
+        "--phase",
+        choices=sorted(SUPPORTED_EXECUTION_PHASES),
+        default=BOTH_PHASE,
+        help="Execution phase for evaluation-grid stages: prepare, evaluate, or both.",
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Render configs and write the execution record without running subprocesses.",
@@ -43,10 +53,13 @@ def main() -> None:
         manifest_path=args.manifest,
         stage_name=args.stage,
         selected_conditions=list(args.condition) or None,
+        execution_phase=args.phase,
         dry_run=bool(args.dry_run),
     )
     print(f"Stage complete: {record['stage_name']}")
     print(f"Stage type: {record['stage_type']}")
+    if record.get("execution_phase"):
+        print(f"Execution phase: {record['execution_phase']}")
     if record.get("dry_run"):
         print("Execution mode: dry-run")
 

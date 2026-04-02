@@ -28,6 +28,16 @@ DEFAULT_PRIMARY_METRICS: tuple[str, ...] = (
     "context_recall",
     "context_precision_without_reference",
 )
+BOTH_PHASE = "both"
+PREPARE_PHASE = "prepare"
+EVALUATE_PHASE = "evaluate"
+SUPPORTED_EXECUTION_PHASES: frozenset[str] = frozenset(
+    {
+        BOTH_PHASE,
+        PREPARE_PHASE,
+        EVALUATE_PHASE,
+    }
+)
 EVALUATION_GRID_STAGE = "evaluation_grid"
 SPLIT_STAGE = "split"
 TUNE_VALIDITY_STAGE = "tune_validity_reranker"
@@ -100,6 +110,7 @@ def run_experiment_stage(
     manifest_path: str | Path,
     stage_name: str,
     selected_conditions: Sequence[str] | None = None,
+    execution_phase: str = BOTH_PHASE,
     dry_run: bool = False,
 ) -> dict[str, Any]:
     """Execute one manifest stage and persist an execution record."""
@@ -107,6 +118,12 @@ def run_experiment_stage(
     manifest = load_experiment_manifest(manifest_path)
     stage_spec = _resolve_stage_spec(manifest, stage_name)
     stage_type = _stage_type(stage_spec)
+    resolved_phase = _execution_phase(execution_phase)
+    if stage_type != EVALUATION_GRID_STAGE and resolved_phase != BOTH_PHASE:
+        raise ValueError(
+            f"Execution phase {resolved_phase!r} is only supported for "
+            f"{EVALUATION_GRID_STAGE!r} stages."
+        )
     stage_dir = _stage_output_dir(manifest, stage_name)
     stage_dir.mkdir(parents=True, exist_ok=True)
 
@@ -117,6 +134,7 @@ def run_experiment_stage(
             stage_spec=stage_spec,
             stage_dir=stage_dir,
             selected_conditions=selected_conditions,
+            execution_phase=resolved_phase,
             dry_run=dry_run,
         )
     elif stage_type == SPLIT_STAGE:
@@ -147,7 +165,11 @@ def run_experiment_stage(
         raise ValueError(f"Unsupported stage type {stage_type!r}.")
 
     record_path = stage_dir / "stage_execution.json"
-    record_path.write_text(json.dumps(_json_normalize(record), indent=2), encoding="utf-8")
+    payload = json.dumps(_json_normalize(record), indent=2)
+    record_path.write_text(payload, encoding="utf-8")
+    if resolved_phase != BOTH_PHASE:
+        phase_record_path = stage_dir / f"stage_execution.{resolved_phase}.json"
+        phase_record_path.write_text(payload, encoding="utf-8")
     return record
 
 
@@ -240,6 +262,7 @@ def _run_evaluation_grid_stage(
     stage_spec: Mapping[str, Any],
     stage_dir: Path,
     selected_conditions: Sequence[str] | None,
+    execution_phase: str,
     dry_run: bool,
 ) -> dict[str, Any]:
     conditions = _stage_conditions(stage_spec, selected_conditions)
@@ -260,30 +283,42 @@ def _run_evaluation_grid_stage(
             stage_name=stage_name,
             condition_name=condition_name,
         )
-        run_options = _merged_run_options(manifest, stage_spec, condition_spec)
+        run_options = _phase_run_options(
+            _merged_run_options(manifest, stage_spec, condition_spec),
+            execution_phase=execution_phase,
+        )
 
         condition_record = {
             "name": condition_name,
             "slug": condition_slug,
             "config_path": str(config_path),
             "preset": condition_spec.get("preset"),
+            "execution_phase": execution_phase,
             "ingestion_commands": [],
             "runs": [],
         }
 
         ingest_specs = _ingest_specs(condition_spec)
-        for ingest_spec in ingest_specs:
-            command = _build_ingest_command(
-                kind=str(ingest_spec["kind"]),
-                config_path=config_path,
-                ingest_spec=ingest_spec,
-            )
-            condition_record["ingestion_commands"].append(command)
-            _run_command(command, dry_run=dry_run)
+        should_run_ingest = execution_phase in {BOTH_PHASE, PREPARE_PHASE}
+        condition_record["ingestion_skipped"] = bool(ingest_specs) and not should_run_ingest
+        if should_run_ingest:
+            for ingest_spec in ingest_specs:
+                command = _build_ingest_command(
+                    kind=str(ingest_spec["kind"]),
+                    config_path=config_path,
+                    ingest_spec=ingest_spec,
+                )
+                condition_record["ingestion_commands"].append(command)
+                _run_command(command, dry_run=dry_run)
 
         for repeat_index in range(1, repeats + 1):
             run_dir = stage_dir / condition_slug / f"run_{repeat_index:02d}"
             prepared_path = run_dir / "prepared_input.json"
+            if execution_phase == EVALUATE_PHASE and not dry_run and not prepared_path.exists():
+                raise FileNotFoundError(
+                    f"Prepared rows are missing for stage {stage_name!r}, condition "
+                    f"{condition_name!r}, repeat {repeat_index}. Expected {prepared_path}."
+                )
             command = _build_evaluate_command(
                 config_path=config_path,
                 dataset_path=dataset_path,
@@ -297,6 +332,7 @@ def _run_evaluation_grid_stage(
             condition_record["runs"].append(
                 {
                     "repeat_index": repeat_index,
+                    "execution_phase": execution_phase,
                     "output_dir": str(run_dir),
                     "prepared_path": str(prepared_path),
                     "command": command,
@@ -307,6 +343,7 @@ def _run_evaluation_grid_stage(
     return {
         "stage_name": stage_name,
         "stage_type": EVALUATION_GRID_STAGE,
+        "execution_phase": execution_phase,
         "dry_run": dry_run,
         "dataset_path": str(dataset_path),
         "annotations_file": str(annotations_path) if annotations_path else None,
@@ -786,6 +823,14 @@ def _stage_type(stage_spec: Mapping[str, Any]) -> str:
     return stage_type
 
 
+def _execution_phase(raw_value: Any) -> str:
+    phase = str(raw_value or BOTH_PHASE).strip().lower()
+    if phase not in SUPPORTED_EXECUTION_PHASES:
+        supported = ", ".join(sorted(SUPPORTED_EXECUTION_PHASES))
+        raise ValueError(f"Unsupported execution phase {phase!r}. Supported values: {supported}")
+    return phase
+
+
 def _merged_config_overrides(
     manifest: Mapping[str, Any],
     stage_spec: Mapping[str, Any],
@@ -810,6 +855,21 @@ def _merged_run_options(
     merged = _deep_merge(merged, defaults)
     merged = _deep_merge(merged, _as_mapping(stage_spec.get("run_options")))
     merged = _deep_merge(merged, _as_mapping(condition_spec.get("run_options")))
+    return merged
+
+
+def _phase_run_options(
+    run_options: Mapping[str, Any],
+    *,
+    execution_phase: str,
+) -> dict[str, Any]:
+    merged = dict(run_options)
+    if execution_phase == PREPARE_PHASE:
+        merged["prepare_only"] = True
+        merged["reuse_prepared"] = False
+    elif execution_phase == EVALUATE_PHASE:
+        merged["prepare_only"] = False
+        merged["reuse_prepared"] = True
     return merged
 
 
@@ -1047,9 +1107,13 @@ def _utc_timestamp() -> str:
 
 
 __all__ = [
+    "BOTH_PHASE",
     "EVALUATION_GRID_STAGE",
+    "EVALUATE_PHASE",
     "BENCHMARK_ANALYSIS_STAGE",
+    "PREPARE_PHASE",
     "SPLIT_STAGE",
+    "SUPPORTED_EXECUTION_PHASES",
     "SUPPORTED_STAGE_TYPES",
     "TUNE_VALIDITY_STAGE",
     "load_experiment_manifest",

@@ -16,6 +16,7 @@ import argparse
 from collections import Counter
 from contextlib import contextmanager
 from datetime import datetime
+import hashlib
 import json
 import logging
 import math
@@ -260,6 +261,68 @@ def _resolve_retriever_metadata(cfg: Any) -> tuple[dict[str, Any] | None, str | 
     return None, None
 
 
+def _stable_fingerprint(value: Mapping[str, Any]) -> str:
+    """Return a stable fingerprint for a JSON-serializable mapping."""
+    payload = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def _is_secret_runtime_key(key: str) -> bool:
+    normalized = str(key or "").strip().lower().replace("-", "_")
+    if not normalized:
+        return False
+    secret_markers = ("api_key", "token", "secret", "password", "authorization")
+    return any(marker in normalized for marker in secret_markers)
+
+
+def _sanitize_runtime_value(value: Any) -> Any:
+    if isinstance(value, Mapping):
+        sanitized: dict[str, Any] = {}
+        for key, inner in value.items():
+            key_text = str(key)
+            if _is_secret_runtime_key(key_text):
+                continue
+            sanitized[key_text] = _sanitize_runtime_value(inner)
+        return sanitized
+    if isinstance(value, list):
+        return [_sanitize_runtime_value(item) for item in value]
+    if isinstance(value, tuple):
+        return [_sanitize_runtime_value(item) for item in value]
+    return value
+
+
+def _resolve_generator_metadata(
+    cfg: Any,
+    *,
+    generation_mode: str,
+    generation_cfg: Mapping[str, Any],
+    args: argparse.Namespace,
+) -> tuple[dict[str, Any] | None, str | None]:
+    if generation_mode == "api":
+        query_api_url = str(
+            getattr(args, "query_api_url", None) or generation_cfg.get("api_url") or ""
+        ).strip()
+        timeout_raw = getattr(args, "query_api_timeout", None)
+        timeout_seconds = (
+            float(timeout_raw)
+            if timeout_raw is not None
+            else _as_float(generation_cfg.get("timeout_seconds"), 600.0)
+        )
+        profile = {
+            "mode": generation_mode,
+            "query_api_url": query_api_url or None,
+            "query_api_timeout": timeout_seconds,
+        }
+    else:
+        profile = {
+            "mode": generation_mode,
+            "generator_llm": _sanitize_runtime_value(_as_mapping(getattr(cfg, "generator_llm", {}))),
+            "llm_generate": _sanitize_runtime_value(_as_mapping(generation_cfg.get("llm_generate", {}))),
+        }
+
+    return profile, _stable_fingerprint(profile)
+
+
 def _prepared_rows_retriever_fingerprint(rows: list[dict[str, Any]]) -> tuple[str | None, int]:
     """Return the unique retriever fingerprint recorded in prepared rows."""
     fingerprints: set[str] = set()
@@ -306,6 +369,56 @@ def _assert_prepared_rows_match_retriever(
     if observed_fingerprint != expected_fingerprint:
         raise ValueError(
             "Prepared rows were generated with a different retriever configuration. "
+            "Regenerate prepared rows before running this evaluation."
+        )
+
+
+def _prepared_rows_generator_fingerprint(rows: list[dict[str, Any]]) -> tuple[str | None, int]:
+    """Return the unique generator fingerprint recorded in prepared rows."""
+    fingerprints: set[str] = set()
+    missing = 0
+    for row in rows:
+        metadata = _row_metadata(row)
+        value = metadata.get("generator_fingerprint")
+        text = str(value or "").strip()
+        if text:
+            fingerprints.add(text)
+        else:
+            missing += 1
+
+    if not fingerprints:
+        return None, missing
+    if len(fingerprints) != 1:
+        raise ValueError(
+            "Prepared rows contain multiple generator fingerprints. Regenerate prepared rows "
+            "before running this evaluation."
+        )
+    return next(iter(fingerprints)), missing
+
+
+def _assert_prepared_rows_match_generator(
+    rows: list[dict[str, Any]],
+    *,
+    expected_fingerprint: str | None,
+) -> None:
+    """Assert that prepared rows match the active generator configuration."""
+    if not expected_fingerprint:
+        return
+
+    observed_fingerprint, missing_count = _prepared_rows_generator_fingerprint(rows)
+    if observed_fingerprint is None:
+        raise ValueError(
+            "Prepared rows do not record a generator fingerprint. Regenerate prepared rows "
+            "with the current generator configuration before reuse."
+        )
+    if missing_count > 0:
+        raise ValueError(
+            "Prepared rows are missing generator fingerprints on some rows. Regenerate prepared rows "
+            "with the current generator configuration before reuse."
+        )
+    if observed_fingerprint != expected_fingerprint:
+        raise ValueError(
+            "Prepared rows were generated with a different generator configuration. "
             "Regenerate prepared rows before running this evaluation."
         )
 
@@ -1691,6 +1804,12 @@ def _resolve_prepared_rows(
         evaluation_policy=evaluation_policy,
         generation_mode=generation_mode,
     )
+    generator_profile, generator_fingerprint = _resolve_generator_metadata(
+        cfg,
+        generation_mode=generation_mode,
+        generation_cfg=generation_cfg,
+        args=args,
+    )
     retriever_profile, retriever_fingerprint = _resolve_retriever_metadata(cfg)
     reranker_profile, reranker_fingerprint = _resolve_reranker_metadata(cfg)
 
@@ -1714,6 +1833,8 @@ def _resolve_prepared_rows(
             "jitter_seconds": float(retry_policy.jitter_seconds),
             "retry_on_empty_response": bool(retry_policy.retry_on_empty_response),
         },
+        "generator_profile": generator_profile,
+        "generator_fingerprint": generator_fingerprint,
         "retriever_profile": retriever_profile,
         "retriever_fingerprint": retriever_fingerprint,
         "reranker_profile": reranker_profile,
@@ -1757,6 +1878,10 @@ def _resolve_prepared_rows(
         _assert_prepared_rows_match_reranker(
             rows,
             expected_fingerprint=reranker_fingerprint,
+        )
+        _assert_prepared_rows_match_generator(
+            rows,
+            expected_fingerprint=generator_fingerprint,
         )
         _assert_prepared_rows_match_retriever(
             rows,
@@ -1846,6 +1971,8 @@ def _resolve_prepared_rows(
                 trace_factory=request_trace_factory,
                 policy=evaluation_policy,
                 budget_ms=deadlines.server_total_ms,
+                generator_profile=generator_profile,
+                generator_fingerprint=generator_fingerprint,
                 retriever_profile=retriever_profile,
                 retriever_fingerprint=retriever_fingerprint,
                 reranker_profile=reranker_profile,
@@ -1871,6 +1998,8 @@ def _resolve_prepared_rows(
                 trace_factory=request_trace_factory,
                 policy=evaluation_policy,
                 budget_ms=deadlines.server_total_ms,
+                generator_profile=generator_profile,
+                generator_fingerprint=generator_fingerprint,
                 retriever_profile=retriever_profile,
                 retriever_fingerprint=retriever_fingerprint,
                 reranker_profile=reranker_profile,

@@ -4,6 +4,7 @@ import csv
 import json
 from pathlib import Path
 
+import pytest
 import yaml
 
 from polaris_rag.evaluation import experiment_automation as automation
@@ -147,6 +148,177 @@ def test_run_experiment_stage_builds_ingest_and_eval_commands(tmp_path: Path, mo
     assert "--no-progress" in calls[1]
     assert calls[1][calls[1].index("--preset") + 1] == "docs_only"
     assert calls[2][calls[2].index("--output-dir") + 1].endswith("run_02")
+
+
+def test_run_experiment_stage_prepare_phase_builds_prepare_only_commands(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    (repo_root / "scripts").mkdir()
+    base_config = tmp_path / "config.yaml"
+    base_config.write_text("prompt_name: test\n", encoding="utf-8")
+
+    manifest_path = _write_manifest(
+        tmp_path,
+        {
+            "artifacts_root": "artifacts/experiments",
+            "base_config": "config.yaml",
+            "defaults": {
+                "run_options": {
+                    "generation_mode": "pipeline",
+                    "generation_workers": 1,
+                }
+            },
+            "stages": {
+                "stage0a_generator_selection": {
+                    "type": "evaluation_grid",
+                    "dataset_path": "dev.jsonl",
+                    "repeats": 1,
+                    "conditions": [
+                        {
+                            "name": "dense_baseline",
+                            "preset": "dense_only",
+                            "run_options": {
+                                "reuse_prepared": True,
+                            },
+                            "ingest": {
+                                "kind": "html",
+                                "homepage": "https://docs.example.org",
+                            },
+                        }
+                    ],
+                }
+            },
+        },
+    )
+
+    calls: list[list[str]] = []
+
+    def _fake_run(command, check, cwd):
+        calls.append(list(command))
+        assert check is True
+        assert Path(cwd) == repo_root
+        return None
+
+    monkeypatch.setattr(automation, "REPO_ROOT", repo_root)
+    monkeypatch.setattr(automation.subprocess, "run", _fake_run)
+
+    record = automation.run_experiment_stage(
+        manifest_path=manifest_path,
+        stage_name="stage0a_generator_selection",
+        execution_phase="prepare",
+        dry_run=False,
+    )
+
+    assert record["execution_phase"] == "prepare"
+    assert len(calls) == 2
+    assert "ingest_html_documents.py" in calls[0][1]
+    assert "--prepare-only" in calls[1]
+    assert "--reuse-prepared" not in calls[1]
+    assert record["conditions"][0]["ingestion_skipped"] is False
+    assert record["conditions"][0]["runs"][0]["execution_phase"] == "prepare"
+
+
+def test_run_experiment_stage_evaluate_phase_reuses_prepared_rows(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    (repo_root / "scripts").mkdir()
+    base_config = tmp_path / "config.yaml"
+    base_config.write_text("prompt_name: test\n", encoding="utf-8")
+
+    manifest_path = _write_manifest(
+        tmp_path,
+        {
+            "artifacts_root": "artifacts/experiments",
+            "base_config": "config.yaml",
+            "stages": {
+                "stage4_source_ablation": {
+                    "type": "evaluation_grid",
+                    "dataset_path": "test.jsonl",
+                    "repeats": 1,
+                    "conditions": [
+                        {
+                            "name": "docs_only",
+                            "preset": "docs_only",
+                            "ingest": {
+                                "kind": "html",
+                                "homepage": "https://docs.example.org",
+                            },
+                        }
+                    ],
+                }
+            },
+        },
+    )
+
+    stage_root = tmp_path / "artifacts" / "experiments" / "stage4_source_ablation"
+    prepared_path = stage_root / "docs_only" / "run_01" / "prepared_input.json"
+    prepared_path.parent.mkdir(parents=True, exist_ok=True)
+    prepared_path.write_text("[]", encoding="utf-8")
+
+    calls: list[list[str]] = []
+
+    def _fake_run(command, check, cwd):
+        calls.append(list(command))
+        assert check is True
+        assert Path(cwd) == repo_root
+        return None
+
+    monkeypatch.setattr(automation, "REPO_ROOT", repo_root)
+    monkeypatch.setattr(automation.subprocess, "run", _fake_run)
+
+    record = automation.run_experiment_stage(
+        manifest_path=manifest_path,
+        stage_name="stage4_source_ablation",
+        execution_phase="evaluate",
+        dry_run=False,
+    )
+
+    assert record["execution_phase"] == "evaluate"
+    assert len(calls) == 1
+    assert "evaluate_rag.py" in calls[0][1]
+    assert "--reuse-prepared" in calls[0]
+    assert "--prepare-only" not in calls[0]
+    assert record["conditions"][0]["ingestion_skipped"] is True
+
+
+def test_run_experiment_stage_evaluate_phase_requires_existing_prepared_rows(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    base_config = tmp_path / "config.yaml"
+    base_config.write_text("prompt_name: test\n", encoding="utf-8")
+    manifest_path = _write_manifest(
+        tmp_path,
+        {
+            "artifacts_root": "artifacts/experiments",
+            "base_config": "config.yaml",
+            "stages": {
+                "stage4_source_ablation": {
+                    "type": "evaluation_grid",
+                    "dataset_path": "test.jsonl",
+                    "conditions": [
+                        {"name": "docs_only", "preset": "docs_only"},
+                    ],
+                }
+            },
+        },
+    )
+
+    monkeypatch.setattr(automation, "REPO_ROOT", tmp_path)
+
+    with pytest.raises(FileNotFoundError, match="Prepared rows are missing"):
+        automation.run_experiment_stage(
+            manifest_path=manifest_path,
+            stage_name="stage4_source_ablation",
+            execution_phase="evaluate",
+            dry_run=False,
+        )
 
 
 def test_summarize_experiment_stage_writes_leaderboard_and_aggregates(tmp_path: Path) -> None:

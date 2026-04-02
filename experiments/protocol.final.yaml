@@ -1,0 +1,1043 @@
+# Final dissertation manifest.
+#
+# This version intentionally removes the dedicated stability-check stages and
+# uses 3 repeated runs for every evaluation-grid stage.
+#
+# Important:
+# - Update the frozen defaults block after Stage 0A, Stage 0B, Stage 0C, Stage 1,
+#   and Stage 2 before you run the later test stages.
+# - The defaults below are a concrete starting point, not a claim that those
+#   selections have already won.
+
+artifacts_root: "../artifacts/experiments/protocol_final_3runs"
+base_config: "../config/config.yaml"
+
+# Reusable config fragments. These extra top-level keys are ignored by the
+# automation loader but are useful through YAML anchors.
+generator_candidates:
+  llama33: &llama33_generator
+    generator_llm:
+      type: "openai_like"
+      model_name: "meta-llama/Llama-3.3-70B-Instruct"
+      api_base: "http://vllm:8080/v1"
+      api_key: "${POLARIS_LLM_API_KEY}"
+      request_timeout: 90
+      max_retries: 1
+      model_kwargs:
+        max_tokens: 1024
+        temperature: 0
+        top_p: 1.0
+        stop_list: ["\nUser:", "\n\nUser:"]
+  mixtral8x22b: &mixtral8x22b_generator
+    generator_llm:
+      type: "openai_like"
+      model_name: "mistralai/Mixtral-8x22B-Instruct-v0.1"
+      api_base: "http://vllm:8080/v1"
+      api_key: "${POLARIS_LLM_API_KEY}"
+      request_timeout: 90
+      max_retries: 1
+      model_kwargs:
+        max_tokens: 1024
+        temperature: 0
+        top_p: 1.0
+        stop_list: ["\nUser:", "\n\nUser:"]
+  mistral_large_2407: &mistral_large_2407_generator
+    generator_llm:
+      type: "openai_like"
+      model_name: "mistralai/Mistral-Large-Instruct-2407"
+      api_base: "http://vllm:8080/v1"
+      api_key: "${POLARIS_LLM_API_KEY}"
+      request_timeout: 90
+      max_retries: 1
+      model_kwargs:
+        max_tokens: 1024
+        temperature: 0
+        top_p: 1.0
+        stop_list: ["\nUser:", "\n\nUser:"]
+
+prompt_configs:
+  generic_prompt: &generic_prompt_config
+    prompts:
+      - "pkg:polaris_rag.prompts:hpc_rag_assistant_v1.json"
+      - "pkg:polaris_rag.prompts:hpc_rag_assistant_v3_ticket_refs.json"
+      - "pkg:polaris_rag.prompts:hpc_ticket_summarizer_v1.json"
+    prompt_name: "hpc_rag_assistant"
+    mlflow:
+      prompt_registry:
+        enabled: false
+  ticket_prompt: &ticket_prompt_config
+    prompts:
+      - "pkg:polaris_rag.prompts:hpc_rag_assistant_v1.json"
+      - "pkg:polaris_rag.prompts:hpc_rag_assistant_v3_ticket_refs.json"
+      - "pkg:polaris_rag.prompts:hpc_ticket_summarizer_v1.json"
+    prompt_name: "hpc_rag_assistant_ticket_refs"
+    mlflow:
+      prompt_registry:
+        enabled: false
+
+selected_collections: &selected_vector_store_collections
+  docs:
+    collection_name: "exp_docs_cs800_ov80"
+  tickets:
+    collection_name: "exp_tickets_cs800_ov80"
+  external_docs:
+    collection_name: "exp_external_docs_selected"
+
+selected_chunking_sources: &selected_chunking_sources
+  docs:
+    strategy: "markdown_token"
+    chunk_size_tokens: 800
+    overlap_tokens: 80
+  tickets:
+    strategy: "jira_turns_token"
+    chunk_size_tokens: 800
+    overlap_tokens: 80
+  external_docs:
+    strategy: "markdown_token"
+    chunk_size_tokens: 800
+    overlap_tokens: 80
+
+retriever_budgets:
+  budget_5_4: &budget_5_4
+    top_k: 5
+    final_top_k: 4
+    hybrid_profile:
+      dense_top_k: 5
+      sparse_top_k: 5
+      top_k: 5
+      fusion:
+        type: "rrf"
+        rrf_k: 60
+        signal_weights:
+          dense: 1.0
+          sparse: 1.0
+    sources:
+      - name: "docs"
+        top_k: 5
+        weight: 1.0
+        filters: {}
+      - name: "tickets"
+        top_k: 5
+        weight: 1.0
+        filters: {}
+  budget_5_6: &budget_5_6
+    top_k: 5
+    final_top_k: 6
+    hybrid_profile:
+      dense_top_k: 5
+      sparse_top_k: 5
+      top_k: 5
+      fusion:
+        type: "rrf"
+        rrf_k: 60
+        signal_weights:
+          dense: 1.0
+          sparse: 1.0
+    sources:
+      - name: "docs"
+        top_k: 5
+        weight: 1.0
+        filters: {}
+      - name: "tickets"
+        top_k: 5
+        weight: 1.0
+        filters: {}
+  budget_5_8: &budget_5_8
+    top_k: 5
+    final_top_k: 8
+    hybrid_profile:
+      dense_top_k: 5
+      sparse_top_k: 5
+      top_k: 5
+      fusion:
+        type: "rrf"
+        rrf_k: 60
+        signal_weights:
+          dense: 1.0
+          sparse: 1.0
+    sources:
+      - name: "docs"
+        top_k: 5
+        weight: 1.0
+        filters: {}
+      - name: "tickets"
+        top_k: 5
+        weight: 1.0
+        filters: {}
+  budget_8_4: &budget_8_4
+    top_k: 8
+    final_top_k: 4
+    hybrid_profile:
+      dense_top_k: 8
+      sparse_top_k: 8
+      top_k: 8
+      fusion:
+        type: "rrf"
+        rrf_k: 60
+        signal_weights:
+          dense: 1.0
+          sparse: 1.0
+    sources:
+      - name: "docs"
+        top_k: 8
+        weight: 1.0
+        filters: {}
+      - name: "tickets"
+        top_k: 8
+        weight: 1.0
+        filters: {}
+  budget_8_6: &budget_8_6
+    top_k: 8
+    final_top_k: 6
+    hybrid_profile:
+      dense_top_k: 8
+      sparse_top_k: 8
+      top_k: 8
+      fusion:
+        type: "rrf"
+        rrf_k: 60
+        signal_weights:
+          dense: 1.0
+          sparse: 1.0
+    sources:
+      - name: "docs"
+        top_k: 8
+        weight: 1.0
+        filters: {}
+      - name: "tickets"
+        top_k: 8
+        weight: 1.0
+        filters: {}
+  budget_8_8: &budget_8_8
+    top_k: 8
+    final_top_k: 8
+    hybrid_profile:
+      dense_top_k: 8
+      sparse_top_k: 8
+      top_k: 8
+      fusion:
+        type: "rrf"
+        rrf_k: 60
+        signal_weights:
+          dense: 1.0
+          sparse: 1.0
+    sources:
+      - name: "docs"
+        top_k: 8
+        weight: 1.0
+        filters: {}
+      - name: "tickets"
+        top_k: 8
+        weight: 1.0
+        filters: {}
+  budget_12_4: &budget_12_4
+    top_k: 12
+    final_top_k: 4
+    hybrid_profile:
+      dense_top_k: 12
+      sparse_top_k: 12
+      top_k: 12
+      fusion:
+        type: "rrf"
+        rrf_k: 60
+        signal_weights:
+          dense: 1.0
+          sparse: 1.0
+    sources:
+      - name: "docs"
+        top_k: 12
+        weight: 1.0
+        filters: {}
+      - name: "tickets"
+        top_k: 12
+        weight: 1.0
+        filters: {}
+  budget_12_6: &budget_12_6
+    top_k: 12
+    final_top_k: 6
+    hybrid_profile:
+      dense_top_k: 12
+      sparse_top_k: 12
+      top_k: 12
+      fusion:
+        type: "rrf"
+        rrf_k: 60
+        signal_weights:
+          dense: 1.0
+          sparse: 1.0
+    sources:
+      - name: "docs"
+        top_k: 12
+        weight: 1.0
+        filters: {}
+      - name: "tickets"
+        top_k: 12
+        weight: 1.0
+        filters: {}
+  budget_12_8: &budget_12_8
+    top_k: 12
+    final_top_k: 8
+    hybrid_profile:
+      dense_top_k: 12
+      sparse_top_k: 12
+      top_k: 12
+      fusion:
+        type: "rrf"
+        rrf_k: 60
+        signal_weights:
+          dense: 1.0
+          sparse: 1.0
+    sources:
+      - name: "docs"
+        top_k: 12
+        weight: 1.0
+        filters: {}
+      - name: "tickets"
+        top_k: 12
+        weight: 1.0
+        filters: {}
+
+ingest_specs:
+  baseline_docs: &baseline_docs_ingest
+    kind: "html"
+    homepage: "https://docs.hpc.cam.ac.uk/hpc/index.html"
+    ingest_internal_links: true
+    source: "docs"
+    qdrant_collection_name: "exp_docs_cs800_ov80"
+    persist_dir: "../data/storage/exp_docs_cs800_ov80"
+    chunking_strategy: "markdown_token"
+    chunk_size_tokens: 800
+    chunk_overlap_tokens: 80
+  baseline_tickets: &baseline_tickets_ingest
+    kind: "jira"
+    source: "tickets"
+    qdrant_collection_name: "exp_tickets_cs800_ov80"
+    persist_dir: "../data/storage/exp_tickets_cs800_ov80"
+    start_date: "2021-11-01"
+    chunking_strategy: "jira_turns_token"
+    chunk_size_tokens: 800
+    chunk_overlap_tokens: 80
+  external_docs: &external_docs_ingest
+    kind: "external_docs"
+    source_register_file: "../data/authority/source_register.external_v1.yaml"
+    source: "external_docs"
+    qdrant_collection_name: "exp_external_docs_selected"
+    persist_dir: "../data/storage/exp_external_docs_selected"
+    chunking_strategy: "markdown_token"
+    chunk_size_tokens: 800
+    chunk_overlap_tokens: 80
+
+defaults:
+  config_overrides:
+    <<: [*llama33_generator, *ticket_prompt_config]
+    vector_stores: *selected_vector_store_collections
+    storage_context:
+      persist_dir: "../data/storage/exp_protocol_selected"
+    ingestion:
+      chunking:
+        sources: *selected_chunking_sources
+      jira:
+        start_date: "2021-11-01"
+    retriever:
+      source_type: "vector"
+      <<: *budget_5_8
+      rerank:
+        weights_path: "config/weights/validity_reranker.protocol.yaml"
+    evaluation:
+      generation:
+        mode: "pipeline"
+        workers: 1
+      dataset:
+        reuse_prepared: false
+  run_options:
+    metrics:
+      - "factual_correctness"
+      - "faithfulness"
+      - "context_recall"
+      - "context_precision_without_reference"
+      - "retrieval_recall_at_k"
+      - "retrieval_ndcg_at_10"
+    generation_mode: "pipeline"
+    generation_workers: 1
+    evaluation_policy: "official"
+    no_progress: true
+
+stages:
+  split_dev_test:
+    type: "split"
+    dataset_file: "../data/test/ragas_one_hop_eval_dataset_final.jsonl"
+    annotations_file: "../data/test/benchmark_annotations_final.csv"
+    test_fraction: 0.30
+    random_state: 42
+    dev_output_file: "../data/test/ragas_one_hop_eval_dataset_final.dev.jsonl"
+    test_output_file: "../data/test/ragas_one_hop_eval_dataset_final.test.jsonl"
+    test_ids_output_file: "../data/test/ragas_one_hop_eval_dataset_final.test_ids.txt"
+    split_report_output_file: "../data/test/ragas_one_hop_eval_dataset_final.split_report.json"
+
+  stage0a_generator_selection:
+    type: "evaluation_grid"
+    dataset_path: "../data/test/ragas_one_hop_eval_dataset_final.dev.jsonl"
+    annotations_file: "../data/test/benchmark_annotations_final.csv"
+    repeats: 3
+    config_overrides:
+      vector_stores:
+        docs:
+          collection_name: "exp_docs_cs800_ov80"
+        tickets:
+          collection_name: "exp_tickets_cs800_ov80"
+      storage_context:
+        persist_dir: "../data/storage/exp_stage0a_baseline"
+      ingestion:
+        chunking:
+          sources:
+            docs:
+              strategy: "markdown_token"
+              chunk_size_tokens: 800
+              overlap_tokens: 80
+            tickets:
+              strategy: "jira_turns_token"
+              chunk_size_tokens: 800
+              overlap_tokens: 80
+      retriever:
+        source_type: "vector"
+        <<: *budget_5_8
+    conditions:
+      - name: "llama33_naive_combined"
+        preset: "naive_combined"
+        ingest:
+          - *baseline_docs_ingest
+          - *baseline_tickets_ingest
+        config_overrides:
+          <<: *llama33_generator
+      - name: "mixtral8x22b_naive_combined"
+        preset: "naive_combined"
+        ingest:
+          - *baseline_docs_ingest
+          - *baseline_tickets_ingest
+        config_overrides:
+          <<: *mixtral8x22b_generator
+      - name: "mistral_large_2407_naive_combined"
+        preset: "naive_combined"
+        ingest:
+          - *baseline_docs_ingest
+          - *baseline_tickets_ingest
+        config_overrides:
+          <<: *mistral_large_2407_generator
+
+  stage0b1_docs_chunking:
+    type: "evaluation_grid"
+    dataset_path: "../data/test/ragas_one_hop_eval_dataset_final.dev.jsonl"
+    annotations_file: "../data/test/benchmark_annotations_final.csv"
+    repeats: 3
+    config_overrides:
+      retriever:
+        source_type: "vector"
+        <<: *budget_5_8
+    conditions:
+      - name: "docs_cs400_ov0"
+        preset: "docs_only"
+        ingest:
+          kind: "html"
+          homepage: "https://docs.hpc.cam.ac.uk/hpc/index.html"
+          ingest_internal_links: true
+          source: "docs"
+          qdrant_collection_name: "exp_docs_cs400_ov0"
+          persist_dir: "../data/storage/exp_docs_cs400_ov0"
+          chunking_strategy: "markdown_token"
+          chunk_size_tokens: 400
+          chunk_overlap_tokens: 0
+        config_overrides:
+          vector_stores:
+            docs:
+              collection_name: "exp_docs_cs400_ov0"
+          ingestion:
+            chunking:
+              sources:
+                docs:
+                  strategy: "markdown_token"
+                  chunk_size_tokens: 400
+                  overlap_tokens: 0
+      - name: "docs_cs400_ov80"
+        preset: "docs_only"
+        ingest:
+          kind: "html"
+          homepage: "https://docs.hpc.cam.ac.uk/hpc/index.html"
+          ingest_internal_links: true
+          source: "docs"
+          qdrant_collection_name: "exp_docs_cs400_ov80"
+          persist_dir: "../data/storage/exp_docs_cs400_ov80"
+          chunking_strategy: "markdown_token"
+          chunk_size_tokens: 400
+          chunk_overlap_tokens: 80
+        config_overrides:
+          vector_stores:
+            docs:
+              collection_name: "exp_docs_cs400_ov80"
+          ingestion:
+            chunking:
+              sources:
+                docs:
+                  strategy: "markdown_token"
+                  chunk_size_tokens: 400
+                  overlap_tokens: 80
+      - name: "docs_cs800_ov0"
+        preset: "docs_only"
+        ingest:
+          kind: "html"
+          homepage: "https://docs.hpc.cam.ac.uk/hpc/index.html"
+          ingest_internal_links: true
+          source: "docs"
+          qdrant_collection_name: "exp_docs_cs800_ov0"
+          persist_dir: "../data/storage/exp_docs_cs800_ov0"
+          chunking_strategy: "markdown_token"
+          chunk_size_tokens: 800
+          chunk_overlap_tokens: 0
+        config_overrides:
+          vector_stores:
+            docs:
+              collection_name: "exp_docs_cs800_ov0"
+          ingestion:
+            chunking:
+              sources:
+                docs:
+                  strategy: "markdown_token"
+                  chunk_size_tokens: 800
+                  overlap_tokens: 0
+      - name: "docs_cs800_ov80"
+        preset: "docs_only"
+        ingest:
+          kind: "html"
+          homepage: "https://docs.hpc.cam.ac.uk/hpc/index.html"
+          ingest_internal_links: true
+          source: "docs"
+          qdrant_collection_name: "exp_docs_cs800_ov80"
+          persist_dir: "../data/storage/exp_docs_cs800_ov80"
+          chunking_strategy: "markdown_token"
+          chunk_size_tokens: 800
+          chunk_overlap_tokens: 80
+        config_overrides:
+          vector_stores:
+            docs:
+              collection_name: "exp_docs_cs800_ov80"
+          ingestion:
+            chunking:
+              sources:
+                docs:
+                  strategy: "markdown_token"
+                  chunk_size_tokens: 800
+                  overlap_tokens: 80
+      - name: "docs_cs1200_ov0"
+        preset: "docs_only"
+        ingest:
+          kind: "html"
+          homepage: "https://docs.hpc.cam.ac.uk/hpc/index.html"
+          ingest_internal_links: true
+          source: "docs"
+          qdrant_collection_name: "exp_docs_cs1200_ov0"
+          persist_dir: "../data/storage/exp_docs_cs1200_ov0"
+          chunking_strategy: "markdown_token"
+          chunk_size_tokens: 1200
+          chunk_overlap_tokens: 0
+        config_overrides:
+          vector_stores:
+            docs:
+              collection_name: "exp_docs_cs1200_ov0"
+          ingestion:
+            chunking:
+              sources:
+                docs:
+                  strategy: "markdown_token"
+                  chunk_size_tokens: 1200
+                  overlap_tokens: 0
+      - name: "docs_cs1200_ov80"
+        preset: "docs_only"
+        ingest:
+          kind: "html"
+          homepage: "https://docs.hpc.cam.ac.uk/hpc/index.html"
+          ingest_internal_links: true
+          source: "docs"
+          qdrant_collection_name: "exp_docs_cs1200_ov80"
+          persist_dir: "../data/storage/exp_docs_cs1200_ov80"
+          chunking_strategy: "markdown_token"
+          chunk_size_tokens: 1200
+          chunk_overlap_tokens: 80
+        config_overrides:
+          vector_stores:
+            docs:
+              collection_name: "exp_docs_cs1200_ov80"
+          ingestion:
+            chunking:
+              sources:
+                docs:
+                  strategy: "markdown_token"
+                  chunk_size_tokens: 1200
+                  overlap_tokens: 80
+
+  stage0b2_ticket_chunking:
+    type: "evaluation_grid"
+    dataset_path: "../data/test/ragas_one_hop_eval_dataset_final.dev.jsonl"
+    annotations_file: "../data/test/benchmark_annotations_final.csv"
+    repeats: 3
+    config_overrides:
+      retriever:
+        source_type: "vector"
+        <<: *budget_5_8
+    conditions:
+      - name: "tickets_cs600_ov0"
+        preset: "tickets_only"
+        ingest:
+          kind: "jira"
+          source: "tickets"
+          qdrant_collection_name: "exp_tickets_cs600_ov0"
+          persist_dir: "../data/storage/exp_tickets_cs600_ov0"
+          start_date: "2021-11-01"
+          chunking_strategy: "jira_turns_token"
+          chunk_size_tokens: 600
+          chunk_overlap_tokens: 0
+        config_overrides:
+          vector_stores:
+            tickets:
+              collection_name: "exp_tickets_cs600_ov0"
+          ingestion:
+            chunking:
+              sources:
+                tickets:
+                  strategy: "jira_turns_token"
+                  chunk_size_tokens: 600
+                  overlap_tokens: 0
+      - name: "tickets_cs600_ov80"
+        preset: "tickets_only"
+        ingest:
+          kind: "jira"
+          source: "tickets"
+          qdrant_collection_name: "exp_tickets_cs600_ov80"
+          persist_dir: "../data/storage/exp_tickets_cs600_ov80"
+          start_date: "2021-11-01"
+          chunking_strategy: "jira_turns_token"
+          chunk_size_tokens: 600
+          chunk_overlap_tokens: 80
+        config_overrides:
+          vector_stores:
+            tickets:
+              collection_name: "exp_tickets_cs600_ov80"
+          ingestion:
+            chunking:
+              sources:
+                tickets:
+                  strategy: "jira_turns_token"
+                  chunk_size_tokens: 600
+                  overlap_tokens: 80
+      - name: "tickets_cs800_ov0"
+        preset: "tickets_only"
+        ingest:
+          kind: "jira"
+          source: "tickets"
+          qdrant_collection_name: "exp_tickets_cs800_ov0"
+          persist_dir: "../data/storage/exp_tickets_cs800_ov0"
+          start_date: "2021-11-01"
+          chunking_strategy: "jira_turns_token"
+          chunk_size_tokens: 800
+          chunk_overlap_tokens: 0
+        config_overrides:
+          vector_stores:
+            tickets:
+              collection_name: "exp_tickets_cs800_ov0"
+          ingestion:
+            chunking:
+              sources:
+                tickets:
+                  strategy: "jira_turns_token"
+                  chunk_size_tokens: 800
+                  overlap_tokens: 0
+      - name: "tickets_cs800_ov80"
+        preset: "tickets_only"
+        ingest:
+          kind: "jira"
+          source: "tickets"
+          qdrant_collection_name: "exp_tickets_cs800_ov80"
+          persist_dir: "../data/storage/exp_tickets_cs800_ov80"
+          start_date: "2021-11-01"
+          chunking_strategy: "jira_turns_token"
+          chunk_size_tokens: 800
+          chunk_overlap_tokens: 80
+        config_overrides:
+          vector_stores:
+            tickets:
+              collection_name: "exp_tickets_cs800_ov80"
+          ingestion:
+            chunking:
+              sources:
+                tickets:
+                  strategy: "jira_turns_token"
+                  chunk_size_tokens: 800
+                  overlap_tokens: 80
+      - name: "tickets_cs1000_ov0"
+        preset: "tickets_only"
+        ingest:
+          kind: "jira"
+          source: "tickets"
+          qdrant_collection_name: "exp_tickets_cs1000_ov0"
+          persist_dir: "../data/storage/exp_tickets_cs1000_ov0"
+          start_date: "2021-11-01"
+          chunking_strategy: "jira_turns_token"
+          chunk_size_tokens: 1000
+          chunk_overlap_tokens: 0
+        config_overrides:
+          vector_stores:
+            tickets:
+              collection_name: "exp_tickets_cs1000_ov0"
+          ingestion:
+            chunking:
+              sources:
+                tickets:
+                  strategy: "jira_turns_token"
+                  chunk_size_tokens: 1000
+                  overlap_tokens: 0
+      - name: "tickets_cs1000_ov80"
+        preset: "tickets_only"
+        ingest:
+          kind: "jira"
+          source: "tickets"
+          qdrant_collection_name: "exp_tickets_cs1000_ov80"
+          persist_dir: "../data/storage/exp_tickets_cs1000_ov80"
+          start_date: "2021-11-01"
+          chunking_strategy: "jira_turns_token"
+          chunk_size_tokens: 1000
+          chunk_overlap_tokens: 80
+        config_overrides:
+          vector_stores:
+            tickets:
+              collection_name: "exp_tickets_cs1000_ov80"
+          ingestion:
+            chunking:
+              sources:
+                tickets:
+                  strategy: "jira_turns_token"
+                  chunk_size_tokens: 1000
+                  overlap_tokens: 80
+
+  stage0b3_combined_sanity:
+    type: "evaluation_grid"
+    dataset_path: "../data/test/ragas_one_hop_eval_dataset_final.dev.jsonl"
+    annotations_file: "../data/test/benchmark_annotations_final.csv"
+    repeats: 3
+    config_overrides:
+      retriever:
+        source_type: "vector"
+        <<: *budget_5_8
+    conditions:
+      - name: "combined_selected_chunking"
+        preset: "naive_combined"
+        ingest:
+          - *baseline_docs_ingest
+          - *baseline_tickets_ingest
+
+  stage0c_retrieval_mode_pilot:
+    type: "evaluation_grid"
+    dataset_path: "../data/test/ragas_one_hop_eval_dataset_final.dev.jsonl"
+    annotations_file: "../data/test/benchmark_annotations_final.csv"
+    repeats: 3
+    conditions:
+      - name: "vector_naive_combined"
+        preset: "naive_combined"
+        config_overrides:
+          retriever:
+            source_type: "vector"
+            <<: *budget_5_8
+      - name: "hybrid_naive_combined"
+        preset: "naive_combined"
+        config_overrides:
+          retriever:
+            source_type: "hybrid"
+            <<: *budget_5_8
+
+  stage1_shared_budget:
+    type: "evaluation_grid"
+    dataset_path: "../data/test/ragas_one_hop_eval_dataset_final.dev.jsonl"
+    annotations_file: "../data/test/benchmark_annotations_final.csv"
+    repeats: 3
+    conditions:
+      - name: "docs_only_topk5_final4"
+        preset: "docs_only"
+        config_overrides:
+          retriever: *budget_5_4
+      - name: "docs_only_topk5_final6"
+        preset: "docs_only"
+        config_overrides:
+          retriever: *budget_5_6
+      - name: "docs_only_topk5_final8"
+        preset: "docs_only"
+        config_overrides:
+          retriever: *budget_5_8
+      - name: "docs_only_topk8_final4"
+        preset: "docs_only"
+        config_overrides:
+          retriever: *budget_8_4
+      - name: "docs_only_topk8_final6"
+        preset: "docs_only"
+        config_overrides:
+          retriever: *budget_8_6
+      - name: "docs_only_topk8_final8"
+        preset: "docs_only"
+        config_overrides:
+          retriever: *budget_8_8
+      - name: "docs_only_topk12_final4"
+        preset: "docs_only"
+        config_overrides:
+          retriever: *budget_12_4
+      - name: "docs_only_topk12_final6"
+        preset: "docs_only"
+        config_overrides:
+          retriever: *budget_12_6
+      - name: "docs_only_topk12_final8"
+        preset: "docs_only"
+        config_overrides:
+          retriever: *budget_12_8
+      - name: "tickets_only_topk5_final4"
+        preset: "tickets_only"
+        config_overrides:
+          retriever: *budget_5_4
+      - name: "tickets_only_topk5_final6"
+        preset: "tickets_only"
+        config_overrides:
+          retriever: *budget_5_6
+      - name: "tickets_only_topk5_final8"
+        preset: "tickets_only"
+        config_overrides:
+          retriever: *budget_5_8
+      - name: "tickets_only_topk8_final4"
+        preset: "tickets_only"
+        config_overrides:
+          retriever: *budget_8_4
+      - name: "tickets_only_topk8_final6"
+        preset: "tickets_only"
+        config_overrides:
+          retriever: *budget_8_6
+      - name: "tickets_only_topk8_final8"
+        preset: "tickets_only"
+        config_overrides:
+          retriever: *budget_8_8
+      - name: "tickets_only_topk12_final4"
+        preset: "tickets_only"
+        config_overrides:
+          retriever: *budget_12_4
+      - name: "tickets_only_topk12_final6"
+        preset: "tickets_only"
+        config_overrides:
+          retriever: *budget_12_6
+      - name: "tickets_only_topk12_final8"
+        preset: "tickets_only"
+        config_overrides:
+          retriever: *budget_12_8
+      - name: "naive_combined_topk5_final4"
+        preset: "naive_combined"
+        config_overrides:
+          retriever: *budget_5_4
+      - name: "naive_combined_topk5_final6"
+        preset: "naive_combined"
+        config_overrides:
+          retriever: *budget_5_6
+      - name: "naive_combined_topk5_final8"
+        preset: "naive_combined"
+        config_overrides:
+          retriever: *budget_5_8
+      - name: "naive_combined_topk8_final4"
+        preset: "naive_combined"
+        config_overrides:
+          retriever: *budget_8_4
+      - name: "naive_combined_topk8_final6"
+        preset: "naive_combined"
+        config_overrides:
+          retriever: *budget_8_6
+      - name: "naive_combined_topk8_final8"
+        preset: "naive_combined"
+        config_overrides:
+          retriever: *budget_8_8
+      - name: "naive_combined_topk12_final4"
+        preset: "naive_combined"
+        config_overrides:
+          retriever: *budget_12_4
+      - name: "naive_combined_topk12_final6"
+        preset: "naive_combined"
+        config_overrides:
+          retriever: *budget_12_6
+      - name: "naive_combined_topk12_final8"
+        preset: "naive_combined"
+        config_overrides:
+          retriever: *budget_12_8
+
+  stage2_validity_tuning:
+    type: "tune_validity_reranker"
+    dataset_path: "../data/test/ragas_one_hop_eval_dataset_final.dev.jsonl"
+    output_path: "../config/weights/validity_reranker.protocol.yaml"
+    manifest_path: "../artifacts/experiments/protocol_final_3runs/stage2_validity_tuning/validity_reranker.protocol.manifest.json"
+    generation_workers: 1
+
+  stage3_benchmark_characterisation:
+    type: "benchmark_analysis"
+    dataset_file: "../data/test/ragas_one_hop_eval_dataset_final.jsonl"
+    dev_dataset_file: "../data/test/ragas_one_hop_eval_dataset_final.dev.jsonl"
+    test_dataset_file: "../data/test/ragas_one_hop_eval_dataset_final.test.jsonl"
+    annotations_file: "../data/test/benchmark_annotations_final.csv"
+    output_dir: "../data/test/benchmark_analysis_protocol_final"
+
+  stage4_source_ablation:
+    type: "evaluation_grid"
+    dataset_path: "../data/test/ragas_one_hop_eval_dataset_final.test.jsonl"
+    annotations_file: "../data/test/benchmark_annotations_final.csv"
+    repeats: 3
+    conditions:
+      - name: "docs_only"
+        preset: "docs_only"
+      - name: "tickets_only"
+        preset: "tickets_only"
+      - name: "naive_combined"
+        preset: "naive_combined"
+
+  stage5_validity_ablation:
+    type: "evaluation_grid"
+    dataset_path: "../data/test/ragas_one_hop_eval_dataset_final.test.jsonl"
+    annotations_file: "../data/test/benchmark_annotations_final.csv"
+    repeats: 3
+    conditions:
+      - name: "naive_combined"
+        preset: "naive_combined"
+      - name: "source_aware"
+        preset: "source_aware"
+      - name: "freshness_only"
+        preset: "freshness_only"
+      - name: "validity_aware"
+        preset: "validity_aware"
+
+  stage6_external_docs_ablation:
+    type: "evaluation_grid"
+    dataset_path: "../data/test/ragas_one_hop_eval_dataset_final.test.jsonl"
+    annotations_file: "../data/test/benchmark_annotations_final.csv"
+    repeats: 3
+    conditions:
+      - name: "validity_aware"
+        preset: "validity_aware"
+      - name: "all_docs_validity_aware"
+        preset: "all_docs_validity_aware"
+        ingest:
+          - *external_docs_ingest
+
+  stage7_prompt_ablation:
+    type: "evaluation_grid"
+    dataset_path: "../data/test/ragas_one_hop_eval_dataset_final.test.jsonl"
+    annotations_file: "../data/test/benchmark_annotations_final.csv"
+    repeats: 3
+    # If Stage 6 shows the external-docs system is the best retrieval stack,
+    # switch both presets in this stage from validity_aware to all_docs_validity_aware.
+    conditions:
+      - name: "generic_prompt"
+        preset: "validity_aware"
+        config_overrides:
+          <<: *generic_prompt_config
+      - name: "ticket_style_prompt"
+        preset: "validity_aware"
+        config_overrides:
+          <<: *ticket_prompt_config
+
+  stage8a_finalist_dev_tuning:
+    type: "evaluation_grid"
+    dataset_path: "../data/test/ragas_one_hop_eval_dataset_final.dev.jsonl"
+    annotations_file: "../data/test/benchmark_annotations_final.csv"
+    repeats: 3
+    # This stage tunes the finalists individually on dev. If Stage 6 produces an
+    # external-docs finalist worth carrying forward, duplicate the validity_aware
+    # blocks below and change the preset to all_docs_validity_aware.
+    conditions:
+      - name: "naive_combined_topk5_final4"
+        preset: "naive_combined"
+        config_overrides:
+          retriever: *budget_5_4
+      - name: "naive_combined_topk5_final6"
+        preset: "naive_combined"
+        config_overrides:
+          retriever: *budget_5_6
+      - name: "naive_combined_topk5_final8"
+        preset: "naive_combined"
+        config_overrides:
+          retriever: *budget_5_8
+      - name: "naive_combined_topk8_final4"
+        preset: "naive_combined"
+        config_overrides:
+          retriever: *budget_8_4
+      - name: "naive_combined_topk8_final6"
+        preset: "naive_combined"
+        config_overrides:
+          retriever: *budget_8_6
+      - name: "naive_combined_topk8_final8"
+        preset: "naive_combined"
+        config_overrides:
+          retriever: *budget_8_8
+      - name: "naive_combined_topk12_final4"
+        preset: "naive_combined"
+        config_overrides:
+          retriever: *budget_12_4
+      - name: "naive_combined_topk12_final6"
+        preset: "naive_combined"
+        config_overrides:
+          retriever: *budget_12_6
+      - name: "naive_combined_topk12_final8"
+        preset: "naive_combined"
+        config_overrides:
+          retriever: *budget_12_8
+      - name: "validity_aware_topk5_final4"
+        preset: "validity_aware"
+        config_overrides:
+          retriever: *budget_5_4
+      - name: "validity_aware_topk5_final6"
+        preset: "validity_aware"
+        config_overrides:
+          retriever: *budget_5_6
+      - name: "validity_aware_topk5_final8"
+        preset: "validity_aware"
+        config_overrides:
+          retriever: *budget_5_8
+      - name: "validity_aware_topk8_final4"
+        preset: "validity_aware"
+        config_overrides:
+          retriever: *budget_8_4
+      - name: "validity_aware_topk8_final6"
+        preset: "validity_aware"
+        config_overrides:
+          retriever: *budget_8_6
+      - name: "validity_aware_topk8_final8"
+        preset: "validity_aware"
+        config_overrides:
+          retriever: *budget_8_8
+      - name: "validity_aware_topk12_final4"
+        preset: "validity_aware"
+        config_overrides:
+          retriever: *budget_12_4
+      - name: "validity_aware_topk12_final6"
+        preset: "validity_aware"
+        config_overrides:
+          retriever: *budget_12_6
+      - name: "validity_aware_topk12_final8"
+        preset: "validity_aware"
+        config_overrides:
+          retriever: *budget_12_8
+
+  stage8b_finalist_test_comparison:
+    type: "evaluation_grid"
+    dataset_path: "../data/test/ragas_one_hop_eval_dataset_final.test.jsonl"
+    annotations_file: "../data/test/benchmark_annotations_final.csv"
+    repeats: 3
+    # Add all_docs_validity_aware here only if Stage 6 justifies carrying it
+    # forward as a real finalist.
+    conditions:
+      - name: "naive_combined"
+        preset: "naive_combined"
+      - name: "validity_aware"
+        preset: "validity_aware"
+
+# Stage 9 manual evaluation:
+#   Summarize Stage 7 or Stage 8B with --run-comparison to generate
+#   manual_eval_sheet.csv and manual_eval_key.csv.
+#
+# Stage 10 error analysis:
+#   Use combined_analysis_rows.jsonl plus your coded manual labels outside the
+#   automation layer.

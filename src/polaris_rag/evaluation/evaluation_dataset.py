@@ -460,6 +460,8 @@ def _build_row_metadata(
 def _stamp_reranker_metadata(
     metadata: dict[str, Any],
     *,
+    generator_profile: Mapping[str, Any] | None = None,
+    generator_fingerprint: str | None = None,
     retriever_profile: Mapping[str, Any] | None = None,
     retriever_fingerprint: str | None = None,
     reranker_profile: Mapping[str, Any] | None = None,
@@ -472,10 +474,10 @@ def _stamp_reranker_metadata(
     ----------
     metadata : dict[str, Any]
         Metadata mapping to extend or stamp.
-    reranker_profile : Mapping[str, Any] or None, optional
-        Value for reranker Profile.
-    reranker_fingerprint : str or None, optional
-        Value for reranker Fingerprint.
+    generator_profile : Mapping[str, Any] or None, optional
+        Value for generator Profile.
+    generator_fingerprint : str or None, optional
+        Value for generator Fingerprint.
     retrieval_trace : Any or None, optional
         Value for retrieval Trace.
     
@@ -484,6 +486,10 @@ def _stamp_reranker_metadata(
     dict[str, Any]
         Structured result of the operation.
     """
+    if generator_profile is not None:
+        metadata["generator_profile"] = _as_metadata_dict(generator_profile)
+    if generator_fingerprint is not None and str(generator_fingerprint).strip():
+        metadata["generator_fingerprint"] = str(generator_fingerprint).strip()
     if retriever_profile is not None:
         metadata["retriever_profile"] = _as_metadata_dict(retriever_profile)
     if retriever_fingerprint is not None and str(retriever_fingerprint).strip():
@@ -1869,6 +1875,8 @@ def _prepare_one(
     raise_exceptions: bool,
     policy: str | None = None,
     budget_ms: int | None = None,
+    default_generator_profile: Mapping[str, Any] | None = None,
+    default_generator_fingerprint: str | None = None,
     default_retriever_profile: Mapping[str, Any] | None = None,
     default_retriever_fingerprint: str | None = None,
     default_reranker_profile: Mapping[str, Any] | None = None,
@@ -1898,6 +1906,10 @@ def _prepare_one(
         Evaluation policy name used to resolve runtime behavior.
     budget_ms : int or None, optional
         Request budget to record in milliseconds.
+    default_generator_profile : Mapping[str, Any] or None, optional
+        Value for default Generator Profile.
+    default_generator_fingerprint : str or None, optional
+        Value for default Generator Fingerprint.
     default_reranker_profile : Mapping[str, Any] or None, optional
         Value for default Reranker Profile.
     default_reranker_fingerprint : str or None, optional
@@ -1941,6 +1953,8 @@ def _prepare_one(
         }
         row["metadata"] = _stamp_reranker_metadata(
             _as_metadata_dict(row.get("metadata", {})),
+            generator_profile=default_generator_profile,
+            generator_fingerprint=default_generator_fingerprint,
             retriever_profile=default_retriever_profile,
             retriever_fingerprint=default_retriever_fingerprint,
             reranker_profile=default_reranker_profile,
@@ -1984,6 +1998,8 @@ def _prepare_one(
             row_metadata["query_constraints"] = query_constraints
         row_metadata = _stamp_reranker_metadata(
             row_metadata,
+            generator_profile=default_generator_profile,
+            generator_fingerprint=default_generator_fingerprint,
             retriever_profile=_as_metadata_dict(result.get("retriever_profile")) or default_retriever_profile,
             retriever_fingerprint=str(result.get("retriever_fingerprint") or default_retriever_fingerprint or "").strip() or None,
             reranker_profile=_as_metadata_dict(result.get("reranker_profile")) or default_reranker_profile,
@@ -2033,6 +2049,8 @@ def _prepare_one(
         }
         row["metadata"] = _stamp_reranker_metadata(
             _as_metadata_dict(row.get("metadata", {})),
+            generator_profile=default_generator_profile,
+            generator_fingerprint=default_generator_fingerprint,
             retriever_profile=default_retriever_profile,
             retriever_fingerprint=default_retriever_fingerprint,
             reranker_profile=default_reranker_profile,
@@ -2188,6 +2206,8 @@ def _prepare_one_via_api(
     requester: ApiRequester,
     policy: str | None = None,
     budget_ms: int | None = None,
+    default_generator_profile: Mapping[str, Any] | None = None,
+    default_generator_fingerprint: str | None = None,
     default_retriever_profile: Mapping[str, Any] | None = None,
     default_retriever_fingerprint: str | None = None,
     default_reranker_profile: Mapping[str, Any] | None = None,
@@ -2221,6 +2241,10 @@ def _prepare_one_via_api(
         Evaluation policy name used to resolve runtime behavior.
     budget_ms : int or None, optional
         Request budget to record in milliseconds.
+    default_generator_profile : Mapping[str, Any] or None, optional
+        Value for default Generator Profile.
+    default_generator_fingerprint : str or None, optional
+        Value for default Generator Fingerprint.
     default_reranker_profile : Mapping[str, Any] or None, optional
         Value for default Reranker Profile.
     default_reranker_fingerprint : str or None, optional
@@ -2264,6 +2288,8 @@ def _prepare_one_via_api(
         }
         row["metadata"] = _stamp_reranker_metadata(
             _as_metadata_dict(row.get("metadata", {})),
+            generator_profile=default_generator_profile,
+            generator_fingerprint=default_generator_fingerprint,
             retriever_profile=default_retriever_profile,
             retriever_fingerprint=default_retriever_fingerprint,
             reranker_profile=default_reranker_profile,
@@ -2296,6 +2322,8 @@ def _prepare_one_via_api(
             row_metadata["query_constraints"] = query_constraints
         row_metadata = _stamp_reranker_metadata(
             row_metadata,
+            generator_profile=default_generator_profile,
+            generator_fingerprint=default_generator_fingerprint,
             retriever_profile=_as_metadata_dict(evaluation_metadata.get("retriever_profile"))
             or _as_metadata_dict(result.get("retriever_profile"))
             or default_retriever_profile,
@@ -2364,6 +2392,8 @@ def _prepare_one_via_api(
         }
         row["metadata"] = _stamp_reranker_metadata(
             _as_metadata_dict(row.get("metadata", {})),
+            generator_profile=default_generator_profile,
+            generator_fingerprint=default_generator_fingerprint,
             retriever_profile=default_retriever_profile,
             retriever_fingerprint=default_retriever_fingerprint,
             reranker_profile=default_reranker_profile,
@@ -2670,6 +2700,8 @@ def _prepare_one_with_retries(
     trace_factory: PrepAttemptTraceFactory | None = None,
     evaluation_policy: str | None = None,
     budget_ms: int | None = None,
+    default_generator_profile: Mapping[str, Any] | None = None,
+    default_generator_fingerprint: str | None = None,
     default_retriever_profile: Mapping[str, Any] | None = None,
     default_retriever_fingerprint: str | None = None,
     default_reranker_profile: Mapping[str, Any] | None = None,
@@ -2703,6 +2735,10 @@ def _prepare_one_with_retries(
         Value for evaluation Policy.
     budget_ms : int or None, optional
         Request budget to record in milliseconds.
+    default_generator_profile : Mapping[str, Any] or None, optional
+        Value for default Generator Profile.
+    default_generator_fingerprint : str or None, optional
+        Value for default Generator Fingerprint.
     default_reranker_profile : Mapping[str, Any] or None, optional
         Value for default Reranker Profile.
     default_reranker_fingerprint : str or None, optional
@@ -2752,6 +2788,8 @@ def _prepare_one_with_retries(
                     raise_exceptions=raise_exceptions,
                     policy=evaluation_policy,
                     budget_ms=budget_ms,
+                    default_generator_profile=default_generator_profile,
+                    default_generator_fingerprint=default_generator_fingerprint,
                     default_retriever_profile=default_retriever_profile,
                     default_retriever_fingerprint=default_retriever_fingerprint,
                     default_reranker_profile=default_reranker_profile,
@@ -2834,6 +2872,8 @@ def _prepare_one_via_api_with_retries(
     trace_factory: PrepAttemptTraceFactory | None = None,
     evaluation_policy: str | None = None,
     budget_ms: int | None = None,
+    default_generator_profile: Mapping[str, Any] | None = None,
+    default_generator_fingerprint: str | None = None,
     default_retriever_profile: Mapping[str, Any] | None = None,
     default_retriever_fingerprint: str | None = None,
     default_reranker_profile: Mapping[str, Any] | None = None,
@@ -2871,6 +2911,10 @@ def _prepare_one_via_api_with_retries(
         Value for evaluation Policy.
     budget_ms : int or None, optional
         Request budget to record in milliseconds.
+    default_generator_profile : Mapping[str, Any] or None, optional
+        Value for default Generator Profile.
+    default_generator_fingerprint : str or None, optional
+        Value for default Generator Fingerprint.
     default_reranker_profile : Mapping[str, Any] or None, optional
         Value for default Reranker Profile.
     default_reranker_fingerprint : str or None, optional
@@ -2925,6 +2969,8 @@ def _prepare_one_via_api_with_retries(
                     requester=requester,
                     policy=evaluation_policy,
                     budget_ms=budget_ms,
+                    default_generator_profile=default_generator_profile,
+                    default_generator_fingerprint=default_generator_fingerprint,
                     default_retriever_profile=default_retriever_profile,
                     default_retriever_fingerprint=default_retriever_fingerprint,
                     default_reranker_profile=default_reranker_profile,
@@ -3051,6 +3097,8 @@ def build_prepared_rows(
     trace_factory: PrepAttemptTraceFactory | None = None,
     policy: str | None = None,
     budget_ms: int | None = None,
+    generator_profile: Mapping[str, Any] | None = None,
+    generator_fingerprint: str | None = None,
     retriever_profile: Mapping[str, Any] | None = None,
     retriever_fingerprint: str | None = None,
     reranker_profile: Mapping[str, Any] | None = None,
@@ -3132,6 +3180,8 @@ def build_prepared_rows(
                     trace_factory=trace_factory,
                     evaluation_policy=policy,
                     budget_ms=budget_ms,
+                    default_generator_profile=generator_profile,
+                    default_generator_fingerprint=generator_fingerprint,
                     default_retriever_profile=retriever_profile,
                     default_retriever_fingerprint=retriever_fingerprint,
                     default_reranker_profile=reranker_profile,
@@ -3159,6 +3209,8 @@ def build_prepared_rows(
                     trace_factory=trace_factory,
                     evaluation_policy=policy,
                     budget_ms=budget_ms,
+                    default_generator_profile=generator_profile,
+                    default_generator_fingerprint=generator_fingerprint,
                     default_retriever_profile=retriever_profile,
                     default_retriever_fingerprint=retriever_fingerprint,
                     default_reranker_profile=reranker_profile,
@@ -3196,6 +3248,8 @@ def build_prepared_rows_from_api(
     trace_factory: PrepAttemptTraceFactory | None = None,
     policy: str | None = None,
     budget_ms: int | None = None,
+    generator_profile: Mapping[str, Any] | None = None,
+    generator_fingerprint: str | None = None,
     retriever_profile: Mapping[str, Any] | None = None,
     retriever_fingerprint: str | None = None,
     reranker_profile: Mapping[str, Any] | None = None,
@@ -3313,6 +3367,8 @@ def build_prepared_rows_from_api(
                     trace_factory=trace_factory,
                     evaluation_policy=policy,
                     budget_ms=budget_ms,
+                    default_generator_profile=generator_profile,
+                    default_generator_fingerprint=generator_fingerprint,
                     default_retriever_profile=retriever_profile,
                     default_retriever_fingerprint=retriever_fingerprint,
                     default_reranker_profile=reranker_profile,
@@ -3342,6 +3398,8 @@ def build_prepared_rows_from_api(
                     trace_factory=trace_factory,
                     evaluation_policy=policy,
                     budget_ms=budget_ms,
+                    default_generator_profile=generator_profile,
+                    default_generator_fingerprint=generator_fingerprint,
                     default_retriever_profile=retriever_profile,
                     default_retriever_fingerprint=retriever_fingerprint,
                     default_reranker_profile=reranker_profile,

@@ -197,6 +197,12 @@ def _cfg_with_reranker(tmp_path, rerank_cfg: dict[str, object]):  # noqa: ANN001
     config_path = tmp_path / "config.yaml"
     config_path.write_text("retriever: {}\n", encoding="utf-8")
     return SimpleNamespace(
+        generator_llm={
+            "provider": "openai",
+            "model_name": "test-generator",
+            "api_base": "http://localhost:8081/v1",
+            "api_key": "secret-key",
+        },
         retriever={
             "type": "multi_collection",
             "rerank": dict(rerank_cfg),
@@ -386,6 +392,66 @@ def test_resolve_prepared_rows_passes_retriever_metadata_to_preparation(monkeypa
     assert manifest["retriever_fingerprint"] == "retriever-fingerprint"
 
 
+def test_resolve_prepared_rows_passes_generator_metadata_to_preparation(monkeypatch, tmp_path) -> None:
+    dataset_path = tmp_path / "dataset.jsonl"
+    dataset_path.write_text('{"id":"1","query":"Q1","expected_answer":"A1"}\n', encoding="utf-8")
+    seen_generator_profiles: list[object] = []
+    seen_generator_fingerprints: list[object] = []
+
+    def _capture_build_prepared_rows(**kwargs):  # noqa: ANN003
+        seen_generator_profiles.append(kwargs.get("generator_profile"))
+        seen_generator_fingerprints.append(kwargs.get("generator_fingerprint"))
+        return _fake_build_prepared_rows(**kwargs)
+
+    monkeypatch.setattr(
+        evaluate_rag,
+        "build_container",
+        lambda cfg: SimpleNamespace(
+            pipeline=object(),
+            retriever_source_settings={"docs": {"weight": 1.0}, "tickets": {"weight": 1.0}},
+        ),
+    )
+    monkeypatch.setattr(evaluate_rag, "build_prepared_rows", _capture_build_prepared_rows)
+
+    args = Namespace(
+        dataset_path=str(dataset_path),
+        prepared_path=None,
+        reuse_prepared=False,
+        generation_workers=1,
+        generation_mode="pipeline",
+        generation_max_attempts=None,
+        generation_retry_initial_backoff=None,
+        generation_retry_max_backoff=None,
+        generation_retry_jitter=None,
+        generation_retry_on_empty_response=None,
+        replay_failures_from=None,
+    )
+
+    cfg = _cfg_with_reranker(tmp_path, {"type": "rrf", "rrf_k": 60})
+
+    _, manifest = evaluate_rag._resolve_prepared_rows(
+        cfg=cfg,
+        args=args,
+        eval_cfg={
+            "dataset": {},
+            "generation": {
+                "workers": 1,
+                "mode": "pipeline",
+                "llm_generate": {"temperature": 0.0},
+            },
+        },
+        show_progress=False,
+    )
+
+    assert seen_generator_profiles[-1]["mode"] == "pipeline"
+    assert seen_generator_profiles[-1]["generator_llm"]["model_name"] == "test-generator"
+    assert "api_key" not in seen_generator_profiles[-1]["generator_llm"]
+    assert seen_generator_profiles[-1]["llm_generate"] == {"temperature": 0.0}
+    assert seen_generator_fingerprints[-1] == manifest["generator_fingerprint"]
+    assert manifest["generator_profile"]["generator_llm"]["api_base"] == "http://localhost:8081/v1"
+    assert "api_key" not in manifest["generator_profile"]["generator_llm"]
+
+
 def test_resolve_prepared_rows_rejects_reuse_when_reranker_fingerprint_differs(monkeypatch, tmp_path) -> None:
     prepared_path = tmp_path / "prepared.json"
     prepared_path.write_text(
@@ -432,11 +498,16 @@ def test_resolve_prepared_rows_rejects_reuse_when_retriever_fingerprint_differs(
     prepared_path = tmp_path / "prepared.json"
     prepared_path.write_text(
         '[{"id":"row-1","user_input":"Q1","reference":"A1","response":"R1","retrieved_contexts":["ctx-1"],'
-        '"retrieved_context_ids":["doc-1"],"metadata":{"retriever_fingerprint":"old-retriever","reranker_fingerprint":"'
-        'same-reranker"}}]',
+        '"retrieved_context_ids":["doc-1"],"metadata":{"generator_fingerprint":"same-generator","retriever_fingerprint":"'
+        'old-retriever","reranker_fingerprint":"same-reranker"}}]',
         encoding="utf-8",
     )
 
+    monkeypatch.setattr(
+        evaluate_rag,
+        "_resolve_generator_metadata",
+        lambda cfg, *, generation_mode, generation_cfg, args: ({"mode": generation_mode}, "same-generator"),
+    )
     monkeypatch.setattr(
         evaluate_rag,
         "_resolve_retriever_metadata",
@@ -465,6 +536,59 @@ def test_resolve_prepared_rows_rejects_reuse_when_retriever_fingerprint_differs(
     cfg = _cfg_with_reranker(tmp_path, {"type": "rrf", "rrf_k": 60})
 
     with pytest.raises(ValueError, match="different retriever configuration"):
+        evaluate_rag._resolve_prepared_rows(
+            cfg=cfg,
+            args=args,
+            eval_cfg={"dataset": {"prepared_path": str(prepared_path)}, "generation": {"workers": 1, "mode": "pipeline"}},
+            show_progress=False,
+        )
+
+
+def test_resolve_prepared_rows_rejects_reuse_when_generator_fingerprint_differs(monkeypatch, tmp_path) -> None:
+    prepared_path = tmp_path / "prepared.json"
+    prepared_path.write_text(
+        '[{"id":"row-1","user_input":"Q1","reference":"A1","response":"R1","retrieved_contexts":["ctx-1"],'
+        '"retrieved_context_ids":["doc-1"],"metadata":{"generator_fingerprint":"old-generator","retriever_fingerprint":"'
+        'same-retriever","reranker_fingerprint":"same-reranker"}}]',
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(
+        evaluate_rag,
+        "_resolve_generator_metadata",
+        lambda cfg, *, generation_mode, generation_cfg, args: (
+            {"mode": generation_mode, "generator_llm": {"model_name": "new-generator"}},
+            "new-generator",
+        ),
+    )
+    monkeypatch.setattr(
+        evaluate_rag,
+        "_resolve_retriever_metadata",
+        lambda cfg: ({"type": "hybrid"}, "same-retriever"),
+    )
+    monkeypatch.setattr(
+        evaluate_rag,
+        "_resolve_reranker_metadata",
+        lambda cfg: ({"type": "rrf"}, "same-reranker"),
+    )
+
+    args = Namespace(
+        dataset_path=None,
+        prepared_path=str(prepared_path),
+        reuse_prepared=True,
+        generation_workers=1,
+        generation_mode="pipeline",
+        generation_max_attempts=None,
+        generation_retry_initial_backoff=None,
+        generation_retry_max_backoff=None,
+        generation_retry_jitter=None,
+        generation_retry_on_empty_response=None,
+        replay_failures_from=None,
+    )
+
+    cfg = _cfg_with_reranker(tmp_path, {"type": "rrf", "rrf_k": 60})
+
+    with pytest.raises(ValueError, match="different generator configuration"):
         evaluate_rag._resolve_prepared_rows(
             cfg=cfg,
             args=args,
@@ -985,10 +1109,16 @@ def test_resolve_prepared_rows_rejects_reuse_when_condition_fingerprint_differs(
     prepared_path = tmp_path / "prepared.json"
     prepared_path.write_text(
         '[{"id":"row-1","user_input":"Q1","reference":"A1","response":"R1","retrieved_contexts":["ctx-1"],'
-        '"retrieved_context_ids":["doc-1"],"metadata":{"reranker_fingerprint":"fingerprint-123","condition_fingerprint":"old-condition"}}]',
+        '"retrieved_context_ids":["doc-1"],"metadata":{"generator_fingerprint":"same-generator","reranker_fingerprint":"'
+        'fingerprint-123","condition_fingerprint":"old-condition"}}]',
         encoding="utf-8",
     )
 
+    monkeypatch.setattr(
+        evaluate_rag,
+        "_resolve_generator_metadata",
+        lambda cfg, *, generation_mode, generation_cfg, args: ({"mode": generation_mode}, "same-generator"),
+    )
     monkeypatch.setattr(
         evaluate_rag,
         "build_container",
