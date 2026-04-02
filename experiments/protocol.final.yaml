@@ -382,9 +382,9 @@ stages:
     config_overrides:
       vector_stores:
         docs:
-          collection_name: "exp_docs_cs800_ov80"
+          collection_name: "support_docs_qwen3_8b_Stage_0A"
         tickets:
-          collection_name: "exp_tickets_cs800_ov80"
+          collection_name: "support_tickets_qwen_3_8b_Stage_0A"
       storage_context:
         persist_dir: "../data/storage/exp_stage0a_baseline"
       ingestion:
