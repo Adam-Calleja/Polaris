@@ -406,15 +406,17 @@ class QdrantIndexStore(BaseVectorStore):
 
         if not chunks:
             return
-        texts = [str(chunk.text or "") for chunk in chunks]
-        dense_vectors = self.embedder.embed_documents(texts)
-        sparse_vectors = self._encode_sparse_documents(texts)
-        self._upsert_chunks(
-            chunks=chunks,
-            dense_vectors=dense_vectors,
-            sparse_vectors=sparse_vectors,
-            batch_size=batch_size,
-        )
+        step = self._insertion_batch_size(batch_size=batch_size, total_chunks=len(chunks))
+        for chunk_batch in self._iter_chunk_batches(chunks, batch_size=step):
+            texts = [str(chunk.text or "") for chunk in chunk_batch]
+            dense_vectors = self.embedder.embed_documents(texts)
+            sparse_vectors = self._encode_sparse_documents(texts)
+            self._upsert_chunks(
+                chunks=chunk_batch,
+                dense_vectors=dense_vectors,
+                sparse_vectors=sparse_vectors,
+                batch_size=step,
+            )
 
     async def ainsert_chunks(
         self,
@@ -423,15 +425,17 @@ class QdrantIndexStore(BaseVectorStore):
     ) -> None:
         if not chunks:
             return
-        texts = [str(chunk.text or "") for chunk in chunks]
-        dense_vectors = await self.embedder.aembed_documents(texts)
-        sparse_vectors = self._encode_sparse_documents(texts)
-        self._upsert_chunks(
-            chunks=chunks,
-            dense_vectors=dense_vectors,
-            sparse_vectors=sparse_vectors,
-            batch_size=batch_size,
-        )
+        step = self._insertion_batch_size(batch_size=batch_size, total_chunks=len(chunks))
+        for chunk_batch in self._iter_chunk_batches(chunks, batch_size=step):
+            texts = [str(chunk.text or "") for chunk in chunk_batch]
+            dense_vectors = await self.embedder.aembed_documents(texts)
+            sparse_vectors = self._encode_sparse_documents(texts)
+            self._upsert_chunks(
+                chunks=chunk_batch,
+                dense_vectors=dense_vectors,
+                sparse_vectors=sparse_vectors,
+                batch_size=step,
+            )
 
     def _upsert_chunks(
         self,
@@ -444,7 +448,9 @@ class QdrantIndexStore(BaseVectorStore):
         if not dense_vectors:
             return
         dense_dim = len(dense_vectors[0])
-        enable_sparse = any(vector is not None and not vector.is_empty() for vector in sparse_vectors)
+        enable_sparse = self.sparse_encoder is not None or any(
+            vector is not None and not vector.is_empty() for vector in sparse_vectors
+        )
         self._ensure_collection(dense_dim=dense_dim, enable_sparse=enable_sparse)
 
         points = [
@@ -463,6 +469,22 @@ class QdrantIndexStore(BaseVectorStore):
                 points=batch,
                 wait=True,
             )
+
+    @staticmethod
+    def _insertion_batch_size(*, batch_size: int, total_chunks: int) -> int:
+        if batch_size and batch_size > 0:
+            return int(batch_size)
+        return max(1, int(total_chunks))
+
+    @staticmethod
+    def _iter_chunk_batches(
+        chunks: list[DocumentChunk],
+        *,
+        batch_size: int,
+    ) -> Iterable[list[DocumentChunk]]:
+        step = max(1, int(batch_size))
+        for start in range(0, len(chunks), step):
+            yield chunks[start:start + step]
 
     def _chunk_payload(self, chunk: DocumentChunk) -> dict[str, Any]:
         metadata = dict(getattr(chunk, "metadata", {}) or {})

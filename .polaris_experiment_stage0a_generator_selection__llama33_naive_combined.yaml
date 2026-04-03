@@ -1,0 +1,85 @@
+extends: /Users/adam/Documents/University/Third Year Project/rag_project/config/config.yaml
+prompts:
+- pkg:polaris_rag.prompts:hpc_rag_assistant_v1.json
+- pkg:polaris_rag.prompts:hpc_rag_assistant_v3_ticket_refs.json
+- pkg:polaris_rag.prompts:hpc_ticket_summarizer_v1.json
+prompt_name: hpc_rag_assistant_ticket_refs
+mlflow:
+  prompt_registry:
+    enabled: false
+generator_llm:
+  type: openai_like
+  model_name: meta-llama/Llama-3.3-70B-Instruct
+  api_base: http://vllm:8080/v1
+  api_key: ${POLARIS_LLM_API_KEY}
+  request_timeout: 90
+  max_retries: 1
+  model_kwargs:
+    max_tokens: 1024
+    temperature: 0
+    top_p: 1.0
+    stop_list:
+    - '
+
+      User:'
+    - '
+
+
+      User:'
+vector_stores:
+  docs:
+    collection_name: support_docs_qwen3_8b_Stage_0A
+  tickets:
+    collection_name: support_tickets_qwen_3_8b_Stage_0A
+  external_docs:
+    collection_name: exp_external_docs_selected
+storage_context:
+  persist_dir: ../data/storage/exp_stage0a_baseline
+ingestion:
+  chunking:
+    sources:
+      docs:
+        strategy: markdown_token
+        chunk_size_tokens: 800
+        overlap_tokens: 80
+      tickets:
+        strategy: jira_turns_token
+        chunk_size_tokens: 800
+        overlap_tokens: 80
+      external_docs:
+        strategy: markdown_token
+        chunk_size_tokens: 800
+        overlap_tokens: 80
+  jira:
+    start_date: '2021-11-01'
+retriever:
+  top_k: 5
+  final_top_k: 8
+  hybrid_profile:
+    dense_top_k: 5
+    sparse_top_k: 5
+    top_k: 5
+    fusion:
+      type: rrf
+      rrf_k: 60
+      signal_weights:
+        dense: 1.0
+        sparse: 1.0
+  sources:
+  - name: docs
+    top_k: 5
+    weight: 1.0
+    filters: {}
+  - name: tickets
+    top_k: 5
+    weight: 1.0
+    filters: {}
+  source_type: vector
+  rerank:
+    weights_path: config/weights/validity_reranker.protocol.yaml
+evaluation:
+  generation:
+    mode: pipeline
+    workers: 1
+  dataset:
+    reuse_prepared: false

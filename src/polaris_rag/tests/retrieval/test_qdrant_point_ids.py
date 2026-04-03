@@ -5,6 +5,8 @@ from uuid import UUID
 
 from llama_index.vector_stores.qdrant import QdrantVectorStore
 
+from polaris_rag.common import DocumentChunk
+from polaris_rag.retrieval.sparse_encoder import SparseEmbedding
 from polaris_rag.retrieval.vector_store import (
     QdrantIndexStore,
     PolarisQdrantVectorStore,
@@ -69,6 +71,7 @@ def test_delete_ref_doc_is_noop_when_collection_does_not_exist():
     )
 
     store = object.__new__(QdrantIndexStore)
+    store.collection_name = "support_tickets_turn_based_qwen_3_8b"
     store.client = client
     store.vector_store = vector_store
 
@@ -76,3 +79,89 @@ def test_delete_ref_doc_is_noop_when_collection_does_not_exist():
 
     assert vector_store.delete_called_with is None
     assert delete_calls == []
+
+
+def test_insert_chunks_embeds_and_upserts_in_batches():
+    events: list[tuple[str, list[str]]] = []
+
+    class FakeEmbedder:
+        def embed_documents(self, texts: list[str]) -> list[list[float]]:
+            events.append(("embed", list(texts)))
+            return [[float(len(text)), 0.0] for text in texts]
+
+    store = object.__new__(QdrantIndexStore)
+    store.embedder = FakeEmbedder()
+    store.sparse_encoder = None
+
+    def fake_upsert_chunks(*, chunks, dense_vectors, sparse_vectors, batch_size):
+        events.append(("upsert", [chunk.id for chunk in chunks]))
+        assert len(chunks) == len(dense_vectors) == len(sparse_vectors)
+        assert batch_size == 2
+
+    store._upsert_chunks = fake_upsert_chunks
+
+    chunks = [
+        DocumentChunk(
+            parent_id="ticket-1",
+            prev_id="",
+            next_id="",
+            text=f"chunk {idx}",
+            document_type="helpdesk_ticket",
+            id=f"chunk-{idx}",
+        )
+        for idx in range(5)
+    ]
+
+    store.insert_chunks(chunks, batch_size=2, use_async=False)
+
+    assert events == [
+        ("embed", ["chunk 0", "chunk 1"]),
+        ("upsert", ["chunk-0", "chunk-1"]),
+        ("embed", ["chunk 2", "chunk 3"]),
+        ("upsert", ["chunk-2", "chunk-3"]),
+        ("embed", ["chunk 4"]),
+        ("upsert", ["chunk-4"]),
+    ]
+
+
+def test_upsert_chunks_enables_sparse_schema_when_sparse_encoder_is_configured():
+    ensure_calls: list[dict[str, object]] = []
+    upsert_calls: list[str] = []
+
+    store = object.__new__(QdrantIndexStore)
+    store.collection_name = "support_tickets"
+    store.dense_vector_name = "dense"
+    store.sparse_vector_name = "sparse"
+    store.sparse_encoder = object()
+    store.client = SimpleNamespace(
+        upsert=lambda **kwargs: upsert_calls.append(kwargs["collection_name"]),
+    )
+
+    def fake_ensure_collection(*, dense_dim: int, enable_sparse: bool) -> None:
+        ensure_calls.append(
+            {
+                "dense_dim": dense_dim,
+                "enable_sparse": enable_sparse,
+            }
+        )
+
+    store._ensure_collection = fake_ensure_collection
+
+    store._upsert_chunks(
+        chunks=[
+            DocumentChunk(
+                parent_id="ticket-1",
+                prev_id="",
+                next_id="",
+                text="hello",
+                document_type="helpdesk_ticket",
+                id="chunk-1",
+            )
+        ],
+        dense_vectors=[[1.0, 2.0]],
+        sparse_vectors=[SparseEmbedding(indices=[], values=[])],
+        batch_size=16,
+    )
+
+    assert ensure_calls == [{"dense_dim": 2, "enable_sparse": True}]
+    assert upsert_calls == ["support_tickets"]
