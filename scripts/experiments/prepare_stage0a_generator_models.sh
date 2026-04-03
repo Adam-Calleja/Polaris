@@ -14,6 +14,7 @@ PORT="${PORT:-8080}"
 VLLM_CONTAINER="${VLLM_CONTAINER:-vllm-gaudi}"
 MODEL_BOOT_TIMEOUT_SECONDS="${MODEL_BOOT_TIMEOUT_SECONDS:-1800}"
 MODEL_BOOT_POLL_SECONDS="${MODEL_BOOT_POLL_SECONDS:-10}"
+WARMUP_REQUESTS="${WARMUP_REQUESTS:-3}"
 
 MODEL_NAMES=(
   "meta-llama/Llama-3.3-70B-Instruct"
@@ -111,6 +112,63 @@ sys.exit(0 if expected_model in model_ids else 2)
   exit 1
 }
 
+run_model_warmup() {
+  local expected_model="$1"
+
+  if (( WARMUP_REQUESTS <= 0 )); then
+    echo "Skipping post-start warmup requests for ${expected_model}"
+    return 0
+  fi
+
+  echo "Running ${WARMUP_REQUESTS} warmup completion request(s) for ${expected_model}"
+  docker_cmd exec \
+    -e "EXPECTED_MODEL=${expected_model}" \
+    -e "PORT=${PORT}" \
+    -e "WARMUP_REQUESTS=${WARMUP_REQUESTS}" \
+    "${VLLM_CONTAINER}" \
+    python3.11 -c '
+import json
+import os
+import urllib.request
+
+expected_model = os.environ["EXPECTED_MODEL"]
+port = os.environ["PORT"]
+warmup_requests = max(0, int(os.environ["WARMUP_REQUESTS"]))
+
+context_block = (
+    "Context item: A user asks how to submit and process a purchase order for HPC support. "
+    "The assistant should classify the request, summarize the action, and draft a safe reply. "
+    "Preserve ticket references and avoid unsupported operational claims. "
+)
+prompt = (
+    "System: You are an HPC support assistant.\n\n"
+    + "\n".join(context_block for _ in range(96))
+    + "\n\nUser: Please explain how this ticket should be handled.\nAssistant:"
+)
+
+payload = json.dumps(
+    {
+        "model": expected_model,
+        "prompt": prompt,
+        "max_tokens": 64,
+        "temperature": 0,
+        "top_p": 1.0,
+    }
+).encode("utf-8")
+
+for idx in range(warmup_requests):
+    request = urllib.request.Request(
+        f"http://127.0.0.1:{port}/v1/completions",
+        data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    with urllib.request.urlopen(request, timeout=300) as response:
+        response.read()
+    print(f"warmup request {idx + 1}/{warmup_requests} complete")
+'
+}
+
 run_prepare_for_condition() {
   local condition_name="$1"
 
@@ -145,6 +203,7 @@ main() {
     cleanup_model
     MODEL="${model_name}" PORT="${PORT}" NETWORK="${NETWORK}" bash "${SETUP_SCRIPT}"
     wait_for_model_server "${model_name}"
+    run_model_warmup "${model_name}"
     run_prepare_for_condition "${condition_name}"
     cleanup_model
   done
