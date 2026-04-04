@@ -10,7 +10,7 @@
 #   selections have already won.
 
 artifacts_root: "../artifacts/experiments/protocol_final_3runs"
-base_config: "../config/config.yaml"
+base_config: "../config/config.gaudi.yaml"
 
 # Reusable config fragments. These extra top-level keys are ignored by the
 # automation loader but are useful through YAML anchors.
@@ -332,7 +332,7 @@ defaults:
     <<: [*llama33_generator, *ticket_prompt_config]
     vector_stores: *selected_vector_store_collections
     storage_context:
-      persist_dir: "../data/storage/exp_protocol_selected"
+      persist_dir: "/app/data/storage/exp_protocol_selected"
     ingestion:
       chunking:
         sources: *selected_chunking_sources
@@ -382,11 +382,11 @@ stages:
     config_overrides:
       vector_stores:
         docs:
-          collection_name: "support_docs_qwen3_8b_Stage_0A"
+          collection_name: "support_docs_stage0a"
         tickets:
-          collection_name: "support_tickets_qwen_3_8b_Stage_0A"
+          collection_name: "support_tickets_stage0a"
       storage_context:
-        persist_dir: "../data/storage/exp_stage0a_baseline"
+        persist_dir: "/app/data/storage/support_tickets_stage0a"
       ingestion:
         chunking:
           sources:
@@ -404,23 +404,14 @@ stages:
     conditions:
       - name: "llama33_naive_combined"
         preset: "naive_combined"
-        ingest:
-          - *baseline_docs_ingest
-          - *baseline_tickets_ingest
         config_overrides:
           <<: *llama33_generator
       - name: "mixtral8x22b_naive_combined"
         preset: "naive_combined"
-        ingest:
-          - *baseline_docs_ingest
-          - *baseline_tickets_ingest
         config_overrides:
           <<: *mixtral8x22b_generator
       - name: "mistral_large_2407_naive_combined"
         preset: "naive_combined"
-        ingest:
-          - *baseline_docs_ingest
-          - *baseline_tickets_ingest
         config_overrides:
           <<: *mistral_large_2407_generator
 
