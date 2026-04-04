@@ -360,7 +360,7 @@ defaults:
     generation_mode: "pipeline"
     generation_workers: 1
     evaluation_policy: "official"
-    no_progress: true
+    no_progress: false
 
 stages:
   split_dev_test:
