@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.3.18)  26 MAR 2026 13:52
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.3.18)  4 APR 2026 22:57
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -222,50 +222,80 @@ LaTeX Font Info:    Overwriting math alphabet `\mathit' in version `normal'
 (Font)                  OT1/cmr/m/it --> OT1/ptm/m/it on input line 76.
 LaTeX Font Info:    Overwriting math alphabet `\mathit' in version `bold'
 (Font)                  OT1/cmr/bx/it --> OT1/ptm/m/it on input line 76.
+) (/usr/local/texlive/2026/texmf-dist/tex/latex/acronym/acronym.sty
+Package: acronym 2025/01/17 v1.50 Support for acronyms (Tobias Oetiker)
+ (/usr/local/texlive/2026/texmf-dist/tex/latex/bigfoot/suffix.sty
+Package: suffix 2006/07/15 1.5a Variant command support
+) (/usr/local/texlive/2026/texmf-dist/tex/generic/xstring/xstring.sty (/usr/local/texlive/2026/texmf-dist/tex/generic/xstring/xstring.tex
+\xs_counta=\count304
+\xs_countb=\count305
+)
+Package: xstring 2023/08/22 v1.86 String manipulations (CT)
+)
+\AC@clearlist=\toks21
 ) (/usr/local/texlive/2026/texmf-dist/tex/latex/l3backend/l3backend-pdftex.def
 File: l3backend-pdftex.def 2025-10-09 L3 backend support: PDF output (pdfTeX)
-\l__color_backend_stack_int=\count304
-) (./report.aux (./chapter1.aux) (./chapter2.aux) (./chapter3.aux) (./chapter4.aux) (./chapter5.aux) (./chapter6.aux) (./chapter7.aux) (./chapter8.aux) (./appendix1.aux))
+\l__color_backend_stack_int=\count306
+) (./report.aux (./chapter1.aux) (./chapter2.aux) (./chapter3.aux) (./chapter4.aux) (./chapter5.aux) (./chapter6.aux
+
+LaTeX Warning: Label `sec:source-ablation' multiply defined.
+
+
+LaTeX Warning: Label `sec:validity-signal-ablation' multiply defined.
+
+
+LaTeX Warning: Label `sec:external-document-scope-ablation' multiply defined.
+
+
+LaTeX Warning: Label `sec:tuned-finalist-comparison' multiply defined.
+
+) (./chapter7.aux) (./chapter8.aux) (./appendix1.aux))
 \openout1 = `report.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 36.
-LaTeX Font Info:    ... okay on input line 36.
-LaTeX Font Info:    Checking defaults for OMS/pzccm/m/n on input line 36.
-LaTeX Font Info:    Trying to load font information for OMS+pzccm on input line 36.
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 38.
+LaTeX Font Info:    ... okay on input line 38.
+LaTeX Font Info:    Checking defaults for OMS/pzccm/m/n on input line 38.
+LaTeX Font Info:    Trying to load font information for OMS+pzccm on input line 38.
  (/usr/local/texlive/2026/texmf-dist/tex/latex/psnfss/omspzccm.fd
 File: omspzccm.fd 2000/01/03 Fontinst v1.801 font definitions for OMS/pzccm.
 )
-LaTeX Font Info:    ... okay on input line 36.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 36.
-LaTeX Font Info:    ... okay on input line 36.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 36.
-LaTeX Font Info:    ... okay on input line 36.
-LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 36.
-LaTeX Font Info:    ... okay on input line 36.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 36.
-LaTeX Font Info:    ... okay on input line 36.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 36.
-LaTeX Font Info:    ... okay on input line 36.
-LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 36.
-LaTeX Font Info:    ... okay on input line 36.
-LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 36.
-LaTeX Font Info:    ... okay on input line 36.
+LaTeX Font Info:    ... okay on input line 38.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 38.
+LaTeX Font Info:    ... okay on input line 38.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 38.
+LaTeX Font Info:    ... okay on input line 38.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 38.
+LaTeX Font Info:    ... okay on input line 38.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 38.
+LaTeX Font Info:    ... okay on input line 38.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 38.
+LaTeX Font Info:    ... okay on input line 38.
+LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 38.
+LaTeX Font Info:    ... okay on input line 38.
+LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 38.
+LaTeX Font Info:    ... okay on input line 38.
  (/usr/local/texlive/2026/texmf-dist/tex/context/base/mkii/supp-pdf.mkii
 [Loading MPS to PDF converter (version 2006.09.02).]
-\scratchcounter=\count305
+\scratchcounter=\count307
 \scratchdimen=\dimen159
 \scratchbox=\box55
-\nofMPsegments=\count306
-\nofMParguments=\count307
-\everyMPshowfont=\toks21
-\MPscratchCnt=\count308
+\nofMPsegments=\count308
+\nofMParguments=\count309
+\everyMPshowfont=\toks22
+\MPscratchCnt=\count310
 \MPscratchDim=\dimen160
-\MPnumerator=\count309
-\makeMPintoPDFobject=\count310
-\everyMPtoPDFconversion=\toks22
+\MPnumerator=\count311
+\makeMPintoPDFobject=\count312
+\everyMPtoPDFconversion=\toks23
 ) (/usr/local/texlive/2026/texmf-dist/tex/latex/epstopdf-pkg/epstopdf-base.sty
 Package: epstopdf-base 2020-01-24 v2.11 Base part for package epstopdf
+ (/usr/local/texlive/2026/texmf-dist/tex/latex/grfext/grfext.sty
+Package: grfext 2019/12/03 v1.3 Manage graphics extensions (HO)
+)
 Package epstopdf-base Info: Redefining graphics rule for `.eps' on input line 485.
+Package grfext Info: Graphics extension search list:
+(grfext)             [.pdf,.png,.jpg,.mps,.jpeg,.jbig2,.jb2,.PDF,.PNG,.JPG,.JPEG,.JBIG2,.JB2,.eps]
+(grfext)             \AppendGraphicsExtensions on input line 504.
  (/usr/local/texlive/2026/texmf-dist/tex/latex/latexconfig/epstopdf-sys.cfg
 File: epstopdf-sys.cfg 2010/07/13 v1.3 Configuration of (r)epstopdf for TeX Live
 )) (/usr/local/texlive/2026/texmf-dist/tex/latex/graphics/color.sty
@@ -275,33 +305,33 @@ File: color.cfg 2016/01/02 v1.6 sample color configuration
 )
 Package color Info: Driver file: pdftex.def on input line 149.
  (/usr/local/texlive/2026/texmf-dist/tex/latex/graphics/mathcolor.ltx))
-Package hyperref Info: Link coloring ON on input line 36.
+Package hyperref Info: Link coloring ON on input line 38.
  (./report.out) (./report.out)
 \@outlinefile=\write3
 \openout3 = `report.out'.
 
-\c@lstlisting=\count311
+\c@lstlisting=\count313
  [1
 
 {/usr/local/texlive/2026/texmf-var/fonts/map/pdftex/updmap/pdftex.map}{/usr/local/texlive/2026/texmf-dist/fonts/enc/dvips/base/8r.enc}] (./report.toc
-LaTeX Font Info:    Trying to load font information for OT1+ptmcm on input line 6.
+LaTeX Font Info:    Trying to load font information for OT1+ptmcm on input line 7.
  (/usr/local/texlive/2026/texmf-dist/tex/latex/psnfss/ot1ptmcm.fd
 File: ot1ptmcm.fd 2000/01/03 Fontinst v1.801 font definitions for OT1/ptmcm.
 )
-LaTeX Font Info:    Trying to load font information for OML+ptmcm on input line 6.
+LaTeX Font Info:    Trying to load font information for OML+ptmcm on input line 7.
  (/usr/local/texlive/2026/texmf-dist/tex/latex/psnfss/omlptmcm.fd
 File: omlptmcm.fd 2000/01/03 Fontinst v1.801 font definitions for OML/ptmcm.
 )
-LaTeX Font Info:    Trying to load font information for OMX+psycm on input line 6.
+LaTeX Font Info:    Trying to load font information for OMX+psycm on input line 7.
  (/usr/local/texlive/2026/texmf-dist/tex/latex/psnfss/omxpsycm.fd
 File: omxpsycm.fd 2000/01/03 Fontinst v1.801 font definitions for OMX/psycm.
 )
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <12> not available
-(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 6.
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 7.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <9> not available
-(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 6.
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 7.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <7> not available
-(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 6.
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 7.
  [2
 
 ] [3])
@@ -309,7 +339,7 @@ LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <7> not available
 \openout4 = `report.toc'.
 
  (./word.count)
-Underfull \hbox (badness 10000) in paragraph at lines 49--49
+Underfull \hbox (badness 10000) in paragraph at lines 51--51
 
  []
 
@@ -319,44 +349,76 @@ Underfull \hbox (badness 10000) in paragraph at lines 49--49
 
  [5
 
-] (./report.lof)
+] (./report.lof
+Package acronym Info: Label `acro:CSD3' newly defined as it shall be overridden
+although it is yet undefined on input line 2.
+Package acronym Info: Label `acro:RCS' newly defined as it shall be overridden
+although it is yet undefined on input line 2.
+)
 \tf@lof=\write6
 \openout6 = `report.lof'.
 
  [6
+
+] (./abbreviations.tex) [7
 
 ] (./abstract.tex
 Underfull \hbox (badness 10000) in paragraph at lines 1--4
 
  []
 
-) [7
+) [8
 
-] [8
+] [9
 
 ]
-Overfull \hbox (1.14229pt too wide) in paragraph at lines 54--54
+Overfull \hbox (1.14229pt too wide) in paragraph at lines 59--59
 \OT1/ptm/m/n/12 right works in the the-sis, for ex-am-ple graphs and ta-bles (``Re-pro-duc-tions''), which
  []
 
 
-Overfull \hbox (22.88693pt too wide) in paragraph at lines 54--54
+Overfull \hbox (22.88693pt too wide) in paragraph at lines 59--59
 \OT1/ptm/m/n/12 Uni-ver-sity Li-brary, The Uni-ver-sity Li-brary's reg-u-la-tions (see [][]$\OT1/pcr/m/n/12 http : / / www . library .
  []
 
-[9
+[10
 
-] [10
+] [11
 
 ]
 \openout2 = `chapter1.aux'.
 
  (./chapter1.tex
 Chapter 1.
-) [11
+Package acronym Info: Label `acro:HPC' newly defined as it shall be overridden
+although it is yet undefined on input line 7.
+Package acronym Info: Label `acro:CSD3' overridden on input line 7.
+Package acronym Info: Label `acro:EPSRC' newly defined as it shall be overridden
+although it is yet undefined on input line 7.
+Package acronym Info: Label `acro:RCS' overridden on input line 7.
+<graphs/ticket_counts.pdf, id=534, 431.17964pt x 254.86092pt>
+File: graphs/ticket_counts.pdf Graphic file (type pdf)
+<use graphs/ticket_counts.pdf>
+Package pdftex.def Info: graphs/ticket_counts.pdf  used on input line 14.
+(pdftex.def)             Requested size: 431.17857pt x 254.86029pt.
+
+Overfull \hbox (18.61362pt too wide) in paragraph at lines 14--15
+ [][] 
+ []
+
+Package acronym Info: Label `acro:LLM' newly defined as it shall be overridden
+although it is yet undefined on input line 19.
+Package acronym Info: Label `acro:RAG' newly defined as it shall be overridden
+although it is yet undefined on input line 19.
+Package acronym Info: Label `acro:NLP' newly defined as it shall be overridden
+although it is yet undefined on input line 19.
+)
+Underfull \vbox (badness 3547) has occurred while \output is active []
+
+ [12
 
 
-]
+] [13 <./graphs/ticket_counts.pdf>]
 \openout2 = `chapter2.aux'.
 
  (./chapter2.tex
@@ -366,12 +428,7 @@ Overfull \hbox (8.44052pt too wide) in paragraph at lines 4--4
 []\OT1/ptm/b/n/17.28 HPC Sup-port as an In-for-ma-tion Re-trieval and Ques-
  []
 
-
-Overfull \hbox (14.09102pt too wide) in paragraph at lines 10--10
-[]\OT1/ptm/b/n/17.28 RAG over Het-ero-ge-neous En-ter-prise or Sup-port Cor-
- []
-
-) [12
+) [14
 
 
 
@@ -381,7 +438,12 @@ Overfull \hbox (14.09102pt too wide) in paragraph at lines 10--10
 
  (./chapter3.tex
 Chapter 3.
-) [13
+
+Overfull \hbox (25.80722pt too wide) in paragraph at lines 16--16
+[]\OT1/ptm/b/n/17.28 Success Cri-te-ria and Requirement-to-Evaluation Map-
+ []
+
+) [15
 
 
 
@@ -391,7 +453,7 @@ Chapter 3.
 
  (./chapter4.tex
 Chapter 4.
-) [14
+) [16
 
 
 
@@ -401,17 +463,23 @@ Chapter 4.
 
  (./chapter5.tex
 Chapter 5.
-) [15
+)
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [17
 
 
 
 
 ]
+Overfull \vbox (233.79532pt too high) has occurred while \output is active []
+
+ [18]
 \openout2 = `chapter6.aux'.
 
  (./chapter6.tex
 Chapter 6.
-) [16
+) [19
 
 
 
@@ -421,7 +489,7 @@ Chapter 6.
 
  (./chapter7.tex
 Chapter 7.
-) [17
+) [20
 
 
 
@@ -431,20 +499,24 @@ Chapter 7.
 
  (./chapter8.tex
 Chapter 8.
-) [18
+) [21
 
 
 
 
 ] (./report.bbl
+LaTeX Font Info:    Font shape `OMS/ptm/m/n' in size <12> not available
+(Font)              Font shape `OMS/pzccm/m/n' tried instead on input line 24.
 
-LaTeX Warning: Empty `thebibliography' environment on input line 23.
+Underfull \hbox (badness 10000) in paragraph at lines 24--25
+[]\OT1/ptm/m/n/12 ``Dawn: Pow-er-ing Fu-sion En-ergy \OMS/pzccm/m/n/12 j \OT1/ptm/m/n/12 Re-search Com-put-ing Ser-vices,''
+ []
 
-) [19
+[22
 
 
 
-]
+]) [23]
 \openout2 = `appendix1.aux'.
 
 
@@ -454,22 +526,26 @@ No file appendix1.tex.
 LaTeX2e <2025-11-01>
 L3 programming layer <2026-01-19>
  ***********
+
+
+LaTeX Warning: There were multiply-defined labels.
+
 Package rerunfilecheck Info: File `report.out' has not changed.
-(rerunfilecheck)             Checksum: 20A77E1B9BD45BBF826881DCF964522D;11809.
+(rerunfilecheck)             Checksum: A7A6C7A025919B615381809845935021;16785.
  ) 
 Here is how much of TeX's memory you used:
- 10826 strings out of 467525
- 168473 string characters out of 5418982
- 584894 words of memory out of 5000000
- 39453 multiletter control sequences out of 15000+600000
- 649963 words of font info for 78 fonts, out of 8000000 for 9000
+ 11640 strings out of 467525
+ 180852 string characters out of 5418982
+ 601489 words of memory out of 5000000
+ 40192 multiletter control sequences out of 15000+600000
+ 655480 words of font info for 85 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 75i,6n,79p,565b,478s stack positions out of 10000i,1000n,20000p,200000b,200000s
-</usr/local/texlive/2026/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmr8a.pfb>
-Output written on report.pdf (19 pages, 68835 bytes).
+ 75i,6n,79p,837b,629s stack positions out of 10000i,1000n,20000p,200000b,200000s
+</usr/local/texlive/2026/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
+Output written on report.pdf (23 pages, 125767 bytes).
 PDF statistics:
- 451 PDF objects out of 1000 (max. 8388607)
- 419 compressed objects within 5 object streams
- 86 named destinations out of 1000 (max. 500000)
- 505 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 710 PDF objects out of 1000 (max. 8388607)
+ 625 compressed objects within 7 object streams
+ 134 named destinations out of 1000 (max. 500000)
+ 678 words of extra memory for PDF output out of 10000 (max. 10000000)
 

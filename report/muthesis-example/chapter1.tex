@@ -4,6 +4,20 @@
 \section{Project Context and Motivation}
 \label{sec:context}
 
+\ac{HPC} systems are an essential tool for both scientific research and industry applications \cite{HPCEnvironment}, providing critical computational resources for a wide range of tasks, from clean energy to personalised medicine \cite{DawnPoweringFusion}. One such system is the \ac{CSD3}, one of the \ac{EPSRC} Tier-2 national supercomputing services hosted by the University of Cambridge \ac{RCS} \cite{ResearchComputingServicesDocumentation}.
+
+
+However, the complexity of systems such as \ac{CSD3} can lead to significant challenges for users, who often need to navigate a wide variety of fragmented documentation, to find the information they need to effectively use the system \cite{AskHPC}. This creates a steep learning curve for new users, many of whom need to seek help from support staff. Figure \ref{fig:ticket-counts} shows a steady increase in the number of support tickets received by the \ac{RCS} helpdesk over between 2017 and 2025, indicating growing pressure on support staff \cite{joslinGeneratingFrequentlyAsked2025} and motivating the development of a more efficient support solution for \ac{CSD3} users.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics{graphs/ticket_counts.pdf}
+    \caption{Annual number of \acs{CSD3} helpdesk tickets from 2017 to 2025, showing a clear overall increase in support demand over time. Data sourced from \acs{RCS} support ticket records.}
+    \label{fig:ticket-counts}
+\end{figure}
+
+Since the release of \ac{LLM}s such as ChatGPT, there has been significant interest in their potential to provide support and assistance in a variety of domains \cite{AskHPC}. In particular, \ac{RAG}-based systems, which combine the generative capabilities of \ac{LLM}s with a retrieval mechanism to access relevant information from a knowledge base, have been shown to produce more specific and factual responses than standard \ac{LLM}s, making them a promising solution for \ac{NLP} tasks \cite{lewisRetrievalaugmentedGenerationKnowledgeintensive2020}. 
+
 \section{Problem Definition and Scope}
 \label{sec:problem}
 
@@ -13,8 +27,11 @@
 \section{Aim, Objectives, and Success Criteria}
 \label{sec:aim}
 
-\section{Overview of Method and Evaluation}
-\label{sec:method}
+\section{Overview of Evaluation Strategy}
+\label{sec:eval_overview}
+
+\section{Project Plan and Milestones}
+\label{sec:plan}
 
 \section{Report Structure}
 \label{sec:structure}
