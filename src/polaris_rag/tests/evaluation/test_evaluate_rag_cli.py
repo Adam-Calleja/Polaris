@@ -253,6 +253,53 @@ def test_log_input_dataset_to_mlflow_uses_test_context(monkeypatch, tmp_path) ->
     ]
 
 
+def test_write_runtime_snapshots_sanitizes_config_snapshot(tmp_path) -> None:
+    tracking = _DummyMainTracking()
+
+    evaluate_rag._write_runtime_snapshots(
+        output_dir=tmp_path,
+        config_payload={
+            "safe": "value",
+            "generator_llm": {
+                "model_name": "test-generator",
+                "api_key": "secret-key",
+            },
+            "jira": {
+                "email": "user@example.com",
+                "api_token": "atlassian-token",
+            },
+            "nested": [
+                {
+                    "authorization": "Bearer secret",
+                    "keep": True,
+                }
+            ],
+        },
+        tracking=tracking,
+    )
+
+    config_artifact = next(
+        artifact
+        for artifact in tracking.logged_json_artifacts
+        if artifact["output_path"].endswith("config_snapshot.json")
+    )
+
+    assert config_artifact["data"] == {
+        "safe": "value",
+        "generator_llm": {
+            "model_name": "test-generator",
+        },
+        "jira": {
+            "email": "user@example.com",
+        },
+        "nested": [
+            {
+                "keep": True,
+            }
+        ],
+    }
+
+
 def test_resolve_prepared_rows_adds_manifest_stats(monkeypatch, tmp_path) -> None:
     dataset_path = tmp_path / "dataset.jsonl"
     dataset_path.write_text('{"id":"1","query":"Q1","expected_answer":"A1"}\n', encoding="utf-8")

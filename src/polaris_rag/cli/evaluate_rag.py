@@ -686,8 +686,9 @@ def _write_runtime_snapshots(
         output_path=output_dir / "env_snapshot.json",
         artifact_path="outputs",
     )
+    sanitized_config_payload = _sanitize_runtime_value(config_payload)
     tracking.log_json_artifact(
-        config_payload,
+        sanitized_config_payload,
         output_path=output_dir / "config_snapshot.json",
         artifact_path="inputs",
     )
