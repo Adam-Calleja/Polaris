@@ -20,3 +20,4 @@ coverage/
 build/
 mlruns/
 *config_snapshot.json
+/home/ac2650/Polaris/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/mixtral8x22b_naive_combined/run_03/config_snapshot.json
