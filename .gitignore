@@ -19,3 +19,4 @@ frontend/dist/
 coverage/
 build/
 mlruns/
+*/config_snapshot.json
