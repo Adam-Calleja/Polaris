@@ -20,8 +20,8 @@
 \providecommand{\BIBdecl}{\relax}
 \BIBdecl
 
-\bibitem{DawnPoweringFusion}
-``Dawn: {{Powering Fusion Energy}} \textbar{} {{Research Computing Services}},'' https://www.hpc.cam.ac.uk/dawn-powering-fusion-energy.
+\bibitem{CSD3UpgradeOctober}
+``{{CSD3 Upgrade October}} 2021 --- {{CSD3}} 1.0 documentation,'' https://docs.hpc.cam.ac.uk/hpc/user-guide/upgrade2021.html.
 
 \bibitem{ResearchComputingServicesDocumentation}
 ``Research {{Computing Services HPC Documentation}} --- {{CSD3}} 1.0 documentation,'' https://docs.hpc.cam.ac.uk/hpc/index.html.
@@ -31,13 +31,16 @@
 A.~Bondapalli, H.~Zheng, O.~T. Ajayi, M.~Keceli, H.~Siddabathuni~Som, T.~Childers, L.~Childers, Y.~Ghadar, M.~Papka, V.~Vishwanath, and R.~Ge, ``Askhpc: A chatbot for high performance computing user support,'' in \emph{Proceedings of the SC '25 Workshops of the International Conference for High Performance Computing, Networking, Storage and Analysis}, ser. SC Workshops '25.\hskip 1em plus 0.5em minus 0.4em\relax New York, NY, USA: Association for Computing Machinery, 2025, p. 727–739. [Online]. Available: \url{https://doi.org/10.1145/3731599.3767433}
 \BIBentrySTDinterwordspacing
 
+\bibitem{hwangRetrievalAugmentedGenerationEstimation2025}
+J.~Hwang, J.~Park, H.~Park, D.~Kim, S.~Park, and J.~Ok, ``Retrieval-{{Augmented Generation}} with {{Estimation}} of {{Source Reliability}},'' in \emph{Proceedings of the 2025 {{Conference}} on {{Empirical Methods}} in {{Natural Language Processing}}}, C.~Christodoulopoulos, T.~Chakraborty, C.~Rose, and V.~Peng, Eds.\hskip 1em plus 0.5em minus 0.4em\relax Suzhou, China: Association for Computational Linguistics, Nov. 2025, pp. 34\,279--34\,303.
+
 \bibitem{joslinGeneratingFrequentlyAsked2025}
 C.~Joslin, D.~Burns, F.~Ashish, and E.~Sarbijan, ``Generating {{Frequently Asked Questions}} from {{Technical Support Tickets}} using {{Large Language Models}},'' in \emph{Proceedings of the {{SC}} '25 {{Workshops}} of the {{International Conference}} for {{High Performance Computing}}, {{Networking}}, {{Storage}} and {{Analysis}}}, ser. {{SC Workshops}} '25.\hskip 1em plus 0.5em minus 0.4em\relax New York, NY, USA: Association for Computing Machinery, Nov. 2025, pp. 715--726.
 
 \bibitem{lewisRetrievalaugmentedGenerationKnowledgeintensive2020}
 P.~Lewis, E.~Perez, A.~Piktus, F.~Petroni, V.~Karpukhin, N.~Goyal, H.~K{\"u}ttler, M.~Lewis, W.-t. Yih, T.~Rockt{\"a}schel, S.~Riedel, and D.~Kiela, ``Retrieval-augmented generation for knowledge-intensive {{NLP}} tasks,'' in \emph{Proceedings of the 34th {{International Conference}} on {{Neural Information Processing Systems}}}, ser. {{NIPS}} '20.\hskip 1em plus 0.5em minus 0.4em\relax Red Hook, NY, USA: Curran Associates Inc., Dec. 2020, pp. 9459--9474.
 
-\bibitem{HPCEnvironment}
-Z.~Xu, X.~Chi, and N.~Xiao, ``High-performance computing environment: A review of twenty years of experiments in {{China}},'' \emph{National Science Review}, vol.~3, no.~1, pp. 36--48, Jan. 2016.
+\bibitem{liYouKnowWhat2024}
+Z.~Li, J.~Zhang, C.~Yan, K.~Das, S.~Kumar, M.~Kantarcioglu, and B.~A. Malin, ``Do {{You Know What You Are Talking About}}? {{Characterizing Query-Knowledge Relevance For Reliable Retrieval Augmented Generation}},'' in \emph{Proceedings of the 2024 {{Conference}} on {{Empirical Methods}} in {{Natural Language Processing}}}, Y.~{Al-Onaizan}, M.~Bansal, and Y.-N. Chen, Eds.\hskip 1em plus 0.5em minus 0.4em\relax Miami, Florida, USA: Association for Computational Linguistics, Nov. 2024, pp. 6130--6151.
 
 \end{thebibliography}
