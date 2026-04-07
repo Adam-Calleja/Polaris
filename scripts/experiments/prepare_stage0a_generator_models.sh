@@ -17,15 +17,15 @@ MODEL_BOOT_POLL_SECONDS="${MODEL_BOOT_POLL_SECONDS:-60}"
 WARMUP_REQUESTS="${WARMUP_REQUESTS:-3}"
 
 MODEL_NAMES=(
-  # "meta-llama/Llama-3.3-70B-Instruct"
-  "mistralai/Mixtral-8x22B-Instruct-v0.1"
-  # "mistralai/Mistral-Large-Instruct-2407"
+  "Qwen/Qwen2.5-32B-Instruct"
+  "meta-llama/Llama-3.3-70B-Instruct"
+  "mistralai/Mistral-Large-Instruct-2407"
 )
 
 CONDITION_NAMES=(
-  # "llama33_naive_combined"
-  "mixtral8x22b_naive_combined"
-  # "mistral_large_2407_naive_combined"
+  "qwen25_32b_naive_combined"
+  "llama33_naive_combined"
+  "mistral_large_2407_naive_combined"
 )
 
 docker_cmd() {
