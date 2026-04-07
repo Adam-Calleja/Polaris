@@ -133,7 +133,7 @@ fi
 HF_CACHE_DIR="${VOLUME}/hf-cache"
 RECIPE_CACHE_DIR_HOST="${VOLUME}/recipe-cache/${MODEL_SAFE}/tag-${TAG_SAFE}/tp-${TENSOR_PARALLEL}/len-${MAX_MODEL_LEN}/seqs-${MAX_NUM_SEQS}/block-${BLOCK_SIZE}"
 RECIPE_CACHE_DIR_CONTAINER="/data/recipe-cache"
-mkdir -p "${HF_CACHE_DIR}/hub" "${HF_CACHE_DIR}/transformers" "${RECIPE_CACHE_DIR_HOST}"
+sudo mkdir -p "${HF_CACHE_DIR}/hub" "${HF_CACHE_DIR}/transformers" "${RECIPE_CACHE_DIR_HOST}"
 
 if ! docker_cmd image inspect "${IMG}" >/dev/null 2>&1; then
   echo "Missing vLLM image: ${IMG}" >&2

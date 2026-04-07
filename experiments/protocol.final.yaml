@@ -28,10 +28,10 @@ generator_candidates:
         temperature: 0
         top_p: 1.0
         stop_list: ["\nUser:", "\n\nUser:"]
-  mixtral8x22b: &mixtral8x22b_generator
+  qwen25_32b: &qwen25_32b_generator
     generator_llm:
       type: "openai_like"
-      model_name: "mistralai/Mixtral-8x22B-Instruct-v0.1"
+      model_name: "Qwen/Qwen2.5-32B-Instruct"
       api_base: "http://vllm:8080/v1"
       api_key: "${POLARIS_LLM_API_KEY}"
       request_timeout: 90
@@ -347,6 +347,10 @@ defaults:
       generation:
         mode: "pipeline"
         workers: 1
+      run:
+        max_workers: 16
+      adaptive_concurrency:
+        enabled: false
       dataset:
         reuse_prepared: false
   run_options:
@@ -355,8 +359,10 @@ defaults:
       - "faithfulness"
       - "context_recall"
       - "context_precision_without_reference"
-      - "retrieval_recall_at_k"
-      - "retrieval_ndcg_at_10"
+      - "answer_relevancy"
+      - "context_entity_recall"
+      - "semantic_similarity"
+      - "noise_sensitivity"
     generation_mode: "pipeline"
     generation_workers: 1
     evaluation_policy: "official"
@@ -406,10 +412,10 @@ stages:
         preset: "naive_combined"
         config_overrides:
           <<: *llama33_generator
-      - name: "mixtral8x22b_naive_combined"
+      - name: "qwen25_32b_naive_combined"
         preset: "naive_combined"
         config_overrides:
-          <<: *mixtral8x22b_generator
+          <<: *qwen25_32b_generator
       - name: "mistral_large_2407_naive_combined"
         preset: "naive_combined"
         config_overrides:
