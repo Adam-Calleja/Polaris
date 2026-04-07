@@ -14,7 +14,8 @@ RUN ${PYTHON_BIN} -m pip install --upgrade pip setuptools wheel && \
     git clone --depth 1 --branch "${VLLM_TAG}" --single-branch \
       https://github.com/HabanaAI/vllm-fork.git "${VLLM_REPO}" && \
     ${PYTHON_BIN} -m pip install -r "${VLLM_REPO}/requirements-hpu.txt" && \
-    ${PYTHON_BIN} -m pip install -e "${VLLM_REPO}" && \
+    cd "${VLLM_REPO}" && \
+    ${PYTHON_BIN} setup.py develop && \
     ${PYTHON_BIN} - <<'PYCODE' && \
     rm -rf /root/.cache/pip "${VLLM_REPO}/.git"
 import importlib.util
@@ -23,4 +24,3 @@ import sys
 print("python:", sys.executable)
 print("vLLM importable:", importlib.util.find_spec("vllm") is not None)
 PYCODE
-

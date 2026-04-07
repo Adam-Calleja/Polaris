@@ -15,21 +15,29 @@ As a result of this complexity, users frequently turn to the \ac{RCS} helpdesk f
     \label{fig:ticket-counts}
 \end{figure}
 
-Recent studies have investigated the use of \ac{LLM}-based assistants for technical support and question answering, including domain-specific systems for HPC user support \cite{AskHPC}. In particular, \ac{RAG}-based systems, which combine the generative capabilities of \ac{LLM}s with a retrieval mechanism to access relevant information from a knowledge base, have been shown to produce more specific and factual responses than non-retrieval-augmented \ac{LLM}s. This makes them a promising solution for evidence-grounded HPC support \ac{QA} \cite{lewisRetrievalaugmentedGenerationKnowledgeintensive2020}.
+Recent studies have investigated the use of \ac{LLM}-based assistants for technical support and question answering, including domain-specific systems for \ac{HPC} user support \cite{AskHPC}. In particular, \ac{RAG}-based systems, which combine the generative capabilities of \ac{LLM}s with a retrieval mechanism to access relevant information from a knowledge base, have been shown to produce more specific and factual responses than non-retrieval-augmented \ac{LLM}s. This makes them a promising solution for evidence-grounded \ac{HPC} support \ac{QA} \cite{lewisRetrievalaugmentedGenerationKnowledgeintensive2020}.
 
-However, the generation quality of RAG is highly dependent on the quality of the retrieved information. Recent work has shown that RAG systems can generate incorrect answers when they are provided with documents of weak relevance \cite{liYouKnowWhat2024}. Furthermore, semantically relevant retrieved evidence can still be unusable if it comes from an unreliable source \cite{hwangRetrievalAugmentedGenerationEstimation2025} or if it reflects outdated information \cite{liYouKnowWhat2024}.
+However, the generation quality of \ac{RAG} is highly dependent on the quality of the retrieved information. Recent work has shown that \ac{RAG} systems can generate incorrect answers when they are provided with documents of weak relevance \cite{liYouKnowWhat2024}. Furthermore, semantically relevant retrieved evidence can still be unusable if it comes from an unreliable source \cite{hwangRetrievalAugmentedGenerationEstimation2025} or if it reflects outdated information \cite{liYouKnowWhat2024}.
 
-In the CSD3 setting, these risks are amplified by the heterogeneous nature of the available evidence. Official CSD3 documentation is typically the primary source for currently supported usage \cite{ResearchComputingServicesDocumentation}, while external package documentation can provide additional context \cite{AskHPC}. Historical support tickets, by contrast, capture concrete prior issue-resolution cases \cite{joslinGeneratingFrequentlyAsked2025}, but these may not remain applicable after later system or software changes \cite{CSD3UpgradeOctober}. 
+In the \ac{CSD3} setting, these risks are amplified by the heterogeneous nature of the available evidence. Official \ac{CSD3} documentation is typically the primary source for currently supported usage \cite{ResearchComputingServicesDocumentation}, while external package documentation can provide additional context \cite{AskHPC}. Historical support tickets, by contrast, capture concrete prior issue-resolution cases \cite{joslinGeneratingFrequentlyAsked2025}, but these may not remain applicable after later system or software changes \cite{CSD3UpgradeOctober}. 
 
-The challenge is therefore not only to retrieve topically relevant information, but to prioritise evidence that is appropriate for the current CSD3 context. The next section formalises this challenge by defining the problem addressed in the dissertation and clarifying its scope.
+The challenge is therefore not only to retrieve topically relevant information, but to prioritise evidence that is appropriate for the current \ac{CSD3} context. The next section formalises this challenge by defining the problem addressed in the dissertation and clarifying its scope.
 
 \section{Problem Definition and Scope}
 \label{sec:problem}
 
+This dissertation addresses the problem of answering \ac{CSD3} user support queries using retrieved evidence from multiple information sources. The task is not only to retrieve semantically similar information, but also to prioritise evidence that is appropriate for the current \ac{CSD3} context. In this setting, answer correctness depends not only on relevance, but also on the authoritativeness, freshness, and applicability of the retrieved evidence to the current system state \cite{liYouKnowWhat2024,hwangRetrievalAugmentedGenerationEstimation2025}. 
 
+The difficulty arises from the heterogeneous evidence base available to the system. Official \ac{CSD3} documentation provides the primary record of currently supported local usage \cite{ResearchComputingServicesDocumentation}; curated external documentation provides further software-specific guidance that may not be covered by the official documentation \cite{AskHPC}; and historical support tickets capture concrete prior issue-resolution cases \cite{joslinGeneratingFrequentlyAsked2025}. These sources therefore serve different evidential roles and should not be treated as interchangeable. In particular, historical tickets may become unreliable after changes to system configuration, software versions, or local policy \cite{joslinGeneratingFrequentlyAsked2025,CSD3UpgradeOctober}. This project therefore treats \ac{HPC} support \ac{QA} as a retrieval problem in which source validity, authority, and freshness must be considered alongside semantic relevance \cite{liYouKnowWhat2024,hwangRetrievalAugmentedGenerationEstimation2025}.
+
+This project is scoped to evidence-grounded first response assistance for \ac{CSD3} user support queries within a supervised internal support workflow, rather than a fully autonomous public-facing application. The present system is restricted to text-accessible evidence, using documentation text and visible ticket content rather than attachments, screenshots, log files, or other non-text artefacts. The study is further scoped to single-hop support queries, excluding more complex tasks that require multiple intermediate retrieval steps. On this basis, the following sections derive the research questions, objectives, success criteria, and evaluation strategy used in the remainder of the report.
 
 \section{Research Questions and Hypotheses}
 \label{sec:questions}
+
+To investigate the problems introduced by the heterogeneous evidence base, this project addresses the following research questions (RQ), along with the associated hypotheses (H):
+
+
 
 \section{Aim, Objectives, and Success Criteria}
 \label{sec:aim}
