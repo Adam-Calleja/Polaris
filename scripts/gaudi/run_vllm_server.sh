@@ -10,9 +10,7 @@ VOLUME=${VOLUME:-/mnt/data/ac2650/test}
 NETWORK=${NETWORK:-polaris_net}
 
 VLLM_TAG=${VLLM_TAG:-v0.7.2+Gaudi-1.21.0}
-IMG_REPO=${IMG_REPO:-local/vllm-gaudi}
-IMG_TAG_DEFAULT="$(printf '%s' "${VLLM_TAG}" | tr '/:+' '---')"
-IMG=${IMG:-${IMG_REPO}:${IMG_TAG_DEFAULT}}
+IMG=${IMG:-vault.habana.ai/gaudi-docker/1.21.0/rhel9.4/habanalabs/pytorch-installer-2.6.0:latest}
 PYTHON_BIN=${PYTHON_BIN:-python3.11}
 
 # Optional user overrides.
@@ -25,6 +23,7 @@ HOST=${HOST:-0.0.0.0}
 TOKENS_PER_BLOCK_BUCKET=${TOKENS_PER_BLOCK_BUCKET:-2048}
 RECIPE_CACHE_DELETE=${RECIPE_CACHE_DELETE:-auto}
 RECIPE_CACHE_SIZE_MB=${RECIPE_CACHE_SIZE_MB:-8192}
+FORCE_REINSTALL=${FORCE_REINSTALL:-false}
 
 ENABLE_HPU_GRAPH_DEFAULT=${ENABLE_HPU_GRAPH_DEFAULT:-false}
 PT_HPU_ENABLE_REFINE_DYNAMIC_SHAPES=${PT_HPU_ENABLE_REFINE_DYNAMIC_SHAPES:-0}
@@ -131,17 +130,10 @@ if (( NUM_BLOCKS < 128 )); then
 fi
 
 HF_CACHE_DIR="${VOLUME}/hf-cache"
+VLLM_HOME_DIR="${VOLUME}/vllm-home"
 RECIPE_CACHE_DIR_HOST="${VOLUME}/recipe-cache/${MODEL_SAFE}/tag-${TAG_SAFE}/tp-${TENSOR_PARALLEL}/len-${MAX_MODEL_LEN}/seqs-${MAX_NUM_SEQS}/block-${BLOCK_SIZE}"
 RECIPE_CACHE_DIR_CONTAINER="/data/recipe-cache"
-sudo mkdir -p "${HF_CACHE_DIR}/hub" "${HF_CACHE_DIR}/transformers" "${RECIPE_CACHE_DIR_HOST}"
-
-if ! docker_cmd image inspect "${IMG}" >/dev/null 2>&1; then
-  echo "Missing vLLM image: ${IMG}" >&2
-  echo "Build it first with:" >&2
-  echo "  ${SCRIPT_DIR}/build_vllm_gaudi_image.sh" >&2
-  echo "or override IMG to a different prebuilt image." >&2
-  exit 1
-fi
+mkdir -p "${HF_CACHE_DIR}/hub" "${HF_CACHE_DIR}/transformers" "${RECIPE_CACHE_DIR_HOST}" "${VLLM_HOME_DIR}"
 
 RECIPE_CACHE_DELETE_VALUE="$(recipe_cache_delete_value)"
 PT_HPU_RECIPE_CACHE_CONFIG_VALUE="${RECIPE_CACHE_DIR_CONTAINER},${RECIPE_CACHE_DELETE_VALUE},${RECIPE_CACHE_SIZE_MB}"
@@ -172,19 +164,100 @@ docker_cmd run --rm -d \
   -e USE_FLASH_ATTENTION="${USE_FLASH_ATTENTION_DEFAULT}" \
   -e FLASH_ATTENTION_RECOMPUTE="${FLASH_ATTENTION_RECOMPUTE_DEFAULT}" \
   -e VLLM_SKIP_WARMUP="${VLLM_SKIP_WARMUP}" \
+  -e FORCE_REINSTALL="${FORCE_REINSTALL}" \
+  -e PYTHON_BIN="${PYTHON_BIN}" \
+  -e VLLM_TAG="${VLLM_TAG}" \
+  -e MODEL="${MODEL}" \
+  -e PORT="${PORT}" \
+  -e TENSOR_PARALLEL="${TENSOR_PARALLEL}" \
+  -e MAX_MODEL_LEN="${MAX_MODEL_LEN}" \
+  -e GPU_MEMORY_UTILIZATION="${GPU_MEMORY_UTILIZATION}" \
+  -e MAX_NUM_SEQS="${MAX_NUM_SEQS}" \
+  -e BLOCK_SIZE="${BLOCK_SIZE}" \
+  -e HOST="${HOST}" \
   -v "${HF_CACHE_DIR}:/data/hf-cache" \
   -v "${RECIPE_CACHE_DIR_HOST}:${RECIPE_CACHE_DIR_CONTAINER}" \
+  -v "${VLLM_HOME_DIR}:/opt/vllm-home" \
   "${IMG}" \
-  "${PYTHON_BIN}" -m vllm.entrypoints.openai.api_server \
-    --model "${MODEL}" \
-    --tensor-parallel-size "${TENSOR_PARALLEL}" \
-    --max-model-len "${MAX_MODEL_LEN}" \
-    --download-dir /data/hf-cache \
-    --port "${PORT}" \
-    --host "${HOST}" \
-    --gpu-memory-utilization "${GPU_MEMORY_UTILIZATION}" \
-    --max-num-seqs "${MAX_NUM_SEQS}" \
-    --block-size "${BLOCK_SIZE}"
+  bash -lc '
+    set -euo pipefail
+
+    PY_BASE="${PYTHON_BIN}"
+    TAG_SAFE="$(printf "%s" "${VLLM_TAG}" | tr "/:+" "---")"
+    VENV_DIR="/opt/vllm-home/venv-${TAG_SAFE}"
+    STAMP_FILE="${VENV_DIR}/.bootstrap-complete"
+    REPO_DIR="/opt/vllm-home/vllm-fork"
+    REPO_TAG_FILE="/opt/vllm-home/vllm-fork/.checked-out-tag"
+
+    mkdir -p /opt/vllm-home
+
+    NEED_BOOTSTRAP=0
+    if [ ! -x "${VENV_DIR}/bin/python" ]; then
+      "${PY_BASE}" -m venv --system-site-packages "${VENV_DIR}"
+      NEED_BOOTSTRAP=1
+    fi
+
+    PY="${VENV_DIR}/bin/python"
+
+    if [ -d "${REPO_DIR}/.git" ]; then
+      CURRENT_TAG="$(cat "${REPO_TAG_FILE}" 2>/dev/null || true)"
+      if [ "${CURRENT_TAG}" != "${VLLM_TAG}" ]; then
+        git -C "${REPO_DIR}" fetch --no-tags origin tag "${VLLM_TAG}" --force
+        git -C "${REPO_DIR}" checkout -f "tags/${VLLM_TAG}"
+        printf "%s\n" "${VLLM_TAG}" > "${REPO_TAG_FILE}"
+        NEED_BOOTSTRAP=1
+      fi
+    else
+      rm -rf "${REPO_DIR}"
+      git clone --depth 1 --branch "${VLLM_TAG}" --single-branch \
+        https://github.com/HabanaAI/vllm-fork.git "${REPO_DIR}"
+      printf "%s\n" "${VLLM_TAG}" > "${REPO_TAG_FILE}"
+      NEED_BOOTSTRAP=1
+    fi
+
+    EXPECTED_STAMP="${VLLM_TAG}|${PY_BASE}"
+    if [ ! -f "${STAMP_FILE}" ] || [ "$(cat "${STAMP_FILE}" 2>/dev/null || true)" != "${EXPECTED_STAMP}" ]; then
+      NEED_BOOTSTRAP=1
+    fi
+
+    case "${FORCE_REINSTALL,,}" in
+      true|1|yes)
+        NEED_BOOTSTRAP=1
+        ;;
+    esac
+
+    if [ "${NEED_BOOTSTRAP}" = "1" ]; then
+      "${PY}" -m pip install --upgrade pip setuptools wheel
+      "${PY}" -m pip install -r "${REPO_DIR}/requirements-hpu.txt"
+      "${PY}" -m pip install -e "${REPO_DIR}"
+      printf "%s\n" "${EXPECTED_STAMP}" > "${STAMP_FILE}"
+    fi
+
+    "${PY}" - <<'"'"'PYCODE'"'"'
+import importlib.util
+import sys
+print("python:", sys.executable)
+print("vLLM importable:", importlib.util.find_spec("vllm") is not None)
+import transformers
+print("transformers:", transformers.__version__)
+PYCODE
+
+    CMD=(
+      "${PY}" -m vllm.entrypoints.openai.api_server
+      --model "${MODEL}"
+      --tensor-parallel-size "${TENSOR_PARALLEL}"
+      --max-model-len "${MAX_MODEL_LEN}"
+      --download-dir /data/hf-cache
+      --port "${PORT}"
+      --host "${HOST}"
+      --gpu-memory-utilization "${GPU_MEMORY_UTILIZATION}"
+      --max-num-seqs "${MAX_NUM_SEQS}"
+      --block-size "${BLOCK_SIZE}"
+    )
+
+    echo "launch: ${CMD[*]}"
+    PYTHONUNBUFFERED=1 "${CMD[@]}"
+  '
 
 echo "vLLM is starting on ${HOST}:${PORT}"
 echo "Model:              ${MODEL}"
@@ -194,6 +267,7 @@ echo "MaxLen:             ${MAX_MODEL_LEN}"
 echo "Blocks:             ${NUM_BLOCKS}"
 echo "GMU:                ${GPU_MEMORY_UTILIZATION}"
 echo "Seqs:               ${MAX_NUM_SEQS}"
+echo "vLLM home:          ${VLLM_HOME_DIR}"
 echo "Recipe cache mode:  ${RECIPE_CACHE_DELETE_VALUE}"
 echo "Recipe cache dir:   ${RECIPE_CACHE_DIR_HOST}"
 echo "Logs:               sudo docker logs -f vllm-gaudi"
