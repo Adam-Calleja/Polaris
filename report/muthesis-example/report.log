@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.3.18)  4 APR 2026 22:57
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.3.18)  6 APR 2026 13:42
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -390,35 +390,35 @@ Overfull \hbox (22.88693pt too wide) in paragraph at lines 59--59
 
  (./chapter1.tex
 Chapter 1.
-Package acronym Info: Label `acro:HPC' newly defined as it shall be overridden
-although it is yet undefined on input line 7.
 Package acronym Info: Label `acro:CSD3' overridden on input line 7.
 Package acronym Info: Label `acro:EPSRC' newly defined as it shall be overridden
 although it is yet undefined on input line 7.
+Package acronym Info: Label `acro:HPC' newly defined as it shall be overridden
+although it is yet undefined on input line 7.
 Package acronym Info: Label `acro:RCS' overridden on input line 7.
-<graphs/ticket_counts.pdf, id=534, 431.17964pt x 254.86092pt>
+<graphs/ticket_counts.pdf, id=532, 431.17964pt x 254.86092pt>
 File: graphs/ticket_counts.pdf Graphic file (type pdf)
 <use graphs/ticket_counts.pdf>
-Package pdftex.def Info: graphs/ticket_counts.pdf  used on input line 14.
+Package pdftex.def Info: graphs/ticket_counts.pdf  used on input line 13.
 (pdftex.def)             Requested size: 431.17857pt x 254.86029pt.
 
-Overfull \hbox (18.61362pt too wide) in paragraph at lines 14--15
+Overfull \hbox (18.61362pt too wide) in paragraph at lines 13--14
  [][] 
  []
 
 Package acronym Info: Label `acro:LLM' newly defined as it shall be overridden
-although it is yet undefined on input line 19.
+although it is yet undefined on input line 18.
 Package acronym Info: Label `acro:RAG' newly defined as it shall be overridden
-although it is yet undefined on input line 19.
-Package acronym Info: Label `acro:NLP' newly defined as it shall be overridden
-although it is yet undefined on input line 19.
-)
-Underfull \vbox (badness 3547) has occurred while \output is active []
-
- [12
+although it is yet undefined on input line 18.
+Package acronym Info: Label `acro:QA' newly defined as it shall be overridden
+although it is yet undefined on input line 18.
+[12
 
 
-] [13 <./graphs/ticket_counts.pdf>]
+])
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [13 <./graphs/ticket_counts.pdf>] [14]
 \openout2 = `chapter2.aux'.
 
  (./chapter2.tex
@@ -428,7 +428,7 @@ Overfull \hbox (8.44052pt too wide) in paragraph at lines 4--4
 []\OT1/ptm/b/n/17.28 HPC Sup-port as an In-for-ma-tion Re-trieval and Ques-
  []
 
-) [14
+) [15
 
 
 
@@ -443,7 +443,7 @@ Overfull \hbox (25.80722pt too wide) in paragraph at lines 16--16
 []\OT1/ptm/b/n/17.28 Success Cri-te-ria and Requirement-to-Evaluation Map-
  []
 
-) [15
+) [16
 
 
 
@@ -453,7 +453,7 @@ Overfull \hbox (25.80722pt too wide) in paragraph at lines 16--16
 
  (./chapter4.tex
 Chapter 4.
-) [16
+) [17
 
 
 
@@ -466,7 +466,7 @@ Chapter 5.
 )
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
- [17
+ [18
 
 
 
@@ -474,12 +474,12 @@ Underfull \vbox (badness 10000) has occurred while \output is active []
 ]
 Overfull \vbox (233.79532pt too high) has occurred while \output is active []
 
- [18]
+ [19]
 \openout2 = `chapter6.aux'.
 
  (./chapter6.tex
 Chapter 6.
-) [19
+) [20
 
 
 
@@ -489,7 +489,7 @@ Chapter 6.
 
  (./chapter7.tex
 Chapter 7.
-) [20
+) [21
 
 
 
@@ -499,24 +499,26 @@ Chapter 7.
 
  (./chapter8.tex
 Chapter 8.
-) [21
+) [22
 
 
 
 
 ] (./report.bbl
-LaTeX Font Info:    Font shape `OMS/ptm/m/n' in size <12> not available
-(Font)              Font shape `OMS/pzccm/m/n' tried instead on input line 24.
-
 Underfull \hbox (badness 10000) in paragraph at lines 24--25
-[]\OT1/ptm/m/n/12 ``Dawn: Pow-er-ing Fu-sion En-ergy \OMS/pzccm/m/n/12 j \OT1/ptm/m/n/12 Re-search Com-put-ing Ser-vices,''
+[]\OT1/ptm/m/n/12 ``CSD3 Up-grade Oc-to-ber 2021 --- CSD3 1.0 doc-u-men-ta-tion,''
  []
 
-[22
+
+Underfull \hbox (badness 2245) in paragraph at lines 35--36
+[]\OT1/ptm/m/n/12 J. Hwang, J. Park, H. Park, D. Kim, S. Park, and J. Ok, ``Retrieval-
+ []
+
+[23
 
 
 
-]) [23]
+]) [24]
 \openout2 = `appendix1.aux'.
 
 
@@ -534,18 +536,18 @@ Package rerunfilecheck Info: File `report.out' has not changed.
 (rerunfilecheck)             Checksum: A7A6C7A025919B615381809845935021;16785.
  ) 
 Here is how much of TeX's memory you used:
- 11640 strings out of 467525
- 180852 string characters out of 5418982
- 601489 words of memory out of 5000000
- 40192 multiletter control sequences out of 15000+600000
- 655480 words of font info for 85 fonts, out of 8000000 for 9000
+ 11641 strings out of 467525
+ 180942 string characters out of 5418982
+ 601541 words of memory out of 5000000
+ 40193 multiletter control sequences out of 15000+600000
+ 654367 words of font info for 83 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 75i,6n,79p,837b,629s stack positions out of 10000i,1000n,20000p,200000b,200000s
-</usr/local/texlive/2026/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
-Output written on report.pdf (23 pages, 125767 bytes).
+ 75i,6n,79p,786b,628s stack positions out of 10000i,1000n,20000p,200000b,200000s
+</usr/local/texlive/2026/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
+Output written on report.pdf (24 pages, 120048 bytes).
 PDF statistics:
- 710 PDF objects out of 1000 (max. 8388607)
- 625 compressed objects within 7 object streams
- 134 named destinations out of 1000 (max. 500000)
+ 715 PDF objects out of 1000 (max. 8388607)
+ 631 compressed objects within 7 object streams
+ 136 named destinations out of 1000 (max. 500000)
  678 words of extra memory for PDF output out of 10000 (max. 10000000)
 

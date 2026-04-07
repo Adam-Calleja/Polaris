@@ -1,0 +1,26 @@
+ARG BASE_IMAGE=vault.habana.ai/gaudi-docker/1.21.0/rhel9.4/habanalabs/pytorch-installer-2.6.0:latest
+FROM ${BASE_IMAGE}
+
+ARG VLLM_TAG=v0.7.2+Gaudi-1.21.0
+ARG PYTHON_BIN=python3.11
+
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    VLLM_HOME=/opt/vllm-home \
+    VLLM_REPO=/opt/vllm-home/vllm-fork
+
+RUN ${PYTHON_BIN} -m pip install --upgrade pip setuptools wheel && \
+    mkdir -p "${VLLM_HOME}" && \
+    git clone --depth 1 --branch "${VLLM_TAG}" --single-branch \
+      https://github.com/HabanaAI/vllm-fork.git "${VLLM_REPO}" && \
+    ${PYTHON_BIN} -m pip install -r "${VLLM_REPO}/requirements-hpu.txt" && \
+    ${PYTHON_BIN} -m pip install -e "${VLLM_REPO}" && \
+    ${PYTHON_BIN} - <<'PYCODE' && \
+    rm -rf /root/.cache/pip "${VLLM_REPO}/.git"
+import importlib.util
+import sys
+
+print("python:", sys.executable)
+print("vLLM importable:", importlib.util.find_spec("vllm") is not None)
+PYCODE
+

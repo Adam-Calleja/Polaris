@@ -21,49 +21,49 @@ Database file #1: refs.bib
 -- http://www.michaelshell.org/tex/ieeetran/bibtex/
 -- See the "IEEEtran_bst_HOWTO.pdf" manual for usage information.
 ** Sorting version - not for normal IEEE work.
-Warning--to sort, need author, organization, or key in DawnPoweringFusion
 Warning--to sort, need author, organization, or key in ResearchComputingServicesDocumentation
+Warning--to sort, need author, organization, or key in CSD3UpgradeOctober
 
 Done.
-You've used 6 entries,
+You've used 7 entries,
             4566 wiz_defined-function locations,
-            955 strings with 10245 characters,
-and the built_in function-call counts, 6016 in all, are:
-= -- 497
-> -- 214
-< -- 30
-+ -- 110
-- -- 60
-* -- 352
-:= -- 838
-add.period$ -- 15
-call.type$ -- 6
-change.case$ -- 48
-chr.to.int$ -- 72
-cite$ -- 8
-duplicate$ -- 382
-empty$ -- 443
-format.name$ -- 64
-if$ -- 1354
+            966 strings with 11052 characters,
+and the built_in function-call counts, 8202 in all, are:
+= -- 648
+> -- 322
+< -- 45
++ -- 170
+- -- 93
+* -- 484
+:= -- 1094
+add.period$ -- 19
+call.type$ -- 7
+change.case$ -- 65
+chr.to.int$ -- 120
+cite$ -- 9
+duplicate$ -- 505
+empty$ -- 607
+format.name$ -- 94
+if$ -- 1856
 int.to.chr$ -- 0
-int.to.str$ -- 6
-missing$ -- 78
-newline$ -- 43
-num.names$ -- 8
-pop$ -- 238
+int.to.str$ -- 7
+missing$ -- 106
+newline$ -- 46
+num.names$ -- 14
+pop$ -- 333
 preamble$ -- 1
-purify$ -- 42
+purify$ -- 54
 quote$ -- 2
-skip$ -- 406
+skip$ -- 531
 stack$ -- 0
-substring$ -- 222
-swap$ -- 293
-text.length$ -- 6
+substring$ -- 356
+swap$ -- 402
+text.length$ -- 5
 text.prefix$ -- 0
 top$ -- 6
-type$ -- 64
+type$ -- 75
 warning$ -- 2
-while$ -- 21
-width$ -- 7
-write$ -- 78
+while$ -- 29
+width$ -- 8
+write$ -- 87
 (There were 2 warnings)

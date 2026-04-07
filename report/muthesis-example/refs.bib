@@ -76,3 +76,59 @@ series = {SC Workshops '25}
   abstract = {Large pre-trained language models have been shown to store factual knowledge in their parameters, and achieve state-of-the-art results when fine-tuned on downstream NLP tasks. However, their ability to access and precisely manipulate knowledge is still limited, and hence on knowledge-intensive tasks, their performance lags behind task-specific architectures. Additionally, providing provenance for their decisions and updating their world knowledge remain open research problems. Pre-trained models with a differentiable access mechanism to explicit non-parametric memory can overcome this issue, but have so far been only investigated for extractive downstream tasks. We explore a general-purpose fine-tuning recipe for retrieval-augmented generation (RAG) --- models which combine pre-trained parametric and non-parametric memory for language generation. We introduce RAG models where the parametric memory is a pre-trained seq2seq model and the non-parametric memory is a dense vector index of Wikipedia, accessed with a pre-trained neural retriever. We compare two RAG formulations, one which conditions on the same retrieved passages across the whole generated sequence, and another which can use different passages per token. We fine-tune and evaluate our models on a wide range of knowledge-intensive NLP tasks and set the state of the art on three open domain QA tasks, outperforming parametric seq2seq models and task-specific retrieve-and-extract architectures. For language generation tasks, we find that RAG models generate more specific, diverse and factual language than a state-of-the-art parametric-only seq2seq baseline.},
   isbn = {978-1-7138-2954-6}
 }
+
+@inproceedings{LinkedInRAG,
+  title = {Retrieval-{{Augmented Generation}} with {{Knowledge Graphs}} for {{Customer Service Question Answering}}},
+  booktitle = {Proceedings of the 47th {{International ACM SIGIR Conference}} on {{Research}} and {{Development}} in {{Information Retrieval}}},
+  author = {Xu, Zhentao and Cruz, Mark Jerome and Guevara, Matthew and Wang, Tie and Deshpande, Manasi and Wang, Xiaofeng and Li, Zheng},
+  year = 2024,
+  month = jul,
+  pages = {2905--2909},
+  publisher = {ACM},
+  address = {Washington DC USA},
+  doi = {10.1145/3626772.3661370},
+  urldate = {2025-10-21},
+  isbn = {979-8-4007-0431-4},
+  langid = {english},
+  file = {/Users/adam/Zotero/storage/TCUKQR5D/Xu et al. - 2024 - Retrieval-Augmented Generation with Knowledge Graphs for Customer Service Question Answering.pdf}
+}
+
+@inproceedings{liYouKnowWhat2024,
+  title = {Do {{You Know What You Are Talking About}}? {{Characterizing Query-Knowledge Relevance For Reliable Retrieval Augmented Generation}}},
+  shorttitle = {Do {{You Know What You Are Talking About}}?},
+  booktitle = {Proceedings of the 2024 {{Conference}} on {{Empirical Methods}} in {{Natural Language Processing}}},
+  author = {Li, Zhuohang and Zhang, Jiaxin and Yan, Chao and Das, Kamalika and Kumar, Sricharan and Kantarcioglu, Murat and Malin, Bradley A.},
+  editor = {{Al-Onaizan}, Yaser and Bansal, Mohit and Chen, Yun-Nung},
+  year = 2024,
+  month = nov,
+  pages = {6130--6151},
+  publisher = {Association for Computational Linguistics},
+  address = {Miami, Florida, USA},
+  doi = {10.18653/v1/2024.emnlp-main.353},
+  urldate = {2026-04-04},
+  abstract = {Language models (LMs) are known to suffer from hallucinations and misinformation. Retrieval augmented generation (RAG) that retrieves verifiable information from an external knowledge corpus to complement the parametric knowledge in LMs provides a tangible solution to these problems. However, the generation quality of RAG is highly dependent on the relevance between a user's query and the retrieved documents. Inaccurate responses may be generated when the query is outside of the scope of knowledge represented in the external knowledge corpus or if the information in the corpus is out-of-date. In this work, we establish a statistical framework that assesses how well a query can be answered by an RAG system by capturing the relevance of knowledge. We introduce an online testing procedure that employs goodness-of-fit (GoF) tests to inspect the relevance of each user query to detect out-of-knowledge queries with low knowledge relevance. Additionally, we develop an offline testing framework that examines a collection of user queries, aiming to detect significant shifts in the query distribution which indicates the knowledge corpus is no longer sufficiently capable of supporting the interests of the users. We demonstrate the capabilities of these strategies through a systematic evaluation on eight question-answering (QA) datasets, the results of which indicate that the new testing framework is an efficient solution to enhance the reliability of existing RAG systems.},
+  file = {/Users/adam/Zotero/storage/NAIVY9C8/Li et al. - 2024 - Do You Know What You Are Talking About Characterizing Query-Knowledge Relevance For Reliable Retrie.pdf}
+}
+
+@misc{CSD3UpgradeOctober,
+  title = {{{CSD3 Upgrade October}} 2021 --- {{CSD3}} 1.0 Documentation},
+  urldate = {2026-04-05},
+  howpublished = {https://docs.hpc.cam.ac.uk/hpc/user-guide/upgrade2021.html}
+}
+
+@inproceedings{hwangRetrievalAugmentedGenerationEstimation2025,
+  title = {Retrieval-{{Augmented Generation}} with {{Estimation}} of {{Source Reliability}}},
+  booktitle = {Proceedings of the 2025 {{Conference}} on {{Empirical Methods}} in {{Natural Language Processing}}},
+  author = {Hwang, Jeongyeon and Park, Junyoung and Park, Hyejin and Kim, Dongwoo and Park, Sangdon and Ok, Jungseul},
+  editor = {Christodoulopoulos, Christos and Chakraborty, Tanmoy and Rose, Carolyn and Peng, Violet},
+  year = 2025,
+  month = nov,
+  pages = {34279--34303},
+  publisher = {Association for Computational Linguistics},
+  address = {Suzhou, China},
+  doi = {10.18653/v1/2025.emnlp-main.1738},
+  urldate = {2026-04-05},
+  abstract = {Retrieval-Augmented Generation (RAG) is an effective approach to enhance the factual accuracy of large language models (LLMs) by retrieving information from external databases, which are typically composed of diverse sources, to supplement the limited internal knowledge of LLMs. However, the standard RAG often risks retrieving incorrect information, as it relies solely on relevance between a query and a document, overlooking the heterogeneous reliability of these sources. To address this issue, we propose Reliability-Aware RAG (RA-RAG), a new multi-source RAG framework that estimates the reliability of sources and leverages this information to prioritize highly reliable and relevant documents, ensuring more robust and accurate response generation. Specifically, RA-RAG first estimates source reliability by cross-checking information across multiple sources. It then retrieves documents from the top-{$\kappa$} reliable and relevant sources and aggregates their information using weighted majority voting (WMV), where the selective retrieval ensures scalability while not compromising the performance. Comprehensive experiments show that RA-RAG consistently outperforms baselines in scenarios with heterogeneous source reliability while scaling efficiently as the number of sources increases. Furthermore, we demonstrate the ability of RA-RAG to estimate real-world sources' reliability, highlighting its practical applicability. Our code and data are available at RA-RAG.},
+  isbn = {979-8-89176-332-6},
+  file = {/Users/adam/Zotero/storage/FJR2GX4R/Hwang et al. - 2025 - Retrieval-Augmented Generation with Estimation of Source Reliability.pdf}
+}

@@ -4,7 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd -- "${SCRIPT_DIR}/../.." && pwd)"
 
-SETUP_SCRIPT="${SETUP_SCRIPT:-${REPO_ROOT}/../polaris_servers/setup_vllm_server.sh}"
+SETUP_SCRIPT="${SETUP_SCRIPT:-${REPO_ROOT}/scripts/gaudi/run_vllm_server.sh}"
 MANIFEST_FILE="${MANIFEST_FILE:-protocol.final.yaml}"
 MANIFEST_PATH="${REPO_ROOT}/experiments/${MANIFEST_FILE}"
 MANIFEST_CONTAINER_PATH="/app/experiments/${MANIFEST_FILE}"

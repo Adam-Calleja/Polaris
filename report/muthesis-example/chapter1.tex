@@ -4,22 +4,29 @@
 \section{Project Context and Motivation}
 \label{sec:context}
 
-\ac{HPC} systems are an essential tool for both scientific research and industry applications \cite{HPCEnvironment}, providing critical computational resources for a wide range of tasks, from clean energy to personalised medicine \cite{DawnPoweringFusion}. One such system is the \ac{CSD3}, one of the \ac{EPSRC} Tier-2 national supercomputing services hosted by the University of Cambridge \ac{RCS} \cite{ResearchComputingServicesDocumentation}.
+The \ac{CSD3} is an \ac{EPSRC} Tier-2 national \ac{HPC} service hosted by the University of Cambridge \ac{RCS}, supporting computationally intensive research across a wide range of scientific disciplines \cite{ResearchComputingServicesDocumentation}. Effective use of such systems requires users to be able to follow and understand detailed documentation. These resources are often scattered across multiple sources, ranging from official \ac{CSD3} documentation \cite{ResearchComputingServicesDocumentation} to external resources such as package documentation, creating a barrier for new users \cite{AskHPC}.
 
-
-However, the complexity of systems such as \ac{CSD3} can lead to significant challenges for users, who often need to navigate a wide variety of fragmented documentation, to find the information they need to effectively use the system \cite{AskHPC}. This creates a steep learning curve for new users, many of whom need to seek help from support staff. Figure \ref{fig:ticket-counts} shows a steady increase in the number of support tickets received by the \ac{RCS} helpdesk over between 2017 and 2025, indicating growing pressure on support staff \cite{joslinGeneratingFrequentlyAsked2025} and motivating the development of a more efficient support solution for \ac{CSD3} users.
+As a result of this complexity, users frequently turn to the \ac{RCS} helpdesk for support. Figure \ref{fig:ticket-counts} shows that there has been a steady increase in the yearly number of resolved \ac{CSD3} helpdesk tickets from 2017 to 2025. This growth indicates not only sustained support demand, but also an expanding archive of operational support knowledge that could be reused to improve user support \cite{joslinGeneratingFrequentlyAsked2025}.
 
 \begin{figure}[ht]
     \centering
     \includegraphics{graphs/ticket_counts.pdf}
-    \caption{Annual number of \acs{CSD3} helpdesk tickets from 2017 to 2025, showing a clear overall increase in support demand over time. Data sourced from \acs{RCS} support ticket records.}
+    \caption{Annual number of resolved \acs{CSD3} helpdesk tickets from 2017 to 2025. Data sourced from \acs{RCS} support ticket records.}
     \label{fig:ticket-counts}
 \end{figure}
 
-Since the release of \ac{LLM}s such as ChatGPT, there has been significant interest in their potential to provide support and assistance in a variety of domains \cite{AskHPC}. In particular, \ac{RAG}-based systems, which combine the generative capabilities of \ac{LLM}s with a retrieval mechanism to access relevant information from a knowledge base, have been shown to produce more specific and factual responses than standard \ac{LLM}s, making them a promising solution for \ac{NLP} tasks \cite{lewisRetrievalaugmentedGenerationKnowledgeintensive2020}. 
+Recent studies have investigated the use of \ac{LLM}-based assistants for technical support and question answering, including domain-specific systems for HPC user support \cite{AskHPC}. In particular, \ac{RAG}-based systems, which combine the generative capabilities of \ac{LLM}s with a retrieval mechanism to access relevant information from a knowledge base, have been shown to produce more specific and factual responses than non-retrieval-augmented \ac{LLM}s. This makes them a promising solution for evidence-grounded HPC support \ac{QA} \cite{lewisRetrievalaugmentedGenerationKnowledgeintensive2020}.
+
+However, the generation quality of RAG is highly dependent on the quality of the retrieved information. Recent work has shown that RAG systems can generate incorrect answers when they are provided with documents of weak relevance \cite{liYouKnowWhat2024}. Furthermore, semantically relevant retrieved evidence can still be unusable if it comes from an unreliable source \cite{hwangRetrievalAugmentedGenerationEstimation2025} or if it reflects outdated information \cite{liYouKnowWhat2024}.
+
+In the CSD3 setting, these risks are amplified by the heterogeneous nature of the available evidence. Official CSD3 documentation is typically the primary source for currently supported usage \cite{ResearchComputingServicesDocumentation}, while external package documentation can provide additional context \cite{AskHPC}. Historical support tickets, by contrast, capture concrete prior issue-resolution cases \cite{joslinGeneratingFrequentlyAsked2025}, but these may not remain applicable after later system or software changes \cite{CSD3UpgradeOctober}. 
+
+The challenge is therefore not only to retrieve topically relevant information, but to prioritise evidence that is appropriate for the current CSD3 context. The next section formalises this challenge by defining the problem addressed in the dissertation and clarifying its scope.
 
 \section{Problem Definition and Scope}
 \label{sec:problem}
+
+
 
 \section{Research Questions and Hypotheses}
 \label{sec:questions}
