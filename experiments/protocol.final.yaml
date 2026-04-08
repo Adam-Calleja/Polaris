@@ -348,7 +348,7 @@ defaults:
         mode: "pipeline"
         workers: 1
       run:
-        max_workers: 16
+        max_workers: 8
       adaptive_concurrency:
         enabled: false
       dataset:
