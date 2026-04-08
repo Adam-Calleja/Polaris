@@ -20,3 +20,4 @@ coverage/
 build/
 mlruns/
 *config_snapshot.json
+data/storage/support_tickets_stage0a/

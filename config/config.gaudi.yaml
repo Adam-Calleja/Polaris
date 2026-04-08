@@ -17,7 +17,7 @@ generator_llm:
 
 evaluator_llm:
   type: "OpenAILike"
-  model_name: "Qwen/Qwen2.5-32B-Instruct"
+  model_name: "ibm-granite/granite-3.3-8b-instruct"
   api_base: "http://vllm:8080/v1"
   api_key: "${POLARIS_LLM_API_KEY}"
   model_kwargs:
