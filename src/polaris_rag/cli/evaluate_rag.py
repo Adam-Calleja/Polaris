@@ -24,6 +24,7 @@ from pathlib import Path
 import sys
 import threading
 import time
+from types import SimpleNamespace
 from typing import Any, Iterator, Mapping
 
 from polaris_rag.app.container import build_container
@@ -66,6 +67,24 @@ from polaris_rag.observability.mlflow_tracking import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+class _MetadataOnlyVectorStore:
+    """Minimal vector-store stub used for config-only retriever profiling."""
+
+    def __init__(self, profile: Mapping[str, Any]) -> None:
+        self._profile = dict(profile)
+
+    def profile(self) -> dict[str, Any]:
+        return dict(self._profile)
+
+    def query_dense_nodes(self, *args: Any, **kwargs: Any) -> list[Any]:
+        _ = args, kwargs
+        return []
+
+    def query_sparse_nodes(self, *args: Any, **kwargs: Any) -> list[Any]:
+        _ = args, kwargs
+        return []
 
 
 def _as_mapping(obj: Any) -> Mapping[str, Any]:
@@ -184,6 +203,240 @@ def _config_base_dir(cfg: Any) -> Path | None:
         return None
 
 
+def _deep_merge_mappings(base: Mapping[str, Any], override: Mapping[str, Any]) -> dict[str, Any]:
+    """Recursively merge nested mappings."""
+    merged = dict(base)
+    for key, value in override.items():
+        if isinstance(value, Mapping) and isinstance(merged.get(key), Mapping):
+            merged[key] = _deep_merge_mappings(_as_mapping(merged[key]), value)
+        else:
+            merged[key] = value
+    return merged
+
+
+def _normalize_embedder_kind(kind: Any) -> str:
+    normalized = str(kind or "").strip().lower().replace("-", "_").replace(" ", "_")
+    if not normalized:
+        return "huggingface"
+    normalized = normalized.replace("openailike", "openai_like")
+    normalized = normalized.replace("open_ailike", "openai_like")
+    normalized = normalized.replace("open_ai_like", "openai_like")
+    return normalized
+
+
+def _dense_model_name_from_config(cfg: Any) -> str | None:
+    """Mirror ``QdrantIndexStore.profile`` without constructing the embedder."""
+    embedder_cfg = _as_mapping(getattr(cfg, "embedder", {}))
+    if not embedder_cfg:
+        return None
+
+    kind = _normalize_embedder_kind(
+        embedder_cfg.get("type")
+        or embedder_cfg.get("kind")
+        or embedder_cfg.get("provider")
+        or embedder_cfg.get("backend")
+        or embedder_cfg.get("impl")
+    )
+    if kind in {"openai_like", "openai"}:
+        model_name = str(embedder_cfg.get("model_name") or "").strip()
+        return model_name or "OpenAILikeEmbedder"
+    return "HuggingFaceEmbedder"
+
+
+def _sparse_encoder_profile_from_config(cfg: Any) -> dict[str, Any] | None:
+    section = _as_mapping(getattr(cfg, "sparse_encoder", {}))
+    if not section or section.get("enabled") is False:
+        return None
+
+    from polaris_rag.retrieval.sparse_encoder import create_sparse_encoder
+
+    encoder = create_sparse_encoder(section)
+    if encoder is None:
+        return None
+    getter = getattr(encoder, "profile", None)
+    if not callable(getter):
+        return None
+    return dict(getter() or {})
+
+
+def _primary_vector_store_config(cfg: Any) -> Mapping[str, Any]:
+    raw = _as_mapping(getattr(cfg, "raw", {}))
+    explicit = _as_mapping(getattr(cfg, "vector_store", raw.get("vector_store", {})))
+    if explicit:
+        return explicit
+
+    stores = _as_mapping(getattr(cfg, "vector_stores", raw.get("vector_stores", {})))
+    if "docs" in stores:
+        return _as_mapping(stores.get("docs", {}))
+    if stores:
+        first_key = next(iter(stores))
+        return _as_mapping(stores.get(first_key, {}))
+    return {}
+
+
+def _vector_store_profile_from_config(
+    cfg: Any,
+    *,
+    source_name: str | None = None,
+) -> dict[str, Any] | None:
+    """Build the stable vector-store profile without contacting Qdrant."""
+    from polaris_rag.retrieval.vector_store import QdrantIndexStore
+
+    raw = _as_mapping(getattr(cfg, "raw", {}))
+    if source_name is None:
+        store_cfg = _primary_vector_store_config(cfg)
+    else:
+        stores = _as_mapping(getattr(cfg, "vector_stores", raw.get("vector_stores", {})))
+        store_cfg = _as_mapping(stores.get(source_name, {}))
+
+    if not store_cfg:
+        return None
+
+    return {
+        "backend": "qdrant",
+        "collection_name": str(store_cfg.get("collection_name") or "default_collection"),
+        "dense_vector_name": str(
+            store_cfg.get("dense_vector_name", QdrantIndexStore.DEFAULT_DENSE_VECTOR_NAME)
+        ),
+        "sparse_vector_name": str(
+            store_cfg.get("sparse_vector_name", QdrantIndexStore.DEFAULT_SPARSE_VECTOR_NAME)
+        ),
+        "dense_model": _dense_model_name_from_config(cfg),
+        "sparse_model": _sparse_encoder_profile_from_config(cfg),
+    }
+
+
+def _source_kind_from_config(cfg: Any) -> str:
+    section = _as_mapping(getattr(cfg, "retriever", {}))
+    source_kind = str(section.get("source_type") or "vector").strip().lower().replace("-", "_")
+    if source_kind not in {"vector", "hybrid", "sparse"}:
+        return "vector"
+    return source_kind
+
+
+def _retriever_source_settings_from_config(cfg: Any) -> dict[str, dict[str, Any]]:
+    """Mirror ``PolarisContainer.retriever_source_settings`` without a container."""
+    section = _as_mapping(getattr(cfg, "retriever", {}))
+    raw_sources = section.get("sources")
+    if raw_sources is None:
+        raise KeyError("Missing 'retriever.sources' in configuration.")
+    if not isinstance(raw_sources, list):
+        raise TypeError("'retriever.sources' must be a list of mappings.")
+    if not raw_sources:
+        raise ValueError("'retriever.sources' must define at least one source.")
+
+    default_top_k = section.get("top_k")
+    default_filters = section.get("filters")
+    default_profile = _as_mapping(section.get("hybrid_profile", {}))
+    settings: dict[str, dict[str, Any]] = {}
+
+    for idx, item in enumerate(raw_sources):
+        item_map = _as_mapping(item)
+        source_name = item_map.get("name")
+        if not isinstance(source_name, str) or not source_name.strip():
+            raise TypeError(f"'retriever.sources[{idx}].name' must be a non-empty string.")
+
+        settings[source_name] = {
+            "top_k": item_map.get("top_k", default_top_k),
+            "filters": item_map.get("filters", default_filters),
+            "weight": item_map.get("weight", 1.0),
+            "retrieval_profile": _deep_merge_mappings(
+                default_profile,
+                _as_mapping(item_map.get("retrieval_profile", {})),
+            ),
+        }
+
+    return settings
+
+
+def _sparse_query_expander_from_config(cfg: Any) -> Any | None:
+    from polaris_rag.retrieval.metadata_enricher import resolve_authority_registry_artifact_path
+    from polaris_rag.retrieval.sparse_query import DeterministicSparseQueryExpander
+
+    registry_artifact_path = resolve_authority_registry_artifact_path(cfg)
+    return DeterministicSparseQueryExpander.from_registry_artifact(registry_artifact_path)
+
+
+def _metadata_only_retriever_from_config(cfg: Any) -> Any | None:
+    """Construct a retriever shell for stable fingerprinting without live services."""
+    from polaris_rag.retrieval.retriever import MultiCollectionRetriever
+    from polaris_rag.retrieval.retriever_factory import create
+
+    section = _as_mapping(getattr(cfg, "retriever", {}))
+    kind = str(section.get("type") or "").strip().lower().replace("-", "_")
+    if not kind:
+        return None
+
+    if kind == "multi_collection":
+        source_kind = _source_kind_from_config(cfg)
+        expander = (
+            _sparse_query_expander_from_config(cfg)
+            if source_kind in {"hybrid", "sparse"}
+            else None
+        )
+        source_settings = _retriever_source_settings_from_config(cfg)
+        source_retrievers: dict[str, Any] = {}
+
+        for source_name, source_cfg in source_settings.items():
+            vector_profile = _vector_store_profile_from_config(cfg, source_name=source_name)
+            if vector_profile is None:
+                return None
+            vector_store = _MetadataOnlyVectorStore(vector_profile)
+            source_retrievers[source_name] = create(
+                kind=source_kind,
+                storage_context=SimpleNamespace(vector_store=vector_store),
+                top_k=source_cfg.get("top_k"),
+                filters=source_cfg.get("filters"),
+                vector_store=vector_store,
+                embedder=None,
+                retrieval_profile=source_cfg.get("retrieval_profile"),
+                sparse_query_expander=expander,
+            )
+
+        return MultiCollectionRetriever(
+            source_retrievers=source_retrievers,
+            source_settings=source_settings,
+            final_top_k=section.get("final_top_k"),
+            rerank=section.get("rerank"),
+            config_base_dir=_config_base_dir(cfg),
+        )
+
+    if kind not in {"vector", "hybrid", "sparse"}:
+        return None
+
+    expander = _sparse_query_expander_from_config(cfg) if kind in {"hybrid", "sparse"} else None
+    vector_profile = _vector_store_profile_from_config(cfg)
+    if vector_profile is None:
+        return None
+
+    vector_store = _MetadataOnlyVectorStore(vector_profile)
+    return create(
+        kind=kind,
+        storage_context=SimpleNamespace(vector_store=vector_store),
+        top_k=section.get("top_k"),
+        filters=section.get("filters"),
+        vector_store=vector_store,
+        embedder=None,
+        retrieval_profile=section.get("hybrid_profile"),
+        sparse_query_expander=expander,
+    )
+
+
+def _extract_retriever_metadata(candidate: Any) -> tuple[dict[str, Any] | None, str | None]:
+    profile_getter = getattr(candidate, "retriever_profile", None)
+    fingerprint_getter = getattr(candidate, "retriever_fingerprint", None)
+    if callable(profile_getter) and callable(fingerprint_getter):
+        try:
+            profile = profile_getter()
+            fingerprint = fingerprint_getter()
+            if profile is None and fingerprint is None:
+                return None, None
+            return dict(profile or {}), str(fingerprint or "").strip() or None
+        except Exception:
+            return None, None
+    return None, None
+
+
 def _resolve_reranker_metadata(cfg: Any) -> tuple[dict[str, Any] | None, str | None]:
     """Resolve reranker Metadata.
     
@@ -211,10 +464,8 @@ def _resolve_reranker_metadata(cfg: Any) -> tuple[dict[str, Any] | None, str | N
 
     from polaris_rag.retrieval.reranker import create_reranker
 
-    source_settings: Mapping[str, Mapping[str, Any]] | None = None
     try:
-        container = build_container(cfg)
-        source_settings = getattr(container, "retriever_source_settings", None)
+        source_settings: Mapping[str, Mapping[str, Any]] | None = _retriever_source_settings_from_config(cfg)
     except Exception:
         source_settings = None
 
@@ -228,6 +479,16 @@ def _resolve_reranker_metadata(cfg: Any) -> tuple[dict[str, Any] | None, str | N
 
 def _resolve_retriever_metadata(cfg: Any) -> tuple[dict[str, Any] | None, str | None]:
     """Resolve retriever Metadata."""
+    try:
+        metadata_only_retriever = _metadata_only_retriever_from_config(cfg)
+    except Exception:
+        metadata_only_retriever = None
+
+    if metadata_only_retriever is not None:
+        profile, fingerprint = _extract_retriever_metadata(metadata_only_retriever)
+        if profile is not None or fingerprint is not None:
+            return profile, fingerprint
+
     try:
         container = build_container(cfg)
     except Exception:
@@ -247,18 +508,7 @@ def _resolve_retriever_metadata(cfg: Any) -> tuple[dict[str, Any] | None, str | 
             return None, None
 
     retriever = getattr(container, "retriever", None)
-    profile_getter = getattr(retriever, "retriever_profile", None)
-    fingerprint_getter = getattr(retriever, "retriever_fingerprint", None)
-    if callable(profile_getter) and callable(fingerprint_getter):
-        try:
-            profile = profile_getter()
-            fingerprint = fingerprint_getter()
-            if profile is None and fingerprint is None:
-                return None, None
-            return dict(profile or {}), str(fingerprint or "").strip() or None
-        except Exception:
-            return None, None
-    return None, None
+    return _extract_retriever_metadata(retriever)
 
 
 def _stable_fingerprint(value: Mapping[str, Any]) -> str:

@@ -23,47 +23,49 @@ Database file #1: refs.bib
 ** Sorting version - not for normal IEEE work.
 Warning--to sort, need author, organization, or key in ResearchComputingServicesDocumentation
 Warning--to sort, need author, organization, or key in CSD3UpgradeOctober
+Warning--empty journal in RAGAS
+Warning--empty year in RAGAS
 
 Done.
-You've used 7 entries,
+You've used 11 entries,
             4566 wiz_defined-function locations,
-            966 strings with 11052 characters,
-and the built_in function-call counts, 8202 in all, are:
-= -- 648
-> -- 322
-< -- 45
-+ -- 170
-- -- 93
-* -- 484
-:= -- 1094
-add.period$ -- 19
-call.type$ -- 7
-change.case$ -- 65
-chr.to.int$ -- 120
-cite$ -- 9
-duplicate$ -- 505
-empty$ -- 607
-format.name$ -- 94
-if$ -- 1856
+            991 strings with 12212 characters,
+and the built_in function-call counts, 12638 in all, are:
+= -- 1003
+> -- 474
+< -- 78
++ -- 248
+- -- 128
+* -- 731
+:= -- 1688
+add.period$ -- 30
+call.type$ -- 11
+change.case$ -- 95
+chr.to.int$ -- 210
+cite$ -- 15
+duplicate$ -- 785
+empty$ -- 946
+format.name$ -- 135
+if$ -- 2874
 int.to.chr$ -- 0
-int.to.str$ -- 7
-missing$ -- 106
-newline$ -- 46
-num.names$ -- 14
-pop$ -- 333
+int.to.str$ -- 11
+missing$ -- 158
+newline$ -- 58
+num.names$ -- 26
+pop$ -- 491
 preamble$ -- 1
-purify$ -- 54
+purify$ -- 76
 quote$ -- 2
-skip$ -- 531
+skip$ -- 826
 stack$ -- 0
-substring$ -- 356
-swap$ -- 402
-text.length$ -- 5
+substring$ -- 590
+swap$ -- 625
+text.length$ -- 8
 text.prefix$ -- 0
 top$ -- 6
-type$ -- 75
-warning$ -- 2
-while$ -- 29
-width$ -- 8
-write$ -- 87
-(There were 2 warnings)
+type$ -- 119
+warning$ -- 4
+while$ -- 51
+width$ -- 13
+write$ -- 122
+(There were 4 warnings)

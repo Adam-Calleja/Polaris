@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.3.18)  7 APR 2026 15:07
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.3.18)  9 APR 2026 13:21
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -396,7 +396,7 @@ although it is yet undefined on input line 7.
 Package acronym Info: Label `acro:HPC' newly defined as it shall be overridden
 although it is yet undefined on input line 7.
 Package acronym Info: Label `acro:RCS' overridden on input line 7.
-<graphs/ticket_counts.pdf, id=532, 431.17964pt x 254.86092pt>
+<graphs/ticket_counts.pdf, id=531, 431.17964pt x 254.86092pt>
 File: graphs/ticket_counts.pdf Graphic file (type pdf)
 <use graphs/ticket_counts.pdf>
 Package pdftex.def Info: graphs/ticket_counts.pdf  used on input line 13.
@@ -423,10 +423,18 @@ Overfull \hbox (0.26749pt too wide) in paragraph at lines 38--39
 \OT1/ptm/m/n/12 To in-ves-ti-gate the prob-lems in-tro-duced by the het-ero-ge-neous ev-i-dence base, this project
  []
 
-)
-Underfull \vbox (badness 10000) has occurred while \output is active []
+LaTeX Font Info:    Trying to load font information for TS1+ptm on input line 41.
+(/usr/local/texlive/2026/texmf-dist/tex/latex/psnfss/ts1ptm.fd
+File: ts1ptm.fd 2001/06/04 font definitions for TS1/ptm.
+) [14] [15]
+Overfull \hbox (10.56215pt too wide) in paragraph at lines 65--66
+[]\OT1/ptm/b/n/12 O5: \OT1/ptm/m/n/12 To eval-u-ate whether heterogeneous-source re-trieval and validity-aware rerank-
+ []
 
- [14] [15]
+[16]
+Package acronym Info: Label `acro:RAGAs' newly defined as it shall be overridden
+although it is yet undefined on input line 106.
+ [17]) [18]
 \openout2 = `chapter2.aux'.
 
  (./chapter2.tex
@@ -436,7 +444,7 @@ Overfull \hbox (8.44052pt too wide) in paragraph at lines 4--4
 []\OT1/ptm/b/n/17.28 HPC Sup-port as an In-for-ma-tion Re-trieval and Ques-
  []
 
-) [16
+) [19
 
 
 
@@ -451,7 +459,7 @@ Overfull \hbox (25.80722pt too wide) in paragraph at lines 16--16
 []\OT1/ptm/b/n/17.28 Success Cri-te-ria and Requirement-to-Evaluation Map-
  []
 
-) [17
+) [20
 
 
 
@@ -461,7 +469,7 @@ Overfull \hbox (25.80722pt too wide) in paragraph at lines 16--16
 
  (./chapter4.tex
 Chapter 4.
-) [18
+) [21
 
 
 
@@ -474,7 +482,7 @@ Chapter 5.
 )
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
- [19
+ [22
 
 
 
@@ -482,12 +490,12 @@ Underfull \vbox (badness 10000) has occurred while \output is active []
 ]
 Overfull \vbox (233.79532pt too high) has occurred while \output is active []
 
- [20]
+ [23]
 \openout2 = `chapter6.aux'.
 
  (./chapter6.tex
 Chapter 6.
-) [21
+) [24
 
 
 
@@ -497,7 +505,7 @@ Chapter 6.
 
  (./chapter7.tex
 Chapter 7.
-) [22
+) [25
 
 
 
@@ -507,7 +515,7 @@ Chapter 7.
 
  (./chapter8.tex
 Chapter 8.
-) [23
+) [26
 
 
 
@@ -518,15 +526,15 @@ Underfull \hbox (badness 10000) in paragraph at lines 24--25
  []
 
 
-Underfull \hbox (badness 2245) in paragraph at lines 35--36
+Underfull \hbox (badness 1742) in paragraph at lines 44--45
 []\OT1/ptm/m/n/12 J. Hwang, J. Park, H. Park, D. Kim, S. Park, and J. Ok, ``Retrieval-
  []
 
-[24
+[27
 
 
 
-]) [25]
+]) [28]
 \openout2 = `appendix1.aux'.
 
 
@@ -541,21 +549,21 @@ L3 programming layer <2026-01-19>
 LaTeX Warning: There were multiply-defined labels.
 
 Package rerunfilecheck Info: File `report.out' has not changed.
-(rerunfilecheck)             Checksum: A7A6C7A025919B615381809845935021;16785.
+(rerunfilecheck)             Checksum: 1B4E719367952E49FC623E5E136E5DA7;16586.
  ) 
 Here is how much of TeX's memory you used:
- 11642 strings out of 467525
- 180949 string characters out of 5418982
- 601541 words of memory out of 5000000
- 40193 multiletter control sequences out of 15000+600000
- 654367 words of font info for 83 fonts, out of 8000000 for 9000
+ 11686 strings out of 467525
+ 181762 string characters out of 5418982
+ 601818 words of memory out of 5000000
+ 40225 multiletter control sequences out of 15000+600000
+ 654681 words of font info for 84 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 75i,6n,79p,1210b,626s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 75i,6n,79p,1210b,640s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/local/texlive/2026/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
-Output written on report.pdf (25 pages, 124414 bytes).
+Output written on report.pdf (28 pages, 136043 bytes).
 PDF statistics:
- 742 PDF objects out of 1000 (max. 8388607)
- 657 compressed objects within 7 object streams
- 137 named destinations out of 1000 (max. 500000)
- 678 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 797 PDF objects out of 1000 (max. 8388607)
+ 708 compressed objects within 8 object streams
+ 145 named destinations out of 1000 (max. 500000)
+ 670 words of extra memory for PDF output out of 10000 (max. 10000000)
 

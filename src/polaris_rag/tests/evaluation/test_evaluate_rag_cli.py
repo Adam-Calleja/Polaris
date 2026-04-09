@@ -2,6 +2,7 @@ from argparse import Namespace
 from contextlib import contextmanager
 from dataclasses import dataclass
 import csv
+import json
 import logging
 import sys
 from types import SimpleNamespace
@@ -206,6 +207,67 @@ def _cfg_with_reranker(tmp_path, rerank_cfg: dict[str, object]):  # noqa: ANN001
         retriever={
             "type": "multi_collection",
             "rerank": dict(rerank_cfg),
+        },
+        config_path=config_path,
+    )
+
+
+def _cfg_with_multi_collection_retriever(tmp_path) -> SimpleNamespace:  # noqa: ANN001
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text("retriever: {}\n", encoding="utf-8")
+    return SimpleNamespace(
+        generator_llm={
+            "provider": "openai",
+            "model_name": "test-generator",
+            "api_base": "http://localhost:8081/v1",
+            "api_key": "secret-key",
+        },
+        embedder={
+            "type": "openai_like",
+            "model_name": "test-embedder",
+            "api_base": "http://localhost:8081/v1",
+            "api_key": "secret-key",
+        },
+        sparse_encoder={
+            "type": "fastembed",
+            "model_name": "test-splade",
+            "batch_size": 16,
+        },
+        vector_stores={
+            "docs": {
+                "collection_name": "docs_collection",
+            },
+            "tickets": {
+                "collection_name": "tickets_collection",
+            },
+        },
+        retriever={
+            "type": "multi_collection",
+            "source_type": "vector",
+            "top_k": 5,
+            "final_top_k": 8,
+            "filters": {},
+            "hybrid_profile": {
+                "dense_top_k": 5,
+                "sparse_top_k": 5,
+                "top_k": 5,
+                "fusion": {
+                    "type": "rrf",
+                    "rrf_k": 60,
+                    "signal_weights": {
+                        "dense": 1.0,
+                        "sparse": 1.0,
+                    },
+                },
+            },
+            "sources": [
+                {"name": "docs", "weight": 1.0},
+                {"name": "tickets", "weight": 1.0},
+            ],
+            "rerank": {
+                "type": "rrf",
+                "rrf_k": 60,
+            },
         },
         config_path=config_path,
     )
@@ -642,6 +704,79 @@ def test_resolve_prepared_rows_rejects_reuse_when_generator_fingerprint_differs(
             eval_cfg={"dataset": {"prepared_path": str(prepared_path)}, "generation": {"workers": 1, "mode": "pipeline"}},
             show_progress=False,
         )
+
+
+def test_resolve_prepared_rows_reuses_existing_rows_without_building_container(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    cfg = _cfg_with_multi_collection_retriever(tmp_path)
+
+    monkeypatch.setattr(
+        evaluate_rag,
+        "build_container",
+        lambda cfg: (_ for _ in ()).throw(AssertionError("build_container should not be called")),
+    )
+
+    retriever_profile, retriever_fingerprint = evaluate_rag._resolve_retriever_metadata(cfg)
+    reranker_profile, reranker_fingerprint = evaluate_rag._resolve_reranker_metadata(cfg)
+    assert retriever_profile is not None
+    assert retriever_fingerprint is not None
+    assert reranker_profile is not None
+    assert reranker_fingerprint is not None
+
+    args = Namespace(
+        dataset_path=None,
+        prepared_path=str(tmp_path / "prepared.json"),
+        reuse_prepared=True,
+        generation_workers=1,
+        generation_mode="pipeline",
+        generation_max_attempts=None,
+        generation_retry_initial_backoff=None,
+        generation_retry_max_backoff=None,
+        generation_retry_jitter=None,
+        generation_retry_on_empty_response=None,
+        replay_failures_from=None,
+    )
+    _, generator_fingerprint = evaluate_rag._resolve_generator_metadata(
+        cfg,
+        generation_mode="pipeline",
+        generation_cfg={"mode": "pipeline"},
+        args=args,
+    )
+
+    prepared_path = tmp_path / "prepared.json"
+    prepared_path.write_text(
+        json.dumps(
+            [
+                {
+                    "id": "row-1",
+                    "user_input": "Q1",
+                    "reference": "A1",
+                    "response": "R1",
+                    "retrieved_contexts": ["ctx-1"],
+                    "retrieved_context_ids": ["doc-1"],
+                    "metadata": {
+                        "generator_fingerprint": generator_fingerprint,
+                        "retriever_fingerprint": retriever_fingerprint,
+                        "reranker_fingerprint": reranker_fingerprint,
+                    },
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    rows, manifest = evaluate_rag._resolve_prepared_rows(
+        cfg=cfg,
+        args=args,
+        eval_cfg={"dataset": {"prepared_path": str(prepared_path)}, "generation": {"workers": 1, "mode": "pipeline"}},
+        show_progress=False,
+    )
+
+    assert len(rows) == 1
+    assert manifest["prepared_source"] == "existing"
+    assert manifest["retriever_fingerprint"] == retriever_fingerprint
 
 
 def test_resolve_prepared_rows_joins_verified_annotations(monkeypatch, tmp_path) -> None:
