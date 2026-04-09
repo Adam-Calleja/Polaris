@@ -7,7 +7,7 @@ MODEL=${MODEL:-Qwen/Qwen2.5-32B-Instruct}
 PORT=${PORT:-8080}
 HOST=${HOST:-0.0.0.0}
 DEVICES=${DEVICES:-0,1,2,3}
-VOLUME=${VOLUME:-/mnt/data/ac2650/test}
+VOLUME=${VOLUME:-${HOME}/.cache/polaris-gaudi}
 NETWORK=${NETWORK:-polaris_net}
 
 IMG=${IMG:-ghcr.io/huggingface/text-generation-inference:3.3.5-gaudi}
@@ -111,7 +111,12 @@ if [[ -z "${MAX_BATCH_PREFILL_TOKENS}" ]]; then
 fi
 
 CACHE_DIR="${VOLUME}/tgi-cache"
-mkdir -p "${CACHE_DIR}"
+if ! mkdir -p "${CACHE_DIR}"; then
+  echo "ERROR: Cannot create cache directory '${CACHE_DIR}'." >&2
+  echo "Set VOLUME to a writable location, for example:" >&2
+  echo "  VOLUME=\$HOME/.cache/polaris-gaudi ./scripts/gaudi/run_tgi_gaudi.sh" >&2
+  exit 1
+fi
 
 if ! docker_cmd network inspect "${NETWORK}" >/dev/null 2>&1; then
   docker_cmd network create "${NETWORK}" >/dev/null
