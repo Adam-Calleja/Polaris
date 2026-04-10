@@ -21,7 +21,7 @@ dependencies = [
   "langchain-core>=0.1",
   "langchain-openai>=0.1,<1",
   "langchain-community>=0.1",
-  "openai>=1,<2",
+  "openai>=2,<3",
 
   # LlamaIndex core + integrations used at runtime
   "llama-index-core>=0.10",
@@ -68,7 +68,7 @@ tokenizers = [
 eval = [
   "ragas>=0.4.3,<0.5",
   "instructor>=1.14.5,<1.15",
-  "openai>=1.0",
+  "openai>=2,<3",
   "pandas>=2.0",
   "pyarrow>=15",
   "scikit-learn>=1.4",
