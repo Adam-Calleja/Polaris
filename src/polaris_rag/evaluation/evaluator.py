@@ -62,6 +62,43 @@ from polaris_rag.observability.mlflow_tracking import set_span_outputs, start_sp
 logger = logging.getLogger(__name__)
 
 
+def _resolve_instructor_mode(value: Any) -> Any:
+    """Resolve a config-supplied instructor mode to the enum expected by RAGAS.
+
+    RAGAS structured evaluators use the Instructor library under the hood. For
+    custom OpenAI-compatible backends that do not support OpenAI
+    ``response_format`` semantics, RAGAS recommends ``instructor.Mode.MD_JSON``.
+    This helper lets YAML configs pass a simple string such as ``MD_JSON``.
+    """
+    if value is None:
+        return None
+
+    try:
+        import instructor
+    except ImportError as exc:  # pragma: no cover - depends on eval extra install
+        raise RuntimeError(
+            "Structured evaluator mode was configured but the 'instructor' package "
+            "is not available in this environment."
+        ) from exc
+
+    if isinstance(value, instructor.Mode):
+        return value
+
+    if isinstance(value, str):
+        normalized = value.strip()
+        if "." in normalized:
+            normalized = normalized.rsplit(".", 1)[-1]
+        normalized = normalized.upper()
+        mode = getattr(instructor.Mode, normalized, None)
+        if mode is not None:
+            return mode
+
+    valid_modes = ", ".join(sorted(member.name for member in instructor.Mode))
+    raise ValueError(
+        f"Unsupported instructor mode {value!r}. Expected one of: {valid_modes}"
+    )
+
+
 class EvaluatorTraceRecorder(Protocol):
     """Evaluator Trace Recorder.
     
@@ -1026,6 +1063,8 @@ class Evaluator:
         # Remove legacy stop-hack settings that hurt structured output paths.
         kwargs.pop("stop", None)
         kwargs.pop("stop_list", None)
+        configured_mode = kwargs.pop("instructor_mode", kwargs.pop("mode", None))
+        resolved_mode = _resolve_instructor_mode(configured_mode)
 
         raw_client = AsyncOpenAI(
             base_url=api_base,
@@ -1043,6 +1082,7 @@ class Evaluator:
             client=client,
             adapter="auto",
             cache=self.cache,
+            mode=resolved_mode,
             **kwargs,
         )
 
