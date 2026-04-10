@@ -1076,15 +1076,33 @@ class Evaluator:
         if self.trace_evaluator_llm and self.trace_factory is not None:
             client = _TracedAsyncOpenAIClient(raw_client, trace_factory=self.trace_factory)
 
-        llm = llm_factory(
-            model=model,
-            provider="openai",
-            client=client,
-            adapter="auto",
-            cache=self.cache,
-            mode=resolved_mode,
-            **kwargs,
-        )
+        if resolved_mode is not None:
+            import instructor
+            from ragas.llms.base import InstructorLLM
+
+            if client is not raw_client:
+                logger.warning(
+                    "Evaluator LLM tracing is disabled for custom instructor_mode "
+                    "because instructor.from_openai expects a native OpenAI client."
+                )
+
+            patched_client = instructor.from_openai(raw_client, mode=resolved_mode)
+            llm = InstructorLLM(
+                client=patched_client,
+                model=model,
+                provider="openai",
+                cache=self.cache,
+                **kwargs,
+            )
+        else:
+            llm = llm_factory(
+                model=model,
+                provider="openai",
+                client=client,
+                adapter="auto",
+                cache=self.cache,
+                **kwargs,
+            )
 
         if hasattr(llm, "set_run_config"):
             llm.set_run_config(self.run_config)
