@@ -67,6 +67,7 @@ tokenizers = [
 ]
 eval = [
   "ragas>=0.4.3,<0.5",
+  "instructor>=1.14.5,<1.15",
   "openai>=1.0",
   "pandas>=2.0",
   "pyarrow>=15",
