@@ -34,6 +34,7 @@ import asyncio
 import contextlib
 from contextvars import ContextVar
 from dataclasses import asdict, dataclass, is_dataclass
+import inspect
 import json
 import logging
 import math
@@ -1076,15 +1077,26 @@ class Evaluator:
         if self.trace_evaluator_llm and self.trace_factory is not None:
             client = _TracedAsyncOpenAIClient(raw_client, trace_factory=self.trace_factory)
 
-        llm = llm_factory(
-            model=model,
-            provider="openai",
-            client=client,
-            adapter="auto",
-            cache=self.cache,
-            mode=resolved_mode,
+        llm_factory_kwargs: dict[str, Any] = {
+            "model": model,
+            "provider": "openai",
+            "client": client,
+            "adapter": "auto",
+            "cache": self.cache,
             **kwargs,
-        )
+        }
+
+        if resolved_mode is not None:
+            llm_factory_sig = inspect.signature(llm_factory)
+            if "mode" not in llm_factory_sig.parameters:
+                raise RuntimeError(
+                    "Configured evaluator_llm.model_kwargs.instructor_mode, but the "
+                    "installed RAGAS version does not support llm_factory(..., mode=...). "
+                    "Upgrade RAGAS to a newer 0.4.x release or remove instructor_mode."
+                )
+            llm_factory_kwargs["mode"] = resolved_mode
+
+        llm = llm_factory(**llm_factory_kwargs)
 
         if hasattr(llm, "set_run_config"):
             llm.set_run_config(self.run_config)
