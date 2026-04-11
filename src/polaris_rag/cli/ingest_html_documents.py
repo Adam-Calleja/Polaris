@@ -219,6 +219,11 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Override the markdown token overlap (optional).",
     )
+    parser.add_argument(
+        "--index-only",
+        action="store_true",
+        help="Create the target Qdrant collection and exit without loading or indexing documents.",
+    )
 
     return parser.parse_args()
 
@@ -336,6 +341,19 @@ def _build_source_storage_context(container: Any, source: str) -> Any:
     )
 
 
+def _ensure_index_only_collection(storage_context: Any, source: str) -> None:
+    """Create an empty collection for the selected source and exit."""
+    vector_store = getattr(storage_context, "vector_store", None)
+    if vector_store is None or not hasattr(vector_store, "ensure_collection_exists"):
+        raise RuntimeError(
+            f"Vector store for source {source!r} does not support index-only collection creation."
+        )
+
+    print(f"Ensuring empty Qdrant collection for source {source!r}...")
+    vector_store.ensure_collection_exists()
+    print("Collection ready.")
+
+
 def _resolve_embedding_workers(cfg: GlobalConfig, cli_value: int | None) -> int | None:
     """Resolve embedding Workers.
     
@@ -388,6 +406,10 @@ def main() -> None:
 
     _override_qdrant_collection_name(cfg, args.source, args.qdrant_collection_name)
     container = build_container(cfg)
+    storage_context = _build_source_storage_context(container, args.source)
+    if args.index_only:
+        _ensure_index_only_collection(storage_context, args.source)
+        return
 
     persist_dir = _resolve_persist_dir(cfg, args.persist_dir)
     conditions = cfg.document_preprocess_html_conditions
@@ -457,7 +479,6 @@ def main() -> None:
         registry_artifact_path=registry_artifact_path,
     )
 
-    storage_context = _build_source_storage_context(container, args.source)
     if storage_context is None:
         raise RuntimeError("Storage context is not available; cannot persist HTML ingestion.")
 

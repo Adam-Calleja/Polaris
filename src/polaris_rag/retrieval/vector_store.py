@@ -382,6 +382,23 @@ class QdrantIndexStore(BaseVectorStore):
             ),
         }
 
+    def ensure_collection_exists(self, *, sample_text: str = "polaris collection bootstrap") -> None:
+        """Create the backing Qdrant collection if it does not already exist."""
+        if self.client.collection_exists(self.collection_name):
+            return
+
+        dense_vectors = self.embedder.embed_documents([str(sample_text)])
+        if not dense_vectors or not dense_vectors[0]:
+            raise ValueError(
+                "Unable to infer embedding dimension for Qdrant collection creation: "
+                "embedder returned no vectors."
+            )
+
+        self._ensure_collection(
+            dense_dim=len(dense_vectors[0]),
+            enable_sparse=self.sparse_encoder is not None,
+        )
+
     def create_index(self, chunks: list[DocumentChunk], batch_size: int) -> None:
         """Compatibility wrapper: recreate by reinserting chunks."""
         self.insert_chunks(chunks, batch_size=batch_size, use_async=False)

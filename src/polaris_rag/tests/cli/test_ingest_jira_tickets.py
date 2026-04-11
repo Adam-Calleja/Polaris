@@ -78,6 +78,7 @@ def test_parse_args_supports_exclusion_and_batching_flags(monkeypatch):
             "512",
             "--chunk-overlap-tokens",
             "64",
+            "--index-only",
         ],
     )
 
@@ -91,6 +92,43 @@ def test_parse_args_supports_exclusion_and_batching_flags(monkeypatch):
     assert args.conversion_engine == "native_jira"
     assert args.chunk_size_tokens == 512
     assert args.chunk_overlap_tokens == 64
+    assert args.index_only is True
+
+
+def test_main_index_only_creates_collection_without_loading_tickets(monkeypatch):
+    ensured: list[str] = []
+
+    fake_cfg = SimpleNamespace(
+        raw={"vector_stores": {"tickets": {"collection_name": "tickets"}}},
+        embedder={},
+    )
+    fake_container = SimpleNamespace(
+        vector_stores={"tickets": "ticket-store"},
+        doc_store="chunk-docstore",
+    )
+    storage_context = SimpleNamespace(
+        vector_store=SimpleNamespace(
+            ensure_collection_exists=lambda: ensured.append("tickets"),
+        ),
+    )
+
+    monkeypatch.setattr(ingest_jira_tickets.GlobalConfig, "load", lambda path: fake_cfg)
+    monkeypatch.setattr(ingest_jira_tickets, "build_container", lambda cfg: fake_container)
+    monkeypatch.setattr(ingest_jira_tickets, "_build_source_storage_context", lambda container, source: storage_context)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "ingest_jira_tickets.py",
+            "-c",
+            "config/config.yaml",
+            "--index-only",
+        ],
+    )
+
+    ingest_jira_tickets.main()
+
+    assert ensured == ["tickets"]
 
 
 def test_main_markdown_chunking_path_persists_markdown_tickets(monkeypatch):

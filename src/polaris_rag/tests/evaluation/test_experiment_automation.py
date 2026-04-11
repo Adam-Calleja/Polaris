@@ -213,12 +213,74 @@ def test_run_experiment_stage_prepare_phase_builds_prepare_only_commands(
     )
 
     assert record["execution_phase"] == "prepare"
-    assert len(calls) == 2
-    assert "ingest_html_documents.py" in calls[0][1]
-    assert "--prepare-only" in calls[1]
-    assert "--reuse-prepared" not in calls[1]
-    assert record["conditions"][0]["ingestion_skipped"] is False
+    assert len(calls) == 1
+    assert "evaluate_rag.py" in calls[0][1]
+    assert "--prepare-only" in calls[0]
+    assert "--reuse-prepared" not in calls[0]
+    assert record["conditions"][0]["ingestion_skipped"] is True
     assert record["conditions"][0]["runs"][0]["execution_phase"] == "prepare"
+
+
+def test_run_experiment_stage_index_phase_builds_index_only_commands(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    (repo_root / "scripts").mkdir()
+    base_config = tmp_path / "config.yaml"
+    base_config.write_text("prompt_name: test\n", encoding="utf-8")
+
+    manifest_path = _write_manifest(
+        tmp_path,
+        {
+            "artifacts_root": "artifacts/experiments",
+            "base_config": "config.yaml",
+            "stages": {
+                "stage0b2_ticket_chunking": {
+                    "type": "evaluation_grid",
+                    "dataset_path": "dev.jsonl",
+                    "repeats": 2,
+                    "conditions": [
+                        {
+                            "name": "tickets_cs600_ov0",
+                            "preset": "tickets_only",
+                            "ingest": {
+                                "kind": "jira",
+                                "source": "tickets",
+                                "qdrant_collection_name": "exp_tickets_cs600_ov0",
+                            },
+                        }
+                    ],
+                }
+            },
+        },
+    )
+
+    calls: list[list[str]] = []
+
+    def _fake_run(command, check, cwd):
+        calls.append(list(command))
+        assert check is True
+        assert Path(cwd) == repo_root
+        return None
+
+    monkeypatch.setattr(automation, "REPO_ROOT", repo_root)
+    monkeypatch.setattr(automation.subprocess, "run", _fake_run)
+
+    record = automation.run_experiment_stage(
+        manifest_path=manifest_path,
+        stage_name="stage0b2_ticket_chunking",
+        execution_phase="index",
+        dry_run=False,
+    )
+
+    assert record["execution_phase"] == "index"
+    assert len(calls) == 1
+    assert "ingest_jira_tickets.py" in calls[0][1]
+    assert "--index-only" not in calls[0]
+    assert record["conditions"][0]["runs"] == []
+    assert record["conditions"][0]["ingestion_skipped"] is False
 
 
 def test_run_experiment_stage_evaluate_phase_reuses_prepared_rows(

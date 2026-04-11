@@ -216,6 +216,11 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Override the markdown token overlap (optional).",
     )
+    parser.add_argument(
+        "--index-only",
+        action="store_true",
+        help="Create the target Qdrant collection and exit without loading or indexing tickets.",
+    )
 
     return parser.parse_args()
 
@@ -525,6 +530,19 @@ def _build_source_storage_context(container: Any, source: str) -> Any:
     )
 
 
+def _ensure_index_only_collection(storage_context: Any, source: str) -> None:
+    """Create an empty collection for the selected source and exit."""
+    vector_store = getattr(storage_context, "vector_store", None)
+    if vector_store is None or not hasattr(vector_store, "ensure_collection_exists"):
+        raise RuntimeError(
+            f"Vector store for source {source!r} does not support index-only collection creation."
+        )
+
+    print(f"Ensuring empty Qdrant collection for source {source!r}...")
+    vector_store.ensure_collection_exists()
+    print("Collection ready.")
+
+
 def main() -> None:
     """Run the command-line entrypoint.
     
@@ -534,9 +552,6 @@ def main() -> None:
         If the provided value is invalid for the operation.
     """
     args = parse_args()
-    from polaris_rag.retrieval.document_loader import load_support_tickets
-    from polaris_rag.retrieval.document_preprocessor import preprocess_jira_tickets
-    from polaris_rag.retrieval.text_splitter import get_chunks_from_jira_tickets
 
     cfg = GlobalConfig.load(args.config_file)
     if args.embedding_workers is not None:
@@ -551,6 +566,14 @@ def main() -> None:
     _override_qdrant_collection_name(cfg, args.source, args.qdrant_collection_name)
 
     container = build_container(cfg)
+    storage_context = _build_source_storage_context(container, args.source)
+    if args.index_only:
+        _ensure_index_only_collection(storage_context, args.source)
+        return
+
+    from polaris_rag.retrieval.document_loader import load_support_tickets
+    from polaris_rag.retrieval.document_preprocessor import preprocess_jira_tickets
+    from polaris_rag.retrieval.text_splitter import get_chunks_from_jira_tickets
 
     persist_dir = _resolve_persist_dir(cfg, args.persist_dir)
     start_date, end_date = _resolve_dates(cfg, args.start_date, args.end_date)
@@ -559,7 +582,6 @@ def main() -> None:
     exclude_keys = _resolve_exclude_keys(cfg, args.exclude_keys_file)
 
     dump_path = Path(args.dump_path) if args.dump_path else (REPO_ROOT / "data" / "debug" / "jira_processed_tickets.txt")
-    storage_context = _build_source_storage_context(container, args.source)
 
     print("Loading Jira tickets...")
     tickets = load_support_tickets(

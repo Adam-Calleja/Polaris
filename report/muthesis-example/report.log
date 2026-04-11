@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.3.18)  10 APR 2026 23:29
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.3.18)  11 APR 2026 15:08
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -398,7 +398,7 @@ although it is yet undefined on input line 7.
 Package acronym Info: Label `acro:HPC' newly defined as it shall be overridden
 although it is yet undefined on input line 7.
 Package acronym Info: Label `acro:RCS' overridden on input line 7.
-<graphs/ticket_counts.pdf, id=530, 431.17964pt x 254.86092pt>
+<graphs/ticket_counts.pdf, id=534, 431.17964pt x 254.86092pt>
 File: graphs/ticket_counts.pdf Graphic file (type pdf)
 <use graphs/ticket_counts.pdf>
 Package pdftex.def Info: graphs/ticket_counts.pdf  used on input line 13.
@@ -457,7 +457,13 @@ although it is yet undefined on input line 11.
 
 Underfull \vbox (badness 3861) has occurred while \output is active []
 
- [20]) [21]
+ [20]
+Package acronym Info: Label `acro:NLP' newly defined as it shall be overridden
+although it is yet undefined on input line 24.
+)
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [21] [22]
 \openout2 = `chapter3.aux'.
 
  (./chapter3.tex
@@ -467,7 +473,7 @@ Overfull \hbox (25.80722pt too wide) in paragraph at lines 16--16
 []\OT1/ptm/b/n/17.28 Success Cri-te-ria and Requirement-to-Evaluation Map-
  []
 
-) [22
+) [23
 
 
 
@@ -477,7 +483,7 @@ Overfull \hbox (25.80722pt too wide) in paragraph at lines 16--16
 
  (./chapter4.tex
 Chapter 4.
-) [23
+) [24
 
 
 
@@ -490,7 +496,7 @@ Chapter 5.
 )
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
- [24
+ [25
 
 
 
@@ -498,12 +504,12 @@ Underfull \vbox (badness 10000) has occurred while \output is active []
 ]
 Overfull \vbox (233.79532pt too high) has occurred while \output is active []
 
- [25]
+ [26]
 \openout2 = `chapter6.aux'.
 
  (./chapter6.tex
 Chapter 6.
-) [26
+) [27
 
 
 
@@ -513,7 +519,7 @@ Chapter 6.
 
  (./chapter7.tex
 Chapter 7.
-) [27
+) [28
 
 
 
@@ -523,12 +529,12 @@ Chapter 7.
 
  (./chapter8.tex
 Chapter 8.
-) [28
+) [29
 
 
 
 
-] (./report.bbl [29
+] (./report.bbl [30
 
 
 
@@ -542,7 +548,7 @@ Underfull \hbox (badness 10000) in paragraph at lines 45--46
 []\OT1/ptm/m/n/12 ``CSD3 Up-grade Oc-to-ber 2021 --- CSD3 1.0 doc-u-men-ta-tion,''
  []
 
-[30]) [31]
+[31]) [32]
 \openout2 = `appendix1.aux'.
 
 
@@ -560,18 +566,18 @@ Package rerunfilecheck Info: File `report.out' has not changed.
 (rerunfilecheck)             Checksum: 2F42F528F00DE2378F75546938A44654;16480.
  ) 
 Here is how much of TeX's memory you used:
- 11965 strings out of 467525
- 185943 string characters out of 5418982
- 607373 words of memory out of 5000000
- 40495 multiletter control sequences out of 15000+600000
+ 11974 strings out of 467525
+ 186034 string characters out of 5418982
+ 607460 words of memory out of 5000000
+ 40501 multiletter control sequences out of 15000+600000
  654681 words of font info for 84 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  75i,6n,79p,1469b,640s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/local/texlive/2026/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
-Output written on report.pdf (31 pages, 144894 bytes).
+Output written on report.pdf (32 pages, 146893 bytes).
 PDF statistics:
- 860 PDF objects out of 1000 (max. 8388607)
- 768 compressed objects within 8 object streams
- 153 named destinations out of 1000 (max. 500000)
+ 880 PDF objects out of 1000 (max. 8388607)
+ 787 compressed objects within 8 object streams
+ 156 named destinations out of 1000 (max. 500000)
  662 words of extra memory for PDF output out of 10000 (max. 10000000)
 
