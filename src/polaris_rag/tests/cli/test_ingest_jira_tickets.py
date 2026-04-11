@@ -66,6 +66,8 @@ def test_parse_args_supports_exclusion_and_batching_flags(monkeypatch):
             "excluded.txt",
             "--vector-batch-size",
             "8",
+            "--fetch-batch-size",
+            "25",
             "--embedding-workers",
             "3",
             "--source",
@@ -86,6 +88,7 @@ def test_parse_args_supports_exclusion_and_batching_flags(monkeypatch):
 
     assert args.exclude_keys_file == "excluded.txt"
     assert args.vector_batch_size == 8
+    assert args.fetch_batch_size == 25
     assert args.embedding_workers == 3
     assert args.source == "tickets"
     assert args.chunking_strategy == "markdown_token"
@@ -228,8 +231,10 @@ def test_main_markdown_chunking_path_persists_markdown_tickets(monkeypatch):
 
     monkeypatch.setattr(
         document_loader,
-        "load_support_tickets",
-        lambda start_date, end_date, limit, cfg, exclude_keys: [{"key": "HPCSSUP-1", "fields": {"summary": "Summary"}}],
+        "iter_support_ticket_batches",
+        lambda start_date, end_date, limit, cfg, exclude_keys, batch_size: iter(
+            [[{"key": "HPCSSUP-1", "fields": {"summary": "Summary"}}]]
+        ),
     )
     monkeypatch.setattr(
         document_preprocessor,
@@ -252,3 +257,146 @@ def test_main_markdown_chunking_path_persists_markdown_tickets(monkeypatch):
     assert inserted["batch_size"] == 16
     assert inserted["use_async"] is False
     assert persisted_docs == markdown_documents
+
+
+def test_main_processes_jira_tickets_in_fetch_batches(monkeypatch):
+    inserted_batches: list[list[str]] = []
+    deleted_ids: list[str] = []
+    deleted_from_docstore: list[str] = []
+    persisted_docs: list[str] = []
+    persist_storage_calls: list[str] = []
+    persist_docstore_calls: list[str] = []
+
+    fake_cfg = SimpleNamespace(
+        raw={"vector_stores": {"tickets": {"collection_name": "tickets"}}},
+        ingestion={
+            "conversion": {"sources": {"tickets": {"engine": "native_jira"}}},
+            "chunking": {"sources": {"tickets": {"strategy": "markdown_token", "chunk_size_tokens": 64, "overlap_tokens": 8}}},
+            "jira": {},
+        },
+        storage_context={"persist_dir": "data/storage/local"},
+        embedder={},
+    )
+    fake_container = SimpleNamespace(
+        token_counter=SimpleNamespace(),
+        vector_stores={"tickets": "ticket-store"},
+        doc_store="chunk-docstore",
+    )
+    storage_context = SimpleNamespace(
+        vector_store=SimpleNamespace(
+            delete_ref_docs=lambda ids: deleted_ids.extend(ids),
+            insert_chunks=lambda chunks, batch_size, use_async: inserted_batches.append(
+                [chunk.parent_id for chunk in chunks]
+            ),
+        ),
+        docstore="docstore",
+    )
+    source_docstore = SimpleNamespace()
+
+    monkeypatch.setattr(ingest_jira_tickets.GlobalConfig, "load", lambda path: fake_cfg)
+    monkeypatch.setattr(ingest_jira_tickets, "build_container", lambda cfg: fake_container)
+    monkeypatch.setattr(ingest_jira_tickets, "_build_source_storage_context", lambda container, source: storage_context)
+    monkeypatch.setattr(ingest_jira_tickets, "load_or_create_source_document_store", lambda persist_dir: source_docstore)
+    monkeypatch.setattr(ingest_jira_tickets, "persist_storage", lambda storage, persist_dir: persist_storage_calls.append(persist_dir))
+    monkeypatch.setattr(ingest_jira_tickets, "persist_docstore", lambda docstore, persist_path: persist_docstore_calls.append(persist_path))
+    monkeypatch.setattr(ingest_jira_tickets, "source_document_store_path", lambda persist_dir: "source_docstore.json")
+    monkeypatch.setattr(ingest_jira_tickets, "add_chunks_to_docstore", lambda storage, chunks: len(chunks))
+    monkeypatch.setattr(ingest_jira_tickets, "delete_ref_docs_from_docstore", lambda docstore, ids: deleted_from_docstore.extend(ids))
+    monkeypatch.setattr(
+        ingest_jira_tickets,
+        "add_documents_to_docstore",
+        lambda docstore, documents: persisted_docs.extend([document.id for document in documents]),
+    )
+    monkeypatch.setattr(
+        ingest_jira_tickets,
+        "_resolve_dates",
+        lambda cfg, start_cli, end_cli: ("2024-01-01", "2024-02-01"),
+    )
+    monkeypatch.setattr(ingest_jira_tickets, "_resolve_limit", lambda cfg, limit_cli: None)
+    monkeypatch.setattr(ingest_jira_tickets, "_resolve_unwanted_summaries", lambda cfg: [])
+    monkeypatch.setattr(ingest_jira_tickets, "_resolve_exclude_keys", lambda cfg, cli_value: [])
+    monkeypatch.setattr(ingest_jira_tickets, "_resolve_persist_dir", lambda cfg, cli_value: "data/storage/local")
+    monkeypatch.setattr(
+        ingest_jira_tickets,
+        "enrich_documents_with_authority_metadata",
+        lambda documents, registry_artifact_path, source_name: documents,
+    )
+    monkeypatch.setattr(
+        ingest_jira_tickets,
+        "resolve_authority_registry_artifact_path",
+        lambda cfg: "data/authority/registry.local_official.v1.json",
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "ingest_jira_tickets.py",
+            "-c",
+            "config/config.yaml",
+            "--chunking-strategy",
+            "markdown_token",
+            "--fetch-batch-size",
+            "2",
+        ],
+    )
+
+    sys.modules.setdefault("atlassian", SimpleNamespace(Jira=object))
+    document_loader = importlib.import_module("polaris_rag.retrieval.document_loader")
+    document_preprocessor = importlib.import_module("polaris_rag.retrieval.document_preprocessor")
+    text_splitter = importlib.import_module("polaris_rag.retrieval.text_splitter")
+
+    monkeypatch.setattr(
+        document_loader,
+        "iter_support_ticket_batches",
+        lambda start_date, end_date, limit, cfg, exclude_keys, batch_size: iter(
+            [
+                [
+                    {"key": "HPCSSUP-1", "fields": {"summary": "Summary 1"}},
+                    {"key": "HPCSSUP-2", "fields": {"summary": "Summary 2"}},
+                ],
+                [
+                    {"key": "HPCSSUP-3", "fields": {"summary": "Summary 3"}},
+                ],
+            ]
+        ),
+    )
+    monkeypatch.setattr(document_preprocessor, "preprocess_jira_tickets", lambda tickets: [])
+    monkeypatch.setattr(text_splitter, "get_chunks_from_jira_tickets", lambda tickets, token_counter: [])
+    monkeypatch.setattr(
+        ingest_jira_tickets,
+        "convert_tickets_to_markdown",
+        lambda tickets, engine, options: [
+            MarkdownDocument(
+                id=ticket["key"],
+                document_type="helpdesk_ticket",
+                text=f"# Ticket {ticket['key']}",
+                metadata={"ticket_key": ticket["key"], "summary": ticket["fields"]["summary"]},
+            )
+            for ticket in tickets
+        ],
+    )
+    monkeypatch.setattr(
+        ingest_jira_tickets,
+        "get_chunks_from_markdown_documents",
+        lambda documents, token_counter, chunk_size, overlap: [
+            DocumentChunk(
+                id=f"{document.id}::chunk::0000",
+                parent_id=document.id,
+                prev_id=None,
+                next_id=None,
+                text=document.text,
+                document_type=document.document_type,
+                metadata={},
+            )
+            for document in documents
+        ],
+    )
+
+    ingest_jira_tickets.main()
+
+    assert inserted_batches == [["HPCSSUP-1", "HPCSSUP-2"], ["HPCSSUP-3"]]
+    assert deleted_ids == ["HPCSSUP-1", "HPCSSUP-2", "HPCSSUP-3"]
+    assert deleted_from_docstore == ["HPCSSUP-1", "HPCSSUP-2", "HPCSSUP-3"]
+    assert persisted_docs == ["HPCSSUP-1", "HPCSSUP-2", "HPCSSUP-3"]
+    assert persist_storage_calls == ["data/storage/local", "data/storage/local"]
+    assert persist_docstore_calls == ["source_docstore.json", "source_docstore.json"]

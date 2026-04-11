@@ -592,6 +592,7 @@ def _build_ingest_command(
         command.extend(_append_cli_option("--start-date", ingest_spec.get("start_date")))
         command.extend(_append_cli_option("--end-date", ingest_spec.get("end_date")))
         command.extend(_append_cli_option("--limit", ingest_spec.get("limit")))
+        command.extend(_append_cli_option("--fetch-batch-size", ingest_spec.get("fetch_batch_size")))
         command.extend(_append_cli_option("--exclude-keys-file", ingest_spec.get("exclude_keys_file")))
         if bool(ingest_spec.get("dump_processed", False)):
             command.append("--dump-processed")

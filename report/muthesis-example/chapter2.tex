@@ -23,6 +23,8 @@ As discussed in \ref{sec:support}, technical support \ac{QA} depends on locating
 
 \citet{lewisRetrievalaugmentedGenerationKnowledgeintensive2020} formulate \ac{RAG} as a hybrid model that combines parametric memory in a pre-trained sequence-to-sequence generator model with non-parametric memory in a dense index of external documents. In this architecture, a neural retriever selects the most relevant documents for a given input query, and then the generator produces a response using these documents as additional context. The authors further distinguish between RAG-Sequence, which uses the same retrieved evidence across the whole output, and RAG-Token, which can draw on different passages for different output tokens. \ac{RAG} is therefore a retrieval-grounded generation framework designed to improve factuality, interpretability, and performance on knowledge-intensive \ac{NLP} tasks \citep{lewisRetrievalaugmentedGenerationKnowledgeintensive2020}.
 
+
+
 \section{Heterogeneous Support Corpora: Documentation and Tickets}
 \label{sec:heterogeneous}
 

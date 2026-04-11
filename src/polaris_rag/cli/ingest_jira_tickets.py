@@ -168,6 +168,13 @@ def parse_args() -> argparse.Namespace:
         help="Batch size for vector-store inserts (default: 16).",
     )
     parser.add_argument(
+        "--fetch-batch-size",
+        required=False,
+        type=int,
+        default=None,
+        help="Maximum number of Jira tickets to process per ingestion batch (optional).",
+    )
+    parser.add_argument(
         "--embedding-workers",
         required=False,
         type=int,
@@ -448,6 +455,50 @@ def _resolve_embedding_workers(cfg: GlobalConfig, cli_value: int | None) -> int 
         return None
 
 
+def _resolve_fetch_batch_size(cfg: GlobalConfig, cli_value: int | None) -> int | None:
+    """Resolve Jira fetch/process batch size."""
+    if cli_value is not None:
+        if cli_value < 1:
+            raise ValueError("--fetch-batch-size must be >= 1 when provided.")
+        return int(cli_value)
+
+    jira_cfg = _get_jira_ingestion_cfg(cfg)
+    value = jira_cfg.get("fetch_batch_size")
+    if value is None:
+        return None
+    try:
+        resolved = int(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("ingestion.jira.fetch_batch_size must be an integer when provided.") from exc
+    if resolved < 1:
+        raise ValueError("ingestion.jira.fetch_batch_size must be >= 1 when provided.")
+    return resolved
+
+
+def _filter_tickets(
+    tickets: list[dict[str, Any]],
+    *,
+    exclude_keys: list[str],
+    unwanted_summaries: list[str],
+) -> list[dict[str, Any]]:
+    """Apply CLI/config exclusion rules to a fetched Jira batch."""
+    filtered = tickets
+    if exclude_keys:
+        excluded_key_set = set(exclude_keys)
+        filtered = [
+            ticket for ticket in filtered if str(ticket.get("key", "")).upper() not in excluded_key_set
+        ]
+
+    if unwanted_summaries:
+        filtered = [
+            ticket
+            for ticket in filtered
+            if not any(unwanted in ticket.get("fields", {}).get("summary", "") for unwanted in unwanted_summaries)
+        ]
+
+    return filtered
+
+
 def _dump_processed_tickets(processed_tickets: list[Any], dump_path: Path) -> None:
     """Dump Processed Tickets.
     
@@ -571,39 +622,24 @@ def main() -> None:
         _ensure_index_only_collection(storage_context, args.source)
         return
 
-    from polaris_rag.retrieval.document_loader import load_support_tickets
+    from polaris_rag.retrieval.document_loader import iter_support_ticket_batches
     from polaris_rag.retrieval.document_preprocessor import preprocess_jira_tickets
     from polaris_rag.retrieval.text_splitter import get_chunks_from_jira_tickets
 
     persist_dir = _resolve_persist_dir(cfg, args.persist_dir)
     start_date, end_date = _resolve_dates(cfg, args.start_date, args.end_date)
     limit = _resolve_limit(cfg, args.limit)
+    fetch_batch_size = _resolve_fetch_batch_size(cfg, args.fetch_batch_size)
     unwanted_summaries = _resolve_unwanted_summaries(cfg)
     exclude_keys = _resolve_exclude_keys(cfg, args.exclude_keys_file)
 
     dump_path = Path(args.dump_path) if args.dump_path else (REPO_ROOT / "data" / "debug" / "jira_processed_tickets.txt")
+    source_document_store = load_or_create_source_document_store(persist_dir=persist_dir)
+    embedding_workers = _resolve_embedding_workers(cfg, args.embedding_workers)
+    use_async_embeddings = embedding_workers is not None and embedding_workers > 1
+    vector_batch_size = max(1, int(args.vector_batch_size))
 
     print("Loading Jira tickets...")
-    tickets = load_support_tickets(
-        start_date=start_date,
-        end_date=end_date,
-        limit=limit,
-        cfg=cfg,
-        exclude_keys=exclude_keys,
-    )
-    print(f"Fetched {len(tickets)} tickets from Jira.")
-
-    if exclude_keys:
-        excluded_key_set = set(exclude_keys)
-        tickets = [ticket for ticket in tickets if str(ticket.get("key", "")).upper() not in excluded_key_set]
-
-    if unwanted_summaries:
-        tickets = [
-            ticket
-            for ticket in tickets
-            if not any(unwanted in ticket.get("fields", {}).get("summary", "") for unwanted in unwanted_summaries)
-        ]
-
     chunking_settings = resolve_chunking_settings(
         cfg,
         source=args.source,
@@ -617,88 +653,118 @@ def main() -> None:
         engine_override=args.conversion_engine,
     )
     registry_artifact_path = resolve_authority_registry_artifact_path(cfg)
-
-    print(f"Loaded {len(tickets)} tickets. Preprocessing...")
-    if chunking_settings.strategy == MARKDOWN_TOKEN_CHUNKING_STRATEGY:
-        processed_tickets = convert_tickets_to_markdown(
-            tickets,
-            engine=conversion_settings.engine,
-            options=conversion_settings.options,
-        )
-        processed_tickets = enrich_documents_with_authority_metadata(
-            processed_tickets,
-            registry_artifact_path=registry_artifact_path,
-            source_name=args.source,
-        )
-        chunks = get_chunks_from_markdown_documents(
-            processed_tickets,
-            token_counter=container.token_counter,
-            chunk_size=chunking_settings.chunk_size_tokens,
-            overlap=chunking_settings.overlap_tokens,
-        )
-    elif chunking_settings.strategy == JIRA_TURNS_TOKEN_CHUNKING_STRATEGY:
-        processed_tickets = preprocess_jira_tickets(tickets)
-        processed_tickets = enrich_documents_with_authority_metadata(
-            processed_tickets,
-            registry_artifact_path=registry_artifact_path,
-            source_name=args.source,
-        )
-        chunks = get_chunks_from_jira_tickets(
-            tickets=processed_tickets,
-            token_counter=container.token_counter,
-            chunk_size=chunking_settings.chunk_size_tokens,
-            overlap=chunking_settings.overlap_tokens,
-        )
-    else:
-        raise ValueError(f"Unsupported ticket chunking strategy: {chunking_settings.strategy!r}")
-
-    ticket_ids = list(dict.fromkeys(str(ticket.id) for ticket in processed_tickets if getattr(ticket, "id", None)))
-
-    if args.dump_processed:
-        print(f"Dumping processed tickets to: {dump_path}")
-        _dump_processed_tickets(processed_tickets, dump_path)
-    print("Generating chunks from tickets...")
-    source_document_store = load_or_create_source_document_store(persist_dir=persist_dir)
-
-    if ticket_ids:
-        print(f"Removing existing chunks for {len(ticket_ids)} tickets...")
-        if hasattr(storage_context.vector_store, "delete_ref_docs"):
-            storage_context.vector_store.delete_ref_docs(ticket_ids)
-        elif hasattr(storage_context.vector_store, "delete_ref_doc"):
-            for ticket_id in ticket_ids:
-                storage_context.vector_store.delete_ref_doc(ticket_id)
-        delete_ref_docs_from_docstore(storage_context.docstore, ticket_ids)
-
-    print("Adding chunks to vector store...")
-    embedding_workers = _resolve_embedding_workers(cfg, args.embedding_workers)
-    use_async_embeddings = embedding_workers is not None and embedding_workers > 1
-    vector_batch_size = max(1, int(args.vector_batch_size))
-    total_chunks = len(chunks)
+    processed_batches = 0
+    total_fetched = 0
+    total_after_filters = 0
+    total_chunks = 0
     mode = "async/concurrent" if use_async_embeddings else "sync/sequential"
+
+    for batch_index, fetched_tickets in enumerate(
+        iter_support_ticket_batches(
+            start_date=start_date,
+            end_date=end_date,
+            limit=limit,
+            cfg=cfg,
+            exclude_keys=exclude_keys,
+            batch_size=fetch_batch_size,
+        ),
+        start=1,
+    ):
+        total_fetched += len(fetched_tickets)
+        print(f"Fetched Jira batch {batch_index}: {len(fetched_tickets)} tickets.")
+
+        tickets = _filter_tickets(
+            fetched_tickets,
+            exclude_keys=exclude_keys,
+            unwanted_summaries=unwanted_summaries,
+        )
+        if not tickets:
+            print(f"Skipping Jira batch {batch_index}: no tickets remain after filtering.")
+            continue
+
+        total_after_filters += len(tickets)
+        print(f"Processing Jira batch {batch_index}: {len(tickets)} tickets after filtering.")
+
+        if chunking_settings.strategy == MARKDOWN_TOKEN_CHUNKING_STRATEGY:
+            processed_tickets = convert_tickets_to_markdown(
+                tickets,
+                engine=conversion_settings.engine,
+                options=conversion_settings.options,
+            )
+            processed_tickets = enrich_documents_with_authority_metadata(
+                processed_tickets,
+                registry_artifact_path=registry_artifact_path,
+                source_name=args.source,
+            )
+            chunks = get_chunks_from_markdown_documents(
+                processed_tickets,
+                token_counter=container.token_counter,
+                chunk_size=chunking_settings.chunk_size_tokens,
+                overlap=chunking_settings.overlap_tokens,
+            )
+        elif chunking_settings.strategy == JIRA_TURNS_TOKEN_CHUNKING_STRATEGY:
+            processed_tickets = preprocess_jira_tickets(tickets)
+            processed_tickets = enrich_documents_with_authority_metadata(
+                processed_tickets,
+                registry_artifact_path=registry_artifact_path,
+                source_name=args.source,
+            )
+            chunks = get_chunks_from_jira_tickets(
+                tickets=processed_tickets,
+                token_counter=container.token_counter,
+                chunk_size=chunking_settings.chunk_size_tokens,
+                overlap=chunking_settings.overlap_tokens,
+            )
+        else:
+            raise ValueError(f"Unsupported ticket chunking strategy: {chunking_settings.strategy!r}")
+
+        ticket_ids = list(dict.fromkeys(str(ticket.id) for ticket in processed_tickets if getattr(ticket, "id", None)))
+
+        if args.dump_processed:
+            print(f"Dumping processed tickets from batch {batch_index} to: {dump_path}")
+            _dump_processed_tickets(processed_tickets, dump_path)
+        print(f"Generated {len(chunks)} chunks from Jira batch {batch_index}.")
+
+        if ticket_ids:
+            print(f"Removing existing chunks for {len(ticket_ids)} tickets in batch {batch_index}...")
+            if hasattr(storage_context.vector_store, "delete_ref_docs"):
+                storage_context.vector_store.delete_ref_docs(ticket_ids)
+            elif hasattr(storage_context.vector_store, "delete_ref_doc"):
+                for ticket_id in ticket_ids:
+                    storage_context.vector_store.delete_ref_doc(ticket_id)
+            delete_ref_docs_from_docstore(storage_context.docstore, ticket_ids)
+
+        print(
+            f"Embedding/indexing {len(chunks)} chunks from Jira batch {batch_index} "
+            f"(insert mode: {mode}, workers: {embedding_workers or 1}, batch size: {vector_batch_size})..."
+        )
+        storage_context.vector_store.insert_chunks(
+            chunks,
+            batch_size=vector_batch_size,
+            use_async=use_async_embeddings,
+        )
+
+        print(f"Adding batch {batch_index} chunks to document store...")
+        add_chunks_to_docstore(storage=storage_context, chunks=chunks)
+
+        print(f"Persisting full tickets from batch {batch_index} to source document store...")
+        add_documents_to_docstore(source_document_store, processed_tickets)
+
+        print(f"Persisting storage after Jira batch {batch_index}...")
+        persist_storage(storage=storage_context, persist_dir=persist_dir)
+        persist_docstore(
+            source_document_store,
+            persist_path=source_document_store_path(persist_dir),
+        )
+
+        processed_batches += 1
+        total_chunks += len(chunks)
+
     print(
-        f"Embedding/indexing {total_chunks} chunks "
-        f"(insert mode: {mode}, workers: {embedding_workers or 1}, batch size: {vector_batch_size})..."
+        "Ingestion complete! "
+        f"Fetched {total_fetched} tickets, processed {total_after_filters} tickets, "
+        f"indexed {total_chunks} chunks across {processed_batches} batch(es)."
     )
-    storage_context.vector_store.insert_chunks(
-        chunks,
-        batch_size=vector_batch_size,
-        use_async=use_async_embeddings,
-    )
-
-    print("Adding chunks to document store...")
-    add_chunks_to_docstore(storage=storage_context, chunks=chunks)
-
-    print("Persisting full tickets to source document store...")
-    add_documents_to_docstore(source_document_store, processed_tickets)
-
-    print("Persisting storage context...")
-    persist_storage(storage=storage_context, persist_dir=persist_dir)
-    persist_docstore(
-        source_document_store,
-        persist_path=source_document_store_path(persist_dir),
-    )
-
-    print("Ingestion complete!")
 
 
 if __name__ == "__main__":

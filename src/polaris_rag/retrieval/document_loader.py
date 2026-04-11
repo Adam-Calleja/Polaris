@@ -30,6 +30,7 @@ import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse, urljoin, urlsplit, urlunsplit
 from datetime import datetime
+from typing import Iterator
 
 from polaris_rag.common import Document
 from polaris_rag.config import GlobalConfig
@@ -330,7 +331,7 @@ def create_jira_jql_query(
 
     return jql_query
 
-def load_support_tickets(
+def iter_support_ticket_batches(
         cfg: GlobalConfig = None,
         username: str = None,
         password: str = None,
@@ -341,13 +342,15 @@ def load_support_tickets(
         keys: list[str] | None = None,
         project_key: str = "HPCSSUP",
         limit: int | None = 100,
-    ) -> list[dict]:
-    """Retrieve resolved Jira support tickets within a date range.
+        batch_size: int | None = None,
+    ) -> Iterator[list[dict]]:
+    """Yield resolved Jira support tickets in bounded batches.
 
     This function connects to the Jira Cloud instance and retrieves issues from
     the specified project that are marked as *Resolved*. Authentication credentials
     are read from ``cfg`` via :attr:`polaris_rag.config.global_config.GlobalConfig.jira_api_credentials`.
-    Results are fetched via :meth:`atlassian.Jira.enhanced_jql` with pagination.
+    Results are fetched via :meth:`atlassian.Jira.enhanced_jql` with pagination
+    and yielded incrementally.
 
     Parameters
     ----------
@@ -375,11 +378,14 @@ def load_support_tickets(
         Maximum number of issues to retrieve. If ``None`` (default), all matching
         issues are returned.
 
-    Returns
-    -------
+    batch_size : int or None, optional
+        Maximum number of issues to yield in each batch. If ``None``, each Jira
+        API page is yielded as-is.
+
+    Yields
+    ------
     list[dict]
-        List of Jira issue dictionaries. Each issue contains standard Jira fields
-        such as ``id``, ``key``, and ``fields``.
+        Jira issue dictionaries in bounded batches.
 
     Raises
     ------
@@ -396,6 +402,8 @@ def load_support_tickets(
         password = jira_api_config['password']
     if not username or not password:
         raise KeyError("Jira credentials are not properly configured.")
+    if batch_size is not None and int(batch_size) < 1:
+        raise ValueError("batch_size must be >= 1 when provided.")
 
     from atlassian import Jira
 
@@ -417,12 +425,13 @@ def load_support_tickets(
     )
 
     next_page_token = None
-    issues = []
+    buffered_issues: list[dict] = []
+    emitted = 0
+    target_batch_size = int(batch_size) if batch_size is not None else None
 
     while True:
-        if limit:
-            if len(issues) >= limit:
-                break
+        if limit is not None and emitted >= limit:
+            break
 
         result = jira.enhanced_jql(
             jql_query,
@@ -430,15 +439,62 @@ def load_support_tickets(
             expand=None,
         ) 
 
-        temp_issues = result.get('issues', [])
-        issues.extend(temp_issues)
+        temp_issues = list(result.get('issues', []) or [])
+        if limit is not None:
+            remaining = int(limit) - emitted - len(buffered_issues)
+            if remaining <= 0:
+                temp_issues = []
+            else:
+                temp_issues = temp_issues[:remaining]
+
+        if target_batch_size is None:
+            if temp_issues:
+                emitted += len(temp_issues)
+                yield temp_issues
+        else:
+            buffered_issues.extend(temp_issues)
+            while len(buffered_issues) >= target_batch_size:
+                batch = buffered_issues[:target_batch_size]
+                emitted += len(batch)
+                yield batch
+                buffered_issues = buffered_issues[target_batch_size:]
 
         next_page_token = result.get('nextPageToken')
 
         if not next_page_token:
             break
-    
-    if limit is not None:
-        issues = issues[:limit]
 
+    if buffered_issues:
+        emitted += len(buffered_issues)
+        yield buffered_issues
+
+
+def load_support_tickets(
+        cfg: GlobalConfig = None,
+        username: str = None,
+        password: str = None,
+        start_date: str = None, 
+        end_date: str = None, 
+        keywords: list[str] | None = None,
+        exclude_keys: list[str] | None = None,
+        keys: list[str] | None = None,
+        project_key: str = "HPCSSUP",
+        limit: int | None = 100,
+    ) -> list[dict]:
+    """Retrieve resolved Jira support tickets within a date range."""
+    issues: list[dict] = []
+    for batch in iter_support_ticket_batches(
+        cfg=cfg,
+        username=username,
+        password=password,
+        start_date=start_date,
+        end_date=end_date,
+        keywords=keywords,
+        exclude_keys=exclude_keys,
+        keys=keys,
+        project_key=project_key,
+        limit=limit,
+        batch_size=None,
+    ):
+        issues.extend(batch)
     return issues
