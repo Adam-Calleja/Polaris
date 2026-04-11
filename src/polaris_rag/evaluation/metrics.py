@@ -28,7 +28,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import math
-from typing import Any, Callable, Iterable
+from typing import Any, Callable, Iterable, Mapping
 
 from ragas.metrics.collections import (
     AnswerRelevancy,
@@ -43,7 +43,7 @@ from ragas.metrics.collections import (
 )
 
 
-MetricBuilder = Callable[[Any, Any], Any]
+MetricBuilder = Callable[[Any, Any, Mapping[str, Any] | None], Any]
 
 
 @dataclass(frozen=True)
@@ -63,6 +63,37 @@ class MetricSpec:
     name: str
     required_columns: frozenset[str]
     builder: MetricBuilder
+
+
+def _as_mapping(value: Any) -> Mapping[str, Any]:
+    """Return a mapping view for optional metric configuration."""
+
+    if isinstance(value, Mapping):
+        return value
+    return {}
+
+
+def _string_option(options: Mapping[str, Any], key: str, default: str) -> str:
+    """Resolve a string metric option with a stable fallback."""
+
+    value = str(options.get(key, default) or "").strip()
+    return value or default
+
+
+def _build_factual_correctness_metric(
+    llm: Any,
+    _embeddings: Any,
+    options: Mapping[str, Any] | None = None,
+) -> Any:
+    """Build the factual-correctness metric with optional config overrides."""
+
+    config = _as_mapping(options)
+    return FactualCorrectness(
+        llm=llm,
+        mode=_string_option(config, "mode", "f1"),
+        atomicity=_string_option(config, "atomicity", "high"),
+        coverage=_string_option(config, "coverage", "high"),
+    )
 
 
 # Default metric set for single-turn RAG evaluation.
@@ -101,52 +132,47 @@ METRIC_REGISTRY: dict[str, MetricSpec] = {
     "context_precision_without_reference": MetricSpec(
         name="context_precision_without_reference",
         required_columns=frozenset({"user_input", "response", "retrieved_contexts"}),
-        builder=lambda llm, embeddings: ContextPrecisionWithoutReference(llm=llm),
+        builder=lambda llm, embeddings, options=None: ContextPrecisionWithoutReference(llm=llm),
     ),
     "context_recall": MetricSpec(
         name="context_recall",
         required_columns=frozenset({"user_input", "retrieved_contexts", "reference"}),
-        builder=lambda llm, embeddings: ContextRecall(llm=llm),
+        builder=lambda llm, embeddings, options=None: ContextRecall(llm=llm),
     ),
     "context_entity_recall": MetricSpec(
         name="context_entity_recall",
         required_columns=frozenset({"retrieved_contexts", "reference"}),
-        builder=lambda llm, embeddings: ContextEntityRecall(llm=llm),
+        builder=lambda llm, embeddings, options=None: ContextEntityRecall(llm=llm),
     ),
     "faithfulness": MetricSpec(
         name="faithfulness",
         required_columns=frozenset({"user_input", "response", "retrieved_contexts"}),
-        builder=lambda llm, embeddings: Faithfulness(llm=llm),
+        builder=lambda llm, embeddings, options=None: Faithfulness(llm=llm),
     ),
     "answer_relevancy": MetricSpec(
         name="answer_relevancy",
         required_columns=frozenset({"user_input", "response"}),
-        builder=lambda llm, embeddings: AnswerRelevancy(llm=llm, embeddings=embeddings),
+        builder=lambda llm, embeddings, options=None: AnswerRelevancy(llm=llm, embeddings=embeddings),
     ),
     "factual_correctness": MetricSpec(
         name="factual_correctness",
         required_columns=frozenset({"response", "reference"}),
-        builder=lambda llm, embeddings: FactualCorrectness(
-            llm=llm,
-            mode="f1",
-            atomicity="high",
-            coverage="high",
-        ),
+        builder=_build_factual_correctness_metric,
     ),
     "semantic_similarity": MetricSpec(
         name="semantic_similarity",
         required_columns=frozenset({"response", "reference"}),
-        builder=lambda llm, embeddings: SemanticSimilarity(embeddings=embeddings),
+        builder=lambda llm, embeddings, options=None: SemanticSimilarity(embeddings=embeddings),
     ),
     "noise_sensitivity": MetricSpec(
         name="noise_sensitivity",
         required_columns=frozenset({"user_input", "response", "reference", "retrieved_contexts"}),
-        builder=lambda llm, embeddings: NoiseSensitivity(llm=llm, mode="relevant"),
+        builder=lambda llm, embeddings, options=None: NoiseSensitivity(llm=llm, mode="relevant"),
     ),
     "summary_score": MetricSpec(
         name="summary_score",
         required_columns=frozenset({"response", "reference_contexts"}),
-        builder=lambda llm, embeddings: SummaryScore(llm=llm),
+        builder=lambda llm, embeddings, options=None: SummaryScore(llm=llm),
     ),
 }
 
@@ -297,7 +323,13 @@ def resolve_metric_specs(
     return resolved, skipped
 
 
-def instantiate_metrics(specs: list[MetricSpec], *, llm: Any, embeddings: Any) -> list[Any]:
+def instantiate_metrics(
+    specs: list[MetricSpec],
+    *,
+    llm: Any,
+    embeddings: Any,
+    metric_config: Mapping[str, Mapping[str, Any]] | None = None,
+) -> list[Any]:
     """Instantiate concrete RAGAS metric objects from resolved specs.
     
     Parameters
@@ -315,7 +347,11 @@ def instantiate_metrics(specs: list[MetricSpec], *, llm: Any, embeddings: Any) -
         Collected results from the operation.
     """
 
-    return [spec.builder(llm, embeddings) for spec in specs]
+    config_by_name = _as_mapping(metric_config)
+    return [
+        spec.builder(llm, embeddings, _as_mapping(config_by_name.get(spec.name)))
+        for spec in specs
+    ]
 
 
 __all__ = [

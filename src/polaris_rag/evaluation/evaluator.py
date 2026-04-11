@@ -764,6 +764,8 @@ class Evaluator:
         Value for batch Size.
     adaptive_concurrency : AdaptiveConcurrencySettings or None, optional
         Value for adaptive Concurrency.
+    metric_overrides : Mapping[str, Any] or None, optional
+        Optional per-metric configuration overrides passed to the metric registry.
     raise_exceptions : bool, optional
         Value for raise Exceptions.
     use_cache : bool, optional
@@ -807,6 +809,7 @@ class Evaluator:
         run_config: RunConfig | None = None,
         batch_size: int | None = None,
         adaptive_concurrency: AdaptiveConcurrencySettings | None = None,
+        metric_overrides: Mapping[str, Any] | None = None,
         raise_exceptions: bool = False,
         use_cache: bool = False,
         cache_dir: str = ".cache/ragas_eval",
@@ -871,6 +874,10 @@ class Evaluator:
 
         self.batch_size = batch_size
         self.adaptive_concurrency = adaptive_concurrency or AdaptiveConcurrencySettings()
+        self.metric_overrides = {
+            str(name): dict(_as_mapping(options))
+            for name, options in _as_mapping(metric_overrides).items()
+        }
 
         self.cache = DiskCacheBackend(cache_dir=cache_dir) if use_cache else None
         if self.trace_evaluator_llm and self.trace_factory is None:
@@ -1026,6 +1033,7 @@ class Evaluator:
             run_config=run_config,
             batch_size=_coerce_int(run_cfg.get("batch_size"), 0) or None,
             adaptive_concurrency=adaptive,
+            metric_overrides=_as_mapping(metric_cfg.get("config")),
             raise_exceptions=_as_bool(run_cfg.get("raise_exceptions"), False),
             use_cache=_as_bool(cache_cfg.get("enabled"), False),
             cache_dir=str(cache_cfg.get("dir", ".cache/ragas_eval")),
@@ -1181,7 +1189,12 @@ class Evaluator:
             requested_metrics=self.requested_metrics,
             auto_gate=self.auto_gate_metrics,
         )
-        instances = instantiate_metrics(specs, llm=self.llm, embeddings=self.embeddings)
+        instances = instantiate_metrics(
+            specs,
+            llm=self.llm,
+            embeddings=self.embeddings,
+            metric_config=self.metric_overrides,
+        )
         return list(zip(specs, instances)), skipped
 
     def _clone_run_config(self, *, max_workers: int) -> RunConfig:

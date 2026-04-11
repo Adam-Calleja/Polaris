@@ -4,6 +4,7 @@ import pytest
 
 pytest.importorskip("ragas.metrics.collections")
 
+import polaris_rag.evaluation.metrics as metrics_module
 from polaris_rag.evaluation.metrics import instantiate_metrics, resolve_metric_specs
 
 
@@ -76,3 +77,38 @@ def test_retrieval_metrics_compute_expected_scores() -> None:
 
     assert recall == 1.0
     assert 0.9 < ndcg < 1.0
+
+
+def test_factual_correctness_accepts_metric_config_overrides(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured: dict[str, object] = {}
+
+    class _FakeFactualCorrectness:
+        def __init__(self, **kwargs):  # noqa: ANN003
+            captured.update(kwargs)
+
+    monkeypatch.setattr(metrics_module, "FactualCorrectness", _FakeFactualCorrectness)
+
+    specs, _ = resolve_metric_specs(
+        dataset_columns={"response", "reference"},
+        requested_metrics=["factual_correctness"],
+        auto_gate=True,
+    )
+
+    metrics = instantiate_metrics(
+        specs,
+        llm="fake-llm",
+        embeddings=None,
+        metric_config={
+            "factual_correctness": {
+                "mode": "precision",
+                "atomicity": "low",
+                "coverage": "high",
+            }
+        },
+    )
+
+    assert len(metrics) == 1
+    assert captured["llm"] == "fake-llm"
+    assert captured["mode"] == "precision"
+    assert captured["atomicity"] == "low"
+    assert captured["coverage"] == "high"
