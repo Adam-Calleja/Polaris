@@ -359,7 +359,7 @@ defaults:
     evaluation:
       generation:
         mode: "pipeline"
-        workers: 1
+        workers: 4
       run:
         max_workers: 8
       adaptive_concurrency:
@@ -377,7 +377,7 @@ defaults:
       - "semantic_similarity"
       - "noise_sensitivity"
     generation_mode: "pipeline"
-    generation_workers: 1
+    generation_workers: 16
     evaluation_policy: "official"
     no_progress: false
 
@@ -455,16 +455,16 @@ stages:
     conditions:
       - name: "docs_cs400_ov0"
         preset: "docs_only"
-        ingest:
-          kind: "html"
-          homepage: "https://docs.hpc.cam.ac.uk/hpc/index.html"
-          ingest_internal_links: true
-          source: "docs"
-          qdrant_collection_name: "exp_docs_cs400_ov0"
-          persist_dir: "../data/storage/exp_docs_cs400_ov0"
-          chunking_strategy: "markdown_token"
-          chunk_size_tokens: 400
-          chunk_overlap_tokens: 0
+        # ingest:
+        #   kind: "html"
+        #   homepage: "https://docs.hpc.cam.ac.uk/hpc/index.html"
+        #   ingest_internal_links: true
+        #   source: "docs"
+        #   qdrant_collection_name: "exp_docs_cs400_ov0"
+        #   persist_dir: "../data/storage/exp_docs_cs400_ov0"
+        #   chunking_strategy: "markdown_token"
+        #   chunk_size_tokens: 400
+        #   chunk_overlap_tokens: 0
         config_overrides:
           vector_stores:
             docs:

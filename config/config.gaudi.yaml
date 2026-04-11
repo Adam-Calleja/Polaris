@@ -4,7 +4,7 @@ generator_llm:
   type: "openai_like"
   # model_name: "llama-cam"
   # api_base: "https://llm.hpc.cam.ac.uk/v1"
-  model_name: "meta-llama/Llama-3.3-70B-Instruct"
+  model_name: "mistralai/Mistral-Large-Instruct-2407"
   api_base: "http://vllm:8080/v1"
   api_key: "${POLARIS_LLM_API_KEY}"
   request_timeout: 90

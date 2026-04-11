@@ -1,0 +1,17 @@
+{
+  "captured_at": "2026-04-11T13:29:58.428147+00:00",
+  "python": {
+    "version": "3.12.13 (main, Apr  7 2026, 02:23:40) [GCC 14.2.0]",
+    "executable": "/usr/local/bin/python"
+  },
+  "platform": {
+    "system": "Linux",
+    "release": "5.14.0-427.42.1.el9_4.x86_64",
+    "machine": "x86_64"
+  },
+  "environment": {
+    "POLARIS_CONFIG": "/app/config/config.gaudi.yaml",
+    "MLFLOW_TRACKING_URI": "http://mlflow:5000",
+    "EMBED_API_BASE": "http://embed:80/v1"
+  }
+}
