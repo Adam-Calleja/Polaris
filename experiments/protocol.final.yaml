@@ -609,7 +609,7 @@ stages:
           source: "tickets"
           qdrant_collection_name: "exp_tickets_cs600_ov0"
           persist_dir: "../data/storage/exp_tickets_cs600_ov0"
-          start_date: "2021-11-01"
+          start_date: "2017-11-01"
           chunking_strategy: "jira_turns_token"
           chunk_size_tokens: 600
           chunk_overlap_tokens: 0
@@ -631,7 +631,7 @@ stages:
           source: "tickets"
           qdrant_collection_name: "exp_tickets_cs600_ov80"
           persist_dir: "../data/storage/exp_tickets_cs600_ov80"
-          start_date: "2021-11-01"
+          start_date: "2017-11-01"
           chunking_strategy: "jira_turns_token"
           chunk_size_tokens: 600
           chunk_overlap_tokens: 80
@@ -653,7 +653,7 @@ stages:
           source: "tickets"
           qdrant_collection_name: "exp_tickets_cs800_ov0"
           persist_dir: "../data/storage/exp_tickets_cs800_ov0"
-          start_date: "2021-11-01"
+          start_date: "2017-11-01"
           chunking_strategy: "jira_turns_token"
           chunk_size_tokens: 800
           chunk_overlap_tokens: 0
@@ -675,7 +675,7 @@ stages:
           source: "tickets"
           qdrant_collection_name: "exp_tickets_cs800_ov80"
           persist_dir: "../data/storage/exp_tickets_cs800_ov80"
-          start_date: "2021-11-01"
+          start_date: "2017-11-01"
           chunking_strategy: "jira_turns_token"
           chunk_size_tokens: 800
           chunk_overlap_tokens: 80
@@ -697,7 +697,7 @@ stages:
           source: "tickets"
           qdrant_collection_name: "exp_tickets_cs1000_ov0"
           persist_dir: "../data/storage/exp_tickets_cs1000_ov0"
-          start_date: "2021-11-01"
+          start_date: "2017-11-01"
           chunking_strategy: "jira_turns_token"
           chunk_size_tokens: 1000
           chunk_overlap_tokens: 0
@@ -719,7 +719,7 @@ stages:
           source: "tickets"
           qdrant_collection_name: "exp_tickets_cs1000_ov80"
           persist_dir: "../data/storage/exp_tickets_cs1000_ov80"
-          start_date: "2021-11-01"
+          start_date: "2017-11-01"
           chunking_strategy: "jira_turns_token"
           chunk_size_tokens: 1000
           chunk_overlap_tokens: 80

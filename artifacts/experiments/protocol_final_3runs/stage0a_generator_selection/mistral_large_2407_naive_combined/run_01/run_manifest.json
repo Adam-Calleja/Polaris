@@ -3,21 +3,27 @@
     "rows": 70,
     "selected_metrics": [
       "factual_correctness",
-      "faithfulness"
+      "faithfulness",
+      "context_recall",
+      "context_precision_without_reference",
+      "answer_relevancy",
+      "context_entity_recall",
+      "semantic_similarity",
+      "noise_sensitivity"
     ],
     "skipped_metrics": [],
-    "selected_max_workers": 8,
-    "batch_size": 16,
+    "selected_max_workers": 16,
+    "batch_size": 32,
     "run_config": {
       "timeout": 240,
       "max_retries": 0,
       "max_wait": 30,
-      "max_workers": 8,
+      "max_workers": 16,
       "log_tenacity": true,
       "seed": 42
     },
-    "duration_seconds": 5537.0409943269915,
-    "failure_rate": 0.02857142857142857,
+    "duration_seconds": 50.44288737101306,
+    "failure_rate": 1.0,
     "tuning_trials": []
   },
   "preset_name": "naive_combined",
@@ -512,7 +518,7 @@
   },
   "tune_concurrency": true,
   "trace_evaluator_llm": false,
-  "mlflow_parent_run_id": "66350e9e785a4c5e8c5bae6ee8ca42c7",
+  "mlflow_parent_run_id": "b2bb4f9d9bac483d8e9187ad0c84b5f8",
   "config_file": "/app/.polaris_experiment_stage0a_generator_selection__mistral_large_2407_naive_combined.yaml",
   "artifacts": {
     "scores_csv": "/app/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/mistral_large_2407_naive_combined/run_01/scores.csv",
@@ -1014,6 +1020,6 @@
     },
     "tune_concurrency": true,
     "trace_evaluator_llm": false,
-    "mlflow_parent_run_id": "66350e9e785a4c5e8c5bae6ee8ca42c7"
+    "mlflow_parent_run_id": "b2bb4f9d9bac483d8e9187ad0c84b5f8"
   }
 }

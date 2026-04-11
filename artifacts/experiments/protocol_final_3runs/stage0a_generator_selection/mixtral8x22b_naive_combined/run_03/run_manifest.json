@@ -3,21 +3,27 @@
     "rows": 70,
     "selected_metrics": [
       "factual_correctness",
-      "faithfulness"
+      "faithfulness",
+      "context_recall",
+      "context_precision_without_reference",
+      "answer_relevancy",
+      "context_entity_recall",
+      "semantic_similarity",
+      "noise_sensitivity"
     ],
     "skipped_metrics": [],
-    "selected_max_workers": 8,
-    "batch_size": 16,
+    "selected_max_workers": 16,
+    "batch_size": 32,
     "run_config": {
       "timeout": 240,
       "max_retries": 0,
       "max_wait": 30,
-      "max_workers": 8,
+      "max_workers": 16,
       "log_tenacity": true,
       "seed": 42
     },
-    "duration_seconds": 5970.851292100997,
-    "failure_rate": 0.03571428571428571,
+    "duration_seconds": 50.907630760004395,
+    "failure_rate": 1.0,
     "tuning_trials": []
   },
   "preset_name": "naive_combined",
@@ -500,7 +506,7 @@
   },
   "tune_concurrency": true,
   "trace_evaluator_llm": false,
-  "mlflow_parent_run_id": "acc39317e0a644bc8333836007d35560",
+  "mlflow_parent_run_id": "631efd63cc834b0e9e6b8ab323891d52",
   "config_file": "/app/.polaris_experiment_stage0a_generator_selection__mixtral8x22b_naive_combined.yaml",
   "artifacts": {
     "scores_csv": "/app/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/mixtral8x22b_naive_combined/run_03/scores.csv",
@@ -990,6 +996,6 @@
     },
     "tune_concurrency": true,
     "trace_evaluator_llm": false,
-    "mlflow_parent_run_id": "acc39317e0a644bc8333836007d35560"
+    "mlflow_parent_run_id": "631efd63cc834b0e9e6b8ab323891d52"
   }
 }
