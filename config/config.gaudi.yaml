@@ -17,15 +17,14 @@ generator_llm:
 
 evaluator_llm:
   type: "OpenAILike"
-  model_name: "ibm-granite/granite-3.3-8b-instruct"
+  model_name: "Qwen/Qwen2.5-72B-Instruct"
   api_base: "http://vllm:8080/v1"
   api_key: "${POLARIS_LLM_API_KEY}"
   model_kwargs:
     temperature: 0
-    top_p: 1.0
-    max_tokens: 4096
-    extra_body:
-        guided_decoding_backend: outlines
+    top_p: 0.99
+    max_tokens: 2048
+    instructor_mode: MD_JSON
 
 embedder:
   type: "OpenAILike"

@@ -1,0 +1,4 @@
+condition_name,runs,preset_name,duration_seconds_mean,duration_seconds_min,duration_seconds_max,duration_seconds_std,failure_rate_mean,failure_rate_min,failure_rate_max,failure_rate_std,factual_correctness_mean,factual_correctness_min,factual_correctness_max,factual_correctness_std,faithfulness_mean,faithfulness_min,faithfulness_max,faithfulness_std
+llama33_naive_combined,3,naive_combined,5519.044311,5201.382628,5700.690272,225.391863,0.023810,0.014286,0.035714,0.008909,0.492372,0.474853,0.508406,0.013738,0.884957,0.865614,0.921246,0.025679
+mistral_large_2407_naive_combined,3,naive_combined,5702.533348,5537.040994,5948.758557,177.512785,0.023810,0.014286,0.028571,0.006734,0.513050,0.501176,0.529857,0.012218,0.906164,0.882077,0.925317,0.017994
+mixtral8x22b_naive_combined,3,naive_combined,5616.040485,5432.320799,5970.851292,250.942094,0.030952,0.021429,0.035714,0.006734,0.458209,0.428358,0.483768,0.022824,0.854789,0.837076,0.866108,0.012685

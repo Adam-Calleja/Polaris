@@ -41,6 +41,19 @@ generator_candidates:
         temperature: 0
         top_p: 1.0
         stop_list: ["\nUser:", "\n\nUser:"]
+  mixtral8x22b: &mixtral8x22b_generator
+    generator_llm:
+      type: "openai_like"
+      model_name: "mistralai/Mixtral-8x22B-Instruct-v0.1"
+      api_base: "http://vllm:8080/v1"
+      api_key: "${POLARIS_LLM_API_KEY}"
+      request_timeout: 90
+      max_retries: 1
+      model_kwargs:
+        max_tokens: 1024
+        temperature: 0
+        top_p: 1.0
+        stop_list: ["\nUser:", "\n\nUser:"]
   mistral_large_2407: &mistral_large_2407_generator
     generator_llm:
       type: "openai_like"
@@ -407,15 +420,19 @@ stages:
       retriever:
         source_type: "vector"
         <<: *budget_5_8
+    run_options:
+      metrics:
+        - "factual_correctness"
+        - "faithfulness"
     conditions:
       - name: "llama33_naive_combined"
         preset: "naive_combined"
         config_overrides:
           <<: *llama33_generator
-      - name: "qwen25_32b_naive_combined"
+      - name: "mixtral8x22b_naive_combined"
         preset: "naive_combined"
         config_overrides:
-          <<: *qwen25_32b_generator
+          <<: *mixtral8x22b_generator
       - name: "mistral_large_2407_naive_combined"
         preset: "naive_combined"
         config_overrides:

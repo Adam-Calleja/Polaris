@@ -2,7 +2,7 @@
   "dataset_path": "/app/data/test/ragas_one_hop_eval_dataset_final.dev.jsonl",
   "annotations_path": "/app/data/test/benchmark_annotations_final.csv",
   "prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/mistral_large_2407_naive_combined/run_01/prepared_input.json",
-  "reuse_prepared": false,
+  "reuse_prepared": true,
   "query_field": "query",
   "reference_field": "expected_answer",
   "id_field": "id",
@@ -306,53 +306,52 @@
   "condition_fingerprint": "2029f1d3dc7835c5b004aec074e3de4c1ac92f38f95af14fe041bfb0aad6b606",
   "annotation_rows": 70,
   "prep_total_rows": 70,
-  "prep_success_rows": 68,
-  "prep_failed_rows": 2,
-  "prep_elapsed_seconds": 3122.5929040460032,
-  "prep_rate_rows_per_second": 0.02241726736434316,
+  "prep_success_rows": 69,
+  "prep_failed_rows": 1,
+  "prep_elapsed_seconds": 0.0,
+  "prep_rate_rows_per_second": 0.0,
   "prep_error_classes": {
-    "BadRequestError": 2
+    "ValueError": 1
   },
   "prep_failure_classes": {
-    "api_internal_error": 2
+    "empty_response": 1
   },
   "prep_failure_class_rates": {
-    "api_internal_error": 0.02857142857142857
+    "empty_response": 0.014285714285714285
   },
   "prep_failure_stages": {
-    "api": 2
+    "generation": 1
   },
   "prep_failure_stage_rates": {
-    "api": 0.02857142857142857
+    "generation": 0.014285714285714285
   },
   "prep_response_statuses": {
-    "ok": 68,
-    "error": 2
+    "ok": 69,
+    "empty_response": 1
   },
   "prep_response_status_rates": {
-    "ok": 0.9714285714285714,
-    "error": 0.02857142857142857
+    "ok": 0.9857142857142858,
+    "empty_response": 0.014285714285714285
   },
-  "prep_coverage": 0.9714285714285714,
-  "prep_empty_response_rate": 0.0,
-  "infra_failure_rate": 0.02857142857142857,
-  "run_validity": "INVALID",
+  "prep_coverage": 0.9857142857142858,
+  "prep_empty_response_rate": 0.014285714285714285,
+  "infra_failure_rate": 0.0,
+  "run_validity": "VALID",
   "run_policy": "official",
   "latency_budget_report": {
-    "count": 68,
+    "count": 69,
     "elapsed_ms": {
-      "p50": 43200.5,
-      "p90": 63867.5,
-      "p95": 70491.95,
-      "max": 75714.0,
-      "mean": 45345.82352941176
+      "p50": 44543.0,
+      "p90": 71233.6,
+      "p95": 74505.59999999999,
+      "max": 110906.0,
+      "mean": 47790.72463768116
     },
     "budget_utilization": {
-      "p50": 0.2400027777777778,
-      "p90": 0.3548194444444444,
-      "max": 0.42063333333333336
+      "p50": 0.2474611111111111,
+      "p90": 0.3957422222222223,
+      "max": 0.6161444444444445
     }
   },
-  "persisted_prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/mistral_large_2407_naive_combined/run_01/prepared_input.json",
-  "prepared_source": "generated"
+  "prepared_source": "existing"
 }
