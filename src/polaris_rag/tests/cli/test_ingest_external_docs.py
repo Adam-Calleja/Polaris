@@ -26,6 +26,7 @@ def test_parse_args_supports_external_ingestion_flags(monkeypatch):
             "8",
             "--embedding-workers",
             "3",
+            "--index-only",
         ],
     )
 
@@ -35,6 +36,47 @@ def test_parse_args_supports_external_ingestion_flags(monkeypatch):
     assert args.source == "external_docs"
     assert args.vector_batch_size == 8
     assert args.embedding_workers == 3
+    assert args.index_only is True
+
+
+def test_main_index_only_creates_collection_without_loading_external_docs(monkeypatch):
+    ensured: list[str] = []
+
+    fake_cfg = SimpleNamespace(
+        raw={"vector_stores": {"external_docs": {"collection_name": "external_docs"}}},
+        embedder={},
+    )
+    fake_container = SimpleNamespace(
+        vector_stores={"external_docs": "external-store"},
+        doc_store="chunk-docstore",
+    )
+    storage_context = SimpleNamespace(
+        vector_store=SimpleNamespace(
+            ensure_collection_exists=lambda: ensured.append("external_docs"),
+        ),
+    )
+
+    def _unexpected_load(*args, **kwargs):  # noqa: ANN002, ANN003
+        raise AssertionError("External documents should not be loaded in index-only mode.")
+
+    monkeypatch.setattr(ingest_external_docs.GlobalConfig, "load", lambda path: fake_cfg)
+    monkeypatch.setattr(ingest_external_docs, "build_container", lambda cfg: fake_container)
+    monkeypatch.setattr(ingest_external_docs, "_build_source_storage_context", lambda container, source: storage_context)
+    monkeypatch.setattr(ingest_external_docs, "_load_external_documents", _unexpected_load)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "ingest_external_docs.py",
+            "-c",
+            "config/config.yaml",
+            "--index-only",
+        ],
+    )
+
+    ingest_external_docs.main()
+
+    assert ensured == ["external_docs"]
 
 
 def test_main_markdown_chunking_path_ingests_registered_external_docs(monkeypatch):

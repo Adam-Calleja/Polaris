@@ -68,6 +68,7 @@ def test_parse_args_supports_source_and_batching_flags(monkeypatch):
             "256",
             "--chunk-overlap-tokens",
             "32",
+            "--index-only",
         ],
     )
 
@@ -80,6 +81,49 @@ def test_parse_args_supports_source_and_batching_flags(monkeypatch):
     assert args.conversion_engine == "markitdown"
     assert args.chunk_size_tokens == 256
     assert args.chunk_overlap_tokens == 32
+    assert args.index_only is True
+
+
+def test_main_index_only_creates_collection_without_loading_documents(monkeypatch):
+    ensured: list[str] = []
+
+    fake_cfg = SimpleNamespace(
+        raw={"vector_stores": {"docs": {"collection_name": "docs"}}},
+        embedder={},
+    )
+    fake_container = SimpleNamespace(
+        vector_stores={"docs": "docs-store"},
+        doc_store="chunk-docstore",
+    )
+    storage_context = SimpleNamespace(
+        vector_store=SimpleNamespace(
+            ensure_collection_exists=lambda: ensured.append("docs"),
+        ),
+    )
+
+    def _unexpected_load(*args, **kwargs):  # noqa: ANN002, ANN003
+        raise AssertionError("HTML documents should not be loaded in index-only mode.")
+
+    monkeypatch.setattr(ingest_html_documents.GlobalConfig, "load", lambda path: fake_cfg)
+    monkeypatch.setattr(ingest_html_documents, "build_container", lambda cfg: fake_container)
+    monkeypatch.setattr(ingest_html_documents, "_build_source_storage_context", lambda container, source: storage_context)
+    monkeypatch.setattr(ingest_html_documents, "load_website_docs", _unexpected_load)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "ingest_html_documents.py",
+            "-c",
+            "config/config.yaml",
+            "-p",
+            "https://docs.example.org/hpc/index.html",
+            "--index-only",
+        ],
+    )
+
+    ingest_html_documents.main()
+
+    assert ensured == ["docs"]
 
 
 def test_get_internal_links_recurses_over_discovered_pages(monkeypatch):

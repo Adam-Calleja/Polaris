@@ -31,11 +31,13 @@ DEFAULT_PRIMARY_METRICS: tuple[str, ...] = (
 BOTH_PHASE = "both"
 PREPARE_PHASE = "prepare"
 EVALUATE_PHASE = "evaluate"
+INDEX_PHASE = "index"
 SUPPORTED_EXECUTION_PHASES: frozenset[str] = frozenset(
     {
         BOTH_PHASE,
         PREPARE_PHASE,
         EVALUATE_PHASE,
+        INDEX_PHASE,
     }
 )
 EVALUATION_GRID_STAGE = "evaluation_grid"
@@ -299,7 +301,7 @@ def _run_evaluation_grid_stage(
         }
 
         ingest_specs = _ingest_specs(condition_spec)
-        should_run_ingest = execution_phase in {BOTH_PHASE, PREPARE_PHASE}
+        should_run_ingest = execution_phase in {BOTH_PHASE, INDEX_PHASE}
         condition_record["ingestion_skipped"] = bool(ingest_specs) and not should_run_ingest
         if should_run_ingest:
             for ingest_spec in ingest_specs:
@@ -310,6 +312,10 @@ def _run_evaluation_grid_stage(
                 )
                 condition_record["ingestion_commands"].append(command)
                 _run_command(command, dry_run=dry_run)
+
+        if execution_phase == INDEX_PHASE:
+            execution_conditions.append(condition_record)
+            continue
 
         for repeat_index in range(1, repeats + 1):
             run_dir = stage_dir / condition_slug / f"run_{repeat_index:02d}"
@@ -559,6 +565,7 @@ def _build_ingest_command(
     kind: str,
     config_path: Path,
     ingest_spec: Mapping[str, Any],
+    index_only: bool = False,
 ) -> list[str]:
     if kind not in SUPPORTED_INGEST_KINDS:
         supported = ", ".join(sorted(SUPPORTED_INGEST_KINDS))
@@ -607,6 +614,8 @@ def _build_ingest_command(
     command.extend(_append_cli_option("--chunking-strategy", ingest_spec.get("chunking_strategy")))
     command.extend(_append_cli_option("--chunk-size-tokens", ingest_spec.get("chunk_size_tokens")))
     command.extend(_append_cli_option("--chunk-overlap-tokens", ingest_spec.get("chunk_overlap_tokens")))
+    if index_only:
+        command.append("--index-only")
     return command
 
 
@@ -870,6 +879,9 @@ def _phase_run_options(
     elif execution_phase == EVALUATE_PHASE:
         merged["prepare_only"] = False
         merged["reuse_prepared"] = True
+    elif execution_phase == INDEX_PHASE:
+        merged["prepare_only"] = False
+        merged["reuse_prepared"] = False
     return merged
 
 

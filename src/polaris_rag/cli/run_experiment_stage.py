@@ -35,7 +35,7 @@ def parse_args() -> argparse.Namespace:
         "--phase",
         choices=sorted(SUPPORTED_EXECUTION_PHASES),
         default=BOTH_PHASE,
-        help="Execution phase for evaluation-grid stages: prepare, evaluate, or both.",
+        help="Execution phase for evaluation-grid stages: index, prepare, evaluate, or both.",
     )
     parser.add_argument(
         "--dry-run",

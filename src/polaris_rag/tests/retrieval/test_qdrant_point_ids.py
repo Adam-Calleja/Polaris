@@ -124,6 +124,31 @@ def test_insert_chunks_embeds_and_upserts_in_batches():
     ]
 
 
+def test_ensure_collection_exists_bootstraps_empty_collection_schema():
+    ensure_calls: list[dict[str, object]] = []
+
+    class FakeEmbedder:
+        def embed_documents(self, texts: list[str]) -> list[list[float]]:
+            assert texts == ["polaris collection bootstrap"]
+            return [[1.0, 2.0, 3.0]]
+
+    store = object.__new__(QdrantIndexStore)
+    store.collection_name = "support_tickets"
+    store.embedder = FakeEmbedder()
+    store.sparse_encoder = object()
+    store.client = SimpleNamespace(collection_exists=lambda collection_name: False)
+    store._ensure_collection = lambda *, dense_dim, enable_sparse: ensure_calls.append(
+        {
+            "dense_dim": dense_dim,
+            "enable_sparse": enable_sparse,
+        }
+    )
+
+    store.ensure_collection_exists()
+
+    assert ensure_calls == [{"dense_dim": 3, "enable_sparse": True}]
+
+
 def test_upsert_chunks_enables_sparse_schema_when_sparse_encoder_is_configured():
     ensure_calls: list[dict[str, object]] = []
     upsert_calls: list[str] = []
