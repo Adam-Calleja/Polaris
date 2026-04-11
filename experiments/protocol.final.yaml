@@ -326,7 +326,7 @@ ingest_specs:
     source: "tickets"
     qdrant_collection_name: "exp_tickets_cs800_ov80"
     persist_dir: "../data/storage/exp_tickets_cs800_ov80"
-    start_date: "2021-11-01"
+    start_date: "2017-11-01"
     chunking_strategy: "jira_turns_token"
     chunk_size_tokens: 800
     chunk_overlap_tokens: 80
@@ -342,7 +342,7 @@ ingest_specs:
 
 defaults:
   config_overrides:
-    <<: [*llama33_generator, *ticket_prompt_config]
+    <<: [*mistral_large_2407_generator, *ticket_prompt_config]
     vector_stores: *selected_vector_store_collections
     storage_context:
       persist_dir: "/app/data/storage/exp_protocol_selected"
@@ -350,7 +350,7 @@ defaults:
       chunking:
         sources: *selected_chunking_sources
       jira:
-        start_date: "2021-11-01"
+        start_date: "2017-11-01"
     retriever:
       source_type: "vector"
       <<: *budget_5_8
@@ -447,6 +447,11 @@ stages:
       retriever:
         source_type: "vector"
         <<: *budget_5_8
+    run_options:
+      metrics:
+        - "factual_correctness"
+        - "faithfulness"
+        - "context_recall"
     conditions:
       - name: "docs_cs400_ov0"
         preset: "docs_only"
