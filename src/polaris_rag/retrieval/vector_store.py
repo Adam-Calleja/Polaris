@@ -25,7 +25,12 @@ import math
 import time
 from typing import TYPE_CHECKING, Any, Iterable, Mapping, Optional
 from uuid import UUID, NAMESPACE_URL, uuid5
+import httpx
+from openai import APIConnectionError as OpenAIAPIConnectionError
+from openai import APIStatusError as OpenAIAPIStatusError
+from openai import APITimeoutError as OpenAIAPITimeoutError
 from qdrant_client import QdrantClient, AsyncQdrantClient
+from qdrant_client.http.exceptions import ResponseHandlingException, UnexpectedResponse
 from qdrant_client.http import models as rest
 from os import environ
 import yaml
@@ -51,6 +56,8 @@ else:
     SparseEmbedding = Any
 
 QDRANT_POINT_ID_NAMESPACE = uuid5(NAMESPACE_URL, "polaris-rag/qdrant-point-id")
+QDRANT_RETRYABLE_STATUS_CODES = frozenset({408, 409, 429, 500, 502, 503, 504})
+OPENAI_RETRYABLE_STATUS_CODES = frozenset({408, 424, 429, 500, 502, 503, 504})
 
 
 def qdrant_point_id_from_node_id(node_id: Any) -> int | str:
@@ -102,6 +109,32 @@ def _translate_node_ids_for_qdrant(node_ids: list[str] | None) -> list[int | str
     if node_ids is None:
         return None
     return [qdrant_point_id_from_node_id(node_id) for node_id in node_ids]
+
+
+def _is_retryable_qdrant_write_error(exc: Exception) -> bool:
+    if isinstance(exc, (ResponseHandlingException, httpx.TimeoutException, httpx.TransportError, TimeoutError)):
+        return True
+
+    if isinstance(exc, UnexpectedResponse):
+        status_code = getattr(exc, "status_code", None)
+        return status_code in QDRANT_RETRYABLE_STATUS_CODES
+
+    return False
+
+
+def _is_retryable_embedding_error(exc: Exception) -> bool:
+    if isinstance(exc, (OpenAIAPITimeoutError, OpenAIAPIConnectionError, httpx.TimeoutException, TimeoutError)):
+        return True
+
+    if isinstance(exc, OpenAIAPIStatusError):
+        status_code = getattr(exc, "status_code", None)
+        return status_code in OPENAI_RETRYABLE_STATUS_CODES
+
+    return False
+
+
+def _is_retryable_insert_error(exc: Exception) -> bool:
+    return _is_retryable_qdrant_write_error(exc) or _is_retryable_embedding_error(exc)
 
 
 class PolarisQdrantVectorStore(QdrantVectorStore):
@@ -313,6 +346,10 @@ class QdrantIndexStore(BaseVectorStore):
             token=token,
             dense_vector_name=str(config.get("dense_vector_name", cls.DEFAULT_DENSE_VECTOR_NAME)),
             sparse_vector_name=str(config.get("sparse_vector_name", cls.DEFAULT_SPARSE_VECTOR_NAME)),
+            write_max_attempts=int(config.get("write_max_attempts", 5)),
+            write_base_backoff_seconds=float(config.get("write_base_backoff_seconds", 1.0)),
+            reduce_batch_on_failure=bool(config.get("reduce_batch_on_failure", True)),
+            min_insertion_batch_size=int(config.get("min_insertion_batch_size", 1)),
         )
 
     @classmethod
@@ -340,6 +377,10 @@ class QdrantIndexStore(BaseVectorStore):
         token: Optional[str] = None,
         dense_vector_name: str = DEFAULT_DENSE_VECTOR_NAME,
         sparse_vector_name: str = DEFAULT_SPARSE_VECTOR_NAME,
+        write_max_attempts: int = 5,
+        write_base_backoff_seconds: float = 1.0,
+        reduce_batch_on_failure: bool = True,
+        min_insertion_batch_size: int = 1,
     ):
         if embedder is None:
             raise ValueError("QdrantIndexStore requires an embedder instance. Provide it via the container.")
@@ -352,6 +393,10 @@ class QdrantIndexStore(BaseVectorStore):
         self.collection_name = str(collection_name)
         self.dense_vector_name = str(dense_vector_name or self.DEFAULT_DENSE_VECTOR_NAME)
         self.sparse_vector_name = str(sparse_vector_name or self.DEFAULT_SPARSE_VECTOR_NAME)
+        self.write_max_attempts = max(1, int(write_max_attempts))
+        self.write_base_backoff_seconds = max(0.0, float(write_base_backoff_seconds))
+        self.reduce_batch_on_failure = bool(reduce_batch_on_failure)
+        self.min_insertion_batch_size = max(1, int(min_insertion_batch_size))
         self._embed_model = self.embedder.get_embedder()
         self._llm = self.llm.get_llm()
 
@@ -381,6 +426,18 @@ class QdrantIndexStore(BaseVectorStore):
                 self.sparse_encoder.profile() if self.sparse_encoder is not None else None
             ),
         }
+
+    def _resolved_write_max_attempts(self) -> int:
+        return max(1, int(getattr(self, "write_max_attempts", 5)))
+
+    def _resolved_write_base_backoff_seconds(self) -> float:
+        return max(0.0, float(getattr(self, "write_base_backoff_seconds", 1.0)))
+
+    def _resolved_reduce_batch_on_failure(self) -> bool:
+        return bool(getattr(self, "reduce_batch_on_failure", True))
+
+    def _resolved_min_insertion_batch_size(self) -> int:
+        return max(1, int(getattr(self, "min_insertion_batch_size", 1)))
 
     def ensure_collection_exists(self, *, sample_text: str = "polaris collection bootstrap") -> None:
         """Create the backing Qdrant collection if it does not already exist."""
@@ -436,15 +493,7 @@ class QdrantIndexStore(BaseVectorStore):
             return
         step = self._insertion_batch_size(batch_size=batch_size, total_chunks=len(chunks))
         for chunk_batch in self._iter_chunk_batches(chunks, batch_size=step):
-            texts = [str(chunk.text or "") for chunk in chunk_batch]
-            dense_vectors = self.embedder.embed_documents(texts)
-            sparse_vectors = self._encode_sparse_documents(texts)
-            self._upsert_chunks(
-                chunks=chunk_batch,
-                dense_vectors=dense_vectors,
-                sparse_vectors=sparse_vectors,
-                batch_size=step,
-            )
+            self._insert_chunk_batch(chunk_batch, batch_size=step)
 
     async def ainsert_chunks(
         self,
@@ -455,15 +504,129 @@ class QdrantIndexStore(BaseVectorStore):
             return
         step = self._insertion_batch_size(batch_size=batch_size, total_chunks=len(chunks))
         for chunk_batch in self._iter_chunk_batches(chunks, batch_size=step):
-            texts = [str(chunk.text or "") for chunk in chunk_batch]
-            dense_vectors = await self.embedder.aembed_documents(texts)
-            sparse_vectors = self._encode_sparse_documents(texts)
-            self._upsert_chunks(
-                chunks=chunk_batch,
-                dense_vectors=dense_vectors,
-                sparse_vectors=sparse_vectors,
-                batch_size=step,
+            await self._ainsert_chunk_batch(chunk_batch, batch_size=step)
+
+    def _insert_chunk_batch(
+        self,
+        chunks: list[DocumentChunk],
+        *,
+        batch_size: int,
+    ) -> None:
+        if not chunks:
+            return
+
+        last_exc: Exception | None = None
+        write_max_attempts = self._resolved_write_max_attempts()
+        write_base_backoff_seconds = self._resolved_write_base_backoff_seconds()
+        reduce_batch_on_failure = self._resolved_reduce_batch_on_failure()
+        min_insertion_batch_size = self._resolved_min_insertion_batch_size()
+
+        for attempt in range(1, write_max_attempts + 1):
+            try:
+                texts = [str(chunk.text or "") for chunk in chunks]
+                dense_vectors = self.embedder.embed_documents(texts)
+                sparse_vectors = self._encode_sparse_documents(texts)
+                self._upsert_chunks(
+                    chunks=chunks,
+                    dense_vectors=dense_vectors,
+                    sparse_vectors=sparse_vectors,
+                    batch_size=max(1, int(batch_size)),
+                )
+                return
+            except Exception as exc:
+                last_exc = exc
+                if not _is_retryable_insert_error(exc):
+                    raise
+                if attempt < write_max_attempts:
+                    retry_delay = write_base_backoff_seconds * (2 ** (attempt - 1))
+                    print(
+                        f"Chunk insert batch of {len(chunks)} failed "
+                        f"(attempt {attempt}/{write_max_attempts}): {exc}. "
+                        f"Retrying in {retry_delay:.1f}s..."
+                    )
+                    time.sleep(retry_delay)
+                    continue
+
+        if (
+            reduce_batch_on_failure
+            and len(chunks) > min_insertion_batch_size
+        ):
+            reduced_batch_size = max(
+                min_insertion_batch_size,
+                min(len(chunks) - 1, max(1, len(chunks) // 2)),
             )
+            print(
+                f"Chunk insert batch of {len(chunks)} exhausted retries. "
+                f"Reducing batch size to {reduced_batch_size} and retrying."
+            )
+            for chunk_batch in self._iter_chunk_batches(chunks, batch_size=reduced_batch_size):
+                self._insert_chunk_batch(chunk_batch, batch_size=reduced_batch_size)
+            return
+
+        if last_exc is None:
+            raise RuntimeError("Chunk insert retry loop exited without success or exception.")
+        raise last_exc
+
+    async def _ainsert_chunk_batch(
+        self,
+        chunks: list[DocumentChunk],
+        *,
+        batch_size: int,
+    ) -> None:
+        if not chunks:
+            return
+
+        last_exc: Exception | None = None
+        write_max_attempts = self._resolved_write_max_attempts()
+        write_base_backoff_seconds = self._resolved_write_base_backoff_seconds()
+        reduce_batch_on_failure = self._resolved_reduce_batch_on_failure()
+        min_insertion_batch_size = self._resolved_min_insertion_batch_size()
+
+        for attempt in range(1, write_max_attempts + 1):
+            try:
+                texts = [str(chunk.text or "") for chunk in chunks]
+                dense_vectors = await self.embedder.aembed_documents(texts)
+                sparse_vectors = self._encode_sparse_documents(texts)
+                self._upsert_chunks(
+                    chunks=chunks,
+                    dense_vectors=dense_vectors,
+                    sparse_vectors=sparse_vectors,
+                    batch_size=max(1, int(batch_size)),
+                )
+                return
+            except Exception as exc:
+                last_exc = exc
+                if not _is_retryable_insert_error(exc):
+                    raise
+                if attempt < write_max_attempts:
+                    retry_delay = write_base_backoff_seconds * (2 ** (attempt - 1))
+                    print(
+                        f"Async chunk insert batch of {len(chunks)} failed "
+                        f"(attempt {attempt}/{write_max_attempts}): {exc}. "
+                        f"Retrying in {retry_delay:.1f}s..."
+                    )
+                    await asyncio.sleep(retry_delay)
+                    continue
+
+        if (
+            reduce_batch_on_failure
+            and len(chunks) > min_insertion_batch_size
+        ):
+            reduced_batch_size = max(
+                min_insertion_batch_size,
+                min(len(chunks) - 1, max(1, len(chunks) // 2)),
+            )
+            print(
+                f"Async chunk insert batch of {len(chunks)} exhausted retries. "
+                f"Reducing batch size to {reduced_batch_size} and retrying."
+            )
+            for chunk_batch in self._iter_chunk_batches(chunks, batch_size=reduced_batch_size):
+                await self._ainsert_chunk_batch(chunk_batch, batch_size=reduced_batch_size)
+            return
+
+        if last_exc is None:
+            raise RuntimeError("Async chunk insert retry loop exited without success or exception.")
+        raise last_exc
 
     def _upsert_chunks(
         self,
@@ -492,11 +655,38 @@ class QdrantIndexStore(BaseVectorStore):
         step = batch_size if batch_size and batch_size > 0 else len(points)
         for start in range(0, len(points), max(1, step)):
             batch = points[start:start + max(1, step)]
-            self.client.upsert(
-                collection_name=self.collection_name,
-                points=batch,
-                wait=True,
-            )
+            self._upsert_points_batch(batch)
+
+    def _upsert_points_batch(self, points: list[rest.PointStruct]) -> None:
+        last_exc: Exception | None = None
+        write_max_attempts = self._resolved_write_max_attempts()
+        write_base_backoff_seconds = self._resolved_write_base_backoff_seconds()
+
+        for attempt in range(1, write_max_attempts + 1):
+            try:
+                self.client.upsert(
+                    collection_name=self.collection_name,
+                    points=points,
+                    wait=True,
+                )
+                return
+            except Exception as exc:
+                last_exc = exc
+                if not _is_retryable_qdrant_write_error(exc):
+                    raise
+                if attempt < write_max_attempts:
+                    retry_delay = write_base_backoff_seconds * (2 ** (attempt - 1))
+                    print(
+                        f"Qdrant upsert of {len(points)} point(s) failed "
+                        f"(attempt {attempt}/{write_max_attempts}): {exc}. "
+                        f"Retrying in {retry_delay:.1f}s..."
+                    )
+                    time.sleep(retry_delay)
+                    continue
+
+        if last_exc is None:
+            raise RuntimeError("Qdrant upsert retry loop exited without success or exception.")
+        raise last_exc
 
     @staticmethod
     def _insertion_batch_size(*, batch_size: int, total_chunks: int) -> int:

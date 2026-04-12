@@ -606,13 +606,31 @@ stages:
       type: "shared_jira_fanout"
       clear_targets: true
       condition_parallelism: 6
-      persist_every_batches: 0
+      persist_every_batches: 10
+      resume_from_checkpoint: true
+      vector_batch_size: 8
     config_overrides:
+      embedder:
+        failover_api_bases:
+          - "http://embed1:80/v1"
+          - "http://embed2:80/v1"
+          - "http://embed3:80/v1"
+          - "http://embed4:80/v1"
+          - "http://embed5:80/v1"
+          - "http://embed6:80/v1"
+        request_max_attempts: 2
+        request_base_backoff_seconds: 1.0
       retriever:
         source_type: "vector"
         <<: *budget_5_8
       sparse_encoder:
         enabled: false
+      vector_stores:
+        tickets:
+          write_max_attempts: 5
+          write_base_backoff_seconds: 1.0
+          reduce_batch_on_failure: true
+          min_insertion_batch_size: 1
     conditions:
       - name: "tickets_cs600_ov0"
         preset: "tickets_only"

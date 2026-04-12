@@ -342,12 +342,13 @@ def test_run_experiment_stage_index_phase_dispatches_shared_jira_fanout(
 
     shared_calls: list[dict[str, object]] = []
 
-    def _fake_shared_index(*, condition_entries, index_strategy, dry_run):
+    def _fake_shared_index(*, condition_entries, index_strategy, dry_run, stage_dir):
         shared_calls.append(
             {
                 "condition_names": [entry.name for entry in condition_entries],
                 "index_strategy": dict(index_strategy),
                 "dry_run": dry_run,
+                "stage_dir": str(stage_dir),
             }
         )
         return {
@@ -409,6 +410,7 @@ def test_run_experiment_stage_index_phase_dispatches_shared_jira_fanout(
                 "persist_every_batches": 0,
             },
             "dry_run": False,
+            "stage_dir": str((tmp_path / "artifacts" / "experiments" / "stage0b2_ticket_chunking").resolve()),
         }
     ]
     assert record["execution_phase"] == "index"

@@ -23,6 +23,7 @@ create_embedder
 """
 
 from abc import ABC, abstractmethod
+import time
 import httpx
 from langchain_core.callbacks import BaseCallbackHandler
 from llama_index.core.base.embeddings.base import BaseEmbedding as LlamaIndexBaseEmbedding
@@ -30,9 +31,13 @@ from typing import Any, Dict, Mapping, Optional
 import yaml
 import asyncio
 from openai import OpenAI as OpenAIClient
+from openai import APIConnectionError as OpenAIAPIConnectionError
+from openai import APIStatusError as OpenAIAPIStatusError
 from openai import APITimeoutError as OpenAIAPITimeoutError
 
 from polaris_rag.common.request_budget import RetrievalTimeoutError
+
+OPENAI_RETRYABLE_STATUS_CODES = frozenset({408, 424, 429, 500, 502, 503, 504})
 
 
 def _as_bool(value: Any, default: bool) -> bool:
@@ -61,6 +66,44 @@ def _as_bool(value: Any, default: bool) -> bool:
         if normalized in {"0", "false", "no", "n", "off"}:
             return False
     return bool(value)
+
+
+def _normalize_api_base_sequence(
+    *,
+    primary_api_base: str,
+    api_bases: Any = None,
+    failover_api_bases: Any = None,
+) -> tuple[str, ...]:
+    ordered: list[str] = []
+
+    def _extend(raw: Any) -> None:
+        if raw is None:
+            return
+        values = raw if isinstance(raw, (list, tuple)) else [raw]
+        for value in values:
+            normalized = str(value or "").strip()
+            if normalized and normalized not in ordered:
+                ordered.append(normalized)
+
+    _extend(primary_api_base)
+    _extend(api_bases)
+    _extend(failover_api_bases)
+
+    if not ordered:
+        raise ValueError("At least one embedder api_base must be configured.")
+
+    return tuple(ordered)
+
+
+def _is_retryable_openai_embedding_error(exc: Exception) -> bool:
+    if isinstance(exc, (OpenAIAPITimeoutError, OpenAIAPIConnectionError, httpx.TimeoutException)):
+        return True
+
+    if isinstance(exc, OpenAIAPIStatusError):
+        status_code = getattr(exc, "status_code", None)
+        return status_code in OPENAI_RETRYABLE_STATUS_CODES
+
+    return False
 
 
 class BaseEmbedder(ABC):
@@ -380,6 +423,8 @@ class OpenAILikeEmbedder(BaseEmbedder):
             model_name: str, 
             *,
             api_base: str,
+            api_bases: list[str] | tuple[str, ...] | None = None,
+            failover_api_bases: list[str] | tuple[str, ...] | None = None,
             api_key: str = None,
             callback_manager: BaseCallbackHandler = None,
             model_kwargs: dict[str, Any] = None,
@@ -388,6 +433,8 @@ class OpenAILikeEmbedder(BaseEmbedder):
             embed_batch_size: int = 10,
             num_workers: Optional[int] = None,
             reuse_client: bool = True,
+            request_max_attempts: int = 3,
+            request_base_backoff_seconds: float = 1.0,
         ):
         """Initialise an OpenAI-compatible embedder.
 
@@ -402,26 +449,155 @@ class OpenAILikeEmbedder(BaseEmbedder):
         model_kwargs : dict[str, Any] or None, optional
             Additional keyword arguments forwarded to the underlying embedder.
         """
-        from llama_index.embeddings.openai_like import OpenAILikeEmbedding
-
         self.model_name = model_name
-        self.api_base = api_base
+        self.api_bases = _normalize_api_base_sequence(
+            primary_api_base=api_base,
+            api_bases=api_bases,
+            failover_api_bases=failover_api_bases,
+        )
+        self.api_base = self.api_bases[0]
+        self._active_api_base_index = 0
         self.api_key = api_key or "fake"
         self.additional_kwargs = dict(model_kwargs or {})
         self.default_timeout_seconds = float(timeout)
         self.default_max_retries = int(max_retries)
-        self.embedder = OpenAILikeEmbedding(
-            model_name=model_name,
+        self.embed_batch_size = max(1, int(embed_batch_size))
+        self.request_max_attempts = max(1, int(request_max_attempts))
+        self.request_base_backoff_seconds = max(0.0, float(request_base_backoff_seconds))
+        self.callback_manager = callback_manager
+        self.num_workers = num_workers
+        self.reuse_client = reuse_client
+        self.embedder = self._build_llamaindex_embedder(api_base=self.api_base)
+
+    def _build_llamaindex_embedder(self, *, api_base: str):
+        from llama_index.embeddings.openai_like import OpenAILikeEmbedding
+
+        return OpenAILikeEmbedding(
+            model_name=self.model_name,
             api_base=api_base,
-            callback_manager=callback_manager,
+            callback_manager=self.callback_manager,
             additional_kwargs=self.additional_kwargs,
             api_key=self.api_key,
-            timeout=timeout,
-            max_retries=max_retries,
-            embed_batch_size=embed_batch_size,
-            num_workers=num_workers,
-            reuse_client=reuse_client,
+            timeout=self.default_timeout_seconds,
+            max_retries=self.default_max_retries,
+            embed_batch_size=self.embed_batch_size,
+            num_workers=self.num_workers,
+            reuse_client=self.reuse_client,
         )
+
+    def _set_active_api_base(self, api_base: str) -> None:
+        normalized = str(api_base or "").strip()
+        if not normalized:
+            raise ValueError("api_base must be non-empty.")
+        if normalized == self.api_base:
+            return
+        if normalized not in self.api_bases:
+            raise ValueError(f"api_base {normalized!r} is not in configured failover pool.")
+
+        self.api_base = normalized
+        self._active_api_base_index = self.api_bases.index(normalized)
+        self.embedder = self._build_llamaindex_embedder(api_base=normalized)
+
+    def _build_openai_client(self, *, api_base: str, timeout_seconds: float | None) -> OpenAIClient:
+        client_timeout = self.default_timeout_seconds if timeout_seconds is None else float(timeout_seconds)
+        return OpenAIClient(
+            api_key=self.api_key,
+            base_url=api_base,
+            timeout=client_timeout,
+            max_retries=max(0, int(self.default_max_retries)),
+        )
+
+    def _request_embeddings_once(
+        self,
+        *,
+        api_base: str,
+        inputs: list[str],
+        timeout_seconds: float | None,
+    ) -> list[list[float]]:
+        client = self._build_openai_client(api_base=api_base, timeout_seconds=timeout_seconds)
+        request_kwargs: dict[str, Any] = {}
+        if self.additional_kwargs:
+            request_kwargs["extra_body"] = dict(self.additional_kwargs)
+
+        response = client.embeddings.create(
+            model=self.model_name,
+            input=inputs,
+            timeout=self.default_timeout_seconds if timeout_seconds is None else float(timeout_seconds),
+            **request_kwargs,
+        )
+        data = sorted(
+            list(getattr(response, "data", None) or []),
+            key=lambda item: int(getattr(item, "index", 0)),
+        )
+        vectors: list[list[float]] = []
+        for item in data:
+            embedding = getattr(item, "embedding", None)
+            if isinstance(embedding, list):
+                vectors.append([float(x) for x in embedding])
+            else:
+                vectors.append(list(embedding or []))
+        return vectors
+
+    def _embed_batch_with_failover(
+        self,
+        *,
+        inputs: list[str],
+        timeout_seconds: float | None,
+    ) -> list[list[float]]:
+        if not inputs:
+            return []
+
+        last_exc: Exception | None = None
+        endpoint_count = len(self.api_bases)
+        starting_index = self._active_api_base_index
+
+        for endpoint_offset in range(endpoint_count):
+            endpoint_index = (starting_index + endpoint_offset) % endpoint_count
+            api_base = self.api_bases[endpoint_index]
+            self._set_active_api_base(api_base)
+
+            for attempt in range(1, self.request_max_attempts + 1):
+                try:
+                    return self._request_embeddings_once(
+                        api_base=api_base,
+                        inputs=inputs,
+                        timeout_seconds=timeout_seconds,
+                    )
+                except (OpenAIAPITimeoutError, httpx.TimeoutException, TimeoutError) as exc:
+                    last_exc = RetrievalTimeoutError(
+                        f"embedding request timed out after "
+                        f"{float(self.default_timeout_seconds if timeout_seconds is None else timeout_seconds):.3f}s"
+                    )
+                    retryable = True
+                    wrapped_exc = exc
+                except Exception as exc:  # pragma: no cover - exercised via helper in tests
+                    last_exc = exc
+                    retryable = _is_retryable_openai_embedding_error(exc)
+                    wrapped_exc = exc
+
+                if not retryable:
+                    raise last_exc
+
+                if attempt < self.request_max_attempts:
+                    retry_delay = self.request_base_backoff_seconds * (2 ** (attempt - 1))
+                    print(
+                        f"Embedding request failed against {api_base} "
+                        f"(attempt {attempt}/{self.request_max_attempts}): {wrapped_exc}. "
+                        f"Retrying in {retry_delay:.1f}s..."
+                    )
+                    time.sleep(retry_delay)
+                    continue
+
+                if endpoint_offset + 1 < endpoint_count:
+                    next_api_base = self.api_bases[(endpoint_index + 1) % endpoint_count]
+                    print(
+                        f"Embedding endpoint {api_base} exhausted after {self.request_max_attempts} attempts. "
+                        f"Failing over to {next_api_base}."
+                    )
+
+        if last_exc is None:
+            raise RuntimeError("Embedding failover loop exited without a result or exception.")
+        raise last_exc
 
     def get_embedder(self) -> LlamaIndexBaseEmbedding:
         """Return the underlying LlamaIndex embedding object.
@@ -453,39 +629,18 @@ class OpenAILikeEmbedder(BaseEmbedder):
         RetrievalTimeoutError
             If `RetrievalTimeoutError` is raised while executing the operation.
         """
-        effective_timeout = timeout_seconds if timeout_seconds is not None else self.default_timeout_seconds
-        if effective_timeout is None:
-            return super().embed_query(query)
+        vectors = self._embed_batch_with_failover(inputs=[query], timeout_seconds=timeout_seconds)
+        return vectors[0] if vectors else []
 
-        client = OpenAIClient(
-            api_key=self.api_key,
-            base_url=self.api_base,
-            timeout=float(effective_timeout),
-            max_retries=max(0, int(self.default_max_retries)),
-        )
-        request_kwargs: dict[str, Any] = {}
-        if self.additional_kwargs:
-            request_kwargs["extra_body"] = dict(self.additional_kwargs)
-
-        try:
-            response = client.embeddings.create(
-                model=self.model_name,
-                input=query,
-                timeout=float(effective_timeout),
-                **request_kwargs,
-            )
-        except (OpenAIAPITimeoutError, httpx.TimeoutException, TimeoutError) as exc:
-            raise RetrievalTimeoutError(
-                f"query embedding timed out after {float(effective_timeout):.3f}s"
-            ) from exc
-
-        data = getattr(response, "data", None) or []
-        if not data:
+    def embed_documents(self, documents: list[str]) -> list[list[float]]:
+        if not documents:
             return []
-        embedding = getattr(data[0], "embedding", None)
-        if isinstance(embedding, list):
-            return [float(x) for x in embedding]
-        return list(embedding or [])
+
+        vectors: list[list[float]] = []
+        for start in range(0, len(documents), self.embed_batch_size):
+            batch = documents[start:start + self.embed_batch_size]
+            vectors.extend(self._embed_batch_with_failover(inputs=batch, timeout_seconds=None))
+        return vectors
 
     @classmethod
     def from_config(
@@ -544,6 +699,8 @@ class OpenAILikeEmbedder(BaseEmbedder):
         return cls(
             model_name=config["model_name"],
             api_base=config["api_base"],
+            api_bases=config.get("api_bases"),
+            failover_api_bases=config.get("failover_api_bases") or config.get("backup_api_bases"),
             api_key=config.get("api_key"),
             callback_manager=callback_manager,
             model_kwargs=config.get("model_kwargs", {}),
@@ -552,6 +709,8 @@ class OpenAILikeEmbedder(BaseEmbedder):
             embed_batch_size=int(config.get("embed_batch_size", 10)),
             num_workers=config.get("num_workers"),
             reuse_client=_as_bool(config.get("reuse_client"), True),
+            request_max_attempts=int(config.get("request_max_attempts", 3)),
+            request_base_backoff_seconds=float(config.get("request_base_backoff_seconds", 1.0)),
         )
     
 

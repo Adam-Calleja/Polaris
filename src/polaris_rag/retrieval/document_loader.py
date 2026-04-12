@@ -26,9 +26,13 @@ create_jira_jql_query
 load_support_tickets
     Retrieve resolved Jira issues over a date window using configured credentials.
 """
+from http.client import RemoteDisconnected
+import time
+
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse, urljoin, urlsplit, urlunsplit
+from urllib3.exceptions import ProtocolError
 from datetime import datetime
 from typing import Iterator
 
@@ -36,6 +40,77 @@ from polaris_rag.common import Document
 from polaris_rag.config import GlobalConfig
 
 DEFAULT_CHARSET = "UTF-8"
+JIRA_REQUEST_MAX_ATTEMPTS = 5
+JIRA_REQUEST_BASE_BACKOFF_SECONDS = 1.0
+JIRA_RETRYABLE_HTTP_STATUS_CODES = frozenset({408, 429, 500, 502, 503, 504})
+
+
+def _build_jira_client(*, username: str, password: str):
+    from atlassian import Jira
+
+    return Jira(
+        url='https://ucam-rcs.atlassian.net',
+        username=username,
+        password=password,
+        cloud=True,
+        api_version='3',
+    )
+
+
+def _is_retryable_jira_request_error(exc: Exception) -> bool:
+    if isinstance(
+        exc,
+        (
+            requests.exceptions.ConnectionError,
+            requests.exceptions.Timeout,
+            requests.exceptions.ChunkedEncodingError,
+            ProtocolError,
+            RemoteDisconnected,
+        ),
+    ):
+        return True
+
+    if isinstance(exc, requests.exceptions.HTTPError):
+        status_code = getattr(getattr(exc, "response", None), "status_code", None)
+        return status_code in JIRA_RETRYABLE_HTTP_STATUS_CODES
+
+    return False
+
+
+def _fetch_jira_page_with_retry(
+    *,
+    jira,
+    username: str,
+    password: str,
+    jql_query: str,
+    next_page_token: str | None,
+) -> tuple[dict, object]:
+    current_jira = jira
+
+    for attempt in range(1, JIRA_REQUEST_MAX_ATTEMPTS + 1):
+        try:
+            result = current_jira.enhanced_jql(
+                jql_query,
+                nextPageToken=next_page_token,
+                expand=None,
+            )
+            return result, current_jira
+        except Exception as exc:
+            if not _is_retryable_jira_request_error(exc) or attempt >= JIRA_REQUEST_MAX_ATTEMPTS:
+                raise
+
+            retry_delay = JIRA_REQUEST_BASE_BACKOFF_SECONDS * (2 ** (attempt - 1))
+            token_label = next_page_token or "<initial>"
+            print(
+                "Jira page fetch failed for "
+                f"nextPageToken={token_label} "
+                f"(attempt {attempt}/{JIRA_REQUEST_MAX_ATTEMPTS}): {exc}. "
+                f"Retrying in {retry_delay:.1f}s..."
+            )
+            time.sleep(retry_delay)
+            current_jira = _build_jira_client(username=username, password=password)
+
+    raise RuntimeError("Jira fetch retry loop exited unexpectedly.")
 
 def is_internal_link(link: str,
                 base_url: str,
@@ -405,15 +480,7 @@ def iter_support_ticket_batches(
     if batch_size is not None and int(batch_size) < 1:
         raise ValueError("batch_size must be >= 1 when provided.")
 
-    from atlassian import Jira
-
-    jira = Jira(
-        url='https://ucam-rcs.atlassian.net',
-        username=username,
-        password=password,
-        cloud=True,
-        api_version='3',
-    )
+    jira = _build_jira_client(username=username, password=password)
 
     jql_query = create_jira_jql_query(
         start_date=start_date,
@@ -433,11 +500,13 @@ def iter_support_ticket_batches(
         if limit is not None and emitted >= limit:
             break
 
-        result = jira.enhanced_jql(
-            jql_query,
-            nextPageToken=next_page_token,
-            expand=None,
-        ) 
+        result, jira = _fetch_jira_page_with_retry(
+            jira=jira,
+            username=username,
+            password=password,
+            jql_query=jql_query,
+            next_page_token=next_page_token,
+        )
 
         temp_issues = list(result.get('issues', []) or [])
         if limit is not None:

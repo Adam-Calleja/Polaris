@@ -313,6 +313,7 @@ def _run_evaluation_grid_stage(
             condition_entries=condition_entries,
             index_strategy=stage_index_strategy,
             dry_run=dry_run,
+            stage_dir=stage_dir,
         )
         return {
             "stage_name": stage_name,

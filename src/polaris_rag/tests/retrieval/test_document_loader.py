@@ -3,6 +3,9 @@ from __future__ import annotations
 import sys
 import types
 
+import pytest
+import requests
+
 sys.modules.setdefault("atlassian", types.SimpleNamespace(Jira=object))
 
 from polaris_rag.retrieval import document_loader
@@ -68,6 +71,74 @@ def test_iter_support_ticket_batches_streams_paged_results_into_requested_batch_
         ["HPCSSUP-4"],
     ]
     assert seen_tokens == [None, "page-2"]
+
+
+def test_iter_support_ticket_batches_retries_transient_jira_disconnect(monkeypatch):
+    responses = iter(
+        [
+            requests.exceptions.ConnectionError("connection dropped"),
+            {
+                "issues": [{"key": "HPCSSUP-1"}],
+                "nextPageToken": None,
+            },
+        ]
+    )
+    sleep_calls: list[float] = []
+    jira_inits: list[dict] = []
+
+    class FakeJira:
+        def __init__(self, **kwargs):
+            jira_inits.append(kwargs)
+
+        def enhanced_jql(self, jql_query, nextPageToken=None, expand=None):  # noqa: N803
+            response = next(responses)
+            if isinstance(response, Exception):
+                raise response
+            return response
+
+    monkeypatch.setitem(sys.modules, "atlassian", types.SimpleNamespace(Jira=FakeJira))
+    monkeypatch.setattr(document_loader.time, "sleep", lambda delay: sleep_calls.append(delay))
+
+    batches = list(
+        iter_support_ticket_batches(
+            cfg=types.SimpleNamespace(jira_api_credentials={"username": "user", "password": "token"}),
+            start_date="2024-01-01",
+            end_date="2024-02-01",
+            limit=None,
+            batch_size=1,
+        )
+    )
+
+    assert [[ticket["key"] for ticket in batch] for batch in batches] == [["HPCSSUP-1"]]
+    assert sleep_calls == [1.0]
+    assert len(jira_inits) == 2
+
+
+def test_iter_support_ticket_batches_raises_after_exhausting_retry_budget(monkeypatch):
+    sleep_calls: list[float] = []
+
+    class FakeJira:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+
+        def enhanced_jql(self, jql_query, nextPageToken=None, expand=None):  # noqa: N803
+            raise requests.exceptions.ConnectionError("connection dropped")
+
+    monkeypatch.setitem(sys.modules, "atlassian", types.SimpleNamespace(Jira=FakeJira))
+    monkeypatch.setattr(document_loader.time, "sleep", lambda delay: sleep_calls.append(delay))
+
+    with pytest.raises(requests.exceptions.ConnectionError, match="connection dropped"):
+        list(
+            iter_support_ticket_batches(
+                cfg=types.SimpleNamespace(jira_api_credentials={"username": "user", "password": "token"}),
+                start_date="2024-01-01",
+                end_date="2024-02-01",
+                limit=None,
+                batch_size=1,
+            )
+        )
+
+    assert sleep_calls == [1.0, 2.0, 4.0, 8.0]
 
 
 def test_load_support_tickets_flattens_streamed_batches(monkeypatch):

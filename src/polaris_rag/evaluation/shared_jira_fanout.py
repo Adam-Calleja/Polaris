@@ -46,6 +46,8 @@ from polaris_rag.retrieval.jira_ingestion import (
 from polaris_rag.retrieval.metadata_enricher import resolve_authority_registry_artifact_path
 
 SHARED_JIRA_FANOUT_INDEX_TYPE = "shared_jira_fanout"
+SHARED_JIRA_FANOUT_CHECKPOINT_FILENAME = "shared_jira_fanout_checkpoint.json"
+SHARED_JIRA_FANOUT_CHECKPOINT_VERSION = 1
 
 
 def _stable_json(value: Any) -> str:
@@ -124,6 +126,7 @@ def _build_condition_plan(
     entry: SharedJiraConditionEntry,
     *,
     clear_targets: bool,
+    default_vector_batch_size: int | None = None,
 ) -> SharedJiraConditionPlan:
     ingest_spec = dict(entry.ingest_spec)
     cfg = GlobalConfig.load(str(entry.config_path))
@@ -150,7 +153,8 @@ def _build_condition_plan(
     )
     registry_artifact_path = resolve_authority_registry_artifact_path(cfg)
     embedding_workers = _resolve_embedding_workers(cfg, ingest_spec.get("embedding_workers"))
-    vector_batch_size = max(1, int(ingest_spec.get("vector_batch_size", 16)))
+    raw_vector_batch_size = ingest_spec.get("vector_batch_size", default_vector_batch_size or 16)
+    vector_batch_size = max(1, int(raw_vector_batch_size))
     dump_path = (
         Path(str(ingest_spec["dump_path"])).expanduser()
         if ingest_spec.get("dump_path")
@@ -265,7 +269,19 @@ def _validate_condition_plans(plans: Sequence[SharedJiraConditionPlan]) -> None:
         seen_persist_dirs.add(plan.persist_dir)
 
 
-def _initialize_condition_runtime(plan: SharedJiraConditionPlan) -> SharedJiraConditionRuntime:
+def _initialize_condition_runtime(
+    plan: SharedJiraConditionPlan,
+    *,
+    resume: bool = False,
+    checkpoint_state: Mapping[str, Any] | None = None,
+) -> SharedJiraConditionRuntime:
+    resolved_persist_dir = Path(plan.persist_dir).expanduser().resolve()
+    if resume and not resolved_persist_dir.exists():
+        raise FileNotFoundError(
+            f"Cannot resume shared Jira fanout for {plan.entry.name!r}: "
+            f"persist dir {resolved_persist_dir} does not exist."
+        )
+
     container = build_container(plan.cfg)
     stores = container.vector_stores
     if plan.source not in stores:
@@ -273,7 +289,7 @@ def _initialize_condition_runtime(plan: SharedJiraConditionPlan) -> SharedJiraCo
     storage_context = build_storage_context(
         vector_store=stores[plan.source],
         docstore=container.doc_store,
-        persist_dir=None,
+        persist_dir=plan.persist_dir if resume else None,
     )
     vector_store = getattr(storage_context, "vector_store", None)
     if vector_store is None or not hasattr(vector_store, "recreate_collection"):
@@ -281,10 +297,13 @@ def _initialize_condition_runtime(plan: SharedJiraConditionPlan) -> SharedJiraCo
             f"Vector store for source {plan.source!r} does not support collection recreation."
         )
 
-    print(f"[{plan.entry.name}] Recreating collection {plan.collection_name!r}...")
-    vector_store.recreate_collection()
-    print(f"[{plan.entry.name}] Clearing persisted state under {Path(plan.persist_dir).expanduser().resolve()}...")
-    clear_persist_dir(plan.persist_dir)
+    if resume:
+        print(f"[{plan.entry.name}] Resuming from persisted state under {resolved_persist_dir}...")
+    else:
+        print(f"[{plan.entry.name}] Recreating collection {plan.collection_name!r}...")
+        vector_store.recreate_collection()
+        print(f"[{plan.entry.name}] Clearing persisted state under {resolved_persist_dir}...")
+        clear_persist_dir(plan.persist_dir)
 
     source_document_store = load_or_create_source_document_store(persist_dir=plan.persist_dir)
     return SharedJiraConditionRuntime(
@@ -292,6 +311,10 @@ def _initialize_condition_runtime(plan: SharedJiraConditionPlan) -> SharedJiraCo
         container=container,
         storage_context=storage_context,
         source_document_store=source_document_store,
+        total_chunks=int((checkpoint_state or {}).get("total_chunks", 0)),
+        total_tickets=int((checkpoint_state or {}).get("total_tickets", 0)),
+        processed_batches=int((checkpoint_state or {}).get("processed_batches", 0)),
+        persist_count=int((checkpoint_state or {}).get("persist_count", 0)),
     )
 
 
@@ -357,11 +380,140 @@ def _strategy_persist_every_batches(index_strategy: Mapping[str, Any]) -> int:
     return raw
 
 
+def _strategy_resume_from_checkpoint(index_strategy: Mapping[str, Any]) -> bool:
+    return bool(index_strategy.get("resume_from_checkpoint", False))
+
+
+def _strategy_vector_batch_size(index_strategy: Mapping[str, Any]) -> int | None:
+    raw = index_strategy.get("vector_batch_size")
+    if raw is None:
+        return None
+    value = int(raw)
+    if value < 1:
+        raise ValueError("index_strategy.vector_batch_size must be >= 1.")
+    return value
+
+
+def _checkpoint_path(stage_dir: Path | None) -> Path | None:
+    if stage_dir is None:
+        return None
+    return Path(stage_dir).expanduser().resolve() / SHARED_JIRA_FANOUT_CHECKPOINT_FILENAME
+
+
+def _condition_checkpoint_signature(plan: SharedJiraConditionPlan) -> str:
+    return _stable_json(
+        {
+            "name": plan.entry.name,
+            "source": plan.source,
+            "persist_dir": plan.persist_dir,
+            "collection_name": plan.collection_name,
+            "start_date": plan.start_date,
+            "end_date": plan.end_date,
+            "limit": plan.limit,
+            "fetch_batch_size": plan.fetch_batch_size,
+            "exclude_keys": plan.exclude_keys,
+            "unwanted_summaries": plan.unwanted_summaries,
+            "chunking_strategy": plan.chunking_strategy,
+            "chunk_size_tokens": plan.chunk_size_tokens,
+            "chunk_overlap_tokens": plan.chunk_overlap_tokens,
+            "conversion_profile": plan.conversion_profile,
+            "registry_artifact_path": plan.registry_artifact_path,
+            "vector_batch_size": plan.vector_batch_size,
+        }
+    )
+
+
+def _load_checkpoint(checkpoint_path: Path | None) -> dict[str, Any] | None:
+    if checkpoint_path is None or not checkpoint_path.exists():
+        return None
+    payload = json.loads(checkpoint_path.read_text(encoding="utf-8"))
+    if not isinstance(payload, Mapping):
+        raise TypeError(f"Shared Jira fanout checkpoint {checkpoint_path} must contain a mapping.")
+    return dict(payload)
+
+
+def _write_checkpoint(checkpoint_path: Path | None, payload: Mapping[str, Any]) -> None:
+    if checkpoint_path is None:
+        return
+    checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
+    checkpoint_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+
+def _clear_checkpoint(checkpoint_path: Path | None) -> None:
+    if checkpoint_path is None or not checkpoint_path.exists():
+        return
+    checkpoint_path.unlink()
+
+
+def _validate_checkpoint(
+    plans: Sequence[SharedJiraConditionPlan],
+    checkpoint: Mapping[str, Any],
+) -> None:
+    version = int(checkpoint.get("version", 0))
+    if version != SHARED_JIRA_FANOUT_CHECKPOINT_VERSION:
+        raise ValueError(
+            f"Unsupported shared Jira checkpoint version {version!r}; "
+            f"expected {SHARED_JIRA_FANOUT_CHECKPOINT_VERSION}."
+        )
+
+    selected_conditions = [plan.entry.name for plan in plans]
+    checkpoint_conditions = [str(name) for name in checkpoint.get("selected_conditions", [])]
+    if checkpoint_conditions != selected_conditions:
+        raise ValueError(
+            "Shared Jira checkpoint was created for a different condition set and cannot be resumed."
+        )
+
+    checkpoint_signatures = checkpoint.get("plan_signatures")
+    if not isinstance(checkpoint_signatures, Mapping):
+        raise ValueError("Shared Jira checkpoint is missing plan_signatures.")
+
+    for plan in plans:
+        expected_signature = _condition_checkpoint_signature(plan)
+        actual_signature = str(checkpoint_signatures.get(plan.entry.name, ""))
+        if actual_signature != expected_signature:
+            raise ValueError(
+                f"Shared Jira checkpoint does not match the current plan for {plan.entry.name!r}."
+            )
+
+
+def _checkpoint_payload(
+    *,
+    plans: Sequence[SharedJiraConditionPlan],
+    runtimes: Sequence[SharedJiraConditionRuntime],
+    summary: Mapping[str, Any],
+    last_completed_fetched_batch_index: int,
+) -> dict[str, Any]:
+    return {
+        "version": SHARED_JIRA_FANOUT_CHECKPOINT_VERSION,
+        "selected_conditions": [plan.entry.name for plan in plans],
+        "plan_signatures": {
+            plan.entry.name: _condition_checkpoint_signature(plan)
+            for plan in plans
+        },
+        "last_completed_fetched_batch_index": int(last_completed_fetched_batch_index),
+        "summary": {
+            "fetched_tickets": int(summary.get("fetched_tickets", 0)),
+            "processed_tickets": int(summary.get("processed_tickets", 0)),
+            "processed_batches": int(summary.get("processed_batches", 0)),
+        },
+        "conditions": {
+            runtime.plan.entry.name: {
+                "total_chunks": int(runtime.total_chunks),
+                "total_tickets": int(runtime.total_tickets),
+                "processed_batches": int(runtime.processed_batches),
+                "persist_count": int(runtime.persist_count),
+            }
+            for runtime in runtimes
+        },
+    }
+
+
 def run_shared_jira_fanout_index(
     *,
     condition_entries: Sequence[SharedJiraConditionEntry],
     index_strategy: Mapping[str, Any],
     dry_run: bool,
+    stage_dir: Path | None = None,
 ) -> dict[str, Any]:
     """Execute a shared Jira fetch/preprocess pass with per-condition fanout indexing."""
     strategy_type = str(index_strategy.get("type", "")).strip()
@@ -369,16 +521,33 @@ def run_shared_jira_fanout_index(
         raise ValueError(f"Unsupported shared Jira index strategy type {strategy_type!r}.")
 
     clear_targets = bool(index_strategy.get("clear_targets", False))
-    plans = [_build_condition_plan(entry, clear_targets=clear_targets) for entry in condition_entries]
+    persist_every_batches = _strategy_persist_every_batches(index_strategy)
+    resume_from_checkpoint = _strategy_resume_from_checkpoint(index_strategy)
+    default_vector_batch_size = _strategy_vector_batch_size(index_strategy)
+    checkpoint_path = _checkpoint_path(stage_dir)
+    if resume_from_checkpoint and persist_every_batches < 1:
+        raise ValueError(
+            "Shared Jira checkpoint resume requires index_strategy.persist_every_batches >= 1."
+        )
+
+    plans = [
+        _build_condition_plan(
+            entry,
+            clear_targets=clear_targets,
+            default_vector_batch_size=default_vector_batch_size,
+        )
+        for entry in condition_entries
+    ]
     _validate_condition_plans(plans)
 
     parallelism = _strategy_parallelism(index_strategy, condition_count=len(plans))
-    persist_every_batches = _strategy_persist_every_batches(index_strategy)
     summary: dict[str, Any] = {
         "type": SHARED_JIRA_FANOUT_INDEX_TYPE,
         "clear_targets": clear_targets,
         "condition_parallelism": parallelism,
         "persist_every_batches": persist_every_batches,
+        "resume_from_checkpoint": resume_from_checkpoint,
+        "checkpoint_path": str(checkpoint_path) if checkpoint_path else None,
         "selected_conditions": [plan.entry.name for plan in plans],
         "fetched_tickets": 0,
         "processed_tickets": 0,
@@ -410,17 +579,56 @@ def run_shared_jira_fanout_index(
             "summary": summary,
         }
 
-    runtimes = [_initialize_condition_runtime(plan) for plan in plans]
+    checkpoint_state = _load_checkpoint(checkpoint_path) if resume_from_checkpoint else None
+    if checkpoint_state is not None:
+        _validate_checkpoint(plans, checkpoint_state)
+    elif checkpoint_path is not None and not resume_from_checkpoint:
+        _clear_checkpoint(checkpoint_path)
+
+    resumed = checkpoint_state is not None
+    checkpoint_condition_state = (
+        checkpoint_state.get("conditions", {})
+        if isinstance(checkpoint_state, Mapping)
+        else {}
+    )
+    runtimes = [
+        _initialize_condition_runtime(
+            plan,
+            resume=resumed,
+            checkpoint_state=(
+                checkpoint_condition_state.get(plan.entry.name)
+                if isinstance(checkpoint_condition_state, Mapping)
+                else None
+            ),
+        )
+        for plan in plans
+    ]
     anchor = plans[0]
-    total_fetched = 0
-    total_after_filters = 0
-    processed_batches = 0
+    checkpoint_summary = (
+        checkpoint_state.get("summary", {})
+        if isinstance(checkpoint_state, Mapping)
+        else {}
+    )
+    if not isinstance(checkpoint_summary, Mapping):
+        checkpoint_summary = {}
+    total_fetched = int(checkpoint_summary.get("fetched_tickets", 0))
+    total_after_filters = int(checkpoint_summary.get("processed_tickets", 0))
+    processed_batches = int(checkpoint_summary.get("processed_batches", 0))
+    last_completed_fetched_batch_index = int(checkpoint_state.get("last_completed_fetched_batch_index", 0)) if checkpoint_state else 0
     started_at = time.perf_counter()
+    summary["fetched_tickets"] = total_fetched
+    summary["processed_tickets"] = total_after_filters
+    summary["processed_batches"] = processed_batches
 
     print(
         "Starting shared Jira fanout indexing for "
         f"{len(runtimes)} condition(s) with parallelism={parallelism}."
     )
+    if resumed:
+        print(
+            f"Resuming shared Jira fanout from fetched batch {last_completed_fetched_batch_index + 1} "
+            f"using checkpoint {checkpoint_path}."
+        )
 
     with ThreadPoolExecutor(max_workers=parallelism) as executor:
         for batch_index, fetched_tickets in enumerate(
@@ -434,6 +642,10 @@ def run_shared_jira_fanout_index(
             ),
             start=1,
         ):
+            if batch_index <= last_completed_fetched_batch_index:
+                print(f"Skipping shared Jira batch {batch_index}: already completed in checkpoint.")
+                continue
+
             total_fetched += len(fetched_tickets)
             print(f"Fetched shared Jira batch {batch_index}: {len(fetched_tickets)} tickets.")
             tickets = filter_jira_tickets(
@@ -480,9 +692,23 @@ def run_shared_jira_fanout_index(
             for runtime, future in futures:
                 future.result()
 
+            last_completed_fetched_batch_index = batch_index
+            summary["fetched_tickets"] = total_fetched
+            summary["processed_tickets"] = total_after_filters
+            summary["processed_batches"] = processed_batches
+
             if persist_every_batches and processed_batches % persist_every_batches == 0:
                 for runtime in runtimes:
                     _persist_condition_runtime(runtime)
+                _write_checkpoint(
+                    checkpoint_path,
+                    _checkpoint_payload(
+                        plans=plans,
+                        runtimes=runtimes,
+                        summary=summary,
+                        last_completed_fetched_batch_index=last_completed_fetched_batch_index,
+                    ),
+                )
 
     if not persist_every_batches or processed_batches % persist_every_batches != 0:
         for runtime in runtimes:
@@ -502,6 +728,7 @@ def run_shared_jira_fanout_index(
         f"Fetched {total_fetched} tickets, processed {total_after_filters} tickets "
         f"across {processed_batches} batch(es) in {elapsed_seconds:.1f}s."
     )
+    _clear_checkpoint(checkpoint_path)
 
     return {
         "conditions": [

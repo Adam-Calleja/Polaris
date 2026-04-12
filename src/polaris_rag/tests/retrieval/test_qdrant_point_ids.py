@@ -7,6 +7,7 @@ from llama_index.vector_stores.qdrant import QdrantVectorStore
 
 from polaris_rag.common import DocumentChunk
 from polaris_rag.retrieval.sparse_encoder import SparseEmbedding
+from polaris_rag.retrieval import vector_store as vector_store_module
 from polaris_rag.retrieval.vector_store import (
     QdrantIndexStore,
     PolarisQdrantVectorStore,
@@ -211,3 +212,89 @@ def test_upsert_chunks_enables_sparse_schema_when_sparse_encoder_is_configured()
 
     assert ensure_calls == [{"dense_dim": 2, "enable_sparse": True}]
     assert upsert_calls == ["support_tickets"]
+
+
+def test_insert_chunks_reduces_batch_size_after_retryable_insert_failure(monkeypatch):
+    events: list[tuple[str, list[str]]] = []
+
+    class FakeEmbedder:
+        def embed_documents(self, texts: list[str]) -> list[list[float]]:
+            events.append(("embed", list(texts)))
+            if len(texts) > 2:
+                raise RuntimeError("batch too large")
+            return [[float(len(text)), 0.0] for text in texts]
+
+    store = object.__new__(QdrantIndexStore)
+    store.embedder = FakeEmbedder()
+    store.sparse_encoder = None
+    store.write_max_attempts = 1
+    store.write_base_backoff_seconds = 0.0
+    store.reduce_batch_on_failure = True
+    store.min_insertion_batch_size = 1
+
+    monkeypatch.setattr(
+        vector_store_module,
+        "_is_retryable_insert_error",
+        lambda exc: isinstance(exc, RuntimeError),
+    )
+
+    def fake_upsert_chunks(*, chunks, dense_vectors, sparse_vectors, batch_size):
+        events.append(("upsert", [chunk.id for chunk in chunks]))
+        assert len(chunks) == len(dense_vectors) == len(sparse_vectors)
+        assert batch_size == len(chunks)
+
+    store._upsert_chunks = fake_upsert_chunks
+
+    chunks = [
+        DocumentChunk(
+            parent_id="ticket-1",
+            prev_id="",
+            next_id="",
+            text=f"chunk {idx}",
+            document_type="helpdesk_ticket",
+            id=f"chunk-{idx}",
+        )
+        for idx in range(4)
+    ]
+
+    store.insert_chunks(chunks, batch_size=4, use_async=False)
+
+    assert events == [
+        ("embed", ["chunk 0", "chunk 1", "chunk 2", "chunk 3"]),
+        ("embed", ["chunk 0", "chunk 1"]),
+        ("upsert", ["chunk-0", "chunk-1"]),
+        ("embed", ["chunk 2", "chunk 3"]),
+        ("upsert", ["chunk-2", "chunk-3"]),
+    ]
+
+
+def test_upsert_points_batch_retries_retryable_qdrant_errors(monkeypatch):
+    sleep_calls: list[float] = []
+    upsert_calls: list[int] = []
+    responses = iter([RuntimeError("timeout"), None])
+
+    store = object.__new__(QdrantIndexStore)
+    store.collection_name = "support_tickets"
+    store.write_max_attempts = 2
+    store.write_base_backoff_seconds = 0.5
+
+    monkeypatch.setattr(
+        vector_store_module,
+        "_is_retryable_qdrant_write_error",
+        lambda exc: isinstance(exc, RuntimeError),
+    )
+    monkeypatch.setattr(vector_store_module.time, "sleep", lambda seconds: sleep_calls.append(seconds))
+
+    def fake_upsert(**kwargs):
+        upsert_calls.append(len(kwargs["points"]))
+        response = next(responses)
+        if isinstance(response, Exception):
+            raise response
+        return response
+
+    store.client = SimpleNamespace(upsert=fake_upsert)
+
+    store._upsert_points_batch([SimpleNamespace(id="point-1"), SimpleNamespace(id="point-2")])
+
+    assert upsert_calls == [2, 2]
+    assert sleep_calls == [0.5]
