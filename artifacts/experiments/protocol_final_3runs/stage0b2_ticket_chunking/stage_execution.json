@@ -1,0 +1,45 @@
+{
+  "stage_name": "stage0b2_ticket_chunking",
+  "stage_type": "evaluation_grid",
+  "execution_phase": "index",
+  "dry_run": false,
+  "dataset_path": "/app/data/test/ragas_one_hop_eval_dataset_final.dev.jsonl",
+  "annotations_file": "/app/data/test/benchmark_annotations_final.csv",
+  "repeats": 3,
+  "conditions": [
+    {
+      "name": "tickets_cs600_ov0",
+      "slug": "tickets_cs600_ov0",
+      "config_path": "/app/.polaris_experiment_stage0b2_ticket_chunking__tickets_cs600_ov0.yaml",
+      "preset": "tickets_only",
+      "execution_phase": "index",
+      "ingestion_commands": [
+        [
+          "/usr/local/bin/python",
+          "/app/scripts/ingest_jira_tickets.py",
+          "-c",
+          "/app/.polaris_experiment_stage0b2_ticket_chunking__tickets_cs600_ov0.yaml",
+          "--start-date",
+          "2017-11-01",
+          "--fetch-batch-size",
+          "200",
+          "--persist-dir",
+          "../data/storage/exp_tickets_cs600_ov0",
+          "--qdrant-collection-name",
+          "exp_tickets_cs600_ov0",
+          "--source",
+          "tickets",
+          "--chunking-strategy",
+          "jira_turns_token",
+          "--chunk-size-tokens",
+          "600",
+          "--chunk-overlap-tokens",
+          "0"
+        ]
+      ],
+      "runs": [],
+      "ingestion_skipped": false
+    }
+  ],
+  "executed_at": "2026-04-11T19:08:20.731893+00:00"
+}

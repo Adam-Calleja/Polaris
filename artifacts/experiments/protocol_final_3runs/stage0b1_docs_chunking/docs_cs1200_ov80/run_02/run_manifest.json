@@ -1,0 +1,723 @@
+{
+  "summary": {
+    "rows": 70,
+    "selected_metrics": [
+      "faithfulness",
+      "context_recall"
+    ],
+    "skipped_metrics": [],
+    "selected_max_workers": 1,
+    "batch_size": 8,
+    "run_config": {
+      "timeout": 240,
+      "max_retries": 0,
+      "max_wait": 30,
+      "max_workers": 1,
+      "log_tenacity": true,
+      "seed": 42
+    },
+    "duration_seconds": 9623.209087066003,
+    "failure_rate": 0.0,
+    "tuning_trials": []
+  },
+  "preset_name": "docs_only",
+  "preset_description": "Docs-only baseline with RRF reranking.",
+  "condition_fingerprint": "8dc44ff61752eeef15ff7dcefab3ef5db2dd92436511e5b1b58090cbeed0a4e9",
+  "condition_summary": {
+    "retriever_type": "multi_collection",
+    "source_type": "vector",
+    "final_top_k": 8,
+    "hybrid_profile": {
+      "dense_top_k": 5,
+      "sparse_top_k": 5,
+      "top_k": 5,
+      "fusion": {
+        "type": "rrf",
+        "rrf_k": 60,
+        "signal_weights": {
+          "dense": 1.0,
+          "sparse": 1.0
+        }
+      }
+    },
+    "sources": [
+      {
+        "top_k": 5,
+        "filters": {},
+        "weight": 1.0,
+        "retrieval_profile": {
+          "dense_top_k": 5,
+          "sparse_top_k": 5,
+          "top_k": 5,
+          "fusion": {
+            "type": "rrf",
+            "rrf_k": 60,
+            "signal_weights": {
+              "dense": 1.0,
+              "sparse": 1.0
+            }
+          }
+        },
+        "name": "docs",
+        "collection_name": "exp_docs_cs1200_ov80"
+      }
+    ],
+    "retriever_profile": {
+      "type": "multi_collection",
+      "source_type": "vector",
+      "final_top_k": 8,
+      "hybrid_profile": {
+        "dense_top_k": 5,
+        "sparse_top_k": 5,
+        "top_k": 5,
+        "fusion": {
+          "type": "rrf",
+          "rrf_k": 60,
+          "signal_weights": {
+            "dense": 1.0,
+            "sparse": 1.0
+          }
+        }
+      },
+      "sources": [
+        {
+          "top_k": 5,
+          "filters": {},
+          "weight": 1.0,
+          "retrieval_profile": {
+            "dense_top_k": 5,
+            "sparse_top_k": 5,
+            "top_k": 5,
+            "fusion": {
+              "type": "rrf",
+              "rrf_k": 60,
+              "signal_weights": {
+                "dense": 1.0,
+                "sparse": 1.0
+              }
+            }
+          },
+          "name": "docs",
+          "collection_name": "exp_docs_cs1200_ov80"
+        }
+      ]
+    },
+    "retriever_fingerprint": "bf99089d82819de25ca751a7242d29d87addf7a420ed5ca8ee7ea84a31eebc2b",
+    "reranker_profile": {
+      "type": "rrf",
+      "rrf_k": 60,
+      "source_weights": {
+        "docs": 1.0
+      },
+      "trace_enabled": true
+    }
+  },
+  "dataset": {
+    "dataset_path": "/app/data/test/ragas_one_hop_eval_dataset_final.dev.jsonl",
+    "annotations_path": "/app/data/test/benchmark_annotations_final.csv",
+    "prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0b1_docs_chunking/docs_cs1200_ov80/run_02/prepared_input.json",
+    "reuse_prepared": true,
+    "query_field": "query",
+    "reference_field": "expected_answer",
+    "id_field": "id",
+    "generation_workers": 16,
+    "generation_mode": "pipeline",
+    "evaluation_policy": "official",
+    "generation_deadlines": {
+      "policy": "official",
+      "client_total_seconds": 200.0,
+      "server_total_seconds": 180.0,
+      "retrieval_cap_seconds": 30.0,
+      "cleanup_reserve_seconds": 5.0,
+      "client_total_ms": 200000,
+      "server_total_ms": 180000,
+      "retrieval_cap_ms": 30000,
+      "cleanup_reserve_ms": 5000
+    },
+    "max_infra_failure_rate": 0.01,
+    "generation_retries": {
+      "max_attempts": 1,
+      "initial_backoff_seconds": 1.0,
+      "max_backoff_seconds": 8.0,
+      "jitter_seconds": 0.25,
+      "retry_on_empty_response": true
+    },
+    "generator_profile": {
+      "mode": "pipeline",
+      "generator_llm": {
+        "type": "openai_like",
+        "model_name": "mistralai/Mistral-Large-Instruct-2407",
+        "api_base": "http://vllm:8080/v1",
+        "request_timeout": 90,
+        "max_retries": 1,
+        "model_kwargs": {
+          "temperature": 0,
+          "top_p": 1.0,
+          "stop_list": [
+            "\nUser:",
+            "\n\nUser:"
+          ]
+        }
+      },
+      "llm_generate": {}
+    },
+    "generator_fingerprint": "073fbf42ca966bf58abbb9d019aa73a18ca5725d60c1d9aa70f3b3ed7e8140ac",
+    "retriever_profile": {
+      "type": "multi_collection",
+      "final_top_k": 8,
+      "sources": {
+        "docs": {
+          "settings": {
+            "filters": {},
+            "retrieval_profile": {
+              "dense_top_k": 5,
+              "fusion": {
+                "rrf_k": 60,
+                "signal_weights": {
+                  "dense": 1.0,
+                  "sparse": 1.0
+                },
+                "type": "rrf"
+              },
+              "sparse_top_k": 5,
+              "top_k": 5
+            },
+            "top_k": 5,
+            "weight": 1.0
+          },
+          "retriever_profile": {
+            "filters": {
+              "filters": []
+            },
+            "retrieval_profile": {
+              "dense_top_k": 5,
+              "fusion": {
+                "rrf_k": 60,
+                "signal_weights": {
+                  "dense": 1.0,
+                  "sparse": 1.0
+                },
+                "type": "rrf"
+              },
+              "sparse_top_k": 5,
+              "top_k": 5
+            },
+            "top_k": 5,
+            "type": "vector",
+            "vector_store": {
+              "backend": "qdrant",
+              "collection_name": "exp_docs_cs1200_ov80",
+              "dense_model": "Qwen/Qwen3-Embedding-8B",
+              "dense_vector_name": "dense",
+              "sparse_model": {
+                "batch_size": 16,
+                "model_name": "prithivida/Splade_PP_en_v1",
+                "type": "fastembed"
+              },
+              "sparse_vector_name": "sparse"
+            }
+          },
+          "retriever_fingerprint": "765182f472aef365344a2ae1a41a47b8fc2cbc3a9e508e94879da399e23acc30"
+        }
+      }
+    },
+    "retriever_fingerprint": "dd3f08bb6ea66f583888f6f0ee681899c776f697b5ff55e9dc716bac8de805c3",
+    "reranker_profile": {
+      "type": "rrf",
+      "rrf_k": 60,
+      "source_weights": {
+        "docs": 1.0
+      },
+      "trace_enabled": true
+    },
+    "reranker_fingerprint": "73426991b4b395730b58d7333939591e83df57c675ebbd1f1c90ede45a038bf5",
+    "preset_name": "docs_only",
+    "preset_description": "Docs-only baseline with RRF reranking.",
+    "condition_summary": {
+      "retriever_type": "multi_collection",
+      "source_type": "vector",
+      "final_top_k": 8,
+      "hybrid_profile": {
+        "dense_top_k": 5,
+        "sparse_top_k": 5,
+        "top_k": 5,
+        "fusion": {
+          "type": "rrf",
+          "rrf_k": 60,
+          "signal_weights": {
+            "dense": 1.0,
+            "sparse": 1.0
+          }
+        }
+      },
+      "sources": [
+        {
+          "top_k": 5,
+          "filters": {},
+          "weight": 1.0,
+          "retrieval_profile": {
+            "dense_top_k": 5,
+            "sparse_top_k": 5,
+            "top_k": 5,
+            "fusion": {
+              "type": "rrf",
+              "rrf_k": 60,
+              "signal_weights": {
+                "dense": 1.0,
+                "sparse": 1.0
+              }
+            }
+          },
+          "name": "docs",
+          "collection_name": "exp_docs_cs1200_ov80"
+        }
+      ],
+      "retriever_profile": {
+        "type": "multi_collection",
+        "source_type": "vector",
+        "final_top_k": 8,
+        "hybrid_profile": {
+          "dense_top_k": 5,
+          "sparse_top_k": 5,
+          "top_k": 5,
+          "fusion": {
+            "type": "rrf",
+            "rrf_k": 60,
+            "signal_weights": {
+              "dense": 1.0,
+              "sparse": 1.0
+            }
+          }
+        },
+        "sources": [
+          {
+            "top_k": 5,
+            "filters": {},
+            "weight": 1.0,
+            "retrieval_profile": {
+              "dense_top_k": 5,
+              "sparse_top_k": 5,
+              "top_k": 5,
+              "fusion": {
+                "type": "rrf",
+                "rrf_k": 60,
+                "signal_weights": {
+                  "dense": 1.0,
+                  "sparse": 1.0
+                }
+              }
+            },
+            "name": "docs",
+            "collection_name": "exp_docs_cs1200_ov80"
+          }
+        ]
+      },
+      "retriever_fingerprint": "bf99089d82819de25ca751a7242d29d87addf7a420ed5ca8ee7ea84a31eebc2b",
+      "reranker_profile": {
+        "type": "rrf",
+        "rrf_k": 60,
+        "source_weights": {
+          "docs": 1.0
+        },
+        "trace_enabled": true
+      }
+    },
+    "condition_fingerprint": "8dc44ff61752eeef15ff7dcefab3ef5db2dd92436511e5b1b58090cbeed0a4e9",
+    "annotation_rows": 70,
+    "prep_total_rows": 70,
+    "prep_success_rows": 70,
+    "prep_failed_rows": 0,
+    "prep_elapsed_seconds": 0.0,
+    "prep_rate_rows_per_second": 0.0,
+    "prep_error_classes": {},
+    "prep_failure_classes": {},
+    "prep_failure_class_rates": {},
+    "prep_failure_stages": {},
+    "prep_failure_stage_rates": {},
+    "prep_response_statuses": {
+      "ok": 70
+    },
+    "prep_response_status_rates": {
+      "ok": 1.0
+    },
+    "prep_coverage": 1.0,
+    "prep_empty_response_rate": 0.0,
+    "infra_failure_rate": 0.0,
+    "run_validity": "VALID",
+    "run_policy": "official",
+    "latency_budget_report": {
+      "count": 70,
+      "elapsed_ms": {
+        "p50": 45349.5,
+        "p90": 74101.3,
+        "p95": 78407.25,
+        "max": 85302.0,
+        "mean": 49050.985714285714
+      },
+      "budget_utilization": {
+        "p50": 0.2519416666666666,
+        "p90": 0.4116738888888889,
+        "max": 0.4739
+      }
+    },
+    "prepared_source": "existing"
+  },
+  "tune_concurrency": true,
+  "trace_evaluator_llm": false,
+  "mlflow_parent_run_id": "44a1431f9bd845ecb0bf5e27df3ce94c",
+  "config_file": "/app/.polaris_experiment_stage0b1_docs_chunking__docs_cs1200_ov80.yaml",
+  "artifacts": {
+    "scores_csv": "/app/artifacts/experiments/protocol_final_3runs/stage0b1_docs_chunking/docs_cs1200_ov80/run_02/scores.csv",
+    "scores_parquet": null,
+    "summary_json": "/app/artifacts/experiments/protocol_final_3runs/stage0b1_docs_chunking/docs_cs1200_ov80/run_02/summary.json",
+    "analysis_rows_jsonl": "/app/artifacts/experiments/protocol_final_3runs/stage0b1_docs_chunking/docs_cs1200_ov80/run_02/analysis_rows.jsonl"
+  },
+  "extra": {
+    "config_file": "/app/.polaris_experiment_stage0b1_docs_chunking__docs_cs1200_ov80.yaml",
+    "preset_name": "docs_only",
+    "preset_description": "Docs-only baseline with RRF reranking.",
+    "condition_summary": {
+      "retriever_type": "multi_collection",
+      "source_type": "vector",
+      "final_top_k": 8,
+      "hybrid_profile": {
+        "dense_top_k": 5,
+        "sparse_top_k": 5,
+        "top_k": 5,
+        "fusion": {
+          "type": "rrf",
+          "rrf_k": 60,
+          "signal_weights": {
+            "dense": 1.0,
+            "sparse": 1.0
+          }
+        }
+      },
+      "sources": [
+        {
+          "top_k": 5,
+          "filters": {},
+          "weight": 1.0,
+          "retrieval_profile": {
+            "dense_top_k": 5,
+            "sparse_top_k": 5,
+            "top_k": 5,
+            "fusion": {
+              "type": "rrf",
+              "rrf_k": 60,
+              "signal_weights": {
+                "dense": 1.0,
+                "sparse": 1.0
+              }
+            }
+          },
+          "name": "docs",
+          "collection_name": "exp_docs_cs1200_ov80"
+        }
+      ],
+      "retriever_profile": {
+        "type": "multi_collection",
+        "source_type": "vector",
+        "final_top_k": 8,
+        "hybrid_profile": {
+          "dense_top_k": 5,
+          "sparse_top_k": 5,
+          "top_k": 5,
+          "fusion": {
+            "type": "rrf",
+            "rrf_k": 60,
+            "signal_weights": {
+              "dense": 1.0,
+              "sparse": 1.0
+            }
+          }
+        },
+        "sources": [
+          {
+            "top_k": 5,
+            "filters": {},
+            "weight": 1.0,
+            "retrieval_profile": {
+              "dense_top_k": 5,
+              "sparse_top_k": 5,
+              "top_k": 5,
+              "fusion": {
+                "type": "rrf",
+                "rrf_k": 60,
+                "signal_weights": {
+                  "dense": 1.0,
+                  "sparse": 1.0
+                }
+              }
+            },
+            "name": "docs",
+            "collection_name": "exp_docs_cs1200_ov80"
+          }
+        ]
+      },
+      "retriever_fingerprint": "bf99089d82819de25ca751a7242d29d87addf7a420ed5ca8ee7ea84a31eebc2b",
+      "reranker_profile": {
+        "type": "rrf",
+        "rrf_k": 60,
+        "source_weights": {
+          "docs": 1.0
+        },
+        "trace_enabled": true
+      }
+    },
+    "condition_fingerprint": "8dc44ff61752eeef15ff7dcefab3ef5db2dd92436511e5b1b58090cbeed0a4e9",
+    "dataset": {
+      "dataset_path": "/app/data/test/ragas_one_hop_eval_dataset_final.dev.jsonl",
+      "annotations_path": "/app/data/test/benchmark_annotations_final.csv",
+      "prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0b1_docs_chunking/docs_cs1200_ov80/run_02/prepared_input.json",
+      "reuse_prepared": true,
+      "query_field": "query",
+      "reference_field": "expected_answer",
+      "id_field": "id",
+      "generation_workers": 16,
+      "generation_mode": "pipeline",
+      "evaluation_policy": "official",
+      "generation_deadlines": {
+        "policy": "official",
+        "client_total_seconds": 200.0,
+        "server_total_seconds": 180.0,
+        "retrieval_cap_seconds": 30.0,
+        "cleanup_reserve_seconds": 5.0,
+        "client_total_ms": 200000,
+        "server_total_ms": 180000,
+        "retrieval_cap_ms": 30000,
+        "cleanup_reserve_ms": 5000
+      },
+      "max_infra_failure_rate": 0.01,
+      "generation_retries": {
+        "max_attempts": 1,
+        "initial_backoff_seconds": 1.0,
+        "max_backoff_seconds": 8.0,
+        "jitter_seconds": 0.25,
+        "retry_on_empty_response": true
+      },
+      "generator_profile": {
+        "mode": "pipeline",
+        "generator_llm": {
+          "type": "openai_like",
+          "model_name": "mistralai/Mistral-Large-Instruct-2407",
+          "api_base": "http://vllm:8080/v1",
+          "request_timeout": 90,
+          "max_retries": 1,
+          "model_kwargs": {
+            "temperature": 0,
+            "top_p": 1.0,
+            "stop_list": [
+              "\nUser:",
+              "\n\nUser:"
+            ]
+          }
+        },
+        "llm_generate": {}
+      },
+      "generator_fingerprint": "073fbf42ca966bf58abbb9d019aa73a18ca5725d60c1d9aa70f3b3ed7e8140ac",
+      "retriever_profile": {
+        "type": "multi_collection",
+        "final_top_k": 8,
+        "sources": {
+          "docs": {
+            "settings": {
+              "filters": {},
+              "retrieval_profile": {
+                "dense_top_k": 5,
+                "fusion": {
+                  "rrf_k": 60,
+                  "signal_weights": {
+                    "dense": 1.0,
+                    "sparse": 1.0
+                  },
+                  "type": "rrf"
+                },
+                "sparse_top_k": 5,
+                "top_k": 5
+              },
+              "top_k": 5,
+              "weight": 1.0
+            },
+            "retriever_profile": {
+              "filters": {
+                "filters": []
+              },
+              "retrieval_profile": {
+                "dense_top_k": 5,
+                "fusion": {
+                  "rrf_k": 60,
+                  "signal_weights": {
+                    "dense": 1.0,
+                    "sparse": 1.0
+                  },
+                  "type": "rrf"
+                },
+                "sparse_top_k": 5,
+                "top_k": 5
+              },
+              "top_k": 5,
+              "type": "vector",
+              "vector_store": {
+                "backend": "qdrant",
+                "collection_name": "exp_docs_cs1200_ov80",
+                "dense_model": "Qwen/Qwen3-Embedding-8B",
+                "dense_vector_name": "dense",
+                "sparse_model": {
+                  "batch_size": 16,
+                  "model_name": "prithivida/Splade_PP_en_v1",
+                  "type": "fastembed"
+                },
+                "sparse_vector_name": "sparse"
+              }
+            },
+            "retriever_fingerprint": "765182f472aef365344a2ae1a41a47b8fc2cbc3a9e508e94879da399e23acc30"
+          }
+        }
+      },
+      "retriever_fingerprint": "dd3f08bb6ea66f583888f6f0ee681899c776f697b5ff55e9dc716bac8de805c3",
+      "reranker_profile": {
+        "type": "rrf",
+        "rrf_k": 60,
+        "source_weights": {
+          "docs": 1.0
+        },
+        "trace_enabled": true
+      },
+      "reranker_fingerprint": "73426991b4b395730b58d7333939591e83df57c675ebbd1f1c90ede45a038bf5",
+      "preset_name": "docs_only",
+      "preset_description": "Docs-only baseline with RRF reranking.",
+      "condition_summary": {
+        "retriever_type": "multi_collection",
+        "source_type": "vector",
+        "final_top_k": 8,
+        "hybrid_profile": {
+          "dense_top_k": 5,
+          "sparse_top_k": 5,
+          "top_k": 5,
+          "fusion": {
+            "type": "rrf",
+            "rrf_k": 60,
+            "signal_weights": {
+              "dense": 1.0,
+              "sparse": 1.0
+            }
+          }
+        },
+        "sources": [
+          {
+            "top_k": 5,
+            "filters": {},
+            "weight": 1.0,
+            "retrieval_profile": {
+              "dense_top_k": 5,
+              "sparse_top_k": 5,
+              "top_k": 5,
+              "fusion": {
+                "type": "rrf",
+                "rrf_k": 60,
+                "signal_weights": {
+                  "dense": 1.0,
+                  "sparse": 1.0
+                }
+              }
+            },
+            "name": "docs",
+            "collection_name": "exp_docs_cs1200_ov80"
+          }
+        ],
+        "retriever_profile": {
+          "type": "multi_collection",
+          "source_type": "vector",
+          "final_top_k": 8,
+          "hybrid_profile": {
+            "dense_top_k": 5,
+            "sparse_top_k": 5,
+            "top_k": 5,
+            "fusion": {
+              "type": "rrf",
+              "rrf_k": 60,
+              "signal_weights": {
+                "dense": 1.0,
+                "sparse": 1.0
+              }
+            }
+          },
+          "sources": [
+            {
+              "top_k": 5,
+              "filters": {},
+              "weight": 1.0,
+              "retrieval_profile": {
+                "dense_top_k": 5,
+                "sparse_top_k": 5,
+                "top_k": 5,
+                "fusion": {
+                  "type": "rrf",
+                  "rrf_k": 60,
+                  "signal_weights": {
+                    "dense": 1.0,
+                    "sparse": 1.0
+                  }
+                }
+              },
+              "name": "docs",
+              "collection_name": "exp_docs_cs1200_ov80"
+            }
+          ]
+        },
+        "retriever_fingerprint": "bf99089d82819de25ca751a7242d29d87addf7a420ed5ca8ee7ea84a31eebc2b",
+        "reranker_profile": {
+          "type": "rrf",
+          "rrf_k": 60,
+          "source_weights": {
+            "docs": 1.0
+          },
+          "trace_enabled": true
+        }
+      },
+      "condition_fingerprint": "8dc44ff61752eeef15ff7dcefab3ef5db2dd92436511e5b1b58090cbeed0a4e9",
+      "annotation_rows": 70,
+      "prep_total_rows": 70,
+      "prep_success_rows": 70,
+      "prep_failed_rows": 0,
+      "prep_elapsed_seconds": 0.0,
+      "prep_rate_rows_per_second": 0.0,
+      "prep_error_classes": {},
+      "prep_failure_classes": {},
+      "prep_failure_class_rates": {},
+      "prep_failure_stages": {},
+      "prep_failure_stage_rates": {},
+      "prep_response_statuses": {
+        "ok": 70
+      },
+      "prep_response_status_rates": {
+        "ok": 1.0
+      },
+      "prep_coverage": 1.0,
+      "prep_empty_response_rate": 0.0,
+      "infra_failure_rate": 0.0,
+      "run_validity": "VALID",
+      "run_policy": "official",
+      "latency_budget_report": {
+        "count": 70,
+        "elapsed_ms": {
+          "p50": 45349.5,
+          "p90": 74101.3,
+          "p95": 78407.25,
+          "max": 85302.0,
+          "mean": 49050.985714285714
+        },
+        "budget_utilization": {
+          "p50": 0.2519416666666666,
+          "p90": 0.4116738888888889,
+          "max": 0.4739
+        }
+      },
+      "prepared_source": "existing"
+    },
+    "tune_concurrency": true,
+    "trace_evaluator_llm": false,
+    "mlflow_parent_run_id": "44a1431f9bd845ecb0bf5e27df3ce94c"
+  }
+}
