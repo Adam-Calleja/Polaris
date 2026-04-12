@@ -13,7 +13,6 @@ main
 from __future__ import annotations
 
 import argparse
-import shutil
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -57,17 +56,19 @@ from polaris_rag.retrieval.document_store_factory import (
     source_document_store_path,
 )
 from polaris_rag.retrieval.ingestion_settings import (
-    JIRA_TURNS_TOKEN_CHUNKING_STRATEGY,
-    MARKDOWN_TOKEN_CHUNKING_STRATEGY,
     resolve_chunking_settings,
     resolve_conversion_settings,
 )
+from polaris_rag.retrieval.jira_ingestion import (
+    chunk_processed_jira_tickets,
+    clear_persist_dir,
+    dump_processed_tickets,
+    filter_jira_tickets,
+    prepare_jira_tickets_for_chunking,
+)
 from polaris_rag.retrieval.metadata_enricher import (
-    enrich_documents_with_authority_metadata,
     resolve_authority_registry_artifact_path,
 )
-from polaris_rag.retrieval.markdown_chunker import get_chunks_from_markdown_documents
-from polaris_rag.retrieval.markdown_converter import convert_tickets_to_markdown
 
 
 def _as_mapping(obj: Any) -> Mapping[str, Any]:
@@ -491,21 +492,11 @@ def _filter_tickets(
     unwanted_summaries: list[str],
 ) -> list[dict[str, Any]]:
     """Apply CLI/config exclusion rules to a fetched Jira batch."""
-    filtered = tickets
-    if exclude_keys:
-        excluded_key_set = set(exclude_keys)
-        filtered = [
-            ticket for ticket in filtered if str(ticket.get("key", "")).upper() not in excluded_key_set
-        ]
-
-    if unwanted_summaries:
-        filtered = [
-            ticket
-            for ticket in filtered
-            if not any(unwanted in ticket.get("fields", {}).get("summary", "") for unwanted in unwanted_summaries)
-        ]
-
-    return filtered
+    return filter_jira_tickets(
+        tickets,
+        exclude_keys=exclude_keys,
+        unwanted_summaries=unwanted_summaries,
+    )
 
 
 def _dump_processed_tickets(processed_tickets: list[Any], dump_path: Path) -> None:
@@ -518,12 +509,7 @@ def _dump_processed_tickets(processed_tickets: list[Any], dump_path: Path) -> No
     dump_path : Path
         Filesystem path used by the operation.
     """
-    dump_path.parent.mkdir(parents=True, exist_ok=True)
-    sep = "\n\n" + ("-" * 10) + "\n\n"
-    with dump_path.open("a", encoding="utf-8") as handle:
-        for ticket in processed_tickets:
-            handle.write(getattr(ticket, "text", ""))
-            handle.write(sep)
+    dump_processed_tickets(processed_tickets, dump_path)
 
 
 def _override_qdrant_collection_name(cfg: GlobalConfig, source: str, cli_value: str | None) -> None:
@@ -605,15 +591,7 @@ def _ensure_index_only_collection(storage_context: Any, source: str) -> None:
 
 def _clear_persist_dir(persist_dir: str) -> None:
     """Remove the resolved persist directory and all persisted ingestion state."""
-    target = Path(persist_dir).expanduser().resolve()
-    if not target.exists():
-        return
-    if target == Path(target.anchor):
-        raise RuntimeError(f"Refusing to remove filesystem root as persist dir: {target}")
-    if target.is_dir():
-        shutil.rmtree(target)
-        return
-    target.unlink()
+    clear_persist_dir(persist_dir)
 
 
 def _clear_ingestion_target(storage_context: Any, *, persist_dir: str, source: str) -> None:
@@ -663,8 +641,6 @@ def main() -> None:
         return
 
     from polaris_rag.retrieval.document_loader import iter_support_ticket_batches
-    from polaris_rag.retrieval.document_preprocessor import preprocess_jira_tickets
-    from polaris_rag.retrieval.text_splitter import get_chunks_from_jira_tickets
 
     start_date, end_date = _resolve_dates(cfg, args.start_date, args.end_date)
     limit = _resolve_limit(cfg, args.limit)
@@ -728,38 +704,21 @@ def main() -> None:
         total_after_filters += len(tickets)
         print(f"Processing Jira batch {batch_index}: {len(tickets)} tickets after filtering.")
 
-        if chunking_settings.strategy == MARKDOWN_TOKEN_CHUNKING_STRATEGY:
-            processed_tickets = convert_tickets_to_markdown(
-                tickets,
-                engine=conversion_settings.engine,
-                options=conversion_settings.options,
-            )
-            processed_tickets = enrich_documents_with_authority_metadata(
-                processed_tickets,
-                registry_artifact_path=registry_artifact_path,
-                source_name=args.source,
-            )
-            chunks = get_chunks_from_markdown_documents(
-                processed_tickets,
-                token_counter=container.token_counter,
-                chunk_size=chunking_settings.chunk_size_tokens,
-                overlap=chunking_settings.overlap_tokens,
-            )
-        elif chunking_settings.strategy == JIRA_TURNS_TOKEN_CHUNKING_STRATEGY:
-            processed_tickets = preprocess_jira_tickets(tickets)
-            processed_tickets = enrich_documents_with_authority_metadata(
-                processed_tickets,
-                registry_artifact_path=registry_artifact_path,
-                source_name=args.source,
-            )
-            chunks = get_chunks_from_jira_tickets(
-                tickets=processed_tickets,
-                token_counter=container.token_counter,
-                chunk_size=chunking_settings.chunk_size_tokens,
-                overlap=chunking_settings.overlap_tokens,
-            )
-        else:
-            raise ValueError(f"Unsupported ticket chunking strategy: {chunking_settings.strategy!r}")
+        processed_tickets = prepare_jira_tickets_for_chunking(
+            tickets,
+            chunking_strategy=chunking_settings.strategy,
+            conversion_engine=conversion_settings.engine,
+            conversion_options=conversion_settings.options,
+            registry_artifact_path=registry_artifact_path,
+            source_name=args.source,
+        )
+        chunks = chunk_processed_jira_tickets(
+            processed_tickets,
+            chunking_strategy=chunking_settings.strategy,
+            token_counter=container.token_counter,
+            chunk_size=chunking_settings.chunk_size_tokens,
+            overlap=chunking_settings.overlap_tokens,
+        )
 
         ticket_ids = list(dict.fromkeys(str(ticket.id) for ticket in processed_tickets if getattr(ticket, "id", None)))
 

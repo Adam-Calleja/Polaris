@@ -275,6 +275,57 @@ def _run_evaluation_grid_stage(
     )
     annotations_path = _resolve_optional_path(manifest, stage_spec.get("annotations_file"))
     repeats = _resolve_positive_int(stage_spec.get("repeats", 1), field_name=f"stages.{stage_name}.repeats")
+    stage_index_strategy = _stage_index_strategy(stage_spec)
+
+    if execution_phase == INDEX_PHASE and _uses_shared_jira_fanout(stage_index_strategy):
+        from polaris_rag.evaluation.shared_jira_fanout import (
+            SharedJiraConditionEntry,
+            run_shared_jira_fanout_index,
+        )
+
+        condition_entries: list[SharedJiraConditionEntry] = []
+        for condition_spec in conditions:
+            condition_name = str(condition_spec["name"])
+            condition_slug = _slugify(condition_name)
+            config_path = render_stage_condition_config(
+                manifest_path=str(manifest["_manifest_path"]),
+                stage_name=stage_name,
+                condition_name=condition_name,
+            )
+            ingest_specs = _ingest_specs(condition_spec)
+            if len(ingest_specs) != 1:
+                raise ValueError(
+                    f"Shared Jira fanout requires exactly one ingest spec per condition; "
+                    f"{condition_name!r} defines {len(ingest_specs)}."
+                )
+            condition_entries.append(
+                SharedJiraConditionEntry(
+                    name=condition_name,
+                    slug=condition_slug,
+                    preset=condition_spec.get("preset"),
+                    config_path=config_path,
+                    condition_spec=condition_spec,
+                    ingest_spec=ingest_specs[0],
+                )
+            )
+
+        shared_result = run_shared_jira_fanout_index(
+            condition_entries=condition_entries,
+            index_strategy=stage_index_strategy,
+            dry_run=dry_run,
+        )
+        return {
+            "stage_name": stage_name,
+            "stage_type": EVALUATION_GRID_STAGE,
+            "execution_phase": execution_phase,
+            "dry_run": dry_run,
+            "dataset_path": str(dataset_path),
+            "annotations_file": str(annotations_path) if annotations_path else None,
+            "repeats": repeats,
+            "conditions": shared_result["conditions"],
+            "shared_index_strategy": shared_result["summary"],
+            "executed_at": _utc_timestamp(),
+        }
 
     execution_conditions: list[dict[str, Any]] = []
     for condition_spec in conditions:
@@ -886,6 +937,15 @@ def _phase_run_options(
         merged["prepare_only"] = False
         merged["reuse_prepared"] = False
     return merged
+
+
+def _stage_index_strategy(stage_spec: Mapping[str, Any]) -> dict[str, Any]:
+    strategy = _as_mapping(stage_spec.get("index_strategy"))
+    return dict(strategy)
+
+
+def _uses_shared_jira_fanout(index_strategy: Mapping[str, Any]) -> bool:
+    return str(index_strategy.get("type", "")).strip() == "shared_jira_fanout"
 
 
 def _default_generated_config_path(stage_name: str, condition_name: str | None) -> Path:

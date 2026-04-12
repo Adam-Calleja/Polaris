@@ -83,6 +83,7 @@ services:
       POLARIS_CONFIG: /app/config/config.yaml
       POLARIS_LLM_API_KEY: ${POLARIS_LLM_API_KEY}
       GEMINI_API_KEY: ${GEMINI_API_KEY}
+      JIRA_API_TOKEN: ${JIRA_API_TOKEN}
       EMBED_API_BASE: http://embed:80/v1
       MLFLOW_TRACKING_URI: http://mlflow:5000
     volumes:

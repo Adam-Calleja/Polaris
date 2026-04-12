@@ -206,11 +206,6 @@ def test_main_markdown_chunking_path_persists_markdown_tickets(monkeypatch):
     monkeypatch.setattr(ingest_jira_tickets, "_resolve_persist_dir", lambda cfg, cli_value: "data/storage/local")
     monkeypatch.setattr(
         ingest_jira_tickets,
-        "enrich_documents_with_authority_metadata",
-        lambda documents, registry_artifact_path, source_name: documents,
-    )
-    monkeypatch.setattr(
-        ingest_jira_tickets,
         "resolve_authority_registry_artifact_path",
         lambda cfg: "data/authority/registry.local_official.v1.json",
     )
@@ -228,9 +223,6 @@ def test_main_markdown_chunking_path_persists_markdown_tickets(monkeypatch):
 
     sys.modules.setdefault("atlassian", SimpleNamespace(Jira=object))
     document_loader = importlib.import_module("polaris_rag.retrieval.document_loader")
-    document_preprocessor = importlib.import_module("polaris_rag.retrieval.document_preprocessor")
-    text_splitter = importlib.import_module("polaris_rag.retrieval.text_splitter")
-
     monkeypatch.setattr(
         document_loader,
         "iter_support_ticket_batches",
@@ -239,17 +231,15 @@ def test_main_markdown_chunking_path_persists_markdown_tickets(monkeypatch):
         ),
     )
     monkeypatch.setattr(
-        document_preprocessor,
-        "preprocess_jira_tickets",
-        lambda tickets: [],
+        ingest_jira_tickets,
+        "prepare_jira_tickets_for_chunking",
+        lambda tickets, chunking_strategy, conversion_engine, conversion_options, registry_artifact_path, source_name: markdown_documents,
     )
     monkeypatch.setattr(
-        text_splitter,
-        "get_chunks_from_jira_tickets",
-        lambda tickets, token_counter: [],
+        ingest_jira_tickets,
+        "chunk_processed_jira_tickets",
+        lambda processed_tickets, chunking_strategy, token_counter, chunk_size, overlap: chunks,
     )
-    monkeypatch.setattr(ingest_jira_tickets, "convert_tickets_to_markdown", lambda tickets, engine, options: markdown_documents)
-    monkeypatch.setattr(ingest_jira_tickets, "get_chunks_from_markdown_documents", lambda documents, token_counter, chunk_size, overlap: chunks)
 
     ingest_jira_tickets.main()
 
@@ -320,11 +310,6 @@ def test_main_clear_collection_resets_target_once_and_skips_batch_deletes(monkey
     monkeypatch.setattr(ingest_jira_tickets, "_resolve_persist_dir", lambda cfg, cli_value: str(persist_dir))
     monkeypatch.setattr(
         ingest_jira_tickets,
-        "enrich_documents_with_authority_metadata",
-        lambda documents, registry_artifact_path, source_name: documents,
-    )
-    monkeypatch.setattr(
-        ingest_jira_tickets,
         "resolve_authority_registry_artifact_path",
         lambda cfg: "data/authority/registry.local_official.v1.json",
     )
@@ -343,9 +328,6 @@ def test_main_clear_collection_resets_target_once_and_skips_batch_deletes(monkey
 
     sys.modules.setdefault("atlassian", SimpleNamespace(Jira=object))
     document_loader = importlib.import_module("polaris_rag.retrieval.document_loader")
-    document_preprocessor = importlib.import_module("polaris_rag.retrieval.document_preprocessor")
-    text_splitter = importlib.import_module("polaris_rag.retrieval.text_splitter")
-
     monkeypatch.setattr(
         document_loader,
         "iter_support_ticket_batches",
@@ -353,12 +335,10 @@ def test_main_clear_collection_resets_target_once_and_skips_batch_deletes(monkey
             [[{"key": "HPCSSUP-1", "fields": {"summary": "Summary"}}]]
         ),
     )
-    monkeypatch.setattr(document_preprocessor, "preprocess_jira_tickets", lambda tickets: [])
-    monkeypatch.setattr(text_splitter, "get_chunks_from_jira_tickets", lambda tickets, token_counter: [])
     monkeypatch.setattr(
         ingest_jira_tickets,
-        "convert_tickets_to_markdown",
-        lambda tickets, engine, options: [
+        "prepare_jira_tickets_for_chunking",
+        lambda tickets, chunking_strategy, conversion_engine, conversion_options, registry_artifact_path, source_name: [
             MarkdownDocument(
                 id="HPCSSUP-1",
                 document_type="helpdesk_ticket",
@@ -369,8 +349,8 @@ def test_main_clear_collection_resets_target_once_and_skips_batch_deletes(monkey
     )
     monkeypatch.setattr(
         ingest_jira_tickets,
-        "get_chunks_from_markdown_documents",
-        lambda documents, token_counter, chunk_size, overlap: [
+        "chunk_processed_jira_tickets",
+        lambda processed_tickets, chunking_strategy, token_counter, chunk_size, overlap: [
             DocumentChunk(
                 id="HPCSSUP-1::chunk::0000",
                 parent_id="HPCSSUP-1",
@@ -450,11 +430,6 @@ def test_main_processes_jira_tickets_in_fetch_batches(monkeypatch):
     monkeypatch.setattr(ingest_jira_tickets, "_resolve_persist_dir", lambda cfg, cli_value: "data/storage/local")
     monkeypatch.setattr(
         ingest_jira_tickets,
-        "enrich_documents_with_authority_metadata",
-        lambda documents, registry_artifact_path, source_name: documents,
-    )
-    monkeypatch.setattr(
-        ingest_jira_tickets,
         "resolve_authority_registry_artifact_path",
         lambda cfg: "data/authority/registry.local_official.v1.json",
     )
@@ -474,9 +449,6 @@ def test_main_processes_jira_tickets_in_fetch_batches(monkeypatch):
 
     sys.modules.setdefault("atlassian", SimpleNamespace(Jira=object))
     document_loader = importlib.import_module("polaris_rag.retrieval.document_loader")
-    document_preprocessor = importlib.import_module("polaris_rag.retrieval.document_preprocessor")
-    text_splitter = importlib.import_module("polaris_rag.retrieval.text_splitter")
-
     monkeypatch.setattr(
         document_loader,
         "iter_support_ticket_batches",
@@ -492,12 +464,10 @@ def test_main_processes_jira_tickets_in_fetch_batches(monkeypatch):
             ]
         ),
     )
-    monkeypatch.setattr(document_preprocessor, "preprocess_jira_tickets", lambda tickets: [])
-    monkeypatch.setattr(text_splitter, "get_chunks_from_jira_tickets", lambda tickets, token_counter: [])
     monkeypatch.setattr(
         ingest_jira_tickets,
-        "convert_tickets_to_markdown",
-        lambda tickets, engine, options: [
+        "prepare_jira_tickets_for_chunking",
+        lambda tickets, chunking_strategy, conversion_engine, conversion_options, registry_artifact_path, source_name: [
             MarkdownDocument(
                 id=ticket["key"],
                 document_type="helpdesk_ticket",
@@ -509,8 +479,8 @@ def test_main_processes_jira_tickets_in_fetch_batches(monkeypatch):
     )
     monkeypatch.setattr(
         ingest_jira_tickets,
-        "get_chunks_from_markdown_documents",
-        lambda documents, token_counter, chunk_size, overlap: [
+        "chunk_processed_jira_tickets",
+        lambda processed_tickets, chunking_strategy, token_counter, chunk_size, overlap: [
             DocumentChunk(
                 id=f"{document.id}::chunk::0000",
                 parent_id=document.id,
@@ -520,7 +490,7 @@ def test_main_processes_jira_tickets_in_fetch_batches(monkeypatch):
                 document_type=document.document_type,
                 metadata={},
             )
-            for document in documents
+            for document in processed_tickets
         ],
     )
 
