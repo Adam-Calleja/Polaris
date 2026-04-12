@@ -399,6 +399,17 @@ class QdrantIndexStore(BaseVectorStore):
             enable_sparse=self.sparse_encoder is not None,
         )
 
+    def clear_collection(self) -> None:
+        """Delete the backing Qdrant collection if it exists."""
+        if not self.client.collection_exists(self.collection_name):
+            return
+        self.client.delete_collection(collection_name=self.collection_name)
+
+    def recreate_collection(self, *, sample_text: str = "polaris collection bootstrap") -> None:
+        """Recreate the backing Qdrant collection from scratch."""
+        self.clear_collection()
+        self.ensure_collection_exists(sample_text=sample_text)
+
     def create_index(self, chunks: list[DocumentChunk], batch_size: int) -> None:
         """Compatibility wrapper: recreate by reinserting chunks."""
         self.insert_chunks(chunks, batch_size=batch_size, use_async=False)

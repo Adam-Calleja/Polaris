@@ -615,6 +615,8 @@ def _build_ingest_command(
     command.extend(_append_cli_option("--chunking-strategy", ingest_spec.get("chunking_strategy")))
     command.extend(_append_cli_option("--chunk-size-tokens", ingest_spec.get("chunk_size_tokens")))
     command.extend(_append_cli_option("--chunk-overlap-tokens", ingest_spec.get("chunk_overlap_tokens")))
+    if bool(ingest_spec.get("clear_collection", False)):
+        command.append("--clear-collection")
     if index_only:
         command.append("--index-only")
     return command

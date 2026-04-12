@@ -250,6 +250,7 @@ def test_run_experiment_stage_index_phase_builds_index_only_commands(
                                 "source": "tickets",
                                 "qdrant_collection_name": "exp_tickets_cs600_ov0",
                                 "fetch_batch_size": 25,
+                                "clear_collection": True,
                             },
                         }
                     ],
@@ -280,6 +281,7 @@ def test_run_experiment_stage_index_phase_builds_index_only_commands(
     assert len(calls) == 1
     assert "ingest_jira_tickets.py" in calls[0][1]
     assert "--index-only" not in calls[0]
+    assert "--clear-collection" in calls[0]
     assert calls[0][calls[0].index("--fetch-batch-size") + 1] == "25"
     assert record["conditions"][0]["runs"] == []
     assert record["conditions"][0]["ingestion_skipped"] is False

@@ -13,6 +13,7 @@ main
 from __future__ import annotations
 
 import argparse
+import shutil
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -227,6 +228,14 @@ def parse_args() -> argparse.Namespace:
         "--index-only",
         action="store_true",
         help="Create the target Qdrant collection and exit without loading or indexing tickets.",
+    )
+    parser.add_argument(
+        "--clear-collection",
+        action="store_true",
+        help=(
+            "Delete and recreate the target Qdrant collection and remove the target persist dir "
+            "before ingestion begins."
+        ),
     )
 
     return parser.parse_args()
@@ -594,6 +603,34 @@ def _ensure_index_only_collection(storage_context: Any, source: str) -> None:
     print("Collection ready.")
 
 
+def _clear_persist_dir(persist_dir: str) -> None:
+    """Remove the resolved persist directory and all persisted ingestion state."""
+    target = Path(persist_dir).expanduser().resolve()
+    if not target.exists():
+        return
+    if target == Path(target.anchor):
+        raise RuntimeError(f"Refusing to remove filesystem root as persist dir: {target}")
+    if target.is_dir():
+        shutil.rmtree(target)
+        return
+    target.unlink()
+
+
+def _clear_ingestion_target(storage_context: Any, *, persist_dir: str, source: str) -> None:
+    """Reset the backing collection and local persisted state once before ingest."""
+    vector_store = getattr(storage_context, "vector_store", None)
+    if vector_store is None or not hasattr(vector_store, "recreate_collection"):
+        raise RuntimeError(
+            f"Vector store for source {source!r} does not support collection recreation."
+        )
+
+    print(f"Recreating Qdrant collection for source {source!r}...")
+    vector_store.recreate_collection()
+    print(f"Removing persisted ingestion state under: {Path(persist_dir).expanduser().resolve()}")
+    _clear_persist_dir(persist_dir)
+    print("Fresh ingestion target ready.")
+
+
 def main() -> None:
     """Run the command-line entrypoint.
     
@@ -618,6 +655,9 @@ def main() -> None:
 
     container = build_container(cfg)
     storage_context = _build_source_storage_context(container, args.source)
+    persist_dir = _resolve_persist_dir(cfg, args.persist_dir)
+    if args.clear_collection:
+        _clear_ingestion_target(storage_context, persist_dir=persist_dir, source=args.source)
     if args.index_only:
         _ensure_index_only_collection(storage_context, args.source)
         return
@@ -626,7 +666,6 @@ def main() -> None:
     from polaris_rag.retrieval.document_preprocessor import preprocess_jira_tickets
     from polaris_rag.retrieval.text_splitter import get_chunks_from_jira_tickets
 
-    persist_dir = _resolve_persist_dir(cfg, args.persist_dir)
     start_date, end_date = _resolve_dates(cfg, args.start_date, args.end_date)
     limit = _resolve_limit(cfg, args.limit)
     fetch_batch_size = _resolve_fetch_batch_size(cfg, args.fetch_batch_size)
@@ -658,6 +697,10 @@ def main() -> None:
     total_after_filters = 0
     total_chunks = 0
     mode = "async/concurrent" if use_async_embeddings else "sync/sequential"
+    should_delete_existing = not args.clear_collection
+
+    if not should_delete_existing:
+        print("Fresh-target mode enabled: skipping per-ticket delete requests during batch ingest.")
 
     for batch_index, fetched_tickets in enumerate(
         iter_support_ticket_batches(
@@ -725,7 +768,7 @@ def main() -> None:
             _dump_processed_tickets(processed_tickets, dump_path)
         print(f"Generated {len(chunks)} chunks from Jira batch {batch_index}.")
 
-        if ticket_ids:
+        if ticket_ids and should_delete_existing:
             print(f"Removing existing chunks for {len(ticket_ids)} tickets in batch {batch_index}...")
             if hasattr(storage_context.vector_store, "delete_ref_docs"):
                 storage_context.vector_store.delete_ref_docs(ticket_ids)

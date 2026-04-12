@@ -149,6 +149,27 @@ def test_ensure_collection_exists_bootstraps_empty_collection_schema():
     assert ensure_calls == [{"dense_dim": 3, "enable_sparse": True}]
 
 
+def test_recreate_collection_resets_then_bootstraps_schema():
+    events: list[tuple[str, object]] = []
+
+    store = object.__new__(QdrantIndexStore)
+    store.collection_name = "support_tickets"
+    store.client = SimpleNamespace(
+        collection_exists=lambda collection_name: True,
+        delete_collection=lambda *, collection_name: events.append(("delete", collection_name)),
+    )
+    store.ensure_collection_exists = lambda *, sample_text="polaris collection bootstrap": events.append(
+        ("ensure", sample_text)
+    )
+
+    store.recreate_collection()
+
+    assert events == [
+        ("delete", "support_tickets"),
+        ("ensure", "polaris collection bootstrap"),
+    ]
+
+
 def test_upsert_chunks_enables_sparse_schema_when_sparse_encoder_is_configured():
     ensure_calls: list[dict[str, object]] = []
     upsert_calls: list[str] = []
