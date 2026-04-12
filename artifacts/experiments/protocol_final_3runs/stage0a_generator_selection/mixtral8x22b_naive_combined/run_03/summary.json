@@ -2,26 +2,20 @@
   "rows": 70,
   "selected_metrics": [
     "factual_correctness",
-    "faithfulness",
-    "context_recall",
-    "context_precision_without_reference",
-    "answer_relevancy",
-    "context_entity_recall",
-    "semantic_similarity",
-    "noise_sensitivity"
+    "faithfulness"
   ],
   "skipped_metrics": [],
-  "selected_max_workers": 16,
-  "batch_size": 32,
+  "selected_max_workers": 8,
+  "batch_size": 16,
   "run_config": {
     "timeout": 240,
     "max_retries": 0,
     "max_wait": 30,
-    "max_workers": 16,
+    "max_workers": 8,
     "log_tenacity": true,
     "seed": 42
   },
-  "duration_seconds": 50.907630760004395,
-  "failure_rate": 1.0,
+  "duration_seconds": 5970.851292100997,
+  "failure_rate": 0.03571428571428571,
   "tuning_trials": []
 }

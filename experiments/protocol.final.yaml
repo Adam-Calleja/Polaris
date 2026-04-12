@@ -361,7 +361,7 @@ defaults:
         mode: "pipeline"
         workers: 4
       run:
-        max_workers: 8
+        max_workers: 1
       adaptive_concurrency:
         enabled: false
       dataset:
@@ -425,10 +425,10 @@ stages:
         - "factual_correctness"
         - "faithfulness"
     conditions:
-      - name: "llama33_naive_combined"
+      - name: "qwen25_32b_naive_combined"
         preset: "naive_combined"
         config_overrides:
-          <<: *llama33_generator
+          <<: *qwen25_32b_generator
       - name: "mixtral8x22b_naive_combined"
         preset: "naive_combined"
         config_overrides:
@@ -447,9 +447,14 @@ stages:
       retriever:
         source_type: "vector"
         <<: *budget_5_8
+      evaluation:
+        metrics:
+          config:
+            factual_correctness:
+              atomicity: "low"
+              coverage: "high"
     run_options:
       metrics:
-        - "factual_correctness"
         - "faithfulness"
         - "context_recall"
     conditions:
@@ -601,6 +606,8 @@ stages:
       retriever:
         source_type: "vector"
         <<: *budget_5_8
+      sparse_encoder:
+        enabled: false
     conditions:
       - name: "tickets_cs600_ov0"
         preset: "tickets_only"
@@ -613,6 +620,7 @@ stages:
           chunking_strategy: "jira_turns_token"
           chunk_size_tokens: 600
           chunk_overlap_tokens: 0
+          fetch_batch_size: 200
         config_overrides:
           vector_stores:
             tickets:
@@ -635,6 +643,7 @@ stages:
           chunking_strategy: "jira_turns_token"
           chunk_size_tokens: 600
           chunk_overlap_tokens: 80
+          fetch_batch_size: 200
         config_overrides:
           vector_stores:
             tickets:
@@ -657,6 +666,7 @@ stages:
           chunking_strategy: "jira_turns_token"
           chunk_size_tokens: 800
           chunk_overlap_tokens: 0
+          fetch_batch_size: 200
         config_overrides:
           vector_stores:
             tickets:
@@ -679,6 +689,7 @@ stages:
           chunking_strategy: "jira_turns_token"
           chunk_size_tokens: 800
           chunk_overlap_tokens: 80
+          fetch_batch_size: 200
         config_overrides:
           vector_stores:
             tickets:
@@ -701,6 +712,7 @@ stages:
           chunking_strategy: "jira_turns_token"
           chunk_size_tokens: 1000
           chunk_overlap_tokens: 0
+          fetch_batch_size: 200
         config_overrides:
           vector_stores:
             tickets:
@@ -723,6 +735,7 @@ stages:
           chunking_strategy: "jira_turns_token"
           chunk_size_tokens: 1000
           chunk_overlap_tokens: 80
+          fetch_batch_size: 200
         config_overrides:
           vector_stores:
             tickets:
