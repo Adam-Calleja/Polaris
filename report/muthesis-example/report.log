@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.3.18)  11 APR 2026 19:24
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.3.18)  12 APR 2026 17:47
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -459,11 +459,8 @@ Underfull \vbox (badness 3861) has occurred while \output is active []
 
  [20]
 Package acronym Info: Label `acro:NLP' newly defined as it shall be overridden
-although it is yet undefined on input line 24.
-)
-Underfull \vbox (badness 5970) has occurred while \output is active []
-
- [21] [22]
+although it is yet undefined on input line 26.
+ [21]) [22]
 \openout2 = `chapter3.aux'.
 
  (./chapter3.tex
@@ -566,18 +563,18 @@ Package rerunfilecheck Info: File `report.out' has not changed.
 (rerunfilecheck)             Checksum: 2F42F528F00DE2378F75546938A44654;16480.
  ) 
 Here is how much of TeX's memory you used:
- 11974 strings out of 467525
- 186034 string characters out of 5418982
- 607460 words of memory out of 5000000
- 40501 multiletter control sequences out of 15000+600000
+ 11978 strings out of 467525
+ 186187 string characters out of 5418982
+ 607526 words of memory out of 5000000
+ 40504 multiletter control sequences out of 15000+600000
  654681 words of font info for 84 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  75i,6n,79p,1469b,640s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/local/texlive/2026/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
-Output written on report.pdf (32 pages, 147633 bytes).
+Output written on report.pdf (32 pages, 150047 bytes).
 PDF statistics:
- 888 PDF objects out of 1000 (max. 8388607)
- 795 compressed objects within 8 object streams
- 156 named destinations out of 1000 (max. 500000)
+ 909 PDF objects out of 1000 (max. 8388607)
+ 815 compressed objects within 9 object streams
+ 157 named destinations out of 1000 (max. 500000)
  662 words of extra memory for PDF output out of 10000 (max. 10000000)
 
