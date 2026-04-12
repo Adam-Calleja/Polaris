@@ -273,6 +273,9 @@ OUTPUT chapter2.aux
 INPUT ./chapter2.tex
 INPUT ./chapter2.tex
 INPUT chapter2.tex
+INPUT /usr/local/texlive/2026/texmf-dist/fonts/vf/adobe/times/zptmcmrm.vf
+INPUT /usr/local/texlive/2026/texmf-dist/fonts/tfm/adobe/times/ptmri8r.tfm
+INPUT /usr/local/texlive/2026/texmf-dist/fonts/tfm/public/cm/cmmi10.tfm
 INPUT ./chapter3.tex
 INPUT ./chapter3.tex
 OUTPUT chapter3.aux
@@ -316,7 +319,6 @@ INPUT ./report.bbl
 INPUT ./report.bbl
 INPUT report.bbl
 INPUT /usr/local/texlive/2026/texmf-dist/fonts/vf/adobe/times/ptmri7t.vf
-INPUT /usr/local/texlive/2026/texmf-dist/fonts/tfm/adobe/times/ptmri8r.tfm
 OUTPUT appendix1.aux
 INPUT report.aux
 INPUT ./chapter1.aux
