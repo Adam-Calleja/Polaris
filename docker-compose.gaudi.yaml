@@ -24,9 +24,10 @@ services:
     cap_add:
       - SYS_NICE
     environment:
-      HABANA_VISIBLE_DEVICES: "7"
+      HABANA_VISIBLE_DEVICES: "4,5,6,7"
       HF_TOKEN: ${HF_TOKEN}
       RUST_BACKTRACE: "1"
+      MAX_WARMUP_SEQUENCE_LENGTH: "1024"
     volumes:
       - /mnt/data/ac2650/test:/data
     command:
@@ -38,13 +39,13 @@ services:
       - last-token
       - --auto-truncate
       - --max-concurrent-requests
-      - "16"
+      - "32"
       - --max-client-batch-size
       - "8"
       - --max-batch-requests
       - "8"
       - --max-batch-tokens
-      - "2048"
+      - "8192"
     healthcheck:
       test:
         - CMD-SHELL
