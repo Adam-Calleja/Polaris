@@ -8,6 +8,7 @@ import pytest
 import yaml
 
 from polaris_rag.evaluation import experiment_automation as automation
+from polaris_rag.evaluation import shared_jira_fanout as shared_fanout
 
 
 def _write_manifest(tmp_path: Path, payload: dict) -> Path:
@@ -221,7 +222,7 @@ def test_run_experiment_stage_prepare_phase_builds_prepare_only_commands(
     assert record["conditions"][0]["runs"][0]["execution_phase"] == "prepare"
 
 
-def test_run_experiment_stage_index_phase_builds_index_only_commands(
+def test_run_experiment_stage_index_phase_builds_ingest_commands_for_non_shared_stage(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -237,7 +238,7 @@ def test_run_experiment_stage_index_phase_builds_index_only_commands(
             "artifacts_root": "artifacts/experiments",
             "base_config": "config.yaml",
             "stages": {
-                "stage0b2_ticket_chunking": {
+                "stage0b_docs_chunking": {
                     "type": "evaluation_grid",
                     "dataset_path": "dev.jsonl",
                     "repeats": 2,
@@ -272,7 +273,7 @@ def test_run_experiment_stage_index_phase_builds_index_only_commands(
 
     record = automation.run_experiment_stage(
         manifest_path=manifest_path,
-        stage_name="stage0b2_ticket_chunking",
+        stage_name="stage0b_docs_chunking",
         execution_phase="index",
         dry_run=False,
     )
@@ -285,6 +286,134 @@ def test_run_experiment_stage_index_phase_builds_index_only_commands(
     assert calls[0][calls[0].index("--fetch-batch-size") + 1] == "25"
     assert record["conditions"][0]["runs"] == []
     assert record["conditions"][0]["ingestion_skipped"] is False
+
+
+def test_run_experiment_stage_index_phase_dispatches_shared_jira_fanout(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    base_config = tmp_path / "config.yaml"
+    base_config.write_text("prompt_name: test\n", encoding="utf-8")
+
+    manifest_path = _write_manifest(
+        tmp_path,
+        {
+            "artifacts_root": "artifacts/experiments",
+            "base_config": "config.yaml",
+            "stages": {
+                "stage0b2_ticket_chunking": {
+                    "type": "evaluation_grid",
+                    "dataset_path": "dev.jsonl",
+                    "repeats": 2,
+                    "index_strategy": {
+                        "type": "shared_jira_fanout",
+                        "clear_targets": True,
+                        "condition_parallelism": 6,
+                        "persist_every_batches": 0,
+                    },
+                    "conditions": [
+                        {
+                            "name": "tickets_cs600_ov0",
+                            "preset": "tickets_only",
+                            "ingest": {
+                                "kind": "jira",
+                                "source": "tickets",
+                                "qdrant_collection_name": "exp_tickets_cs600_ov0",
+                                "fetch_batch_size": 25,
+                            },
+                        },
+                        {
+                            "name": "tickets_cs800_ov0",
+                            "preset": "tickets_only",
+                            "ingest": {
+                                "kind": "jira",
+                                "source": "tickets",
+                                "qdrant_collection_name": "exp_tickets_cs800_ov0",
+                                "fetch_batch_size": 25,
+                            },
+                        },
+                    ],
+                }
+            },
+        },
+    )
+
+    shared_calls: list[dict[str, object]] = []
+
+    def _fake_shared_index(*, condition_entries, index_strategy, dry_run):
+        shared_calls.append(
+            {
+                "condition_names": [entry.name for entry in condition_entries],
+                "index_strategy": dict(index_strategy),
+                "dry_run": dry_run,
+            }
+        )
+        return {
+            "conditions": [
+                {
+                    "name": entry.name,
+                    "slug": entry.slug,
+                    "config_path": str(entry.config_path),
+                    "preset": entry.preset,
+                    "execution_phase": "index",
+                    "ingestion_commands": [],
+                    "runs": [],
+                    "ingestion_skipped": False,
+                    "shared_ingestion": True,
+                    "collection_name": f"collection_{entry.name}",
+                    "persist_dir": f"/tmp/{entry.name}",
+                    "indexed_chunks": 0,
+                    "processed_batches": 0,
+                    "indexed_tickets": 0,
+                    "persist_count": 0,
+                }
+                for entry in condition_entries
+            ],
+            "summary": {
+                "type": "shared_jira_fanout",
+                "condition_parallelism": len(condition_entries),
+                "clear_targets": True,
+                "persist_every_batches": 0,
+                "selected_conditions": [entry.name for entry in condition_entries],
+                "fetched_tickets": 0,
+                "processed_tickets": 0,
+                "processed_batches": 0,
+                "elapsed_seconds": 0.0,
+            },
+        }
+
+    def _fail_run(*args, **kwargs):
+        raise AssertionError("shared Jira fanout index path should not spawn subprocess ingest commands")
+
+    monkeypatch.setattr(automation, "REPO_ROOT", repo_root)
+    monkeypatch.setattr(automation.subprocess, "run", _fail_run)
+    monkeypatch.setattr(shared_fanout, "run_shared_jira_fanout_index", _fake_shared_index)
+
+    record = automation.run_experiment_stage(
+        manifest_path=manifest_path,
+        stage_name="stage0b2_ticket_chunking",
+        selected_conditions=["tickets_cs800_ov0"],
+        execution_phase="index",
+        dry_run=False,
+    )
+
+    assert shared_calls == [
+        {
+            "condition_names": ["tickets_cs800_ov0"],
+            "index_strategy": {
+                "type": "shared_jira_fanout",
+                "clear_targets": True,
+                "condition_parallelism": 6,
+                "persist_every_batches": 0,
+            },
+            "dry_run": False,
+        }
+    ]
+    assert record["execution_phase"] == "index"
+    assert record["conditions"][0]["name"] == "tickets_cs800_ov0"
+    assert record["shared_index_strategy"]["type"] == "shared_jira_fanout"
 
 
 def test_run_experiment_stage_evaluate_phase_reuses_prepared_rows(

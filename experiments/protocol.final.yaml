@@ -602,6 +602,11 @@ stages:
     dataset_path: "../data/test/ragas_one_hop_eval_dataset_final.dev.jsonl"
     annotations_file: "../data/test/benchmark_annotations_final.csv"
     repeats: 3
+    index_strategy:
+      type: "shared_jira_fanout"
+      clear_targets: true
+      condition_parallelism: 6
+      persist_every_batches: 0
     config_overrides:
       retriever:
         source_type: "vector"
