@@ -646,7 +646,7 @@ stages:
           fetch_batch_size: 200
         config_overrides:
           embedder:
-            api_base: "http://embed1:80/v1"
+            api_base: "http://embed:80/v1"
           vector_stores:
             tickets:
               collection_name: "exp_tickets_cs600_ov0"
@@ -671,7 +671,7 @@ stages:
           fetch_batch_size: 200
         config_overrides:
           embedder:
-            api_base: "http://embed2:80/v1"
+            api_base: "http://embed:80/v1"
           vector_stores:
             tickets:
               collection_name: "exp_tickets_cs600_ov80"
@@ -696,7 +696,7 @@ stages:
           fetch_batch_size: 200
         config_overrides:
           embedder:
-            api_base: "http://embed3:80/v1"
+            api_base: "http://embed:80/v1"
           vector_stores:
             tickets:
               collection_name: "exp_tickets_cs800_ov0"
@@ -721,7 +721,7 @@ stages:
           fetch_batch_size: 200
         config_overrides:
           embedder:
-            api_base: "http://embed4:80/v1"
+            api_base: "http://embed:80/v1"
           vector_stores:
             tickets:
               collection_name: "exp_tickets_cs800_ov80"
@@ -746,7 +746,7 @@ stages:
           fetch_batch_size: 200
         config_overrides:
           embedder:
-            api_base: "http://embed5:80/v1"
+            api_base: "http://embed:80/v1"
           vector_stores:
             tickets:
               collection_name: "exp_tickets_cs1000_ov0"
@@ -771,7 +771,7 @@ stages:
           fetch_batch_size: 200
         config_overrides:
           embedder:
-            api_base: "http://embed6:80/v1"
+            api_base: "http://embed:80/v1"
           vector_stores:
             tickets:
               collection_name: "exp_tickets_cs1000_ov80"
