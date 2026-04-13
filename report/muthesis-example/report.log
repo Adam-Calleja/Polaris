@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.3.18)  12 APR 2026 18:49
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.3.18)  13 APR 2026 18:47
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -465,7 +465,20 @@ Overfull \hbox (26.4148pt too wide) in paragraph at lines 26--27
 \OT1/ptm/m/n/12 intensive gen-er-a-tion, and fact ver-i-fi-ca-tion bench-marks. Their mod-els out-per-form parametric-
  []
 
-[21]) [22]
+[21] [22]
+Overfull \hbox (8.89488pt too wide) in paragraph at lines 43--44
+\OT1/ptm/m/n/12 edge base to "sup-port queries that may need in-for-ma-tion re-trieved from mul-ti-ple sources"
+ []
+
+
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+
+Overfull \hbox (27.58992pt too wide) has occurred while \output is active
+\OT1/ptm/m/sl/12 2.3.  HETEROGENEOUS SUPPORT CORPORA: DOCUMENTATION AND TICKETS \OT1/ptm/m/n/12 23
+ []
+
+[23]) [24]
 \openout2 = `chapter3.aux'.
 
  (./chapter3.tex
@@ -475,7 +488,7 @@ Overfull \hbox (25.80722pt too wide) in paragraph at lines 16--16
 []\OT1/ptm/b/n/17.28 Success Cri-te-ria and Requirement-to-Evaluation Map-
  []
 
-) [23
+) [25
 
 
 
@@ -485,7 +498,7 @@ Overfull \hbox (25.80722pt too wide) in paragraph at lines 16--16
 
  (./chapter4.tex
 Chapter 4.
-) [24
+) [26
 
 
 
@@ -498,7 +511,7 @@ Chapter 5.
 )
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
- [25
+ [27
 
 
 
@@ -506,12 +519,12 @@ Underfull \vbox (badness 10000) has occurred while \output is active []
 ]
 Overfull \vbox (233.79532pt too high) has occurred while \output is active []
 
- [26]
+ [28]
 \openout2 = `chapter6.aux'.
 
  (./chapter6.tex
 Chapter 6.
-) [27
+) [29
 
 
 
@@ -521,7 +534,7 @@ Chapter 6.
 
  (./chapter7.tex
 Chapter 7.
-) [28
+) [30
 
 
 
@@ -531,12 +544,12 @@ Chapter 7.
 
  (./chapter8.tex
 Chapter 8.
-) [29
+) [31
 
 
 
 
-] (./report.bbl [30
+] (./report.bbl [32
 
 
 
@@ -550,7 +563,7 @@ Underfull \hbox (badness 10000) in paragraph at lines 45--46
 []\OT1/ptm/m/n/12 ``CSD3 Up-grade Oc-to-ber 2021 --- CSD3 1.0 doc-u-men-ta-tion,''
  []
 
-[31]) [32]
+[33]) [34]
 \openout2 = `appendix1.aux'.
 
 
@@ -568,18 +581,18 @@ Package rerunfilecheck Info: File `report.out' has not changed.
 (rerunfilecheck)             Checksum: 2F42F528F00DE2378F75546938A44654;16480.
  ) 
 Here is how much of TeX's memory you used:
- 11987 strings out of 467525
- 186446 string characters out of 5418982
+ 11989 strings out of 467525
+ 186460 string characters out of 5418982
  607675 words of memory out of 5000000
  40510 multiletter control sequences out of 15000+600000
  655040 words of font info for 85 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 75i,6n,79p,1469b,640s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 75i,6n,79p,1519b,640s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/local/texlive/2026/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
-Output written on report.pdf (32 pages, 151111 bytes).
+Output written on report.pdf (34 pages, 157102 bytes).
 PDF statistics:
- 912 PDF objects out of 1000 (max. 8388607)
- 818 compressed objects within 9 object streams
- 159 named destinations out of 1000 (max. 500000)
+ 956 PDF objects out of 1000 (max. 8388607)
+ 860 compressed objects within 9 object streams
+ 161 named destinations out of 1000 (max. 500000)
  662 words of extra memory for PDF output out of 10000 (max. 10000000)
 
