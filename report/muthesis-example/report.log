@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.3.18)  13 APR 2026 18:58
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.3.18)  14 APR 2026 13:32
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -345,15 +345,16 @@ Underfull \hbox (badness 10000) in paragraph at lines 51--51
 
  []
 
-[4] (./report.lot)
+[4] (./report.lot
+Package acronym Info: Label `acro:CSD3' newly defined as it shall be overridden
+although it is yet undefined on input line 3.
+)
 \tf@lot=\write5
 \openout5 = `report.lot'.
 
  [5
 
 ] (./report.lof
-Package acronym Info: Label `acro:CSD3' newly defined as it shall be overridden
-although it is yet undefined on input line 2.
 Package acronym Info: Label `acro:RCS' newly defined as it shall be overridden
 although it is yet undefined on input line 2.
 )
@@ -392,13 +393,12 @@ Overfull \hbox (22.88693pt too wide) in paragraph at lines 59--59
 
  (./chapter1.tex
 Chapter 1.
-Package acronym Info: Label `acro:CSD3' overridden on input line 7.
 Package acronym Info: Label `acro:EPSRC' newly defined as it shall be overridden
 although it is yet undefined on input line 7.
 Package acronym Info: Label `acro:HPC' newly defined as it shall be overridden
 although it is yet undefined on input line 7.
 Package acronym Info: Label `acro:RCS' overridden on input line 7.
-<graphs/ticket_counts.pdf, id=534, 431.17964pt x 254.86092pt>
+<graphs/ticket_counts.pdf, id=533, 431.17964pt x 254.86092pt>
 File: graphs/ticket_counts.pdf Graphic file (type pdf)
 <use graphs/ticket_counts.pdf>
 Package pdftex.def Info: graphs/ticket_counts.pdf  used on input line 13.
@@ -465,15 +465,207 @@ Overfull \hbox (26.4148pt too wide) in paragraph at lines 26--27
 \OT1/ptm/m/n/12 intensive gen-er-a-tion, and fact ver-i-fi-ca-tion bench-marks. Their mod-els out-per-form parametric-
  []
 
-[21] [22])
-Underfull \vbox (badness 10000) has occurred while \output is active []
+[21]
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <10.95> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 43.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <8> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 43.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <6> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 43.
+
+Underfull \hbox (badness 10000) in paragraph at lines 47--47
+\OT1/ptm/m/n/10.95 doc-u-men-ta-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 48--48
+[]\OT1/ptm/m/n/10.95 Highest for
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 48--48
+\OT1/ptm/m/n/10.95 site-specific
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 49--49
+[]\OT1/ptm/m/n/10.95 Records sup-ported
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 49--49
+\OT1/ptm/m/n/10.95 lo-cal work-flows,
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 49--49
+\OT1/ptm/m/n/10.95 con-straints, and
+ []
+
+
+Underfull \hbox (badness 3229) in paragraph at lines 50--50
+[]\OT1/ptm/m/n/10.95 May omit low-level
+ []
+
+
+Underfull \hbox (badness 5939) in paragraph at lines 50--50
+\OT1/ptm/m/n/10.95 case trou-bleshoot-ing
+ []
+
+
+Underfull \hbox (badness 5519) in paragraph at lines 51--52
+\OT1/ptm/m/n/10.95 mis-sion, per-mis-sions,
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 52--52
+[]\OT1/ptm/m/n/10.95 External
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 52--52
+\OT1/ptm/m/n/10.95 tech-ni-cal
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 52--52
+\OT1/ptm/m/n/10.95 doc-u-men-ta-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 53--53
+[]\OT1/ptm/m/n/10.95 Medium:
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 53--53
+\OT1/ptm/m/n/10.95 strong on
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 54--54
+[]\OT1/ptm/m/n/10.95 Provides tool be-
+ []
+
+
+Underfull \hbox (badness 3919) in paragraph at lines 54--54
+\OT1/ptm/m/n/10.95 con-fig-u-ra-tion de-tail
+ []
+
+
+Underfull \hbox (badness 1609) in paragraph at lines 55--55
+[]\OT1/ptm/m/n/10.95 Can be rel-e-vant yet
+ []
+
+
+Underfull \hbox (badness 1931) in paragraph at lines 55--55
+\OT1/ptm/m/n/10.95 out-of-scope, out-of-
+ []
+
+
+Underfull \hbox (badness 1412) in paragraph at lines 55--55
+\OT1/ptm/m/n/10.95 for lo-cal op-er-a-tional
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 57--57
+[]\OT1/ptm/m/n/10.95 Historical
+ []
+
+
+Underfull \hbox (badness 1546) in paragraph at lines 57--57
+\OT1/ptm/m/n/10.95 sup-port tick-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 58--58
+\OT1/ptm/m/n/10.95 for prior-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 58--58
+\OT1/ptm/m/n/10.95 case re-trieval,
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 58--58
+\OT1/ptm/m/n/10.95 weaker for
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 59--59
+[]\OT1/ptm/m/n/10.95 Preserves con-crete
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 59--59
+\OT1/ptm/m/n/10.95 prob-lem re-ports,
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 59--59
+\OT1/ptm/m/n/10.95 di-ag-nos-tic con-text,
+ []
+
+
+Underfull \hbox (badness 1648) in paragraph at lines 60--60
+[]\OT1/ptm/m/n/10.95 Lagging, noisy, and
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 60--60
+\OT1/ptm/m/n/10.95 privacy-sensitive;
+ []
+
+
+Underfull \hbox (badness 6608) in paragraph at lines 60--60
+\OT1/ptm/m/n/10.95 user-specific con-tent
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 61--62
+[]\OT1/ptm/m/n/10.95 Use with fresh-ness
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 61--62
+\OT1/ptm/m/n/10.95 con-trols and ac-cess
+ []
+
+
+Underfull \hbox (badness 4024) in paragraph at lines 61--62
+\OT1/ptm/m/n/10.95 re-stric-tions; strongest
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 61--62
+\OT1/ptm/m/n/10.95 for trou-bleshoot-ing
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 61--62
+\OT1/ptm/m/n/10.95 analo-gies and prior-
+ []
+
+
+Overfull \hbox (45.69041pt too wide) in paragraph at lines 43--64
+ [][] 
+ []
+
+[22]
+Underfull \vbox (badness 1852) has occurred while \output is active []
 
 
 Overfull \hbox (27.58992pt too wide) has occurred while \output is active
 \OT1/ptm/m/sl/12 2.3.  HETEROGENEOUS SUPPORT CORPORA: DOCUMENTATION AND TICKETS \OT1/ptm/m/n/12 23
  []
 
-[23] [24]
+[23]
+Overfull \hbox (0.68425pt too wide) in paragraph at lines 74--75
+[]\OT1/ptm/m/n/12 Taken to-gether, the lit-er-a-ture sup-ports mod-elling [][] sup-port ev-i-dence as a source-
+ []
+
+) [24]
 \openout2 = `chapter3.aux'.
 
  (./chapter3.tex
@@ -573,21 +765,21 @@ L3 programming layer <2026-01-19>
 LaTeX Warning: There were multiply-defined labels.
 
 Package rerunfilecheck Info: File `report.out' has not changed.
-(rerunfilecheck)             Checksum: 2F42F528F00DE2378F75546938A44654;16480.
+(rerunfilecheck)             Checksum: A2D10B3C7AD82E7188E04A0F5763FED3;16253.
  ) 
 Here is how much of TeX's memory you used:
- 11989 strings out of 467525
- 186460 string characters out of 5418982
- 607675 words of memory out of 5000000
- 40510 multiletter control sequences out of 15000+600000
- 655040 words of font info for 85 fonts, out of 8000000 for 9000
+ 12014 strings out of 467525
+ 186907 string characters out of 5418982
+ 610727 words of memory out of 5000000
+ 40535 multiletter control sequences out of 15000+600000
+ 664647 words of font info for 105 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 75i,6n,79p,1469b,640s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 75i,11n,79p,1941b,640s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/local/texlive/2026/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
-Output written on report.pdf (34 pages, 155279 bytes).
+Output written on report.pdf (34 pages, 158979 bytes).
 PDF statistics:
- 941 PDF objects out of 1000 (max. 8388607)
- 845 compressed objects within 9 object streams
- 161 named destinations out of 1000 (max. 500000)
- 662 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 974 PDF objects out of 1000 (max. 8388607)
+ 877 compressed objects within 9 object streams
+ 160 named destinations out of 1000 (max. 500000)
+ 654 words of extra memory for PDF output out of 10000 (max. 10000000)
 
