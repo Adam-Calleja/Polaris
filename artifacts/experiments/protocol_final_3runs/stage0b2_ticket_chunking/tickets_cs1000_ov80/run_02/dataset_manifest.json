@@ -2,7 +2,7 @@
   "dataset_path": "/app/data/test/ragas_one_hop_eval_dataset_final.dev.jsonl",
   "annotations_path": "/app/data/test/benchmark_annotations_final.csv",
   "prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0b2_ticket_chunking/tickets_cs1000_ov80/run_02/prepared_input.json",
-  "reuse_prepared": false,
+  "reuse_prepared": true,
   "query_field": "query",
   "reference_field": "expected_answer",
   "id_field": "id",
@@ -209,8 +209,8 @@
   "prep_total_rows": 70,
   "prep_success_rows": 70,
   "prep_failed_rows": 0,
-  "prep_elapsed_seconds": 241.51775941400047,
-  "prep_rate_rows_per_second": 0.28983375868442324,
+  "prep_elapsed_seconds": 0.0,
+  "prep_rate_rows_per_second": 0.0,
   "prep_error_classes": {},
   "prep_failure_classes": {},
   "prep_failure_class_rates": {},
@@ -242,6 +242,5 @@
       "max": 0.5039777777777777
     }
   },
-  "persisted_prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0b2_ticket_chunking/tickets_cs1000_ov80/run_02/prepared_input.json",
-  "prepared_source": "generated"
+  "prepared_source": "existing"
 }

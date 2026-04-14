@@ -361,7 +361,7 @@ defaults:
         mode: "pipeline"
         workers: 4
       run:
-        max_workers: 1
+        max_workers: 4
       adaptive_concurrency:
         enabled: false
       dataset:
@@ -631,6 +631,10 @@ stages:
           write_base_backoff_seconds: 1.0
           reduce_batch_on_failure: true
           min_insertion_batch_size: 1
+    run_options:
+      metrics:
+        - "faithfulness"
+        - "context_recall"
     conditions:
       - name: "tickets_cs600_ov0"
         preset: "tickets_only"
