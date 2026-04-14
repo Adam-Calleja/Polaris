@@ -20,10 +20,14 @@ def test_build_source_storage_context_uses_named_store(monkeypatch):
         return "storage-context"
 
     monkeypatch.setattr(ingest_jira_tickets, "build_storage_context", fake_build_storage_context)
+    monkeypatch.setattr(
+        ingest_jira_tickets,
+        "load_or_create_chunk_document_store",
+        lambda *, persist_dir, source: "chunk-docstore",
+    )
 
     container = SimpleNamespace(
         vector_stores={"tickets": "ticket-store"},
-        doc_store="chunk-docstore",
     )
 
     result = ingest_jira_tickets._build_source_storage_context(container, "tickets")
@@ -119,7 +123,7 @@ def test_main_index_only_creates_collection_without_loading_tickets(monkeypatch)
 
     monkeypatch.setattr(ingest_jira_tickets.GlobalConfig, "load", lambda path: fake_cfg)
     monkeypatch.setattr(ingest_jira_tickets, "build_container", lambda cfg: fake_container)
-    monkeypatch.setattr(ingest_jira_tickets, "_build_source_storage_context", lambda container, source: storage_context)
+    monkeypatch.setattr(ingest_jira_tickets, "_build_source_storage_context", lambda container, source, persist_dir=None: storage_context)
     monkeypatch.setattr(
         sys,
         "argv",
@@ -187,10 +191,10 @@ def test_main_markdown_chunking_path_persists_markdown_tickets(monkeypatch):
 
     monkeypatch.setattr(ingest_jira_tickets.GlobalConfig, "load", lambda path: fake_cfg)
     monkeypatch.setattr(ingest_jira_tickets, "build_container", lambda cfg: fake_container)
-    monkeypatch.setattr(ingest_jira_tickets, "_build_source_storage_context", lambda container, source: storage_context)
+    monkeypatch.setattr(ingest_jira_tickets, "_build_source_storage_context", lambda container, source, persist_dir=None: storage_context)
     monkeypatch.setattr(ingest_jira_tickets, "load_or_create_source_document_store", lambda persist_dir: source_docstore)
-    monkeypatch.setattr(ingest_jira_tickets, "persist_storage", lambda storage, persist_dir: None)
     monkeypatch.setattr(ingest_jira_tickets, "persist_docstore", lambda docstore, persist_path: None)
+    monkeypatch.setattr(ingest_jira_tickets, "chunk_document_store_path", lambda persist_dir, source: "chunk_docstore.tickets.json")
     monkeypatch.setattr(ingest_jira_tickets, "source_document_store_path", lambda persist_dir: "source_docstore.json")
     monkeypatch.setattr(ingest_jira_tickets, "add_chunks_to_docstore", lambda storage, chunks: len(chunks))
     monkeypatch.setattr(ingest_jira_tickets, "delete_ref_docs_from_docstore", lambda docstore, ids: deleted_from_docstore.extend(ids))
@@ -287,10 +291,10 @@ def test_main_clear_collection_resets_target_once_and_skips_batch_deletes(monkey
 
     monkeypatch.setattr(ingest_jira_tickets.GlobalConfig, "load", lambda path: fake_cfg)
     monkeypatch.setattr(ingest_jira_tickets, "build_container", lambda cfg: fake_container)
-    monkeypatch.setattr(ingest_jira_tickets, "_build_source_storage_context", lambda container, source: storage_context)
+    monkeypatch.setattr(ingest_jira_tickets, "_build_source_storage_context", lambda container, source, persist_dir=None: storage_context)
     monkeypatch.setattr(ingest_jira_tickets, "load_or_create_source_document_store", lambda persist_dir: source_docstore)
-    monkeypatch.setattr(ingest_jira_tickets, "persist_storage", lambda storage, persist_dir: None)
     monkeypatch.setattr(ingest_jira_tickets, "persist_docstore", lambda docstore, persist_path: None)
+    monkeypatch.setattr(ingest_jira_tickets, "chunk_document_store_path", lambda persist_dir, source: "chunk_docstore.tickets.json")
     monkeypatch.setattr(ingest_jira_tickets, "source_document_store_path", lambda persist_dir: "source_docstore.json")
     monkeypatch.setattr(ingest_jira_tickets, "add_chunks_to_docstore", lambda storage, chunks: len(chunks))
     monkeypatch.setattr(ingest_jira_tickets, "delete_ref_docs_from_docstore", lambda docstore, ids: deleted_from_docstore.extend(ids))
@@ -376,7 +380,6 @@ def test_main_processes_jira_tickets_in_fetch_batches(monkeypatch):
     deleted_ids: list[str] = []
     deleted_from_docstore: list[str] = []
     persisted_docs: list[str] = []
-    persist_storage_calls: list[str] = []
     persist_docstore_calls: list[str] = []
 
     fake_cfg = SimpleNamespace(
@@ -407,10 +410,10 @@ def test_main_processes_jira_tickets_in_fetch_batches(monkeypatch):
 
     monkeypatch.setattr(ingest_jira_tickets.GlobalConfig, "load", lambda path: fake_cfg)
     monkeypatch.setattr(ingest_jira_tickets, "build_container", lambda cfg: fake_container)
-    monkeypatch.setattr(ingest_jira_tickets, "_build_source_storage_context", lambda container, source: storage_context)
+    monkeypatch.setattr(ingest_jira_tickets, "_build_source_storage_context", lambda container, source, persist_dir=None: storage_context)
     monkeypatch.setattr(ingest_jira_tickets, "load_or_create_source_document_store", lambda persist_dir: source_docstore)
-    monkeypatch.setattr(ingest_jira_tickets, "persist_storage", lambda storage, persist_dir: persist_storage_calls.append(persist_dir))
     monkeypatch.setattr(ingest_jira_tickets, "persist_docstore", lambda docstore, persist_path: persist_docstore_calls.append(persist_path))
+    monkeypatch.setattr(ingest_jira_tickets, "chunk_document_store_path", lambda persist_dir, source: "chunk_docstore.tickets.json")
     monkeypatch.setattr(ingest_jira_tickets, "source_document_store_path", lambda persist_dir: "source_docstore.json")
     monkeypatch.setattr(ingest_jira_tickets, "add_chunks_to_docstore", lambda storage, chunks: len(chunks))
     monkeypatch.setattr(ingest_jira_tickets, "delete_ref_docs_from_docstore", lambda docstore, ids: deleted_from_docstore.extend(ids))
@@ -500,5 +503,9 @@ def test_main_processes_jira_tickets_in_fetch_batches(monkeypatch):
     assert deleted_ids == ["HPCSSUP-1", "HPCSSUP-2", "HPCSSUP-3"]
     assert deleted_from_docstore == ["HPCSSUP-1", "HPCSSUP-2", "HPCSSUP-3"]
     assert persisted_docs == ["HPCSSUP-1", "HPCSSUP-2", "HPCSSUP-3"]
-    assert persist_storage_calls == ["data/storage/local", "data/storage/local"]
-    assert persist_docstore_calls == ["source_docstore.json", "source_docstore.json"]
+    assert persist_docstore_calls == [
+        "chunk_docstore.tickets.json",
+        "source_docstore.json",
+        "chunk_docstore.tickets.json",
+        "source_docstore.json",
+    ]

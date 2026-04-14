@@ -26,9 +26,10 @@ from polaris_rag.retrieval.document_store_factory import (
     add_chunks_to_docstore,
     add_documents_to_docstore,
     build_storage_context,
+    chunk_document_store_path,
     load_or_create_source_document_store,
+    load_or_create_chunk_document_store,
     persist_docstore,
-    persist_storage,
     source_document_store_path,
 )
 from polaris_rag.retrieval.ingestion_settings import (
@@ -286,10 +287,14 @@ def _initialize_condition_runtime(
     stores = container.vector_stores
     if plan.source not in stores:
         raise KeyError(f"Unknown source {plan.source!r}. Available sources: {sorted(stores.keys())}")
+    chunk_docstore = load_or_create_chunk_document_store(
+        persist_dir=plan.persist_dir if resume else None,
+        source=plan.source,
+    )
     storage_context = build_storage_context(
         vector_store=stores[plan.source],
-        docstore=container.doc_store,
-        persist_dir=plan.persist_dir if resume else None,
+        docstore=chunk_docstore,
+        persist_dir=None,
     )
     vector_store = getattr(storage_context, "vector_store", None)
     if vector_store is None or not hasattr(vector_store, "recreate_collection"):
@@ -357,7 +362,10 @@ def _process_condition_batch(
 def _persist_condition_runtime(runtime: SharedJiraConditionRuntime) -> None:
     plan = runtime.plan
     print(f"[{plan.entry.name}] Persisting storage context to {plan.persist_dir}...")
-    persist_storage(storage=runtime.storage_context, persist_dir=plan.persist_dir)
+    persist_docstore(
+        runtime.storage_context.docstore,
+        persist_path=chunk_document_store_path(plan.persist_dir, plan.source),
+    )
     persist_docstore(
         runtime.source_document_store,
         persist_path=source_document_store_path(plan.persist_dir),

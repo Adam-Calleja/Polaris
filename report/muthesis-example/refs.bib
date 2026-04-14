@@ -292,3 +292,33 @@ series = {SC Workshops '25}
   isbn = {979-8-89176-251-0},
   file = {/Users/adam/Zotero/storage/SDFWFYYN/Ouyang et al. - 2025 - HoH A Dynamic Benchmark for Evaluating the Impact of Outdated Information on Retrieval-Augmented Ge.pdf}
 }
+
+@inproceedings{ruRAGCheckerFinegrainedFramework2024,
+  title = {{{RAGChecker}}: {{A Fine-grained Framework}} for {{Diagnosing Retrieval-Augmented Generation}}},
+  shorttitle = {{{RAGChecker}}},
+  booktitle = {The {{Thirty-eight Conference}} on {{Neural Information Processing Systems Datasets}} and {{Benchmarks Track}}},
+  author = {Ru, Dongyu and Qiu, Lin and Hu, Xiangkun and Zhang, Tianhang and Shi, Peng and Chang, Shuaichen and Jiayang, Cheng and Wang, Cunxiang and Sun, Shichao and Li, Huanyu and Zhang, Zizhao and Wang, Binjie and Jiang, Jiarong and He, Tong and Wang, Zhiguo and Liu, Pengfei and Zhang, Yue and Zhang, Zheng},
+  year = 2024,
+  month = nov,
+  urldate = {2026-04-14},
+  abstract = {Despite Retrieval-Augmented Generation (RAG) has shown promising capability in leveraging external knowledge, a comprehensive evaluation of RAG systems is still challenging due to the modular nature of RAG, evaluation of long-form responses and reliability of measurements. In this paper, we propose a fine-grained evaluation framework, RAGChecker, that incorporates a suite of diagnostic metrics for both the retrieval and generation modules. Meta evaluation verifies that RAGChecker has significantly better correlations with human judgments than other evaluation metrics. Using RAGChecker, we evaluate 8 RAG systems and conduct an in-depth analysis of their performance, revealing insightful patterns and trade-offs in the design choices of RAG architectures. The metrics of RAGChecker can guide researchers and practitioners in developing more effective RAG systems.},
+  langid = {english},
+  file = {/Users/adam/Zotero/storage/RFFDPM54/Ru et al. - 2024 - RAGChecker A Fine-grained Framework for Diagnosing Retrieval-Augmented Generation.pdf}
+}
+
+@inproceedings{saad-falconARESAutomatedEvaluation2024,
+  title = {{{ARES}}: {{An Automated Evaluation Framework}} for {{Retrieval-Augmented Generation Systems}}},
+  shorttitle = {{{ARES}}},
+  booktitle = {Proceedings of the 2024 {{Conference}} of the {{North American Chapter}} of the {{Association}} for {{Computational Linguistics}}: {{Human Language Technologies}} ({{Volume}} 1: {{Long Papers}})},
+  author = {{Saad-Falcon}, Jon and Khattab, Omar and Potts, Christopher and Zaharia, Matei},
+  editor = {Duh, Kevin and Gomez, Helena and Bethard, Steven},
+  year = 2024,
+  month = jun,
+  pages = {338--354},
+  publisher = {Association for Computational Linguistics},
+  address = {Mexico City, Mexico},
+  doi = {10.18653/v1/2024.naacl-long.20},
+  urldate = {2026-04-14},
+  abstract = {Evaluating retrieval-augmented generation (RAG) systems traditionally relies on hand annotations for input queries, passages to retrieve, and responses to generate. We introduce ARES, an Automated RAG Evaluation System, for evaluating RAG systems along the dimensions of context relevance, answer faithfulness, and answer relevance. By creating its own synthetic training data, ARES finetunes lightweight LM judges to assess the quality of individual RAG components. To mitigate potential prediction errors, ARES utilizes a small set of human-annotated datapoints for prediction-powered inference (PPI). Across eight different knowledge-intensive tasks in KILT, SuperGLUE, and AIS, ARES accurately evaluates RAG systems while using only a few hundred human annotations during evaluation. Furthermore, ARES judges remain effective across domain shifts, proving accurate even after changing the type of queries and/or documents used in the evaluated RAG systems. We make our code and datasets publicly available on Github.},
+  file = {/Users/adam/Zotero/storage/IE3RPRWZ/Saad-Falcon et al. - 2024 - ARES An Automated Evaluation Framework for Retrieval-Augmented Generation Systems.pdf}
+}

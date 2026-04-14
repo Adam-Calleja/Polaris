@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+import copy
+from collections import Counter, defaultdict
 from dataclasses import dataclass
 import hashlib
 import json
+import math
 from pathlib import Path
+import re
 import time
 from typing import Any, Mapping, Optional
 
@@ -164,6 +168,234 @@ class SparseIndexRetriever:
     def retriever_fingerprint(self) -> str:
         """Return the active retriever fingerprint."""
         return retriever_fingerprint(self._profile)
+
+
+class BM25IndexRetriever:
+    """BM25 retriever over a configured source chunk docstore."""
+
+    def __init__(
+        self,
+        *,
+        storage_context: StorageContext,
+        filters: Optional[MetadataFilters] = None,
+        top_k: Optional[int] = 5,
+        retrieval_profile: Mapping[str, Any] | None = None,
+        **_: Any,
+    ) -> None:
+        self._filters = filters
+        self._docstore = getattr(storage_context, "docstore", None)
+        if self._docstore is None:
+            raise ValueError("BM25IndexRetriever requires a storage context with a docstore.")
+
+        profile = dict(retrieval_profile or {})
+        bm25_cfg = _as_mapping(profile.get("bm25", {}))
+        self._top_k = max(1, int(profile.get("bm25_top_k", profile.get("top_k", top_k or 5))))
+        self._k1 = _coerce_float(bm25_cfg.get("k1"), 1.5)
+        self._b = _coerce_float(bm25_cfg.get("b"), 0.75)
+        self._corpus = _BM25Corpus.from_docstore(
+            self._docstore,
+            k1=self._k1,
+            b=self._b,
+        )
+        self._profile = {
+            "type": "bm25",
+            "top_k": self._top_k,
+            "filters": _metadata_filters_profile(filters),
+            "docstore": _docstore_profile(self._docstore, node_count=self._corpus.document_count),
+            "bm25": {
+                "k1": self._k1,
+                "b": self._b,
+            },
+        }
+
+    def retrieve(
+        self,
+        query: str,
+        *,
+        timeout_seconds: float | None = None,
+        query_constraints: Any | None = None,
+        **kwargs: Any,
+    ) -> list[NodeWithScore]:
+        _ = query_constraints, kwargs
+        results = self._corpus.search(
+            query,
+            top_k=self._top_k,
+            filters=self._filters,
+            timeout_seconds=timeout_seconds,
+        )
+        return _stamp_bm25_results(results)
+
+    def retriever_profile(self) -> dict[str, Any]:
+        """Return the active retriever profile."""
+        return dict(self._profile)
+
+    def retriever_fingerprint(self) -> str:
+        """Return the active retriever fingerprint."""
+        return retriever_fingerprint(self._profile)
+
+
+class DenseBM25HybridRetriever:
+    """Hybrid dense+BM25 retriever with client-side within-source fusion."""
+
+    def __init__(
+        self,
+        *,
+        storage_context: StorageContext,
+        filters: Optional[MetadataFilters] = None,
+        top_k: Optional[int] = 5,
+        vector_store: QdrantIndexStore | None = None,
+        embedder: Any | None = None,
+        retrieval_profile: Mapping[str, Any] | None = None,
+        **_: Any,
+    ) -> None:
+        profile = dict(retrieval_profile or {})
+        fusion_cfg = _as_mapping(profile.get("fusion", {}))
+        signal_weights = _as_mapping(fusion_cfg.get("signal_weights", {}))
+
+        self._filters = filters
+        self._dense_top_k = max(1, int(profile.get("dense_top_k", top_k or 5)))
+        self._bm25_top_k = max(
+            1,
+            int(profile.get("bm25_top_k", profile.get("sparse_top_k", profile.get("dense_top_k", top_k or 5)))),
+        )
+        self._top_k = max(1, int(profile.get("top_k", top_k or 5)))
+        self._fusion_type = str(fusion_cfg.get("type", "rrf") or "rrf").strip().lower()
+        if self._fusion_type != "rrf":
+            raise ValueError(
+                f"Unsupported hybrid fusion type {self._fusion_type!r}. Supported fusion types: ['rrf']."
+            )
+        self._rrf_k = max(1, int(fusion_cfg.get("rrf_k", 60) or 60))
+        self._signal_weights = {
+            "dense": _coerce_float(signal_weights.get("dense"), 1.0),
+            "bm25": _coerce_float(signal_weights.get("bm25", signal_weights.get("sparse")), 1.0),
+        }
+
+        self._dense_retriever = VectorIndexRetriever(
+            storage_context=storage_context,
+            filters=filters,
+            top_k=self._dense_top_k,
+            vector_store=vector_store,
+            embedder=embedder,
+            retrieval_profile=profile,
+        )
+        self._bm25_retriever = BM25IndexRetriever(
+            storage_context=storage_context,
+            filters=filters,
+            top_k=self._bm25_top_k,
+            retrieval_profile=profile,
+        )
+        self._profile = {
+            "type": "dense_bm25_hybrid",
+            "dense_top_k": self._dense_top_k,
+            "bm25_top_k": self._bm25_top_k,
+            "top_k": self._top_k,
+            "filters": _metadata_filters_profile(filters),
+            "fusion": {
+                "type": self._fusion_type,
+                "rrf_k": self._rrf_k,
+                "signal_weights": dict(self._signal_weights),
+            },
+            "vector_store": _retriever_profile(self._dense_retriever).get("vector_store") if _retriever_profile(self._dense_retriever) else None,
+            "docstore": _retriever_profile(self._bm25_retriever).get("docstore") if _retriever_profile(self._bm25_retriever) else None,
+            "bm25": _retriever_profile(self._bm25_retriever).get("bm25") if _retriever_profile(self._bm25_retriever) else None,
+        }
+
+    def retrieve(
+        self,
+        query: str,
+        *,
+        timeout_seconds: float | None = None,
+        query_constraints: Any | None = None,
+        **kwargs: Any,
+    ) -> list[NodeWithScore]:
+        deadline = None
+        if timeout_seconds is not None:
+            deadline = time.monotonic() + max(0.0, float(timeout_seconds))
+
+        dense_results = self._dense_retriever.retrieve(
+            query,
+            timeout_seconds=_remaining_timeout(deadline, "dense"),
+            query_constraints=query_constraints,
+            **kwargs,
+        )
+        bm25_results = self._bm25_retriever.retrieve(
+            query,
+            timeout_seconds=_remaining_timeout(deadline, "bm25"),
+            query_constraints=query_constraints,
+            **kwargs,
+        )
+        return self._fuse_results(dense_results=dense_results, bm25_results=bm25_results)
+
+    def retriever_profile(self) -> dict[str, Any]:
+        """Return the active retriever profile."""
+        return dict(self._profile)
+
+    def retriever_fingerprint(self) -> str:
+        """Return the active retriever fingerprint."""
+        return retriever_fingerprint(self._profile)
+
+    def _fuse_results(
+        self,
+        *,
+        dense_results: list[NodeWithScore],
+        bm25_results: list[NodeWithScore],
+    ) -> list[NodeWithScore]:
+        merged: dict[str, _FusedCandidate] = {}
+
+        for rank, item in enumerate(dense_results, start=1):
+            node_with_score = _coerce_node_with_score(item)
+            node = node_with_score.node
+            node_id = _node_id(node)
+            entry = merged.setdefault(node_id, _FusedCandidate(node=node))
+            entry.node = _preferred_node(entry.node, node, existing_score=entry.best_score, candidate_score=node_with_score.score)
+            entry.best_score = _better_score(entry.best_score, node_with_score.score)
+            entry.dense_rank = min(entry.dense_rank, rank) if entry.dense_rank is not None else rank
+            entry.dense_score = _better_score(entry.dense_score, node_with_score.score)
+
+        for rank, item in enumerate(bm25_results, start=1):
+            node_with_score = _coerce_node_with_score(item)
+            node = node_with_score.node
+            node_id = _node_id(node)
+            entry = merged.setdefault(node_id, _FusedCandidate(node=node))
+            entry.node = _preferred_node(entry.node, node, existing_score=entry.best_score, candidate_score=node_with_score.score)
+            entry.best_score = _better_score(entry.best_score, node_with_score.score)
+            entry.bm25_rank = min(entry.bm25_rank, rank) if entry.bm25_rank is not None else rank
+            entry.bm25_score = _better_score(entry.bm25_score, node_with_score.score)
+
+        items: list[tuple[float, float, str, NodeWithScore]] = []
+        for node_id, entry in merged.items():
+            fusion_score = 0.0
+            if entry.dense_rank is not None:
+                fusion_score += self._signal_weights["dense"] / float(self._rrf_k + entry.dense_rank)
+            if entry.bm25_rank is not None:
+                fusion_score += self._signal_weights["bm25"] / float(self._rrf_k + entry.bm25_rank)
+            entry.fusion_score = fusion_score
+            _stamp_signal_trace(
+                entry.node,
+                {
+                    "signal_type": "hybrid_rrf",
+                    "hybrid_kind": "dense_bm25",
+                    "fusion_type": self._fusion_type,
+                    "rrf_k": self._rrf_k,
+                    "signal_weights": dict(self._signal_weights),
+                    "dense_rank": entry.dense_rank,
+                    "dense_score": _float_or_none(entry.dense_score),
+                    "bm25_rank": entry.bm25_rank,
+                    "bm25_score": _float_or_none(entry.bm25_score),
+                    "fusion_score": fusion_score,
+                },
+            )
+            items.append(
+                (
+                    fusion_score,
+                    _tie_break_score(entry),
+                    node_id,
+                    NodeWithScore(node=entry.node, score=fusion_score),
+                )
+            )
+
+        items.sort(key=lambda item: (-item[0], -item[1], item[2]))
+        return [item[3] for item in items[: self._top_k]]
 
 
 class HybridRetriever:
@@ -479,6 +711,131 @@ class MultiCollectionRetriever:
         )
 
 
+class _BM25Corpus:
+    TOKEN_PATTERN = re.compile(r"[A-Za-z0-9_]+")
+
+    def __init__(
+        self,
+        *,
+        nodes: list[Any],
+        postings: Mapping[str, list[tuple[int, int]]],
+        document_frequencies: Mapping[str, int],
+        document_lengths: list[int],
+        avg_document_length: float,
+        k1: float,
+        b: float,
+    ) -> None:
+        self._nodes = list(nodes)
+        self._postings = {str(term): list(entries) for term, entries in postings.items()}
+        self._document_frequencies = {str(term): int(freq) for term, freq in document_frequencies.items()}
+        self._document_lengths = [int(length) for length in document_lengths]
+        self._avg_document_length = max(float(avg_document_length), 1.0)
+        self._k1 = max(0.0, float(k1))
+        self._b = max(0.0, float(b))
+
+    @classmethod
+    def from_docstore(
+        cls,
+        docstore: Any,
+        *,
+        k1: float,
+        b: float,
+    ) -> "_BM25Corpus":
+        nodes = _docstore_nodes(docstore)
+        postings: dict[str, list[tuple[int, int]]] = defaultdict(list)
+        document_frequencies: dict[str, int] = defaultdict(int)
+        document_lengths: list[int] = []
+
+        for doc_index, node in enumerate(nodes):
+            tokens = cls.tokenize(_node_text(node))
+            document_lengths.append(len(tokens))
+            term_counts = Counter(tokens)
+            for term, freq in term_counts.items():
+                postings[term].append((doc_index, int(freq)))
+                document_frequencies[term] += 1
+
+        avg_document_length = (
+            sum(document_lengths) / float(len(document_lengths))
+            if document_lengths else 1.0
+        )
+        return cls(
+            nodes=nodes,
+            postings=postings,
+            document_frequencies=document_frequencies,
+            document_lengths=document_lengths,
+            avg_document_length=avg_document_length,
+            k1=k1,
+            b=b,
+        )
+
+    @property
+    def document_count(self) -> int:
+        return len(self._nodes)
+
+    @classmethod
+    def tokenize(cls, text: str) -> list[str]:
+        return [match.group(0).lower() for match in cls.TOKEN_PATTERN.finditer(str(text or ""))]
+
+    def search(
+        self,
+        query: str,
+        *,
+        top_k: int,
+        filters: MetadataFilters | dict | None = None,
+        timeout_seconds: float | None = None,
+    ) -> list[NodeWithScore]:
+        if not self._nodes:
+            return []
+
+        query_terms = Counter(self.tokenize(query))
+        if not query_terms:
+            return []
+
+        deadline = None
+        if timeout_seconds is not None:
+            deadline = time.monotonic() + max(0.0, float(timeout_seconds))
+
+        scores: dict[int, float] = defaultdict(float)
+        document_count = len(self._nodes)
+        for term, query_term_frequency in query_terms.items():
+            _ensure_bm25_time_remaining(deadline)
+            postings = self._postings.get(term)
+            if not postings:
+                continue
+            document_frequency = self._document_frequencies.get(term, 0)
+            if document_frequency <= 0:
+                continue
+            idf = math.log(1.0 + ((document_count - document_frequency + 0.5) / (document_frequency + 0.5)))
+            for doc_index, term_frequency in postings:
+                node = self._nodes[doc_index]
+                if not _node_matches_filters(node, filters):
+                    continue
+                doc_length = self._document_lengths[doc_index] if doc_index < len(self._document_lengths) else 0
+                norm = self._k1 * (1.0 - self._b + self._b * (float(doc_length) / self._avg_document_length))
+                denominator = float(term_frequency) + norm
+                if denominator <= 0.0:
+                    continue
+                scores[doc_index] += (
+                    idf
+                    * ((float(term_frequency) * (self._k1 + 1.0)) / denominator)
+                    * float(query_term_frequency)
+                )
+
+        ranked = sorted(
+            scores.items(),
+            key=lambda item: (-item[1], _node_id(self._nodes[item[0]])),
+        )
+        results: list[NodeWithScore] = []
+        for doc_index, score in ranked[: max(1, int(top_k))]:
+            results.append(
+                NodeWithScore(
+                    node=_clone_node(self._nodes[doc_index]),
+                    score=float(score),
+                )
+            )
+        return results
+
+
 @dataclass
 class _FusedCandidate:
     node: Any
@@ -487,6 +844,8 @@ class _FusedCandidate:
     dense_score: float | None = None
     sparse_rank: int | None = None
     sparse_score: float | None = None
+    bm25_rank: int | None = None
+    bm25_score: float | None = None
     fusion_score: float | None = None
 
 
@@ -548,6 +907,22 @@ def _stamp_sparse_results(
     return stamped
 
 
+def _stamp_bm25_results(results: list[NodeWithScore]) -> list[NodeWithScore]:
+    stamped: list[NodeWithScore] = []
+    for rank, item in enumerate(results, start=1):
+        node_with_score = _coerce_node_with_score(item)
+        _stamp_signal_trace(
+            node_with_score.node,
+            {
+                "signal_type": "bm25",
+                "bm25_rank": rank,
+                "bm25_score": _float_or_none(node_with_score.score),
+            },
+        )
+        stamped.append(node_with_score)
+    return stamped
+
+
 def _stamp_signal_trace(node: Any, trace: Mapping[str, Any]) -> None:
     metadata = getattr(node, "metadata", None)
     if not isinstance(metadata, dict):
@@ -565,6 +940,13 @@ def _remaining_timeout(deadline: float | None, stage: str) -> float | None:
     if remaining <= 0:
         raise RetrievalTimeoutError(f"retrieval timed out before querying {stage!r}")
     return remaining
+
+
+def _ensure_bm25_time_remaining(deadline: float | None) -> None:
+    if deadline is None:
+        return
+    if deadline - time.monotonic() <= 0.0:
+        raise RetrievalTimeoutError("retrieval timed out during 'bm25' scoring")
 
 
 def _coerce_node_with_score(item: Any) -> NodeWithScore:
@@ -622,9 +1004,42 @@ def _preferred_node(
 def _tie_break_score(entry: _FusedCandidate) -> float:
     return max(
         score
-        for score in [entry.best_score, entry.dense_score, entry.sparse_score]
+        for score in [entry.best_score, entry.dense_score, entry.sparse_score, entry.bm25_score]
         if score is not None
-    ) if any(score is not None for score in [entry.best_score, entry.dense_score, entry.sparse_score]) else 0.0
+    ) if any(
+        score is not None
+        for score in [entry.best_score, entry.dense_score, entry.sparse_score, entry.bm25_score]
+    ) else 0.0
+
+
+def _clone_node(node: Any) -> Any:
+    try:
+        return copy.deepcopy(node)
+    except Exception:
+        return node
+
+
+def _node_text(node: Any) -> str:
+    text = getattr(node, "text", None)
+    if isinstance(text, str):
+        return text
+    getter = getattr(node, "get_content", None)
+    if callable(getter):
+        try:
+            value = getter()
+        except Exception:
+            value = None
+        if isinstance(value, str):
+            return value
+    return ""
+
+
+def _docstore_nodes(docstore: Any) -> list[Any]:
+    docs = getattr(docstore, "docs", None)
+    if not isinstance(docs, Mapping):
+        return []
+    items = sorted(docs.items(), key=lambda item: str(item[0]))
+    return [node for _, node in items if node is not None]
 
 
 def _vector_store_profile(vector_store: QdrantIndexStore | None) -> dict[str, Any] | None:
@@ -638,6 +1053,16 @@ def _vector_store_profile(vector_store: QdrantIndexStore | None) -> dict[str, An
             return None
         return _stable_json_value(profile)
     return None
+
+
+def _docstore_profile(docstore: Any, *, node_count: int | None = None) -> dict[str, Any] | None:
+    if docstore is None:
+        return None
+    profile = {
+        "backend": type(docstore).__name__,
+        "node_count": int(node_count) if node_count is not None else len(_docstore_nodes(docstore)),
+    }
+    return _stable_json_value(profile)
 
 
 def _retriever_profile(retriever: Any) -> dict[str, Any] | None:
@@ -702,6 +1127,80 @@ def _metadata_filters_profile(filters: MetadataFilters | None) -> dict[str, Any]
     return result
 
 
+def _node_matches_filters(
+    node: Any,
+    filters: MetadataFilters | dict | None,
+) -> bool:
+    if filters is None:
+        return True
+    metadata = getattr(node, "metadata", None)
+    metadata = metadata if isinstance(metadata, Mapping) else {}
+    if isinstance(filters, dict):
+        return all(metadata.get(key) == value for key, value in filters.items())
+    if not isinstance(filters, MetadataFilters):
+        return True
+
+    child_results = [
+        _node_matches_filters(node, item) if isinstance(item, MetadataFilters)
+        else _metadata_filter_matches(metadata, item)
+        for item in list(getattr(filters, "filters", []) or [])
+    ]
+    raw_condition = getattr(filters, "condition", "and")
+    condition = str(getattr(raw_condition, "value", raw_condition) or "and").lower()
+    if condition == "or":
+        return any(child_results)
+    if condition == "not":
+        return not any(child_results)
+    return all(child_results)
+
+
+def _metadata_filter_matches(metadata: Mapping[str, Any], metadata_filter: MetadataFilter) -> bool:
+    key = str(getattr(metadata_filter, "key", "") or "")
+    raw_operator = getattr(metadata_filter, "operator", "==")
+    operator = str(getattr(raw_operator, "value", raw_operator) or "==").lower()
+    expected = getattr(metadata_filter, "value", None)
+    actual = metadata.get(key)
+
+    if operator == "==":
+        return actual == expected
+    if operator == "!=":
+        return actual != expected
+    if operator == ">":
+        lhs, rhs = _ordered_values(actual, expected)
+        return lhs > rhs
+    if operator == ">=":
+        lhs, rhs = _ordered_values(actual, expected)
+        return lhs >= rhs
+    if operator == "<":
+        lhs, rhs = _ordered_values(actual, expected)
+        return lhs < rhs
+    if operator == "<=":
+        lhs, rhs = _ordered_values(actual, expected)
+        return lhs <= rhs
+    if operator == "in":
+        return actual in expected if isinstance(expected, (list, tuple, set, frozenset)) else False
+    if operator == "nin":
+        return actual not in expected if isinstance(expected, (list, tuple, set, frozenset)) else True
+    if operator == "any":
+        if not isinstance(actual, (list, tuple, set, frozenset)):
+            return False
+        expected_values = expected if isinstance(expected, (list, tuple, set, frozenset)) else [expected]
+        return any(value in actual for value in expected_values)
+    if operator == "all":
+        if not isinstance(actual, (list, tuple, set, frozenset)):
+            return False
+        expected_values = expected if isinstance(expected, (list, tuple, set, frozenset)) else [expected]
+        return all(value in actual for value in expected_values)
+    return actual == expected
+
+
+def _ordered_values(left: Any, right: Any) -> tuple[Any, Any]:
+    try:
+        return float(left), float(right)
+    except Exception:
+        return str(left), str(right)
+
+
 def _stable_json_value(value: Any) -> Any:
     if isinstance(value, Mapping):
         return {
@@ -728,6 +1227,8 @@ def _as_mapping(value: Any) -> dict[str, Any]:
 
 
 __all__ = [
+    "BM25IndexRetriever",
+    "DenseBM25HybridRetriever",
     "HybridRetriever",
     "MultiCollectionRetriever",
     "SparseIndexRetriever",

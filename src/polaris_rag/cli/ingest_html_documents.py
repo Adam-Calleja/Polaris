@@ -52,8 +52,10 @@ from polaris_rag.retrieval.document_preprocessor import preprocess_html_document
 from polaris_rag.retrieval.document_store_factory import (
     add_chunks_to_docstore,
     build_storage_context,
+    chunk_document_store_path,
     delete_ref_docs_from_docstore,
-    persist_storage,
+    load_or_create_chunk_document_store,
+    persist_docstore,
 )
 from polaris_rag.retrieval.ingestion_settings import (
     HTML_HIERARCHICAL_CHUNKING_STRATEGY,
@@ -310,7 +312,7 @@ def _override_qdrant_collection_name(cfg: GlobalConfig, source: str, cli_value: 
     selected_store["collection_name"] = cli_value
 
 
-def _build_source_storage_context(container: Any, source: str) -> Any:
+def _build_source_storage_context(container: Any, source: str, *, persist_dir: str | None = None) -> Any:
     """Build source Storage Context.
     
     Parameters
@@ -334,9 +336,13 @@ def _build_source_storage_context(container: Any, source: str) -> Any:
     if source not in stores:
         raise KeyError(f"Unknown source {source!r}. Available sources: {sorted(stores.keys())}")
 
+    docstore = load_or_create_chunk_document_store(
+        persist_dir=persist_dir,
+        source=source,
+    )
     return build_storage_context(
         vector_store=stores[source],
-        docstore=container.doc_store,
+        docstore=docstore,
         persist_dir=None,
     )
 
@@ -405,13 +411,13 @@ def main() -> None:
         embedder_cfg["num_workers"] = int(args.embedding_workers)
 
     _override_qdrant_collection_name(cfg, args.source, args.qdrant_collection_name)
+    persist_dir = _resolve_persist_dir(cfg, args.persist_dir)
     container = build_container(cfg)
-    storage_context = _build_source_storage_context(container, args.source)
+    storage_context = _build_source_storage_context(container, args.source, persist_dir=persist_dir)
     if args.index_only:
         _ensure_index_only_collection(storage_context, args.source)
         return
 
-    persist_dir = _resolve_persist_dir(cfg, args.persist_dir)
     conditions = cfg.document_preprocess_html_conditions
     tags = cfg.document_preprocess_html_tags
     link_classes = cfg.document_preprocess_html_link_classes
@@ -513,10 +519,10 @@ def main() -> None:
         chunks=chunks,
     )
 
-    print("Persisting storage context...")
-    persist_storage(
-        storage=storage_context,
-        persist_dir=persist_dir,
+    print("Persisting source chunk document store...")
+    persist_docstore(
+        storage_context.docstore,
+        persist_path=chunk_document_store_path(persist_dir, args.source),
     )
 
     print("Ingestion complete!")

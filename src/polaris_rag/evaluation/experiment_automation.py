@@ -292,7 +292,10 @@ def _run_evaluation_grid_stage(
                 stage_name=stage_name,
                 condition_name=condition_name,
             )
-            ingest_specs = _ingest_specs(condition_spec)
+            ingest_specs = [
+                _resolve_ingest_spec_paths(manifest, spec)
+                for spec in _ingest_specs(condition_spec)
+            ]
             if len(ingest_specs) != 1:
                 raise ValueError(
                     f"Shared Jira fanout requires exactly one ingest spec per condition; "
@@ -352,7 +355,10 @@ def _run_evaluation_grid_stage(
             "runs": [],
         }
 
-        ingest_specs = _ingest_specs(condition_spec)
+        ingest_specs = [
+            _resolve_ingest_spec_paths(manifest, spec)
+            for spec in _ingest_specs(condition_spec)
+        ]
         should_run_ingest = execution_phase in {BOTH_PHASE, INDEX_PHASE}
         condition_record["ingestion_skipped"] = bool(ingest_specs) and not should_run_ingest
         if should_run_ingest:
@@ -1005,6 +1011,29 @@ def _ingest_specs(condition_spec: Mapping[str, Any]) -> list[dict[str, Any]]:
         if kind == "html" and not str(spec.get("homepage", "")).strip():
             raise ValueError("HTML ingest specs must define 'homepage'.")
     return specs
+
+
+def _resolve_ingest_spec_paths(
+    manifest: Mapping[str, Any],
+    ingest_spec: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Resolve manifest-relative path fields inside one ingest spec."""
+    resolved = dict(ingest_spec)
+    kind = str(resolved.get("kind", "")).strip()
+    path_fields = {"persist_dir"}
+
+    if kind == "jira":
+        path_fields.update({"exclude_keys_file", "dump_path"})
+    elif kind == "external_docs":
+        path_fields.update({"source_register_file"})
+
+    for field in path_fields:
+        raw_value = resolved.get(field)
+        resolved_path = _resolve_optional_path(manifest, raw_value)
+        if resolved_path is not None:
+            resolved[field] = str(resolved_path)
+
+    return resolved
 
 
 def _read_metric_means(path: Path) -> dict[str, float | None]:

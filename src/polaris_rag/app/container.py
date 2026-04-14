@@ -530,7 +530,10 @@ class PolarisContainer:
         dict[str, Any]
             Mapping from source name to storage context.
         """
-        from polaris_rag.retrieval.document_store_factory import build_storage_context
+        from polaris_rag.retrieval.document_store_factory import (
+            build_storage_context,
+            load_or_create_chunk_document_store,
+        )
 
         stores = self.vector_stores
         source_settings = self.retriever_source_settings
@@ -544,9 +547,13 @@ class PolarisContainer:
                     f"Available: {available}"
                 )
 
+            source_docstore = load_or_create_chunk_document_store(
+                persist_dir=self.storage_persist_dir,
+                source=source_name,
+            )
             contexts[source_name] = build_storage_context(
                 vector_store=stores[source_name],
-                docstore=self.doc_store,
+                docstore=source_docstore,
                 persist_dir=None,
             )
 
@@ -565,7 +572,7 @@ class PolarisContainer:
         section = _as_mapping(self.config.retriever)
         source_kind = section.get("source_type") or "vector"
         source_kind = str(source_kind).strip().lower().replace("-", "_")
-        if source_kind not in {"vector", "hybrid", "sparse"}:
+        if source_kind not in {"vector", "hybrid", "sparse", "bm25", "dense_bm25_hybrid", "bm25_hybrid", "dense_bm25"}:
             source_kind = "vector"
 
         from polaris_rag.retrieval.retriever_factory import create
@@ -665,6 +672,16 @@ class PolarisContainer:
                 embedder=self.embedder,
                 retrieval_profile=section.get("hybrid_profile"),
                 sparse_query_expander=self.sparse_query_expander,
+            )
+        if kind in {"dense_bm25_hybrid", "bm25_hybrid", "dense_bm25", "bm25"}:
+            return create(
+                kind=kind,
+                storage_context=self.storage_context,
+                top_k=section.get("top_k"),
+                filters=section.get("filters"),
+                vector_store=self.vector_store,
+                embedder=self.embedder,
+                retrieval_profile=section.get("hybrid_profile"),
             )
         if kind == "sparse":
             return create(

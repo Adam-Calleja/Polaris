@@ -23,7 +23,7 @@ create_vector_store
 import asyncio
 import math
 import time
-from typing import TYPE_CHECKING, Any, Iterable, Mapping, Optional
+from typing import TYPE_CHECKING, Any, Iterable, Iterator, Mapping, Optional
 from uuid import UUID, NAMESPACE_URL, uuid5
 import httpx
 from openai import APIConnectionError as OpenAIAPIConnectionError
@@ -915,6 +915,65 @@ class QdrantIndexStore(BaseVectorStore):
 
     def persist(self, **kwargs):
         return None
+
+    def iter_payload_nodes(
+        self,
+        *,
+        batch_size: int = 512,
+        filters: MetadataFilters | dict | None = None,
+        timeout_seconds: float | None = None,
+    ) -> Iterator[TextNode]:
+        """Yield stored nodes reconstructed from Qdrant payloads.
+
+        Parameters
+        ----------
+        batch_size : int, optional
+            Number of points to fetch per Qdrant scroll request.
+        filters : MetadataFilters or dict or None, optional
+            Optional metadata filters forwarded to the Qdrant scroll query.
+        timeout_seconds : float or None, optional
+            Optional overall timeout budget for the scroll operation.
+
+        Yields
+        ------
+        TextNode
+            Reconstructed node from the stored payload.
+        """
+        if not self.client.collection_exists(self.collection_name):
+            return
+
+        retrieval_started_at = time.perf_counter()
+        qdrant_timeout = self._remaining_qdrant_timeout(
+            timeout_seconds=timeout_seconds,
+            retrieval_started_at=retrieval_started_at,
+        ) if timeout_seconds is not None else None
+        scroll_filter = self._query_filter(filters)
+        offset: Any | None = None
+        step = max(1, int(batch_size))
+
+        while True:
+            try:
+                points, offset = self.client.scroll(
+                    collection_name=self.collection_name,
+                    scroll_filter=scroll_filter,
+                    limit=step,
+                    offset=offset,
+                    with_payload=True,
+                    with_vectors=False,
+                    timeout=qdrant_timeout,
+                )
+            except Exception as exc:
+                if timeout_seconds is not None and is_timeout_exception(exc):
+                    raise RetrievalTimeoutError(
+                        f"vector-store payload scroll timed out after {float(timeout_seconds):.3f}s"
+                    ) from exc
+                raise
+
+            for point in list(points or []):
+                yield self._point_to_node(point)
+
+            if offset is None:
+                break
 
     def _remaining_qdrant_timeout(
         self,

@@ -20,6 +20,8 @@ from llama_index.core.vector_stores.types import MetadataFilters
 from llama_index.core import StorageContext
 
 from polaris_rag.retrieval.retriever import (
+    BM25IndexRetriever,
+    DenseBM25HybridRetriever,
     HybridRetriever,
     SparseIndexRetriever,
     VectorIndexRetriever,
@@ -137,6 +139,19 @@ def _build_hybrid(**kw) -> Retriever:
     """
     return HybridRetriever(**kw)
 
+@register("dense_bm25_hybrid")
+@register("bm25_hybrid")
+@register("dense_bm25")
+def _build_dense_bm25_hybrid(**kw) -> Retriever:
+    """Build a dense+BM25 hybrid retriever.
+
+    Returns
+    -------
+    Retriever
+        Hybrid retriever instance combining dense vector search and BM25.
+    """
+    return DenseBM25HybridRetriever(**kw)
+
 @register("sparse")
 def _build_sparse(**kw) -> Retriever:
     """Build a sparse-only retriever.
@@ -147,6 +162,17 @@ def _build_sparse(**kw) -> Retriever:
         Sparse retriever instance.
     """
     return SparseIndexRetriever(**kw)
+
+@register("bm25")
+def _build_bm25(**kw) -> Retriever:
+    """Build a BM25-only retriever.
+
+    Returns
+    -------
+    Retriever
+        BM25 retriever instance.
+    """
+    return BM25IndexRetriever(**kw)
 
 
 if MultiCollectionRetriever is not None:

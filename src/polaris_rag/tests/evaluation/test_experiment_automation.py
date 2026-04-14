@@ -109,6 +109,7 @@ def test_run_experiment_stage_builds_ingest_and_eval_commands(tmp_path: Path, mo
                                 "kind": "html",
                                 "homepage": "https://docs.example.org",
                                 "ingest_internal_links": True,
+                                "persist_dir": "../data/storage/exp_docs_cs400_ov0",
                                 "qdrant_collection_name": "exp_docs_cs400_ov0",
                                 "chunking_strategy": "markdown_token",
                                 "chunk_size_tokens": 400,
@@ -141,6 +142,9 @@ def test_run_experiment_stage_builds_ingest_and_eval_commands(tmp_path: Path, mo
     assert record["stage_type"] == "evaluation_grid"
     assert len(calls) == 3
     assert "ingest_html_documents.py" in calls[0][1]
+    assert calls[0][calls[0].index("--persist-dir") + 1] == str(
+        (tmp_path.parent / "data" / "storage" / "exp_docs_cs400_ov0").resolve()
+    )
     assert calls[0][-1] == "0"
     assert "evaluate_rag.py" in calls[1][1]
     assert "--preset" in calls[1]
@@ -320,6 +324,7 @@ def test_run_experiment_stage_index_phase_dispatches_shared_jira_fanout(
                             "ingest": {
                                 "kind": "jira",
                                 "source": "tickets",
+                                "persist_dir": "../data/storage/exp_tickets_cs600_ov0",
                                 "qdrant_collection_name": "exp_tickets_cs600_ov0",
                                 "fetch_batch_size": 25,
                             },
@@ -330,6 +335,7 @@ def test_run_experiment_stage_index_phase_dispatches_shared_jira_fanout(
                             "ingest": {
                                 "kind": "jira",
                                 "source": "tickets",
+                                "persist_dir": "../data/storage/exp_tickets_cs800_ov0",
                                 "qdrant_collection_name": "exp_tickets_cs800_ov0",
                                 "fetch_batch_size": 25,
                             },
@@ -346,6 +352,7 @@ def test_run_experiment_stage_index_phase_dispatches_shared_jira_fanout(
         shared_calls.append(
             {
                 "condition_names": [entry.name for entry in condition_entries],
+                "persist_dirs": [entry.ingest_spec.get("persist_dir") for entry in condition_entries],
                 "index_strategy": dict(index_strategy),
                 "dry_run": dry_run,
                 "stage_dir": str(stage_dir),
@@ -403,6 +410,7 @@ def test_run_experiment_stage_index_phase_dispatches_shared_jira_fanout(
     assert shared_calls == [
         {
             "condition_names": ["tickets_cs800_ov0"],
+            "persist_dirs": [str((tmp_path.parent / "data" / "storage" / "exp_tickets_cs800_ov0").resolve())],
             "index_strategy": {
                 "type": "shared_jira_fanout",
                 "clear_targets": True,

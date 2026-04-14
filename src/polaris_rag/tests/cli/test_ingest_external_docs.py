@@ -61,7 +61,7 @@ def test_main_index_only_creates_collection_without_loading_external_docs(monkey
 
     monkeypatch.setattr(ingest_external_docs.GlobalConfig, "load", lambda path: fake_cfg)
     monkeypatch.setattr(ingest_external_docs, "build_container", lambda cfg: fake_container)
-    monkeypatch.setattr(ingest_external_docs, "_build_source_storage_context", lambda container, source: storage_context)
+    monkeypatch.setattr(ingest_external_docs, "_build_source_storage_context", lambda container, source, persist_dir=None: storage_context)
     monkeypatch.setattr(ingest_external_docs, "_load_external_documents", _unexpected_load)
     monkeypatch.setattr(
         sys,
@@ -140,7 +140,7 @@ def test_main_markdown_chunking_path_ingests_registered_external_docs(monkeypatc
 
     monkeypatch.setattr(ingest_external_docs.GlobalConfig, "load", lambda path: fake_cfg)
     monkeypatch.setattr(ingest_external_docs, "build_container", lambda cfg: fake_container)
-    monkeypatch.setattr(ingest_external_docs, "_build_source_storage_context", lambda container, source: storage_context)
+    monkeypatch.setattr(ingest_external_docs, "_build_source_storage_context", lambda container, source, persist_dir=None: storage_context)
     monkeypatch.setattr(
         ingest_external_docs,
         "_load_external_documents",
@@ -163,7 +163,12 @@ def test_main_markdown_chunking_path_ingests_registered_external_docs(monkeypatc
     )
     monkeypatch.setattr(ingest_external_docs, "add_chunks_to_docstore", lambda storage, chunks: len(chunks))
     monkeypatch.setattr(ingest_external_docs, "delete_ref_docs_from_docstore", lambda docstore, ids: deleted_from_docstore.extend(ids))
-    monkeypatch.setattr(ingest_external_docs, "persist_storage", lambda storage, persist_dir: None)
+    monkeypatch.setattr(ingest_external_docs, "persist_docstore", lambda docstore, persist_path: None)
+    monkeypatch.setattr(
+        ingest_external_docs,
+        "chunk_document_store_path",
+        lambda persist_dir, source: "chunk_docstore.external_docs.json",
+    )
     monkeypatch.setattr(
         sys,
         "argv",

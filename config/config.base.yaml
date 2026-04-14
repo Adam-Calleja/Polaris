@@ -30,24 +30,24 @@ storage_context:
   persist_dir: "data/storage/local"
 
 retriever:
-  # Dense+sparse hybrid is configured below, but the checked-in runtime stays on
-  # vector-only until collections are reingested into a hybrid profile.
+  # Dense+BM25 hybrid can run against existing dense collections once the
+  # per-source chunk docstores have been backfilled from stored Qdrant payloads.
   type: "multi_collection"
-  source_type: "vector"
+  source_type: "dense_bm25_hybrid"
   top_k: 5
   score_threshold: 0.0
   filters: {}
   final_top_k: 8
   hybrid_profile:
     dense_top_k: 30
-    sparse_top_k: 30
+    bm25_top_k: 30
     top_k: 20
     fusion:
       type: "rrf"
       rrf_k: 60
       signal_weights:
         dense: 1.0
-        sparse: 1.0
+        bm25: 1.0
   rerank:
     type: "rrf"
     rrf_k: 60

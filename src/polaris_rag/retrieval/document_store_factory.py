@@ -37,6 +37,7 @@ if TYPE_CHECKING:
     from polaris_rag.retrieval.vector_store import BaseVectorStore
 
 SOURCE_DOCUMENT_STORE_FILENAME = "source_docstore.json"
+CHUNK_DOCUMENT_STORE_PREFIX = "chunk_docstore"
 
 def create_docstore(
         kind: str = "simple",
@@ -134,6 +135,49 @@ def source_document_store_path(persist_dir: str | Path) -> str:
     return str(Path(persist_dir).expanduser().resolve() / SOURCE_DOCUMENT_STORE_FILENAME)
 
 
+def chunk_document_store_filename(source: str) -> str:
+    """Return the filename used for a persisted per-source chunk docstore.
+
+    Parameters
+    ----------
+    source : str
+        Source name to encode into the filename.
+
+    Returns
+    -------
+    str
+        Resulting filename.
+    """
+    normalized = str(source or "").strip()
+    if not normalized:
+        raise ValueError("'source' must be a non-empty string.")
+    safe_source = normalized.replace("/", "_").replace("\\", "_").replace(" ", "_")
+    return f"{CHUNK_DOCUMENT_STORE_PREFIX}.{safe_source}.json"
+
+
+def chunk_document_store_path(
+        persist_dir: str | Path,
+        source: str,
+    ) -> str:
+    """Return the path used for a persisted per-source chunk docstore.
+
+    Parameters
+    ----------
+    persist_dir : str or Path
+        Base persistence directory.
+    source : str
+        Source name to encode into the filename.
+
+    Returns
+    -------
+    str
+        Resulting string path.
+    """
+    return str(
+        Path(persist_dir).expanduser().resolve() / chunk_document_store_filename(source)
+    )
+
+
 def load_or_create_source_document_store(
         *,
         persist_dir: str | Path | None,
@@ -154,6 +198,35 @@ def load_or_create_source_document_store(
         return create_docstore("simple")
 
     persist_path = Path(source_document_store_path(persist_dir))
+    if persist_path.exists():
+        return SimpleDocumentStore.from_persist_path(str(persist_path))
+
+    return create_docstore("simple")
+
+
+def load_or_create_chunk_document_store(
+        *,
+        persist_dir: str | Path | None,
+        source: str,
+    ) -> BaseDocumentStore:
+    """Load a persisted per-source chunk docstore or create a fresh one.
+
+    Parameters
+    ----------
+    persist_dir : str or Path or None, optional
+        Base persistence directory. When omitted, returns a fresh in-memory docstore.
+    source : str
+        Source name used to resolve the persisted chunk docstore path.
+
+    Returns
+    -------
+    BaseDocumentStore
+        Loaded or newly created chunk docstore.
+    """
+    if persist_dir is None:
+        return create_docstore("simple")
+
+    persist_path = Path(chunk_document_store_path(persist_dir, source))
     if persist_path.exists():
         return SimpleDocumentStore.from_persist_path(str(persist_path))
 
@@ -322,9 +395,12 @@ def delete_ref_docs_from_docstore(
 
 
 __all__ = [
+    "chunk_document_store_filename",
+    "chunk_document_store_path",
     "create_docstore",
     "build_storage_context",
     "source_document_store_path",
+    "load_or_create_chunk_document_store",
     "load_or_create_source_document_store",
     "persist_storage",
     "persist_docstore",

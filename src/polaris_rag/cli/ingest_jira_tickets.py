@@ -49,10 +49,11 @@ from polaris_rag.retrieval.document_store_factory import (
     add_chunks_to_docstore,
     add_documents_to_docstore,
     build_storage_context,
+    chunk_document_store_path,
     delete_ref_docs_from_docstore,
+    load_or_create_chunk_document_store,
     load_or_create_source_document_store,
     persist_docstore,
-    persist_storage,
     source_document_store_path,
 )
 from polaris_rag.retrieval.ingestion_settings import (
@@ -545,7 +546,7 @@ def _override_qdrant_collection_name(cfg: GlobalConfig, source: str, cli_value: 
     selected_store["collection_name"] = cli_value
 
 
-def _build_source_storage_context(container: Any, source: str) -> Any:
+def _build_source_storage_context(container: Any, source: str, *, persist_dir: str | None = None) -> Any:
     """Build source Storage Context.
     
     Parameters
@@ -569,9 +570,13 @@ def _build_source_storage_context(container: Any, source: str) -> Any:
     if source not in stores:
         raise KeyError(f"Unknown source {source!r}. Available sources: {sorted(stores.keys())}")
 
+    docstore = load_or_create_chunk_document_store(
+        persist_dir=persist_dir,
+        source=source,
+    )
     return build_storage_context(
         vector_store=stores[source],
-        docstore=container.doc_store,
+        docstore=docstore,
         persist_dir=None,
     )
 
@@ -631,9 +636,9 @@ def main() -> None:
 
     _override_qdrant_collection_name(cfg, args.source, args.qdrant_collection_name)
 
-    container = build_container(cfg)
-    storage_context = _build_source_storage_context(container, args.source)
     persist_dir = _resolve_persist_dir(cfg, args.persist_dir)
+    container = build_container(cfg)
+    storage_context = _build_source_storage_context(container, args.source, persist_dir=persist_dir)
     if args.clear_collection:
         _clear_ingestion_target(storage_context, persist_dir=persist_dir, source=args.source)
     if args.index_only:
@@ -753,7 +758,10 @@ def main() -> None:
         add_documents_to_docstore(source_document_store, processed_tickets)
 
         print(f"Persisting storage after Jira batch {batch_index}...")
-        persist_storage(storage=storage_context, persist_dir=persist_dir)
+        persist_docstore(
+            storage_context.docstore,
+            persist_path=chunk_document_store_path(persist_dir, args.source),
+        )
         persist_docstore(
             source_document_store,
             persist_path=source_document_store_path(persist_dir),

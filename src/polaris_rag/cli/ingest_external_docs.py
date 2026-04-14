@@ -62,8 +62,9 @@ from polaris_rag.config import GlobalConfig
 from polaris_rag.retrieval.document_preprocessor import preprocess_html_documents
 from polaris_rag.retrieval.document_store_factory import (
     add_chunks_to_docstore,
+    chunk_document_store_path,
     delete_ref_docs_from_docstore,
-    persist_storage,
+    persist_docstore,
 )
 from polaris_rag.retrieval.ingestion_settings import (
     HTML_HIERARCHICAL_CHUNKING_STRATEGY,
@@ -263,14 +264,14 @@ def main() -> None:
             cfg.raw["embedder"] = embedder_cfg
         embedder_cfg["num_workers"] = int(args.embedding_workers)
 
+    persist_dir = _resolve_persist_dir(cfg, args.persist_dir)
     _override_qdrant_collection_name(cfg, args.source, args.qdrant_collection_name)
     container = build_container(cfg)
-    storage_context = _build_source_storage_context(container, args.source)
+    storage_context = _build_source_storage_context(container, args.source, persist_dir=persist_dir)
     if args.index_only:
         _ensure_index_only_collection(storage_context, args.source)
         return
 
-    persist_dir = _resolve_persist_dir(cfg, args.persist_dir)
     conditions = cfg.document_preprocess_html_conditions
     tags = cfg.document_preprocess_html_tags
     link_classes = cfg.document_preprocess_html_link_classes
@@ -364,10 +365,10 @@ def main() -> None:
         chunks=chunks,
     )
 
-    print("Persisting storage context...")
-    persist_storage(
-        storage_context,
-        persist_dir,
+    print("Persisting source chunk document store...")
+    persist_docstore(
+        storage_context.docstore,
+        persist_path=chunk_document_store_path(persist_dir, args.source),
     )
 
     print(

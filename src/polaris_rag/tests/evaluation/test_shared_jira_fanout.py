@@ -90,6 +90,7 @@ def test_initialize_condition_runtime_recreates_collection_and_clears_persist_di
 ) -> None:
     recreate_calls: list[str] = []
     cleared_dirs: list[str] = []
+    loaded_chunk_docstores: list[tuple[str | None, str]] = []
     loaded_docstores: list[str] = []
 
     class FakeVectorStore:
@@ -113,6 +114,11 @@ def test_initialize_condition_runtime_recreates_collection_and_clears_persist_di
     monkeypatch.setattr(fanout, "clear_persist_dir", lambda persist_dir: cleared_dirs.append(persist_dir))
     monkeypatch.setattr(
         fanout,
+        "load_or_create_chunk_document_store",
+        lambda *, persist_dir, source: loaded_chunk_docstores.append((persist_dir, source)) or "chunk-docstore",
+    )
+    monkeypatch.setattr(
+        fanout,
         "load_or_create_source_document_store",
         lambda *, persist_dir: loaded_docstores.append(str(persist_dir)) or "source-docstore",
     )
@@ -121,6 +127,7 @@ def test_initialize_condition_runtime_recreates_collection_and_clears_persist_di
 
     assert recreate_calls == ["tickets"]
     assert cleared_dirs == [str(tmp_path / "persist_tickets_cs600_ov0")]
+    assert loaded_chunk_docstores == [(None, "tickets")]
     assert loaded_docstores == [str(tmp_path / "persist_tickets_cs600_ov0")]
     assert runtime.source_document_store == "source-docstore"
 
@@ -131,6 +138,7 @@ def test_initialize_condition_runtime_resume_uses_existing_persisted_state(
 ) -> None:
     recreate_calls: list[str] = []
     cleared_dirs: list[str] = []
+    loaded_chunk_docstores: list[tuple[str | None, str]] = []
     loaded_docstores: list[str] = []
     storage_persist_dirs: list[str | None] = []
     persist_dir = tmp_path / "persist_tickets_cs600_ov0"
@@ -157,6 +165,11 @@ def test_initialize_condition_runtime_resume_uses_existing_persisted_state(
     monkeypatch.setattr(fanout, "clear_persist_dir", lambda persist_dir: cleared_dirs.append(persist_dir))
     monkeypatch.setattr(
         fanout,
+        "load_or_create_chunk_document_store",
+        lambda *, persist_dir, source: loaded_chunk_docstores.append((persist_dir, source)) or "chunk-docstore",
+    )
+    monkeypatch.setattr(
+        fanout,
         "load_or_create_source_document_store",
         lambda *, persist_dir: loaded_docstores.append(str(persist_dir)) or "source-docstore",
     )
@@ -174,7 +187,8 @@ def test_initialize_condition_runtime_resume_uses_existing_persisted_state(
 
     assert recreate_calls == []
     assert cleared_dirs == []
-    assert storage_persist_dirs == [str(persist_dir)]
+    assert storage_persist_dirs == [None]
+    assert loaded_chunk_docstores == [(str(persist_dir), "tickets")]
     assert loaded_docstores == [str(persist_dir)]
     assert runtime.total_chunks == 5
     assert runtime.total_tickets == 3
@@ -199,7 +213,6 @@ def test_run_shared_jira_fanout_index_fetches_once_processes_all_conditions_and_
     delete_calls: list[tuple[str, tuple[str, ...]]] = []
     added_chunk_calls: list[tuple[str, list[str]]] = []
     added_document_calls: list[tuple[str, list[str]]] = []
-    persist_storage_calls: list[tuple[str, str]] = []
     persist_docstore_calls: list[tuple[str, str]] = []
 
     class FakeVectorStore:
@@ -290,13 +303,13 @@ def test_run_shared_jira_fanout_index_fetches_once_processes_all_conditions_and_
     )
     monkeypatch.setattr(
         fanout,
-        "persist_storage",
-        lambda storage, persist_dir: persist_storage_calls.append((str(storage.docstore), persist_dir)),
+        "persist_docstore",
+        lambda docstore, persist_path: persist_docstore_calls.append((str(docstore), str(persist_path))),
     )
     monkeypatch.setattr(
         fanout,
-        "persist_docstore",
-        lambda docstore, persist_path: persist_docstore_calls.append((str(docstore), str(persist_path))),
+        "chunk_document_store_path",
+        lambda persist_dir, source: str(Path(persist_dir) / f"chunk_docstore.{source}.json"),
     )
     monkeypatch.setattr(
         fanout,
@@ -359,8 +372,7 @@ def test_run_shared_jira_fanout_index_fetches_once_processes_all_conditions_and_
     assert first_batch_insert_indexes
     assert fetch_two_index > max(first_batch_insert_indexes)
     assert delete_calls == []
-    assert len(persist_storage_calls) == 2
-    assert len(persist_docstore_calls) == 2
+    assert len(persist_docstore_calls) == 4
     assert result["summary"]["condition_parallelism"] == 2
     assert result["summary"]["fetched_tickets"] == 3
     assert result["summary"]["processed_tickets"] == 3
@@ -497,13 +509,13 @@ def test_run_shared_jira_fanout_index_resumes_from_checkpoint_and_skips_complete
     monkeypatch.setattr(fanout, "add_documents_to_docstore", lambda docstore, documents: len(documents))
     monkeypatch.setattr(
         fanout,
-        "persist_storage",
-        lambda storage, persist_dir: persisted.append(f"storage:{persist_dir}"),
+        "persist_docstore",
+        lambda docstore, persist_path: persisted.append(f"docstore:{persist_path}"),
     )
     monkeypatch.setattr(
         fanout,
-        "persist_docstore",
-        lambda docstore, persist_path: persisted.append(f"docstore:{persist_path}"),
+        "chunk_document_store_path",
+        lambda persist_dir, source: str(Path(persist_dir) / f"chunk_docstore.{source}.json"),
     )
     monkeypatch.setattr(
         fanout,

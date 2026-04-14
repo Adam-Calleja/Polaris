@@ -20,10 +20,14 @@ def test_build_source_storage_context_uses_named_store(monkeypatch):
         return "storage-context"
 
     monkeypatch.setattr(ingest_html_documents, "build_storage_context", fake_build_storage_context)
+    monkeypatch.setattr(
+        ingest_html_documents,
+        "load_or_create_chunk_document_store",
+        lambda *, persist_dir, source: "chunk-docstore",
+    )
 
     container = SimpleNamespace(
         vector_stores={"docs": "docs-store"},
-        doc_store="chunk-docstore",
     )
 
     result = ingest_html_documents._build_source_storage_context(container, "docs")
@@ -106,7 +110,7 @@ def test_main_index_only_creates_collection_without_loading_documents(monkeypatc
 
     monkeypatch.setattr(ingest_html_documents.GlobalConfig, "load", lambda path: fake_cfg)
     monkeypatch.setattr(ingest_html_documents, "build_container", lambda cfg: fake_container)
-    monkeypatch.setattr(ingest_html_documents, "_build_source_storage_context", lambda container, source: storage_context)
+    monkeypatch.setattr(ingest_html_documents, "_build_source_storage_context", lambda container, source, persist_dir=None: storage_context)
     monkeypatch.setattr(ingest_html_documents, "load_website_docs", _unexpected_load)
     monkeypatch.setattr(
         sys,
@@ -262,7 +266,7 @@ def test_main_uses_recursive_internal_link_discovery(monkeypatch):
 
     monkeypatch.setattr(ingest_html_documents.GlobalConfig, "load", lambda path: fake_cfg)
     monkeypatch.setattr(ingest_html_documents, "build_container", lambda cfg: fake_container)
-    monkeypatch.setattr(ingest_html_documents, "_build_source_storage_context", lambda container, source: storage_context)
+    monkeypatch.setattr(ingest_html_documents, "_build_source_storage_context", lambda container, source, persist_dir=None: storage_context)
     monkeypatch.setattr(ingest_html_documents, "get_internal_links", lambda homepage: recursive_links)
     monkeypatch.setattr(
         ingest_html_documents,
@@ -285,7 +289,8 @@ def test_main_uses_recursive_internal_link_discovery(monkeypatch):
     monkeypatch.setattr(ingest_html_documents, "localize_doc_chunk_scope_family_metadata", lambda chunks, registry_artifact_path: chunks)
     monkeypatch.setattr(ingest_html_documents, "add_chunks_to_docstore", lambda storage, chunks: len(chunks))
     monkeypatch.setattr(ingest_html_documents, "delete_ref_docs_from_docstore", lambda docstore, ids: deleted_from_docstore.extend(ids))
-    monkeypatch.setattr(ingest_html_documents, "persist_storage", lambda storage, persist_dir: None)
+    monkeypatch.setattr(ingest_html_documents, "persist_docstore", lambda docstore, persist_path: None)
+    monkeypatch.setattr(ingest_html_documents, "chunk_document_store_path", lambda persist_dir, source: "chunk_docstore.docs.json")
     monkeypatch.setattr(
         sys,
         "argv",
@@ -371,7 +376,7 @@ def test_main_markdown_chunking_path_replaces_existing_docs(monkeypatch):
 
     monkeypatch.setattr(ingest_html_documents.GlobalConfig, "load", lambda path: fake_cfg)
     monkeypatch.setattr(ingest_html_documents, "build_container", lambda cfg: fake_container)
-    monkeypatch.setattr(ingest_html_documents, "_build_source_storage_context", lambda container, source: storage_context)
+    monkeypatch.setattr(ingest_html_documents, "_build_source_storage_context", lambda container, source, persist_dir=None: storage_context)
     monkeypatch.setattr(ingest_html_documents, "load_website_docs", lambda links: html_documents)
     monkeypatch.setattr(ingest_html_documents, "preprocess_html_documents", lambda documents, tags, conditions: documents)
     monkeypatch.setattr(ingest_html_documents, "convert_documents_to_markdown", lambda documents, engine, options: markdown_documents)
@@ -395,7 +400,8 @@ def test_main_markdown_chunking_path_replaces_existing_docs(monkeypatch):
     )
     monkeypatch.setattr(ingest_html_documents, "add_chunks_to_docstore", lambda storage, chunks: len(chunks))
     monkeypatch.setattr(ingest_html_documents, "delete_ref_docs_from_docstore", lambda docstore, ids: deleted_from_docstore.extend(ids))
-    monkeypatch.setattr(ingest_html_documents, "persist_storage", lambda storage, persist_dir: None)
+    monkeypatch.setattr(ingest_html_documents, "persist_docstore", lambda docstore, persist_path: None)
+    monkeypatch.setattr(ingest_html_documents, "chunk_document_store_path", lambda persist_dir, source: "chunk_docstore.docs.json")
     monkeypatch.setattr(
         sys,
         "argv",
