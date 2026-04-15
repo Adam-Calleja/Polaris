@@ -87,6 +87,13 @@ class _MetadataOnlyVectorStore:
         return []
 
 
+class _MetadataOnlyDocStore:
+    """Minimal docstore stub used for config-only BM25 retriever profiling."""
+
+    def __init__(self) -> None:
+        self.docs: dict[str, Any] = {}
+
+
 def _as_mapping(obj: Any) -> Mapping[str, Any]:
     """As Mapping.
     
@@ -203,6 +210,39 @@ def _config_base_dir(cfg: Any) -> Path | None:
         return None
 
 
+def _storage_persist_dir_from_config(cfg: Any) -> str | None:
+    """Resolve the storage-context persist dir using the same rules as the container."""
+    sc_cfg = getattr(cfg, "storage_context", {})
+    persist_dir = None
+
+    if hasattr(sc_cfg, "persist_dir") and getattr(sc_cfg, "persist_dir"):
+        persist_dir = str(getattr(sc_cfg, "persist_dir"))
+    elif isinstance(sc_cfg, Mapping):
+        raw_persist_dir = sc_cfg.get("persist_dir")
+        if raw_persist_dir:
+            persist_dir = str(raw_persist_dir)
+    else:
+        try:
+            sc_map = _as_mapping(sc_cfg)
+        except TypeError:
+            sc_map = {}
+        raw_persist_dir = sc_map.get("persist_dir")
+        if raw_persist_dir:
+            persist_dir = str(raw_persist_dir)
+
+    if not persist_dir:
+        return None
+
+    base_dir = _config_base_dir(cfg)
+    if base_dir is None:
+        return persist_dir
+
+    path = Path(persist_dir)
+    if path.is_absolute():
+        return str(path)
+    return str((base_dir / path).resolve())
+
+
 def _deep_merge_mappings(base: Mapping[str, Any], override: Mapping[str, Any]) -> dict[str, Any]:
     """Recursively merge nested mappings."""
     merged = dict(base)
@@ -309,7 +349,7 @@ def _vector_store_profile_from_config(
 def _source_kind_from_config(cfg: Any) -> str:
     section = _as_mapping(getattr(cfg, "retriever", {}))
     source_kind = str(section.get("source_type") or "vector").strip().lower().replace("-", "_")
-    if source_kind not in {"vector", "hybrid", "sparse"}:
+    if source_kind not in {"vector", "hybrid", "sparse", "bm25", "dense_bm25_hybrid", "bm25_hybrid", "dense_bm25"}:
         return "vector"
     return source_kind
 
@@ -360,8 +400,11 @@ def _sparse_query_expander_from_config(cfg: Any) -> Any | None:
 def _metadata_only_retriever_from_config(cfg: Any) -> Any | None:
     """Construct a retriever shell for stable fingerprinting without live services."""
     from polaris_rag.retrieval.retriever import MultiCollectionRetriever
+    from polaris_rag.retrieval.document_store_factory import load_or_create_chunk_document_store
     from polaris_rag.retrieval.retriever_factory import create
 
+    bm25_like_kinds = {"bm25", "dense_bm25_hybrid", "bm25_hybrid", "dense_bm25"}
+    persist_dir = _storage_persist_dir_from_config(cfg)
     section = _as_mapping(getattr(cfg, "retriever", {}))
     kind = str(section.get("type") or "").strip().lower().replace("-", "_")
     if not kind:
@@ -382,9 +425,20 @@ def _metadata_only_retriever_from_config(cfg: Any) -> Any | None:
             if vector_profile is None:
                 return None
             vector_store = _MetadataOnlyVectorStore(vector_profile)
+            storage_context = SimpleNamespace(vector_store=vector_store)
+            if source_kind in bm25_like_kinds:
+                docstore = (
+                    load_or_create_chunk_document_store(persist_dir=persist_dir, source=source_name)
+                    if persist_dir is not None
+                    else _MetadataOnlyDocStore()
+                )
+                storage_context = SimpleNamespace(
+                    vector_store=vector_store,
+                    docstore=docstore,
+                )
             source_retrievers[source_name] = create(
                 kind=source_kind,
-                storage_context=SimpleNamespace(vector_store=vector_store),
+                storage_context=storage_context,
                 top_k=source_cfg.get("top_k"),
                 filters=source_cfg.get("filters"),
                 vector_store=vector_store,
@@ -401,7 +455,7 @@ def _metadata_only_retriever_from_config(cfg: Any) -> Any | None:
             config_base_dir=_config_base_dir(cfg),
         )
 
-    if kind not in {"vector", "hybrid", "sparse"}:
+    if kind not in {"vector", "hybrid", "sparse", "bm25", "dense_bm25_hybrid", "bm25_hybrid", "dense_bm25"}:
         return None
 
     expander = _sparse_query_expander_from_config(cfg) if kind in {"hybrid", "sparse"} else None
@@ -410,9 +464,15 @@ def _metadata_only_retriever_from_config(cfg: Any) -> Any | None:
         return None
 
     vector_store = _MetadataOnlyVectorStore(vector_profile)
+    storage_context = SimpleNamespace(vector_store=vector_store)
+    if kind in bm25_like_kinds:
+        storage_context = SimpleNamespace(
+            vector_store=vector_store,
+            docstore=_MetadataOnlyDocStore(),
+        )
     return create(
         kind=kind,
-        storage_context=SimpleNamespace(vector_store=vector_store),
+        storage_context=storage_context,
         top_k=section.get("top_k"),
         filters=section.get("filters"),
         vector_store=vector_store,

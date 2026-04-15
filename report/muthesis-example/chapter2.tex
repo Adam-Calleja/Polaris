@@ -91,6 +91,8 @@ Taken together, these studies imply that retrieval for HPC support should not be
 
 Evaluating \ac{RAG} systems is a more complex problem than evaluating standalone \ac{LM}s because system quality depends not only on the final answer, but also on whether the retriever finds suitable evidence and whether the generator uses that evidence faithfully \citep{RAGAS,ruRAGCheckerFinegrainedFramework2024}. A single end-to-end score is therefore insufficient on its own since the a poor final answer could be cause by retrieval failure, incomplete evidence, or weak use of otherwise valid context \cite{ruRAGCheckerFinegrainedFramework2024}. As a result, recent work treats \ac{RAG} evaluation as a multi-dimensional problem that separates retrieval quality from grounded generation quality \cite{saad-falconARESAutomatedEvaluation2024,RAGAS}. This is typically operationalised through measures such as context relevance, answer faithfulness, and answer relevance.
 
+RAGAS is a recent evaluation framework, which proposes reference-free evaluation for \ac{RAG} systems using three core dimensions: faithfulness, answer relevance, and context relevance \citep{RAGAS}. This decomposition is especially useful in development settings because it enables rapid comparison of \ac{RAG} systems even when human-annotated references are unavailable \citep{RAGAS}. 
+
 \section{Gap Analysis and Research Positioning}
 \label{sec:gap}
 

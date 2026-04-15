@@ -212,7 +212,7 @@ def _cfg_with_reranker(tmp_path, rerank_cfg: dict[str, object]):  # noqa: ANN001
     )
 
 
-def _cfg_with_multi_collection_retriever(tmp_path) -> SimpleNamespace:  # noqa: ANN001
+def _cfg_with_multi_collection_retriever(tmp_path, *, source_type: str = "vector") -> SimpleNamespace:  # noqa: ANN001
     config_path = tmp_path / "config.yaml"
     config_path.write_text("retriever: {}\n", encoding="utf-8")
     return SimpleNamespace(
@@ -243,12 +243,13 @@ def _cfg_with_multi_collection_retriever(tmp_path) -> SimpleNamespace:  # noqa: 
         },
         retriever={
             "type": "multi_collection",
-            "source_type": "vector",
+            "source_type": source_type,
             "top_k": 5,
             "final_top_k": 8,
             "filters": {},
             "hybrid_profile": {
                 "dense_top_k": 5,
+                "bm25_top_k": 5,
                 "sparse_top_k": 5,
                 "top_k": 5,
                 "fusion": {
@@ -256,6 +257,7 @@ def _cfg_with_multi_collection_retriever(tmp_path) -> SimpleNamespace:  # noqa: 
                     "rrf_k": 60,
                     "signal_weights": {
                         "dense": 1.0,
+                        "bm25": 1.0,
                         "sparse": 1.0,
                     },
                 },
@@ -777,6 +779,72 @@ def test_resolve_prepared_rows_reuses_existing_rows_without_building_container(
     assert len(rows) == 1
     assert manifest["prepared_source"] == "existing"
     assert manifest["retriever_fingerprint"] == retriever_fingerprint
+
+
+def test_resolve_retriever_metadata_supports_dense_bm25_multi_collection_without_building_container(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    cfg = _cfg_with_multi_collection_retriever(tmp_path, source_type="dense_bm25_hybrid")
+
+    monkeypatch.setattr(
+        evaluate_rag,
+        "build_container",
+        lambda cfg: (_ for _ in ()).throw(AssertionError("build_container should not be called")),
+    )
+
+    retriever_profile, retriever_fingerprint = evaluate_rag._resolve_retriever_metadata(cfg)
+
+    assert retriever_profile is not None
+    assert retriever_fingerprint is not None
+    assert retriever_profile["type"] == "multi_collection"
+    assert retriever_profile["sources"]["docs"]["retriever_profile"]["type"] == "dense_bm25_hybrid"
+    assert retriever_profile["sources"]["tickets"]["retriever_profile"]["type"] == "dense_bm25_hybrid"
+
+    vector_cfg = _cfg_with_multi_collection_retriever(tmp_path, source_type="vector")
+    _, vector_fingerprint = evaluate_rag._resolve_retriever_metadata(vector_cfg)
+    assert vector_fingerprint is not None
+    assert retriever_fingerprint != vector_fingerprint
+
+
+def test_resolve_retriever_metadata_uses_persisted_chunk_docstores_for_dense_bm25_multi_collection(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    cfg = _cfg_with_multi_collection_retriever(tmp_path, source_type="dense_bm25_hybrid")
+    cfg.storage_context = {"persist_dir": "storage"}
+
+    class _FakeDocStore:
+        def __init__(self, count: int) -> None:
+            self.docs = {
+                f"node-{index}": SimpleNamespace(text=f"document {index}")
+                for index in range(count)
+            }
+
+    def _fake_load_or_create_chunk_document_store(*, persist_dir, source):  # noqa: ANN001
+        assert str(persist_dir).endswith("/storage")
+        counts = {
+            "docs": 2,
+            "tickets": 3,
+        }
+        return _FakeDocStore(counts[source])
+
+    monkeypatch.setattr(
+        "polaris_rag.retrieval.document_store_factory.load_or_create_chunk_document_store",
+        _fake_load_or_create_chunk_document_store,
+    )
+    monkeypatch.setattr(
+        evaluate_rag,
+        "build_container",
+        lambda cfg: (_ for _ in ()).throw(AssertionError("build_container should not be called")),
+    )
+
+    retriever_profile, _ = evaluate_rag._resolve_retriever_metadata(cfg)
+
+    assert retriever_profile is not None
+    assert retriever_profile["sources"]["docs"]["retriever_profile"]["docstore"]["backend"] == "_FakeDocStore"
+    assert retriever_profile["sources"]["docs"]["retriever_profile"]["docstore"]["node_count"] == 2
+    assert retriever_profile["sources"]["tickets"]["retriever_profile"]["docstore"]["node_count"] == 3
 
 
 def test_resolve_prepared_rows_joins_verified_annotations(monkeypatch, tmp_path) -> None:
