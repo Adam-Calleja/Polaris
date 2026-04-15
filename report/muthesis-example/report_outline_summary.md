@@ -42,8 +42,7 @@ Notes:
 - `2.3 Heterogeneous Support Corpora: Documentation and Tickets`
 - `2.4 Authority, Freshness, and Validity in Retrieval`
 - `2.5 Evaluation of RAG Systems`
-- `2.6 Failure Modes of Naive Retrieval`
-- `2.7 Gap Analysis and Research Positioning`
+- `2.6 Gap Analysis and Research Positioning`
 
 Suggested word budget: about `2,400`
 

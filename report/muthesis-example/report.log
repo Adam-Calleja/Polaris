@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.3.18)  15 APR 2026 10:14
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.3.18)  15 APR 2026 15:47
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -398,7 +398,7 @@ although it is yet undefined on input line 7.
 Package acronym Info: Label `acro:HPC' newly defined as it shall be overridden
 although it is yet undefined on input line 7.
 Package acronym Info: Label `acro:RCS' overridden on input line 7.
-<graphs/ticket_counts.pdf, id=533, 431.17964pt x 254.86092pt>
+<graphs/ticket_counts.pdf, id=537, 431.17964pt x 254.86092pt>
 File: graphs/ticket_counts.pdf Graphic file (type pdf)
 <use graphs/ticket_counts.pdf>
 Package pdftex.def Info: graphs/ticket_counts.pdf  used on input line 13.
@@ -668,7 +668,13 @@ Overfull \hbox (0.68425pt too wide) in paragraph at lines 74--75
 [24]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
- [25]) [26]
+ [25] [26]
+Package acronym Info: Label `acro:RGB' newly defined as it shall be overridden
+although it is yet undefined on input line 98.
+)
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [27] [28]
 \openout2 = `chapter3.aux'.
 
  (./chapter3.tex
@@ -678,7 +684,7 @@ Overfull \hbox (25.80722pt too wide) in paragraph at lines 16--16
 []\OT1/ptm/b/n/17.28 Success Cri-te-ria and Requirement-to-Evaluation Map-
  []
 
-) [27
+) [29
 
 
 
@@ -688,7 +694,7 @@ Overfull \hbox (25.80722pt too wide) in paragraph at lines 16--16
 
  (./chapter4.tex
 Chapter 4.
-) [28
+) [30
 
 
 
@@ -701,7 +707,7 @@ Chapter 5.
 )
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
- [29
+ [31
 
 
 
@@ -709,12 +715,12 @@ Underfull \vbox (badness 10000) has occurred while \output is active []
 ]
 Overfull \vbox (233.79532pt too high) has occurred while \output is active []
 
- [30]
+ [32]
 \openout2 = `chapter6.aux'.
 
  (./chapter6.tex
 Chapter 6.
-) [31
+) [33
 
 
 
@@ -724,7 +730,7 @@ Chapter 6.
 
  (./chapter7.tex
 Chapter 7.
-) [32
+) [34
 
 
 
@@ -734,12 +740,12 @@ Chapter 7.
 
  (./chapter8.tex
 Chapter 8.
-) [33
+) [35
 
 
 
 
-] (./report.bbl [34
+] (./report.bbl [36
 
 
 
@@ -753,7 +759,20 @@ Underfull \hbox (badness 10000) in paragraph at lines 45--46
 []\OT1/ptm/m/n/12 ``CSD3 Up-grade Oc-to-ber 2021 --- CSD3 1.0 doc-u-men-ta-tion,''
  []
 
-[35] [36]) [37]
+[37] [38]
+LaTeX Font Info:    Font shape `OMS/ptm/m/n' in size <12> not available
+(Font)              Font shape `OMS/pzccm/m/n' tried instead on input line 87.
+
+Underfull \hbox (badness 2197) in paragraph at lines 87--88
+[]\OT1/ptm/m/n/12 ``Benchmarking Large Lan-guage Mod-els in Retrieval-Augmented Gen-er-a-
+ []
+
+
+Underfull \hbox (badness 2865) in paragraph at lines 87--88
+\OT1/ptm/m/n/12 tion \OMS/pzccm/m/n/12 j \OT1/ptm/m/n/12 Pro-ceed-ings of the AAAI Con-fer-ence on Ar-ti-fi-cial In-tel-li-gence,''
+ []
+
+) [39]
 \openout2 = `appendix1.aux'.
 
 
@@ -771,18 +790,18 @@ Package rerunfilecheck Info: File `report.out' has not changed.
 (rerunfilecheck)             Checksum: A2D10B3C7AD82E7188E04A0F5763FED3;16253.
  ) 
 Here is how much of TeX's memory you used:
- 12029 strings out of 467525
- 187427 string characters out of 5418982
- 611020 words of memory out of 5000000
- 40544 multiletter control sequences out of 15000+600000
- 664647 words of font info for 105 fonts, out of 8000000 for 9000
+ 12047 strings out of 467525
+ 187694 string characters out of 5418982
+ 611149 words of memory out of 5000000
+ 40555 multiletter control sequences out of 15000+600000
+ 665760 words of font info for 107 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  75i,11n,79p,1941b,652s stack positions out of 10000i,1000n,20000p,200000b,200000s
-</usr/local/texlive/2026/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
-Output written on report.pdf (37 pages, 167621 bytes).
+</usr/local/texlive/2026/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
+Output written on report.pdf (39 pages, 180106 bytes).
 PDF statistics:
- 1039 PDF objects out of 1200 (max. 8388607)
- 938 compressed objects within 10 object streams
- 166 named destinations out of 1000 (max. 500000)
+ 1085 PDF objects out of 1200 (max. 8388607)
+ 980 compressed objects within 10 object streams
+ 171 named destinations out of 1000 (max. 500000)
  654 words of extra memory for PDF output out of 10000 (max. 10000000)
 
