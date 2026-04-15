@@ -4,7 +4,7 @@
 \section{Project Context and Motivation}
 \label{sec:context}
 
-The \ac{CSD3} is an \ac{EPSRC} Tier-2 national \ac{HPC} service hosted by the University of Cambridge \ac{RCS}, supporting computationally intensive research across a wide range of scientific disciplines \citep{ResearchComputingServicesDocumentation}. Effective use of such systems requires users to be able to follow and understand detailed documentation. These resources are often scattered across multiple sources, ranging from official \ac{CSD3} documentation \citep{ResearchComputingServicesDocumentation} to external resources such as package documentation, creating a barrier for new users \citep{AskHPC}.
+The \ac{CSD3} is an \ac{EPSRC} Tier-2 national \ac{HPC} service hosted by the University of Cambridge \ac{RCS}, supporting computationally intensive research across a wide range of scientific disciplines \citep{ResearchComputingServicesDocumentation}. Effective use of such systems requires users to be able to follow and understand detailed documentation. These resources are often scattered across multiple sources, ranging from local \ac{CSD3} documentation \citep{ResearchComputingServicesDocumentation} to external resources such as package documentation, creating a barrier for new users \citep{AskHPC}.
 
 As a result of this complexity, users frequently turn to the \ac{RCS} helpdesk for support. Figure \ref{fig:ticket-counts} shows that there has been a steady increase in the yearly number of resolved \ac{CSD3} helpdesk tickets from 2017 to 2025. This growth indicates not only sustained support demand, but also an expanding archive of operational support knowledge that could be reused to improve user support \citep{joslinGeneratingFrequentlyAsked2025}.
 
@@ -19,7 +19,7 @@ Recent studies have investigated the use of \ac{LLM}-based assistants for techni
 
 However, the generation quality of \ac{RAG} is highly dependent on the quality of the retrieved information. Recent work has shown that \ac{RAG} systems can generate incorrect answers when they are provided with documents of weak relevance \citep{liYouKnowWhat2024}. Furthermore, semantically relevant retrieved evidence can still be unusable if it comes from an unreliable source \citep{hwangRetrievalAugmentedGenerationEstimation2025} or if it reflects outdated information \citep{liYouKnowWhat2024}.
 
-In the \ac{CSD3} setting, these risks are amplified by the heterogeneous nature of the available evidence. Official \ac{CSD3} documentation is typically the primary source for currently supported usage \citep{ResearchComputingServicesDocumentation}, while external package documentation can provide additional context \citep{AskHPC}. Historical support tickets, by contrast, capture concrete prior issue-resolution cases \citep{joslinGeneratingFrequentlyAsked2025}, but these may not remain applicable after later system or software changes \citep{CSD3UpgradeOctober}. 
+In the \ac{CSD3} setting, these risks are amplified by the heterogeneous nature of the available evidence. Local \ac{CSD3} documentation is typically the primary source for currently supported usage \citep{ResearchComputingServicesDocumentation}, while external package documentation can provide additional context \citep{AskHPC}. Historical support tickets, by contrast, capture concrete prior issue-resolution cases \citep{joslinGeneratingFrequentlyAsked2025}, but these may not remain applicable after later system or software changes \citep{CSD3UpgradeOctober}. 
 
 The challenge is therefore not only to retrieve topically relevant information, but to prioritise evidence that is appropriate for the current \ac{CSD3} context. The next section formalises this challenge by defining the problem addressed in the dissertation and clarifying its scope.
 
@@ -28,7 +28,7 @@ The challenge is therefore not only to retrieve topically relevant information, 
 
 This dissertation addresses the problem of answering \ac{CSD3} user support queries using retrieved evidence from multiple information sources. The task is not only to retrieve semantically similar information, but also to prioritise evidence that is appropriate for the current \ac{CSD3} context. In this setting, answer correctness depends not only on relevance, but also on the authoritativeness, freshness, and applicability of the retrieved evidence to the current system state \citep{liYouKnowWhat2024,hwangRetrievalAugmentedGenerationEstimation2025}. 
 
-The difficulty arises from the heterogeneous evidence base available to the system. Official \ac{CSD3} documentation provides the primary record of currently supported local usage \citep{ResearchComputingServicesDocumentation}; curated external documentation provides further software-specific guidance that may not be covered by the official documentation \citep{AskHPC}; and historical support tickets capture concrete prior issue-resolution cases \citep{joslinGeneratingFrequentlyAsked2025}. These sources therefore serve different evidential roles and should not be treated as interchangeable. In particular, historical tickets may become unreliable after changes to system configuration, software versions, or local policy \citep{joslinGeneratingFrequentlyAsked2025,CSD3UpgradeOctober}. This project therefore treats \ac{HPC} support \ac{QA} as a retrieval problem in which source validity, authority, and freshness must be considered alongside semantic relevance \citep{liYouKnowWhat2024,hwangRetrievalAugmentedGenerationEstimation2025}.
+The difficulty arises from the heterogeneous evidence base available to the system. Local \ac{CSD3} documentation provides the primary record of currently supported local usage \citep{ResearchComputingServicesDocumentation}; curated external documentation provides further software-specific guidance that may not be covered by the local documentation \citep{AskHPC}; and historical support tickets capture concrete prior issue-resolution cases \citep{joslinGeneratingFrequentlyAsked2025}. These sources therefore serve different evidential roles and should not be treated as interchangeable. In particular, historical tickets may become unreliable after changes to system configuration, software versions, or local policy \citep{joslinGeneratingFrequentlyAsked2025,CSD3UpgradeOctober}. This project therefore treats \ac{HPC} support \ac{QA} as a retrieval problem in which source validity, authority, and freshness must be considered alongside semantic relevance \citep{liYouKnowWhat2024,hwangRetrievalAugmentedGenerationEstimation2025}.
 
 This project is scoped to evidence-grounded first response assistance for \ac{CSD3} user support queries within a supervised internal support workflow, rather than a fully autonomous public-facing application. The present system is restricted to text-accessible evidence, using documentation text and visible ticket content rather than attachments, screenshots, log files, or other non-text artefacts. The study is further scoped to single-hop support queries, excluding more complex tasks that require multiple intermediate retrieval steps. On this basis, the following sections derive the research questions, objectives, success criteria, and evaluation strategy used in the remainder of the report.
 
@@ -38,9 +38,9 @@ This project is scoped to evidence-grounded first response assistance for \ac{CS
 To investigate the problems introduced by the heterogeneous evidence base, this project addresses the following research questions (RQ), along with the associated hypotheses (H):
 
 \begin{itemize}
-    \item \textbf{RQ1:} Does combining official \ac{CSD3} documentation with historical support-ticket evidence improve the factual correctness of answers, relative to single-source retrieval?
+    \item \textbf{RQ1:} Does combining local \ac{CSD3} documentation with historical support-ticket evidence improve the factual correctness of answers, relative to single-source retrieval?
     \begin{itemize}
-        \item \textbf{H1:} Combined retrieval will outperform documentation-only and ticket-only baselines in factual correctness, particularly for case-specific troubleshooting queries for which official documentation and historical resolutions provide complementary evidence.  
+        \item \textbf{H1:} Combined retrieval will outperform documentation-only and ticket-only baselines in factual correctness, particularly for case-specific troubleshooting queries for which local documentation and historical resolutions provide complementary evidence.  
     \end{itemize}
     \item \textbf{RQ2:} Does validity-aware reranking improve the factual correctness and faithfulness of answers, relative to source-agnostic relevance-based retrieval over the same heterogeneous corpus?
     \begin{itemize}
@@ -58,7 +58,7 @@ These questions, along with their associated hypotheses, are evaluated later thr
 The principal aim of this project is to design and evaluate an end-to-end \ac{RAG} assistant for use in a supervised \ac{CSD3} support workflow. Within the scope of single-hop, text-accessible user support queries, the project investigates whether combining heterogeneous support evidence with validity-aware retrieval improves the factual correctness and faithfulness of grounded first-response answers. To achieve this aim, the project pursues the following objectives:
 
 \begin{itemize}
-    \item \textbf{O1:} To construct a reproducible, queryable support corpus from official \ac{CSD3} documentation, historical support tickets, and selected external documentation, using source-specific preprocessing, chunking, and metadata enrichment. 
+    \item \textbf{O1:} To construct a reproducible, queryable support corpus from local \ac{CSD3} documentation, historical support tickets, and selected external documentation, using source-specific preprocessing, chunking, and metadata enrichment. 
     \item \textbf{O2:} To implement an end-to-end \ac{RAG} assistant and baseline retrieval configurations for \ac{CSD3} support queries, capable of producing grounded first-response answers from retrieved evidence. 
     \item \textbf{O3:} To design and integrate a validity-aware retrieval and reranking strategy that uses authority, scope, freshness, version, and status signals to prioritise evidence appropriate to the current \ac{CSD3} environment. 
     \item \textbf{O4:} To develop a benchmark and experimental framework for single-hop \ac{CSD3} support queries, including a fixed development and test split and manually verified benchmark annotations for source requirements and validity sensitivity. 
@@ -70,7 +70,7 @@ The success of these objectives will be determined by the following success crit
 \textbf{Primary Research Success Criteria}
 
 \begin{itemize}
-    \item \textbf{SC1:} The project provides a convincing held-out test-set answer to whether combining official documentation and historical support tickets improves factual correctness over single-source baselines.
+    \item \textbf{SC1:} The project provides a convincing held-out test-set answer to whether combining local documentation and historical support tickets improves factual correctness over single-source baselines.
     \item \textbf{SC2:} The project produces a convincing held-out test-set answer to whether validity-aware reranking improves over naive combined retrieval, judged primarily by factual correctness and checked against faithfulness.
     \item \textbf{SC3:} The project reaches a justified conclusion about the role of external documentation for software-specific queries, including the possibility that any benefit is limited or conditional.
 \end{itemize}
@@ -79,7 +79,7 @@ The success of these objectives will be determined by the following success crit
 
 \begin{itemize}
     \item \textbf{SC4:} A working end-to-end \ac{RAG} assistant is implemented for the scoped task of supervised, single-hop, text-accessible \ac{CSD3} support \ac{QA}. 
-    \item \textbf{SC5:} The system can ingest and retrieve from heterogeneous support sources, with official documentation, historical support tickets, and external documentation represented in a reproducible and source-distinct way. 
+    \item \textbf{SC5:} The system can ingest and retrieve from heterogeneous support sources, with local documentation, historical support tickets, and external documentation represented in a reproducible and source-distinct way. 
     \item \textbf{SC6:} A fixed benchmark, validated and manually verified annotations, and a frozen development and test evaluation protocol are produced for the in-scope query class, supporting subgroup analysis of source requirements and validity sensitivity. 
     \item \textbf{SC7:} The final conclusions are supported by controlled experiments, reproducible artefacts, and honest failure analysis, so that the strengths, limitations, and practical value of the approach can be assessed clearly.
 \end{itemize}
