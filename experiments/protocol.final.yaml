@@ -90,7 +90,7 @@ prompt_configs:
 
 selected_collections: &selected_vector_store_collections
   docs:
-    collection_name: "exp_docs_cs800_ov80"
+    collection_name: "exp_docs_cs1200_ov0"
   tickets:
     collection_name: "exp_tickets_cs800_ov80"
   external_docs:
@@ -99,8 +99,8 @@ selected_collections: &selected_vector_store_collections
 selected_chunking_sources: &selected_chunking_sources
   docs:
     strategy: "markdown_token"
-    chunk_size_tokens: 800
-    overlap_tokens: 80
+    chunk_size_tokens: 1200
+    overlap_tokens: 0
   tickets:
     strategy: "jira_turns_token"
     chunk_size_tokens: 800
@@ -116,14 +116,14 @@ retriever_budgets:
     final_top_k: 4
     hybrid_profile:
       dense_top_k: 5
-      sparse_top_k: 5
+      bm25_top_k: 5
       top_k: 5
       fusion:
         type: "rrf"
         rrf_k: 60
         signal_weights:
           dense: 1.0
-          sparse: 1.0
+          bm25: 1.0
     sources:
       - name: "docs"
         top_k: 5
@@ -138,14 +138,14 @@ retriever_budgets:
     final_top_k: 6
     hybrid_profile:
       dense_top_k: 5
-      sparse_top_k: 5
+      bm25_top_k: 5
       top_k: 5
       fusion:
         type: "rrf"
         rrf_k: 60
         signal_weights:
           dense: 1.0
-          sparse: 1.0
+          bm25: 1.0
     sources:
       - name: "docs"
         top_k: 5
@@ -160,14 +160,14 @@ retriever_budgets:
     final_top_k: 8
     hybrid_profile:
       dense_top_k: 5
-      sparse_top_k: 5
+      bm25_top_k: 5
       top_k: 5
       fusion:
         type: "rrf"
         rrf_k: 60
         signal_weights:
           dense: 1.0
-          sparse: 1.0
+          bm25: 1.0
     sources:
       - name: "docs"
         top_k: 5
@@ -182,14 +182,14 @@ retriever_budgets:
     final_top_k: 4
     hybrid_profile:
       dense_top_k: 8
-      sparse_top_k: 8
+      bm25_top_k: 8
       top_k: 8
       fusion:
         type: "rrf"
         rrf_k: 60
         signal_weights:
           dense: 1.0
-          sparse: 1.0
+          bm25: 1.0
     sources:
       - name: "docs"
         top_k: 8
@@ -204,14 +204,14 @@ retriever_budgets:
     final_top_k: 6
     hybrid_profile:
       dense_top_k: 8
-      sparse_top_k: 8
+      bm25_top_k: 8
       top_k: 8
       fusion:
         type: "rrf"
         rrf_k: 60
         signal_weights:
           dense: 1.0
-          sparse: 1.0
+          bm25: 1.0
     sources:
       - name: "docs"
         top_k: 8
@@ -226,14 +226,14 @@ retriever_budgets:
     final_top_k: 8
     hybrid_profile:
       dense_top_k: 8
-      sparse_top_k: 8
+      bm25_top_k: 8
       top_k: 8
       fusion:
         type: "rrf"
         rrf_k: 60
         signal_weights:
           dense: 1.0
-          sparse: 1.0
+          bm25: 1.0
     sources:
       - name: "docs"
         top_k: 8
@@ -248,14 +248,14 @@ retriever_budgets:
     final_top_k: 4
     hybrid_profile:
       dense_top_k: 12
-      sparse_top_k: 12
+      bm25_top_k: 12
       top_k: 12
       fusion:
         type: "rrf"
         rrf_k: 60
         signal_weights:
           dense: 1.0
-          sparse: 1.0
+          bm25: 1.0
     sources:
       - name: "docs"
         top_k: 12
@@ -270,14 +270,14 @@ retriever_budgets:
     final_top_k: 6
     hybrid_profile:
       dense_top_k: 12
-      sparse_top_k: 12
+      bm25_top_k: 12
       top_k: 12
       fusion:
         type: "rrf"
         rrf_k: 60
         signal_weights:
           dense: 1.0
-          sparse: 1.0
+          bm25: 1.0
     sources:
       - name: "docs"
         top_k: 12
@@ -292,14 +292,14 @@ retriever_budgets:
     final_top_k: 8
     hybrid_profile:
       dense_top_k: 12
-      sparse_top_k: 12
+      bm25_top_k: 12
       top_k: 12
       fusion:
         type: "rrf"
         rrf_k: 60
         signal_weights:
           dense: 1.0
-          sparse: 1.0
+          bm25: 1.0
     sources:
       - name: "docs"
         top_k: 12
@@ -356,6 +356,8 @@ defaults:
       <<: *budget_5_8
       rerank:
         weights_path: "config/weights/validity_reranker.protocol.yaml"
+    sparse_encoder:
+      enabled: false
     evaluation:
       generation:
         mode: "pipeline"
@@ -808,6 +810,14 @@ stages:
     dataset_path: "../data/test/ragas_one_hop_eval_dataset_final.dev.jsonl"
     annotations_file: "../data/test/benchmark_annotations_final.csv"
     repeats: 3
+    config_overrides:
+      embedder:
+        api_base: "http://embed6:80/v1"
+    run_options:
+      metrics:
+        - "faithfulness"
+        - "context_recall"
+        - "factual_correctness"
     conditions:
       - name: "vector_naive_combined"
         preset: "naive_combined"
@@ -815,11 +825,11 @@ stages:
           retriever:
             source_type: "vector"
             <<: *budget_5_8
-      - name: "hybrid_naive_combined"
+      - name: "dense_bm25_naive_combined"
         preset: "naive_combined"
         config_overrides:
           retriever:
-            source_type: "hybrid"
+            source_type: "dense_bm25_hybrid"
             <<: *budget_5_8
 
   stage1_shared_budget:
