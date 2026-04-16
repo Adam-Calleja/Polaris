@@ -609,3 +609,76 @@ def test_summarize_experiment_stage_writes_leaderboard_and_aggregates(tmp_path: 
     by_condition = {row["condition_name"]: row for row in aggregate_rows}
     assert by_condition["docs_only"]["factual_correctness_mean"] == "0.500000"
     assert by_condition["naive_combined"]["factual_correctness_mean"] == "0.850000"
+
+
+def test_summarize_experiment_stage_tolerates_large_csv_fields(tmp_path: Path) -> None:
+    manifest_path = _write_manifest(
+        tmp_path,
+        {
+            "artifacts_root": "artifacts/experiments",
+            "base_config": "config.yaml",
+            "stages": {
+                "stage0c_retrieval_mode_pilot": {
+                    "type": "evaluation_grid",
+                    "dataset_path": "test.jsonl",
+                    "conditions": [
+                        {"name": "retrieval_baseline", "preset": "dense_only"},
+                    ],
+                }
+            },
+        },
+    )
+
+    run_dir = (
+        tmp_path
+        / "artifacts"
+        / "experiments"
+        / "stage0c_retrieval_mode_pilot"
+        / "retrieval_baseline"
+        / "run_01"
+    )
+    run_dir.mkdir(parents=True)
+
+    with (run_dir / "scores.csv").open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(
+            handle,
+            fieldnames=["factual_correctness", "faithfulness", "retrieved_contexts"],
+        )
+        writer.writeheader()
+        writer.writerow(
+            {
+                "factual_correctness": 0.75,
+                "faithfulness": 0.5,
+                "retrieved_contexts": "x" * 200_000,
+            }
+        )
+    (run_dir / "summary.json").write_text(
+        json.dumps(
+            {
+                "rows": 1,
+                "duration_seconds": 3.0,
+                "failure_rate": 0.0,
+                "selected_max_workers": 1,
+            }
+        ),
+        encoding="utf-8",
+    )
+    (run_dir / "run_manifest.json").write_text(
+        json.dumps(
+            {
+                "preset_name": "dense_only",
+                "config_file": "/tmp/generated.yaml",
+                "condition_fingerprint": "dense-only-fp",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    artifacts = automation.summarize_experiment_stage(
+        manifest_path=manifest_path,
+        stage_name="stage0c_retrieval_mode_pilot",
+    )
+
+    leaderboard_rows = list(csv.DictReader(artifacts["leaderboard_csv"].open("r", encoding="utf-8")))
+    assert leaderboard_rows[0]["condition_name"] == "retrieval_baseline"
+    assert leaderboard_rows[0]["factual_correctness"] == "0.750000"

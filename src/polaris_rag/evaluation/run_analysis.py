@@ -44,6 +44,7 @@ import random
 from typing import Any, Iterable, Mapping
 
 from polaris_rag.evaluation.benchmark_annotations import ANALYSIS_LABEL_COLUMNS, ANNOTATION_METADATA_KEY
+from polaris_rag.evaluation.csv_utils import dict_reader as csv_dict_reader
 from polaris_rag.evaluation.evaluation_dataset import load_prepared_rows
 
 
@@ -1015,7 +1016,7 @@ def _load_csv_records(path: Path) -> list[dict[str, Any]]:
         Collected results from the operation.
     """
     with path.open("r", encoding="utf-8", newline="") as handle:
-        reader = csv.DictReader(handle)
+        reader = csv_dict_reader(handle)
         return [dict(row) for row in reader]
 
 

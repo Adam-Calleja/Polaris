@@ -34,6 +34,8 @@ import csv
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
+from polaris_rag.evaluation.csv_utils import dict_reader as csv_dict_reader
+
 
 ANNOTATION_COLUMNS: tuple[str, ...] = (
     "id",
@@ -187,7 +189,7 @@ def load_annotation_rows(path: str | Path) -> list[dict[str, str]]:
         raise FileNotFoundError(f"Annotation CSV not found: {resolved}")
 
     with resolved.open("r", encoding="utf-8", newline="") as handle:
-        reader = csv.DictReader(handle)
+        reader = csv_dict_reader(handle)
         if reader.fieldnames is None:
             return []
 
@@ -259,7 +261,7 @@ def load_legacy_audit_labels(path: str | Path) -> dict[str, dict[str, str]]:
         raise FileNotFoundError(f"Legacy audit label file not found: {resolved}")
 
     with resolved.open("r", encoding="utf-8", newline="") as handle:
-        reader = csv.DictReader(handle)
+        reader = csv_dict_reader(handle)
         if reader.fieldnames is None:
             return {}
         if "id" not in reader.fieldnames:

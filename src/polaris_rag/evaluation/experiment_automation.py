@@ -20,6 +20,8 @@ from typing import Any, Iterable, Mapping, Sequence
 
 import yaml
 
+from polaris_rag.evaluation.csv_utils import dict_reader as csv_dict_reader
+
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_PRIMARY_METRICS: tuple[str, ...] = (
@@ -1038,7 +1040,7 @@ def _resolve_ingest_spec_paths(
 
 def _read_metric_means(path: Path) -> dict[str, float | None]:
     with path.open("r", encoding="utf-8", newline="") as handle:
-        reader = csv.DictReader(handle)
+        reader = csv_dict_reader(handle)
         sums: dict[str, float] = {}
         counts: dict[str, int] = {}
         for row in reader:
