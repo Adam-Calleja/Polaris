@@ -2,7 +2,7 @@
   "dataset_path": "/app/data/test/ragas_one_hop_eval_dataset_final.dev.jsonl",
   "annotations_path": "/app/data/test/benchmark_annotations_final.csv",
   "prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0c_retrieval_mode_pilot/dense_bm25_naive_combined/run_03/prepared_input.json",
-  "reuse_prepared": false,
+  "reuse_prepared": true,
   "query_field": "query",
   "reference_field": "expected_answer",
   "id_field": "id",
@@ -72,24 +72,29 @@
           "weight": 1.0
         },
         "retriever_profile": {
+          "bm25": {
+            "b": 0.75,
+            "k1": 1.5
+          },
+          "bm25_top_k": 5,
+          "dense_top_k": 5,
+          "docstore": {
+            "backend": "SimpleDocumentStore",
+            "node_count": 85
+          },
           "filters": {
             "filters": []
           },
-          "retrieval_profile": {
-            "bm25_top_k": 5,
-            "dense_top_k": 5,
-            "fusion": {
-              "rrf_k": 60,
-              "signal_weights": {
-                "bm25": 1.0,
-                "dense": 1.0
-              },
-              "type": "rrf"
+          "fusion": {
+            "rrf_k": 60,
+            "signal_weights": {
+              "bm25": 1.0,
+              "dense": 1.0
             },
-            "top_k": 5
+            "type": "rrf"
           },
           "top_k": 5,
-          "type": "vector",
+          "type": "dense_bm25_hybrid",
           "vector_store": {
             "backend": "qdrant",
             "collection_name": "exp_docs_cs1200_ov0",
@@ -99,7 +104,7 @@
             "sparse_vector_name": "sparse"
           }
         },
-        "retriever_fingerprint": "6bf318412b047f7497df6350e56a74e354391f79b00746635274e690fd5f58d1"
+        "retriever_fingerprint": "e01b5615cf217c07071ec1ae60ada29ac2e3676f8683e04617986bcecc71d982"
       },
       "tickets": {
         "settings": {
@@ -121,24 +126,29 @@
           "weight": 1.0
         },
         "retriever_profile": {
+          "bm25": {
+            "b": 0.75,
+            "k1": 1.5
+          },
+          "bm25_top_k": 5,
+          "dense_top_k": 5,
+          "docstore": {
+            "backend": "SimpleDocumentStore",
+            "node_count": 235374
+          },
           "filters": {
             "filters": []
           },
-          "retrieval_profile": {
-            "bm25_top_k": 5,
-            "dense_top_k": 5,
-            "fusion": {
-              "rrf_k": 60,
-              "signal_weights": {
-                "bm25": 1.0,
-                "dense": 1.0
-              },
-              "type": "rrf"
+          "fusion": {
+            "rrf_k": 60,
+            "signal_weights": {
+              "bm25": 1.0,
+              "dense": 1.0
             },
-            "top_k": 5
+            "type": "rrf"
           },
           "top_k": 5,
-          "type": "vector",
+          "type": "dense_bm25_hybrid",
           "vector_store": {
             "backend": "qdrant",
             "collection_name": "exp_tickets_cs800_ov80",
@@ -148,11 +158,11 @@
             "sparse_vector_name": "sparse"
           }
         },
-        "retriever_fingerprint": "e2a3475ddfe793e06ea10ba6ef0b51f02d9ed2fa6b2de7f9cc73f2e81f690a9f"
+        "retriever_fingerprint": "dfb56f22e6cdeec4a9be07ab1587e2bef5a77b8671c9084014ffa92e21c11474"
       }
     }
   },
-  "retriever_fingerprint": "3a63f4e7575c047ae25bcf7ca18775cabd67e0c2297304a44981440c2a11ff30",
+  "retriever_fingerprint": "2ba1e392e2b513ad0bca35e8b9a6c47fe0754f50dbb05727fdd5f7aae0a10a6b",
   "reranker_profile": {
     "type": "rrf",
     "rrf_k": 60,
@@ -300,8 +310,8 @@
   "prep_total_rows": 70,
   "prep_success_rows": 70,
   "prep_failed_rows": 0,
-  "prep_elapsed_seconds": 2272.764261613018,
-  "prep_rate_rows_per_second": 0.030799498734778528,
+  "prep_elapsed_seconds": 0.0,
+  "prep_rate_rows_per_second": 0.0,
   "prep_error_classes": {},
   "prep_failure_classes": {},
   "prep_failure_class_rates": {},
@@ -333,6 +343,5 @@
       "max": 5.2210777777777775
     }
   },
-  "persisted_prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0c_retrieval_mode_pilot/dense_bm25_naive_combined/run_03/prepared_input.json",
-  "prepared_source": "generated"
+  "prepared_source": "existing"
 }
