@@ -13,9 +13,9 @@
 \contentsline {chapter}{\numberline {2}Background and Related Work}{19}{chapter.2}%
 \contentsline {section}{\numberline {2.1}HPC Support as an Information Retrieval and Question Answering Problem}{19}{section.2.1}%
 \contentsline {section}{\numberline {2.2}Retrieval-Augmented Generation}{21}{section.2.2}%
-\contentsline {section}{\numberline {2.3}Heterogeneous Support Corpora: Documentation and Tickets}{22}{section.2.3}%
-\contentsline {section}{\numberline {2.4}Authority, Freshness, and Validity in Retrieval}{24}{section.2.4}%
-\contentsline {section}{\numberline {2.5}Evaluation of RAG Systems}{26}{section.2.5}%
+\contentsline {section}{\numberline {2.3}Heterogeneous Support Corpora: Documentation and Tickets}{23}{section.2.3}%
+\contentsline {section}{\numberline {2.4}Authority, Freshness, and Validity in Retrieval}{25}{section.2.4}%
+\contentsline {section}{\numberline {2.5}Evaluation of RAG Systems}{27}{section.2.5}%
 \contentsline {section}{\numberline {2.6}Gap Analysis and Research Positioning}{28}{section.2.6}%
 \contentsline {chapter}{\numberline {3}Problem Formulation and Requirements}{30}{chapter.3}%
 \contentsline {section}{\numberline {3.1}Task Definition}{30}{section.3.1}%

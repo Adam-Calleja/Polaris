@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.3.18)  15 APR 2026 20:27
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.3.18)  15 APR 2026 22:24
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -347,7 +347,7 @@ Underfull \hbox (badness 10000) in paragraph at lines 51--51
 
 [4] (./report.lot
 Package acronym Info: Label `acro:CSD3' newly defined as it shall be overridden
-although it is yet undefined on input line 3.
+although it is yet undefined on input line 4.
 )
 \tf@lot=\write5
 \openout5 = `report.lot'.
@@ -398,7 +398,7 @@ although it is yet undefined on input line 7.
 Package acronym Info: Label `acro:HPC' newly defined as it shall be overridden
 although it is yet undefined on input line 7.
 Package acronym Info: Label `acro:RCS' overridden on input line 7.
-<graphs/ticket_counts.pdf, id=537, 431.17964pt x 254.86092pt>
+<graphs/ticket_counts.pdf, id=540, 431.17964pt x 254.86092pt>
 File: graphs/ticket_counts.pdf Graphic file (type pdf)
 <use graphs/ticket_counts.pdf>
 Package pdftex.def Info: graphs/ticket_counts.pdf  used on input line 13.
@@ -446,219 +446,300 @@ Overfull \hbox (8.44052pt too wide) in paragraph at lines 6--6
 []\OT1/ptm/b/n/17.28 HPC Sup-port as an In-for-ma-tion Re-trieval and Ques-
  []
 
+Package acronym Info: Label `acro:IR' newly defined as it shall be overridden
+although it is yet undefined on input line 11.
 [19
 
 
 
 
 ]
-Package acronym Info: Label `acro:IR' newly defined as it shall be overridden
-although it is yet undefined on input line 11.
-
-Underfull \vbox (badness 3861) has occurred while \output is active []
-
- [20]
 Package acronym Info: Label `acro:LM' newly defined as it shall be overridden
 although it is yet undefined on input line 22.
 
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [20]
 Overfull \hbox (26.4148pt too wide) in paragraph at lines 26--27
 \OT1/ptm/m/n/12 intensive gen-er-a-tion, and fact ver-i-fi-ca-tion bench-marks. Their mod-els out-per-form parametric-
  []
 
 [21]
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <10.95> not available
-(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 43.
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 36.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <8> not available
-(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 43.
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 36.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <6> not available
-(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 43.
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 36.
 
-Underfull \hbox (badness 10000) in paragraph at lines 47--47
+Underfull \hbox (badness 1122) in paragraph at lines 41--41
+[]\OT1/ptm/m/n/10.95 Retrieval ne-ces-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 42--42
+[]\OT1/ptm/m/n/10.95 Avoids in-dis-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 42--42
+\OT1/ptm/m/n/10.95 crim-i-nate fixed-$\OML/ptmcm/m/it/10.95 k$
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 42--42
+\OT1/ptm/m/n/10.95 re-trieval; en-ables
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 42--42
+\OT1/ptm/m/n/10.95 re-trieval on de-
+ []
+
+
+Underfull \hbox (badness 1028) in paragraph at lines 43--44
+[]\OT1/ptm/m/n/10.95 Does not model het-ero-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 45--45
+[]\OT1/ptm/m/n/10.95 Query--
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 45--45
+\OT1/ptm/m/n/10.95 knowledge
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 46--46
+[]\OT1/ptm/m/n/10.95 Detects when
+ []
+
+
+Underfull \hbox (badness 3635) in paragraph at lines 46--46
+\OT1/ptm/m/n/10.95 of the cor-pus or
+ []
+
+
+Underfull \hbox (badness 5274) in paragraph at lines 49--49
+[]\OT1/ptm/m/n/10.95 Source re-li-a-bil-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 50--50
+[]\OT1/ptm/m/n/10.95 Prioritises re-li-
+ []
+
+
+Underfull \hbox (badness 3861) in paragraph at lines 50--50
+\OT1/ptm/m/n/10.95 able and rel-e-vant
+ []
+
+
+Underfull \hbox (badness 4569) in paragraph at lines 50--50
+\OT1/ptm/m/n/10.95 sources in multi-
+ []
+
+[22]
+Underfull \hbox (badness 10000) in paragraph at lines 75--75
 []\OT1/ptm/m/n/10.95 Local doc-u-
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 48--48
-[]\OT1/ptm/m/n/10.95 Highest for
+Underfull \hbox (badness 10000) in paragraph at lines 76--76
+[]\OT1/ptm/m/n/10.95 Primary au-
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 48--48
+Underfull \hbox (badness 10000) in paragraph at lines 76--76
+\OT1/ptm/m/n/10.95 thor-ity for
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 76--76
 \OT1/ptm/m/n/10.95 site-specific
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 49--49
+Underfull \hbox (badness 10000) in paragraph at lines 77--77
 []\OT1/ptm/m/n/10.95 Records sup-ported
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 49--49
+Underfull \hbox (badness 10000) in paragraph at lines 77--77
 \OT1/ptm/m/n/10.95 lo-cal work-flows,
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 49--49
+Underfull \hbox (badness 10000) in paragraph at lines 77--77
 \OT1/ptm/m/n/10.95 con-straints, and
  []
 
 
-Underfull \hbox (badness 3229) in paragraph at lines 50--50
+Underfull \hbox (badness 3229) in paragraph at lines 78--78
 []\OT1/ptm/m/n/10.95 May omit low-level
  []
 
 
-Underfull \hbox (badness 5939) in paragraph at lines 50--50
+Underfull \hbox (badness 5939) in paragraph at lines 78--78
 \OT1/ptm/m/n/10.95 case trou-bleshoot-ing
  []
 
 
-Underfull \hbox (badness 5519) in paragraph at lines 51--52
+Underfull \hbox (badness 5519) in paragraph at lines 79--80
 \OT1/ptm/m/n/10.95 mis-sion, per-mis-sions,
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 52--52
+Underfull \hbox (badness 10000) in paragraph at lines 80--80
 []\OT1/ptm/m/n/10.95 External
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 52--52
+Underfull \hbox (badness 10000) in paragraph at lines 80--80
 \OT1/ptm/m/n/10.95 tech-ni-cal
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 52--52
+Underfull \hbox (badness 10000) in paragraph at lines 80--80
 \OT1/ptm/m/n/10.95 doc-u-men-ta-
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 53--53
-[]\OT1/ptm/m/n/10.95 Medium:
+Underfull \hbox (badness 6364) in paragraph at lines 81--81
+[]\OT1/ptm/m/n/10.95 Secondary for
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 53--53
-\OT1/ptm/m/n/10.95 strong on
+Underfull \hbox (badness 10000) in paragraph at lines 81--81
+\OT1/ptm/m/n/10.95 lo-cal op-er-a-
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 54--54
+Underfull \hbox (badness 10000) in paragraph at lines 81--81
+\OT1/ptm/m/n/10.95 tional truth;
+ []
+
+
+Underfull \hbox (badness 1163) in paragraph at lines 81--81
+\OT1/ptm/m/n/10.95 strong on tool
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 82--82
 []\OT1/ptm/m/n/10.95 Provides tool be-
  []
 
 
-Underfull \hbox (badness 3919) in paragraph at lines 54--54
+Underfull \hbox (badness 3919) in paragraph at lines 82--82
 \OT1/ptm/m/n/10.95 con-fig-u-ra-tion de-tail
  []
 
 
-Underfull \hbox (badness 1609) in paragraph at lines 55--55
+Underfull \hbox (badness 1609) in paragraph at lines 83--83
 []\OT1/ptm/m/n/10.95 Can be rel-e-vant yet
  []
 
 
-Underfull \hbox (badness 1931) in paragraph at lines 55--55
+Underfull \hbox (badness 1931) in paragraph at lines 83--83
 \OT1/ptm/m/n/10.95 out-of-scope, out-of-
  []
 
 
-Underfull \hbox (badness 1412) in paragraph at lines 55--55
+Underfull \hbox (badness 1412) in paragraph at lines 83--83
 \OT1/ptm/m/n/10.95 for lo-cal op-er-a-tional
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 57--57
+Underfull \hbox (badness 10000) in paragraph at lines 85--85
 []\OT1/ptm/m/n/10.95 Historical
  []
 
 
-Underfull \hbox (badness 1546) in paragraph at lines 57--57
+Underfull \hbox (badness 1546) in paragraph at lines 85--85
 \OT1/ptm/m/n/10.95 sup-port tick-
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 58--58
+Underfull \hbox (badness 10000) in paragraph at lines 86--86
 \OT1/ptm/m/n/10.95 for prior-
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 58--58
+Underfull \hbox (badness 10000) in paragraph at lines 86--86
 \OT1/ptm/m/n/10.95 case re-trieval,
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 58--58
+Underfull \hbox (badness 10000) in paragraph at lines 86--86
 \OT1/ptm/m/n/10.95 weaker for
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 59--59
+Underfull \hbox (badness 10000) in paragraph at lines 87--87
 []\OT1/ptm/m/n/10.95 Preserves con-crete
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 59--59
+Underfull \hbox (badness 10000) in paragraph at lines 87--87
 \OT1/ptm/m/n/10.95 prob-lem re-ports,
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 59--59
+Underfull \hbox (badness 10000) in paragraph at lines 87--87
 \OT1/ptm/m/n/10.95 di-ag-nos-tic con-text,
  []
 
 
-Underfull \hbox (badness 1648) in paragraph at lines 60--60
+Underfull \hbox (badness 1648) in paragraph at lines 88--88
 []\OT1/ptm/m/n/10.95 Lagging, noisy, and
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 60--60
+Underfull \hbox (badness 10000) in paragraph at lines 88--88
 \OT1/ptm/m/n/10.95 privacy-sensitive;
  []
 
 
-Underfull \hbox (badness 6608) in paragraph at lines 60--60
+Underfull \hbox (badness 6608) in paragraph at lines 88--88
 \OT1/ptm/m/n/10.95 user-specific con-tent
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 61--62
+Underfull \hbox (badness 10000) in paragraph at lines 89--90
 []\OT1/ptm/m/n/10.95 Use with fresh-ness
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 61--62
+Underfull \hbox (badness 10000) in paragraph at lines 89--90
 \OT1/ptm/m/n/10.95 con-trols and ac-cess
  []
 
 
-Underfull \hbox (badness 4024) in paragraph at lines 61--62
+Underfull \hbox (badness 4024) in paragraph at lines 89--90
 \OT1/ptm/m/n/10.95 re-stric-tions; strongest
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 61--62
+Underfull \hbox (badness 10000) in paragraph at lines 89--90
 \OT1/ptm/m/n/10.95 for trou-bleshoot-ing
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 61--62
+Underfull \hbox (badness 10000) in paragraph at lines 89--90
 \OT1/ptm/m/n/10.95 analo-gies and prior-
  []
 
 
-Overfull \hbox (45.69041pt too wide) in paragraph at lines 43--64
+Overfull \hbox (45.69041pt too wide) in paragraph at lines 71--92
  [][] 
  []
 
 
-Overfull \hbox (5.02779pt too wide) in paragraph at lines 68--69
+Overfull \hbox (5.02779pt too wide) in paragraph at lines 96--97
 []\OT1/ptm/m/n/12 For facility-specific sup-port, lo-cal doc-u-men-ta-tion is the pri-mary doc-u-men-tary source
  []
-
-[22]
-Underfull \vbox (badness 10000) has occurred while \output is active []
 
 
 Overfull \hbox (27.58992pt too wide) has occurred while \output is active
@@ -666,19 +747,19 @@ Overfull \hbox (27.58992pt too wide) has occurred while \output is active
  []
 
 [23]
-Overfull \hbox (0.68425pt too wide) in paragraph at lines 74--75
-[]\OT1/ptm/m/n/12 Taken to-gether, the lit-er-a-ture sup-ports mod-elling [][] sup-port ev-i-dence as a source-
+Overfull \hbox (3.75801pt too wide) in paragraph at lines 98--99
+\OT1/ptm/m/n/12 source [][], how-ever, such ma-te-rial still raises source-reliability and local-applicability
  []
 
-[24]
+
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
- [25] [26]
+ [24] [25]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [26]
 Package acronym Info: Label `acro:RGB' newly defined as it shall be overridden
-although it is yet undefined on input line 98.
-
-Underfull \vbox (badness 10000) has occurred while \output is active []
-
+although it is yet undefined on input line 126.
  [27] [28]) [29]
 \openout2 = `chapter3.aux'.
 
@@ -795,18 +876,18 @@ Package rerunfilecheck Info: File `report.out' has not changed.
 (rerunfilecheck)             Checksum: A2D10B3C7AD82E7188E04A0F5763FED3;16253.
  ) 
 Here is how much of TeX's memory you used:
- 12048 strings out of 467525
- 187701 string characters out of 5418982
- 610149 words of memory out of 5000000
- 40555 multiletter control sequences out of 15000+600000
- 665760 words of font info for 107 fonts, out of 8000000 for 9000
+ 12053 strings out of 467525
+ 187761 string characters out of 5418982
+ 609263 words of memory out of 5000000
+ 40556 multiletter control sequences out of 15000+600000
+ 667585 words of font info for 110 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 75i,11n,79p,1941b,652s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 75i,11n,79p,2002b,652s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/local/texlive/2026/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
-Output written on report.pdf (40 pages, 184836 bytes).
+Output written on report.pdf (40 pages, 186431 bytes).
 PDF statistics:
- 1129 PDF objects out of 1200 (max. 8388607)
- 1022 compressed objects within 11 object streams
- 172 named destinations out of 1000 (max. 500000)
+ 1142 PDF objects out of 1200 (max. 8388607)
+ 1035 compressed objects within 11 object streams
+ 173 named destinations out of 1000 (max. 500000)
  654 words of extra memory for PDF output out of 10000 (max. 10000000)
 
