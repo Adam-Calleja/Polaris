@@ -1,0 +1,350 @@
+{
+  "dataset_path": "/app/data/test/ragas_one_hop_eval_dataset_final.dev.jsonl",
+  "annotations_path": "/app/data/test/benchmark_annotations_final.csv",
+  "prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage1_shared_budget/naive_combined_topk12_final4/run_02/prepared_input.json",
+  "reuse_prepared": false,
+  "query_field": "query",
+  "reference_field": "expected_answer",
+  "id_field": "id",
+  "generation_workers": 16,
+  "generation_mode": "pipeline",
+  "evaluation_policy": "official",
+  "generation_deadlines": {
+    "policy": "official",
+    "client_total_seconds": 200.0,
+    "server_total_seconds": 180.0,
+    "retrieval_cap_seconds": 30.0,
+    "cleanup_reserve_seconds": 5.0,
+    "client_total_ms": 200000,
+    "server_total_ms": 180000,
+    "retrieval_cap_ms": 30000,
+    "cleanup_reserve_ms": 5000
+  },
+  "max_infra_failure_rate": 0.01,
+  "generation_retries": {
+    "max_attempts": 1,
+    "initial_backoff_seconds": 1.0,
+    "max_backoff_seconds": 8.0,
+    "jitter_seconds": 0.25,
+    "retry_on_empty_response": true
+  },
+  "generator_profile": {
+    "mode": "pipeline",
+    "generator_llm": {
+      "type": "openai_like",
+      "model_name": "mistralai/Mistral-Large-Instruct-2407",
+      "api_base": "http://vllm:8080/v1",
+      "request_timeout": 90,
+      "max_retries": 1,
+      "model_kwargs": {
+        "temperature": 0,
+        "top_p": 1.0,
+        "stop_list": [
+          "\nUser:",
+          "\n\nUser:"
+        ]
+      }
+    },
+    "llm_generate": {}
+  },
+  "generator_fingerprint": "073fbf42ca966bf58abbb9d019aa73a18ca5725d60c1d9aa70f3b3ed7e8140ac",
+  "retriever_profile": {
+    "type": "multi_collection",
+    "final_top_k": 4,
+    "sources": {
+      "docs": {
+        "settings": {
+          "filters": {},
+          "retrieval_profile": {
+            "bm25_top_k": 12,
+            "dense_top_k": 12,
+            "fusion": {
+              "rrf_k": 60,
+              "signal_weights": {
+                "bm25": 1.0,
+                "dense": 1.0
+              },
+              "type": "rrf"
+            },
+            "top_k": 12
+          },
+          "top_k": 12,
+          "weight": 1.0
+        },
+        "retriever_profile": {
+          "filters": {
+            "filters": []
+          },
+          "retrieval_profile": {
+            "bm25_top_k": 12,
+            "dense_top_k": 12,
+            "fusion": {
+              "rrf_k": 60,
+              "signal_weights": {
+                "bm25": 1.0,
+                "dense": 1.0
+              },
+              "type": "rrf"
+            },
+            "top_k": 12
+          },
+          "top_k": 12,
+          "type": "vector",
+          "vector_store": {
+            "backend": "qdrant",
+            "collection_name": "exp_docs_cs1200_ov0",
+            "dense_model": "Qwen/Qwen3-Embedding-8B",
+            "dense_vector_name": "dense",
+            "sparse_model": null,
+            "sparse_vector_name": "sparse"
+          }
+        },
+        "retriever_fingerprint": "a9a220d4ecbe0ec2a41c365e4794c3d8d41792dbc884c72ca55586e26fd87cea"
+      },
+      "tickets": {
+        "settings": {
+          "filters": {},
+          "retrieval_profile": {
+            "bm25_top_k": 12,
+            "dense_top_k": 12,
+            "fusion": {
+              "rrf_k": 60,
+              "signal_weights": {
+                "bm25": 1.0,
+                "dense": 1.0
+              },
+              "type": "rrf"
+            },
+            "top_k": 12
+          },
+          "top_k": 12,
+          "weight": 1.0
+        },
+        "retriever_profile": {
+          "filters": {
+            "filters": []
+          },
+          "retrieval_profile": {
+            "bm25_top_k": 12,
+            "dense_top_k": 12,
+            "fusion": {
+              "rrf_k": 60,
+              "signal_weights": {
+                "bm25": 1.0,
+                "dense": 1.0
+              },
+              "type": "rrf"
+            },
+            "top_k": 12
+          },
+          "top_k": 12,
+          "type": "vector",
+          "vector_store": {
+            "backend": "qdrant",
+            "collection_name": "exp_tickets_cs800_ov80",
+            "dense_model": "Qwen/Qwen3-Embedding-8B",
+            "dense_vector_name": "dense",
+            "sparse_model": null,
+            "sparse_vector_name": "sparse"
+          }
+        },
+        "retriever_fingerprint": "dd7ff8f6e2fb5e670af5d1b66e7a441f3b9c6e5ed69e7a811766c7ee2265f22d"
+      }
+    }
+  },
+  "retriever_fingerprint": "6fa7450d39a9f466788e381244d01b3f93cdaeb7c169fdf76cc34c1a4763ec0f",
+  "reranker_profile": {
+    "type": "rrf",
+    "rrf_k": 60,
+    "source_weights": {
+      "docs": 1.0,
+      "tickets": 1.0
+    },
+    "trace_enabled": true
+  },
+  "reranker_fingerprint": "919c0e51c02532aa66423a7292c247df070dea8c40b92335a6a692165fefb030",
+  "preset_name": "naive_combined",
+  "preset_description": "Naive docs+tickets baseline with RRF reranking.",
+  "condition_summary": {
+    "retriever_type": "multi_collection",
+    "source_type": "vector",
+    "final_top_k": 4,
+    "hybrid_profile": {
+      "dense_top_k": 12,
+      "bm25_top_k": 12,
+      "top_k": 12,
+      "fusion": {
+        "type": "rrf",
+        "rrf_k": 60,
+        "signal_weights": {
+          "dense": 1.0,
+          "bm25": 1.0
+        }
+      }
+    },
+    "sources": [
+      {
+        "top_k": 12,
+        "filters": {},
+        "weight": 1.0,
+        "retrieval_profile": {
+          "dense_top_k": 12,
+          "bm25_top_k": 12,
+          "top_k": 12,
+          "fusion": {
+            "type": "rrf",
+            "rrf_k": 60,
+            "signal_weights": {
+              "dense": 1.0,
+              "bm25": 1.0
+            }
+          }
+        },
+        "name": "docs",
+        "collection_name": "exp_docs_cs1200_ov0"
+      },
+      {
+        "top_k": 12,
+        "filters": {},
+        "weight": 1.0,
+        "retrieval_profile": {
+          "dense_top_k": 12,
+          "bm25_top_k": 12,
+          "top_k": 12,
+          "fusion": {
+            "type": "rrf",
+            "rrf_k": 60,
+            "signal_weights": {
+              "dense": 1.0,
+              "bm25": 1.0
+            }
+          }
+        },
+        "name": "tickets",
+        "collection_name": "exp_tickets_cs800_ov80"
+      }
+    ],
+    "retriever_profile": {
+      "type": "multi_collection",
+      "source_type": "vector",
+      "final_top_k": 4,
+      "hybrid_profile": {
+        "dense_top_k": 12,
+        "bm25_top_k": 12,
+        "top_k": 12,
+        "fusion": {
+          "type": "rrf",
+          "rrf_k": 60,
+          "signal_weights": {
+            "dense": 1.0,
+            "bm25": 1.0
+          }
+        }
+      },
+      "sources": [
+        {
+          "top_k": 12,
+          "filters": {},
+          "weight": 1.0,
+          "retrieval_profile": {
+            "dense_top_k": 12,
+            "bm25_top_k": 12,
+            "top_k": 12,
+            "fusion": {
+              "type": "rrf",
+              "rrf_k": 60,
+              "signal_weights": {
+                "dense": 1.0,
+                "bm25": 1.0
+              }
+            }
+          },
+          "name": "docs",
+          "collection_name": "exp_docs_cs1200_ov0"
+        },
+        {
+          "top_k": 12,
+          "filters": {},
+          "weight": 1.0,
+          "retrieval_profile": {
+            "dense_top_k": 12,
+            "bm25_top_k": 12,
+            "top_k": 12,
+            "fusion": {
+              "type": "rrf",
+              "rrf_k": 60,
+              "signal_weights": {
+                "dense": 1.0,
+                "bm25": 1.0
+              }
+            }
+          },
+          "name": "tickets",
+          "collection_name": "exp_tickets_cs800_ov80"
+        }
+      ]
+    },
+    "retriever_fingerprint": "e540c52b3aa56fae8f80dec71d29b622946289d45758fd1d8fc1a1cb7d762bf3",
+    "reranker_profile": {
+      "type": "rrf",
+      "rrf_k": 60,
+      "source_weights": {
+        "docs": 1.0,
+        "tickets": 1.0
+      },
+      "trace_enabled": true
+    }
+  },
+  "condition_fingerprint": "cad6b9cf9571847cebb83e9766cdd6b6d741497deb5be49429a435fbdf00e07e",
+  "annotation_rows": 70,
+  "prep_total_rows": 70,
+  "prep_success_rows": 67,
+  "prep_failed_rows": 3,
+  "prep_elapsed_seconds": 273.0236772589851,
+  "prep_rate_rows_per_second": 0.2563880199064176,
+  "prep_error_classes": {
+    "UnexpectedResponse": 3
+  },
+  "prep_failure_classes": {
+    "api_internal_error": 3
+  },
+  "prep_failure_class_rates": {
+    "api_internal_error": 0.04285714285714286
+  },
+  "prep_failure_stages": {
+    "api": 3
+  },
+  "prep_failure_stage_rates": {
+    "api": 0.04285714285714286
+  },
+  "prep_response_statuses": {
+    "ok": 67,
+    "error": 3
+  },
+  "prep_response_status_rates": {
+    "ok": 0.9571428571428572,
+    "error": 0.04285714285714286
+  },
+  "prep_coverage": 0.9571428571428572,
+  "prep_empty_response_rate": 0.0,
+  "infra_failure_rate": 0.04285714285714286,
+  "run_validity": "INVALID",
+  "run_policy": "official",
+  "latency_budget_report": {
+    "count": 67,
+    "elapsed_ms": {
+      "p50": 48503.0,
+      "p90": 68240.0,
+      "p95": 74480.5,
+      "max": 83871.0,
+      "mean": 49833.20895522388
+    },
+    "budget_utilization": {
+      "p50": 0.2694611111111111,
+      "p90": 0.3791111111111111,
+      "max": 0.46595
+    }
+  },
+  "persisted_prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage1_shared_budget/naive_combined_topk12_final4/run_02/prepared_input.json",
+  "prepared_source": "generated"
+}

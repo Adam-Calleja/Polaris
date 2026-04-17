@@ -17,16 +17,13 @@ generator_llm:
 
 evaluator_llm:
   type: "OpenAILike"
-  model_name: "Qwen/Qwen2.5-72B-Instruct"
-  api_base: "http://vllm:8080/v1"
+  model_name: "hosted_vllm/mistralai/Devstral-2-123B-Instruct-2512"
+  api_base: "https://llm.hpc.cam.ac.uk/v1"
   api_key: "${POLARIS_LLM_API_KEY}"
   model_kwargs:
     temperature: 0
     top_p: 0.99
-    max_tokens: 2048
-    frequency_penalty: 0.2
-    extra_body:
-      repetition_penalty: 1.08
+    max_tokens: 4096
     instructor_mode: MD_JSON
 
 embedder:
@@ -42,9 +39,9 @@ embedder:
 
 vector_stores:
   docs:
-    collection_name: "support_docs_qwen3_8b"
+    collection_name: "exp_docs_cs1200_ov0"
   tickets:
-    collection_name: "support_tickets_turn_based_chunking_qwen_3_8b"
+    collection_name: "exp_tickets_cs800_ov80"
 
 storage_context:
   persist_dir: "/app/persist/turn_based_chunking"

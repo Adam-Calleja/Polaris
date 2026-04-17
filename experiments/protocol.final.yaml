@@ -363,7 +363,7 @@ defaults:
         mode: "pipeline"
         workers: 4
       run:
-        max_workers: 4
+        max_workers: 1
       adaptive_concurrency:
         enabled: false
       dataset:
@@ -837,79 +837,90 @@ stages:
     dataset_path: "../data/test/ragas_one_hop_eval_dataset_final.dev.jsonl"
     annotations_file: "../data/test/benchmark_annotations_final.csv"
     repeats: 3
+    run_options:
+      metrics:
+        - "factual_correctness"
+        - "context_precision_without_reference"
+    config_overrides:
+      evaluation:
+        metrics:
+          config:
+            factual_correctness:
+              atomicity: "low"
+              coverage: "high"
     conditions:
-      - name: "docs_only_topk5_final4"
-        preset: "docs_only"
-        config_overrides:
-          retriever: *budget_5_4
-      - name: "docs_only_topk5_final6"
-        preset: "docs_only"
-        config_overrides:
-          retriever: *budget_5_6
-      - name: "docs_only_topk5_final8"
-        preset: "docs_only"
-        config_overrides:
-          retriever: *budget_5_8
-      - name: "docs_only_topk8_final4"
-        preset: "docs_only"
-        config_overrides:
-          retriever: *budget_8_4
-      - name: "docs_only_topk8_final6"
-        preset: "docs_only"
-        config_overrides:
-          retriever: *budget_8_6
-      - name: "docs_only_topk8_final8"
-        preset: "docs_only"
-        config_overrides:
-          retriever: *budget_8_8
-      - name: "docs_only_topk12_final4"
-        preset: "docs_only"
-        config_overrides:
-          retriever: *budget_12_4
-      - name: "docs_only_topk12_final6"
-        preset: "docs_only"
-        config_overrides:
-          retriever: *budget_12_6
-      - name: "docs_only_topk12_final8"
-        preset: "docs_only"
-        config_overrides:
-          retriever: *budget_12_8
-      - name: "tickets_only_topk5_final4"
-        preset: "tickets_only"
-        config_overrides:
-          retriever: *budget_5_4
-      - name: "tickets_only_topk5_final6"
-        preset: "tickets_only"
-        config_overrides:
-          retriever: *budget_5_6
-      - name: "tickets_only_topk5_final8"
-        preset: "tickets_only"
-        config_overrides:
-          retriever: *budget_5_8
-      - name: "tickets_only_topk8_final4"
-        preset: "tickets_only"
-        config_overrides:
-          retriever: *budget_8_4
-      - name: "tickets_only_topk8_final6"
-        preset: "tickets_only"
-        config_overrides:
-          retriever: *budget_8_6
-      - name: "tickets_only_topk8_final8"
-        preset: "tickets_only"
-        config_overrides:
-          retriever: *budget_8_8
-      - name: "tickets_only_topk12_final4"
-        preset: "tickets_only"
-        config_overrides:
-          retriever: *budget_12_4
-      - name: "tickets_only_topk12_final6"
-        preset: "tickets_only"
-        config_overrides:
-          retriever: *budget_12_6
-      - name: "tickets_only_topk12_final8"
-        preset: "tickets_only"
-        config_overrides:
-          retriever: *budget_12_8
+      # - name: "docs_only_topk5_final4"
+      #   preset: "docs_only"
+      #   config_overrides:
+      #     retriever: *budget_5_4
+      # - name: "docs_only_topk5_final6"
+      #   preset: "docs_only"
+      #   config_overrides:
+      #     retriever: *budget_5_6
+      # - name: "docs_only_topk5_final8"
+      #   preset: "docs_only"
+      #   config_overrides:
+      #     retriever: *budget_5_8
+      # - name: "docs_only_topk8_final4"
+      #   preset: "docs_only"
+      #   config_overrides:
+      #     retriever: *budget_8_4
+      # - name: "docs_only_topk8_final6"
+      #   preset: "docs_only"
+      #   config_overrides:
+      #     retriever: *budget_8_6
+      # - name: "docs_only_topk8_final8"
+      #   preset: "docs_only"
+      #   config_overrides:
+      #     retriever: *budget_8_8
+      # - name: "docs_only_topk12_final4"
+      #   preset: "docs_only"
+      #   config_overrides:
+      #     retriever: *budget_12_4
+      # - name: "docs_only_topk12_final6"
+      #   preset: "docs_only"
+      #   config_overrides:
+      #     retriever: *budget_12_6
+      # - name: "docs_only_topk12_final8"
+      #   preset: "docs_only"
+      #   config_overrides:
+      #     retriever: *budget_12_8
+      # - name: "tickets_only_topk5_final4"
+      #   preset: "tickets_only"
+      #   config_overrides:
+      #     retriever: *budget_5_4
+      # - name: "tickets_only_topk5_final6"
+      #   preset: "tickets_only"
+      #   config_overrides:
+      #     retriever: *budget_5_6
+      # - name: "tickets_only_topk5_final8"
+      #   preset: "tickets_only"
+      #   config_overrides:
+      #     retriever: *budget_5_8
+      # - name: "tickets_only_topk8_final4"
+      #   preset: "tickets_only"
+      #   config_overrides:
+      #     retriever: *budget_8_4
+      # - name: "tickets_only_topk8_final6"
+      #   preset: "tickets_only"
+      #   config_overrides:
+      #     retriever: *budget_8_6
+      # - name: "tickets_only_topk8_final8"
+      #   preset: "tickets_only"
+      #   config_overrides:
+      #     retriever: *budget_8_8
+      # - name: "tickets_only_topk12_final4"
+      #   preset: "tickets_only"
+      #   config_overrides:
+      #     retriever: *budget_12_4
+      # - name: "tickets_only_topk12_final6"
+      #   preset: "tickets_only"
+      #   config_overrides:
+      #     retriever: *budget_12_6
+      # - name: "tickets_only_topk12_final8"
+      #   preset: "tickets_only"
+      #   config_overrides:
+      #     retriever: *budget_12_8
       - name: "naive_combined_topk5_final4"
         preset: "naive_combined"
         config_overrides:
