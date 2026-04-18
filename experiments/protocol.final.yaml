@@ -814,6 +814,12 @@ stages:
       retriever:
         source_type: "vector"
         <<: *budget_5_8
+      evaluation:
+        metrics:
+          config:
+            factual_correctness:
+              atomicity: "low"
+              coverage: "high"
     run_options:
       metrics:
         - "factual_correctness"
