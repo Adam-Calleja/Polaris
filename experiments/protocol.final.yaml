@@ -809,11 +809,16 @@ stages:
     type: "evaluation_grid"
     dataset_path: "../data/test/ragas_one_hop_eval_dataset_final.dev.jsonl"
     annotations_file: "../data/test/benchmark_annotations_final.csv"
-    repeats: 3
+    repeats: 1
     config_overrides:
       retriever:
         source_type: "vector"
         <<: *budget_5_8
+    run_options:
+      metrics:
+        - "factual_correctness"
+        - "faithfulness"
+        - "context_recall"
     conditions:
       - name: "docs_cs800_ov80_tickets_cs800_ov80"
         preset: "naive_combined"

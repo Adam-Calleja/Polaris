@@ -1,0 +1,1004 @@
+{
+  "summary": {
+    "rows": 70,
+    "selected_metrics": [
+      "factual_correctness",
+      "faithfulness",
+      "context_recall"
+    ],
+    "skipped_metrics": [],
+    "selected_max_workers": 1,
+    "batch_size": 8,
+    "run_config": {
+      "timeout": 240,
+      "max_retries": 0,
+      "max_wait": 30,
+      "max_workers": 1,
+      "log_tenacity": true,
+      "seed": 42
+    },
+    "duration_seconds": 7073.043064154015,
+    "failure_rate": 0.05714285714285714,
+    "tuning_trials": []
+  },
+  "preset_name": "naive_combined",
+  "preset_description": "Naive docs+tickets baseline with RRF reranking.",
+  "condition_fingerprint": "5e8d1aba317cebbf023305c51a4461e050df1e5da0c53bc3745cf759baf85bcb",
+  "condition_summary": {
+    "retriever_type": "multi_collection",
+    "source_type": "vector",
+    "final_top_k": 8,
+    "hybrid_profile": {
+      "dense_top_k": 5,
+      "bm25_top_k": 5,
+      "top_k": 5,
+      "fusion": {
+        "type": "rrf",
+        "rrf_k": 60,
+        "signal_weights": {
+          "dense": 1.0,
+          "bm25": 1.0
+        }
+      }
+    },
+    "sources": [
+      {
+        "top_k": 5,
+        "filters": {},
+        "weight": 1.0,
+        "retrieval_profile": {
+          "dense_top_k": 5,
+          "bm25_top_k": 5,
+          "top_k": 5,
+          "fusion": {
+            "type": "rrf",
+            "rrf_k": 60,
+            "signal_weights": {
+              "dense": 1.0,
+              "bm25": 1.0
+            }
+          }
+        },
+        "name": "docs",
+        "collection_name": "exp_docs_cs800_ov80"
+      },
+      {
+        "top_k": 5,
+        "filters": {},
+        "weight": 1.0,
+        "retrieval_profile": {
+          "dense_top_k": 5,
+          "bm25_top_k": 5,
+          "top_k": 5,
+          "fusion": {
+            "type": "rrf",
+            "rrf_k": 60,
+            "signal_weights": {
+              "dense": 1.0,
+              "bm25": 1.0
+            }
+          }
+        },
+        "name": "tickets",
+        "collection_name": "exp_tickets_cs800_ov80"
+      }
+    ],
+    "retriever_profile": {
+      "type": "multi_collection",
+      "source_type": "vector",
+      "final_top_k": 8,
+      "hybrid_profile": {
+        "dense_top_k": 5,
+        "bm25_top_k": 5,
+        "top_k": 5,
+        "fusion": {
+          "type": "rrf",
+          "rrf_k": 60,
+          "signal_weights": {
+            "dense": 1.0,
+            "bm25": 1.0
+          }
+        }
+      },
+      "sources": [
+        {
+          "top_k": 5,
+          "filters": {},
+          "weight": 1.0,
+          "retrieval_profile": {
+            "dense_top_k": 5,
+            "bm25_top_k": 5,
+            "top_k": 5,
+            "fusion": {
+              "type": "rrf",
+              "rrf_k": 60,
+              "signal_weights": {
+                "dense": 1.0,
+                "bm25": 1.0
+              }
+            }
+          },
+          "name": "docs",
+          "collection_name": "exp_docs_cs800_ov80"
+        },
+        {
+          "top_k": 5,
+          "filters": {},
+          "weight": 1.0,
+          "retrieval_profile": {
+            "dense_top_k": 5,
+            "bm25_top_k": 5,
+            "top_k": 5,
+            "fusion": {
+              "type": "rrf",
+              "rrf_k": 60,
+              "signal_weights": {
+                "dense": 1.0,
+                "bm25": 1.0
+              }
+            }
+          },
+          "name": "tickets",
+          "collection_name": "exp_tickets_cs800_ov80"
+        }
+      ]
+    },
+    "retriever_fingerprint": "120745670773d9f77196de685c11b3c3f9474b1bd4dd2747743f23faac23af24",
+    "reranker_profile": {
+      "type": "rrf",
+      "rrf_k": 60,
+      "source_weights": {
+        "docs": 1.0,
+        "tickets": 1.0
+      },
+      "trace_enabled": true
+    }
+  },
+  "dataset": {
+    "dataset_path": "/app/data/test/ragas_one_hop_eval_dataset_final.dev.jsonl",
+    "annotations_path": "/app/data/test/benchmark_annotations_final.csv",
+    "prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0b4_combined_chunking_followup/docs_cs800_ov80_tickets_cs800_ov80/run_01/prepared_input.json",
+    "reuse_prepared": true,
+    "query_field": "query",
+    "reference_field": "expected_answer",
+    "id_field": "id",
+    "generation_workers": 16,
+    "generation_mode": "pipeline",
+    "evaluation_policy": "official",
+    "generation_deadlines": {
+      "policy": "official",
+      "client_total_seconds": 200.0,
+      "server_total_seconds": 180.0,
+      "retrieval_cap_seconds": 30.0,
+      "cleanup_reserve_seconds": 5.0,
+      "client_total_ms": 200000,
+      "server_total_ms": 180000,
+      "retrieval_cap_ms": 30000,
+      "cleanup_reserve_ms": 5000
+    },
+    "max_infra_failure_rate": 0.01,
+    "generation_retries": {
+      "max_attempts": 1,
+      "initial_backoff_seconds": 1.0,
+      "max_backoff_seconds": 8.0,
+      "jitter_seconds": 0.25,
+      "retry_on_empty_response": true
+    },
+    "generator_profile": {
+      "mode": "pipeline",
+      "generator_llm": {
+        "type": "openai_like",
+        "model_name": "mistralai/Mistral-Large-Instruct-2407",
+        "api_base": "http://vllm:8080/v1",
+        "request_timeout": 90,
+        "max_retries": 1,
+        "model_kwargs": {
+          "temperature": 0,
+          "top_p": 1.0,
+          "stop_list": [
+            "\nUser:",
+            "\n\nUser:"
+          ]
+        }
+      },
+      "llm_generate": {}
+    },
+    "generator_fingerprint": "073fbf42ca966bf58abbb9d019aa73a18ca5725d60c1d9aa70f3b3ed7e8140ac",
+    "retriever_profile": {
+      "type": "multi_collection",
+      "final_top_k": 8,
+      "sources": {
+        "docs": {
+          "settings": {
+            "filters": {},
+            "retrieval_profile": {
+              "bm25_top_k": 5,
+              "dense_top_k": 5,
+              "fusion": {
+                "rrf_k": 60,
+                "signal_weights": {
+                  "bm25": 1.0,
+                  "dense": 1.0
+                },
+                "type": "rrf"
+              },
+              "top_k": 5
+            },
+            "top_k": 5,
+            "weight": 1.0
+          },
+          "retriever_profile": {
+            "filters": {
+              "filters": []
+            },
+            "retrieval_profile": {
+              "bm25_top_k": 5,
+              "dense_top_k": 5,
+              "fusion": {
+                "rrf_k": 60,
+                "signal_weights": {
+                  "bm25": 1.0,
+                  "dense": 1.0
+                },
+                "type": "rrf"
+              },
+              "top_k": 5
+            },
+            "top_k": 5,
+            "type": "vector",
+            "vector_store": {
+              "backend": "qdrant",
+              "collection_name": "exp_docs_cs800_ov80",
+              "dense_model": "Qwen/Qwen3-Embedding-8B",
+              "dense_vector_name": "dense",
+              "sparse_model": null,
+              "sparse_vector_name": "sparse"
+            }
+          },
+          "retriever_fingerprint": "61def53a677224f8531b1faf7d8990ca298dbd9678f91c3202906bba107892d1"
+        },
+        "tickets": {
+          "settings": {
+            "filters": {},
+            "retrieval_profile": {
+              "bm25_top_k": 5,
+              "dense_top_k": 5,
+              "fusion": {
+                "rrf_k": 60,
+                "signal_weights": {
+                  "bm25": 1.0,
+                  "dense": 1.0
+                },
+                "type": "rrf"
+              },
+              "top_k": 5
+            },
+            "top_k": 5,
+            "weight": 1.0
+          },
+          "retriever_profile": {
+            "filters": {
+              "filters": []
+            },
+            "retrieval_profile": {
+              "bm25_top_k": 5,
+              "dense_top_k": 5,
+              "fusion": {
+                "rrf_k": 60,
+                "signal_weights": {
+                  "bm25": 1.0,
+                  "dense": 1.0
+                },
+                "type": "rrf"
+              },
+              "top_k": 5
+            },
+            "top_k": 5,
+            "type": "vector",
+            "vector_store": {
+              "backend": "qdrant",
+              "collection_name": "exp_tickets_cs800_ov80",
+              "dense_model": "Qwen/Qwen3-Embedding-8B",
+              "dense_vector_name": "dense",
+              "sparse_model": null,
+              "sparse_vector_name": "sparse"
+            }
+          },
+          "retriever_fingerprint": "e2a3475ddfe793e06ea10ba6ef0b51f02d9ed2fa6b2de7f9cc73f2e81f690a9f"
+        }
+      }
+    },
+    "retriever_fingerprint": "934271a9d46cac0f8454ccc972cce55e88693ee8028ac55499ceb34f3f638917",
+    "reranker_profile": {
+      "type": "rrf",
+      "rrf_k": 60,
+      "source_weights": {
+        "docs": 1.0,
+        "tickets": 1.0
+      },
+      "trace_enabled": true
+    },
+    "reranker_fingerprint": "919c0e51c02532aa66423a7292c247df070dea8c40b92335a6a692165fefb030",
+    "preset_name": "naive_combined",
+    "preset_description": "Naive docs+tickets baseline with RRF reranking.",
+    "condition_summary": {
+      "retriever_type": "multi_collection",
+      "source_type": "vector",
+      "final_top_k": 8,
+      "hybrid_profile": {
+        "dense_top_k": 5,
+        "bm25_top_k": 5,
+        "top_k": 5,
+        "fusion": {
+          "type": "rrf",
+          "rrf_k": 60,
+          "signal_weights": {
+            "dense": 1.0,
+            "bm25": 1.0
+          }
+        }
+      },
+      "sources": [
+        {
+          "top_k": 5,
+          "filters": {},
+          "weight": 1.0,
+          "retrieval_profile": {
+            "dense_top_k": 5,
+            "bm25_top_k": 5,
+            "top_k": 5,
+            "fusion": {
+              "type": "rrf",
+              "rrf_k": 60,
+              "signal_weights": {
+                "dense": 1.0,
+                "bm25": 1.0
+              }
+            }
+          },
+          "name": "docs",
+          "collection_name": "exp_docs_cs800_ov80"
+        },
+        {
+          "top_k": 5,
+          "filters": {},
+          "weight": 1.0,
+          "retrieval_profile": {
+            "dense_top_k": 5,
+            "bm25_top_k": 5,
+            "top_k": 5,
+            "fusion": {
+              "type": "rrf",
+              "rrf_k": 60,
+              "signal_weights": {
+                "dense": 1.0,
+                "bm25": 1.0
+              }
+            }
+          },
+          "name": "tickets",
+          "collection_name": "exp_tickets_cs800_ov80"
+        }
+      ],
+      "retriever_profile": {
+        "type": "multi_collection",
+        "source_type": "vector",
+        "final_top_k": 8,
+        "hybrid_profile": {
+          "dense_top_k": 5,
+          "bm25_top_k": 5,
+          "top_k": 5,
+          "fusion": {
+            "type": "rrf",
+            "rrf_k": 60,
+            "signal_weights": {
+              "dense": 1.0,
+              "bm25": 1.0
+            }
+          }
+        },
+        "sources": [
+          {
+            "top_k": 5,
+            "filters": {},
+            "weight": 1.0,
+            "retrieval_profile": {
+              "dense_top_k": 5,
+              "bm25_top_k": 5,
+              "top_k": 5,
+              "fusion": {
+                "type": "rrf",
+                "rrf_k": 60,
+                "signal_weights": {
+                  "dense": 1.0,
+                  "bm25": 1.0
+                }
+              }
+            },
+            "name": "docs",
+            "collection_name": "exp_docs_cs800_ov80"
+          },
+          {
+            "top_k": 5,
+            "filters": {},
+            "weight": 1.0,
+            "retrieval_profile": {
+              "dense_top_k": 5,
+              "bm25_top_k": 5,
+              "top_k": 5,
+              "fusion": {
+                "type": "rrf",
+                "rrf_k": 60,
+                "signal_weights": {
+                  "dense": 1.0,
+                  "bm25": 1.0
+                }
+              }
+            },
+            "name": "tickets",
+            "collection_name": "exp_tickets_cs800_ov80"
+          }
+        ]
+      },
+      "retriever_fingerprint": "120745670773d9f77196de685c11b3c3f9474b1bd4dd2747743f23faac23af24",
+      "reranker_profile": {
+        "type": "rrf",
+        "rrf_k": 60,
+        "source_weights": {
+          "docs": 1.0,
+          "tickets": 1.0
+        },
+        "trace_enabled": true
+      }
+    },
+    "condition_fingerprint": "5e8d1aba317cebbf023305c51a4461e050df1e5da0c53bc3745cf759baf85bcb",
+    "annotation_rows": 70,
+    "prep_total_rows": 70,
+    "prep_success_rows": 64,
+    "prep_failed_rows": 6,
+    "prep_elapsed_seconds": 0.0,
+    "prep_rate_rows_per_second": 0.0,
+    "prep_error_classes": {
+      "ValueError": 6
+    },
+    "prep_failure_classes": {
+      "empty_response": 6
+    },
+    "prep_failure_class_rates": {
+      "empty_response": 0.08571428571428572
+    },
+    "prep_failure_stages": {
+      "generation": 6
+    },
+    "prep_failure_stage_rates": {
+      "generation": 0.08571428571428572
+    },
+    "prep_response_statuses": {
+      "ok": 64,
+      "empty_response": 6
+    },
+    "prep_response_status_rates": {
+      "ok": 0.9142857142857143,
+      "empty_response": 0.08571428571428572
+    },
+    "prep_coverage": 0.9142857142857143,
+    "prep_empty_response_rate": 0.08571428571428572,
+    "infra_failure_rate": 0.0,
+    "run_validity": "VALID",
+    "run_policy": "official",
+    "latency_budget_report": {
+      "count": 64,
+      "elapsed_ms": {
+        "p50": 465101.0,
+        "p90": 546012.9,
+        "p95": 551243.15,
+        "max": 630021.0,
+        "mean": 456725.28125
+      },
+      "budget_utilization": {
+        "p50": 2.5838944444444447,
+        "p90": 3.033405,
+        "max": 3.5001166666666665
+      }
+    },
+    "prepared_source": "existing"
+  },
+  "tune_concurrency": true,
+  "trace_evaluator_llm": false,
+  "mlflow_parent_run_id": "00a219c5f89840bf970c8f41e15f2a13",
+  "config_file": "/app/.polaris_experiment_stage0b4_combined_chunking_followup__docs_cs800_ov80_tickets_cs800_ov80.yaml",
+  "artifacts": {
+    "scores_csv": "/app/artifacts/experiments/protocol_final_3runs/stage0b4_combined_chunking_followup/docs_cs800_ov80_tickets_cs800_ov80/run_01/scores.csv",
+    "scores_parquet": null,
+    "summary_json": "/app/artifacts/experiments/protocol_final_3runs/stage0b4_combined_chunking_followup/docs_cs800_ov80_tickets_cs800_ov80/run_01/summary.json",
+    "analysis_rows_jsonl": "/app/artifacts/experiments/protocol_final_3runs/stage0b4_combined_chunking_followup/docs_cs800_ov80_tickets_cs800_ov80/run_01/analysis_rows.jsonl"
+  },
+  "extra": {
+    "config_file": "/app/.polaris_experiment_stage0b4_combined_chunking_followup__docs_cs800_ov80_tickets_cs800_ov80.yaml",
+    "preset_name": "naive_combined",
+    "preset_description": "Naive docs+tickets baseline with RRF reranking.",
+    "condition_summary": {
+      "retriever_type": "multi_collection",
+      "source_type": "vector",
+      "final_top_k": 8,
+      "hybrid_profile": {
+        "dense_top_k": 5,
+        "bm25_top_k": 5,
+        "top_k": 5,
+        "fusion": {
+          "type": "rrf",
+          "rrf_k": 60,
+          "signal_weights": {
+            "dense": 1.0,
+            "bm25": 1.0
+          }
+        }
+      },
+      "sources": [
+        {
+          "top_k": 5,
+          "filters": {},
+          "weight": 1.0,
+          "retrieval_profile": {
+            "dense_top_k": 5,
+            "bm25_top_k": 5,
+            "top_k": 5,
+            "fusion": {
+              "type": "rrf",
+              "rrf_k": 60,
+              "signal_weights": {
+                "dense": 1.0,
+                "bm25": 1.0
+              }
+            }
+          },
+          "name": "docs",
+          "collection_name": "exp_docs_cs800_ov80"
+        },
+        {
+          "top_k": 5,
+          "filters": {},
+          "weight": 1.0,
+          "retrieval_profile": {
+            "dense_top_k": 5,
+            "bm25_top_k": 5,
+            "top_k": 5,
+            "fusion": {
+              "type": "rrf",
+              "rrf_k": 60,
+              "signal_weights": {
+                "dense": 1.0,
+                "bm25": 1.0
+              }
+            }
+          },
+          "name": "tickets",
+          "collection_name": "exp_tickets_cs800_ov80"
+        }
+      ],
+      "retriever_profile": {
+        "type": "multi_collection",
+        "source_type": "vector",
+        "final_top_k": 8,
+        "hybrid_profile": {
+          "dense_top_k": 5,
+          "bm25_top_k": 5,
+          "top_k": 5,
+          "fusion": {
+            "type": "rrf",
+            "rrf_k": 60,
+            "signal_weights": {
+              "dense": 1.0,
+              "bm25": 1.0
+            }
+          }
+        },
+        "sources": [
+          {
+            "top_k": 5,
+            "filters": {},
+            "weight": 1.0,
+            "retrieval_profile": {
+              "dense_top_k": 5,
+              "bm25_top_k": 5,
+              "top_k": 5,
+              "fusion": {
+                "type": "rrf",
+                "rrf_k": 60,
+                "signal_weights": {
+                  "dense": 1.0,
+                  "bm25": 1.0
+                }
+              }
+            },
+            "name": "docs",
+            "collection_name": "exp_docs_cs800_ov80"
+          },
+          {
+            "top_k": 5,
+            "filters": {},
+            "weight": 1.0,
+            "retrieval_profile": {
+              "dense_top_k": 5,
+              "bm25_top_k": 5,
+              "top_k": 5,
+              "fusion": {
+                "type": "rrf",
+                "rrf_k": 60,
+                "signal_weights": {
+                  "dense": 1.0,
+                  "bm25": 1.0
+                }
+              }
+            },
+            "name": "tickets",
+            "collection_name": "exp_tickets_cs800_ov80"
+          }
+        ]
+      },
+      "retriever_fingerprint": "120745670773d9f77196de685c11b3c3f9474b1bd4dd2747743f23faac23af24",
+      "reranker_profile": {
+        "type": "rrf",
+        "rrf_k": 60,
+        "source_weights": {
+          "docs": 1.0,
+          "tickets": 1.0
+        },
+        "trace_enabled": true
+      }
+    },
+    "condition_fingerprint": "5e8d1aba317cebbf023305c51a4461e050df1e5da0c53bc3745cf759baf85bcb",
+    "dataset": {
+      "dataset_path": "/app/data/test/ragas_one_hop_eval_dataset_final.dev.jsonl",
+      "annotations_path": "/app/data/test/benchmark_annotations_final.csv",
+      "prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0b4_combined_chunking_followup/docs_cs800_ov80_tickets_cs800_ov80/run_01/prepared_input.json",
+      "reuse_prepared": true,
+      "query_field": "query",
+      "reference_field": "expected_answer",
+      "id_field": "id",
+      "generation_workers": 16,
+      "generation_mode": "pipeline",
+      "evaluation_policy": "official",
+      "generation_deadlines": {
+        "policy": "official",
+        "client_total_seconds": 200.0,
+        "server_total_seconds": 180.0,
+        "retrieval_cap_seconds": 30.0,
+        "cleanup_reserve_seconds": 5.0,
+        "client_total_ms": 200000,
+        "server_total_ms": 180000,
+        "retrieval_cap_ms": 30000,
+        "cleanup_reserve_ms": 5000
+      },
+      "max_infra_failure_rate": 0.01,
+      "generation_retries": {
+        "max_attempts": 1,
+        "initial_backoff_seconds": 1.0,
+        "max_backoff_seconds": 8.0,
+        "jitter_seconds": 0.25,
+        "retry_on_empty_response": true
+      },
+      "generator_profile": {
+        "mode": "pipeline",
+        "generator_llm": {
+          "type": "openai_like",
+          "model_name": "mistralai/Mistral-Large-Instruct-2407",
+          "api_base": "http://vllm:8080/v1",
+          "request_timeout": 90,
+          "max_retries": 1,
+          "model_kwargs": {
+            "temperature": 0,
+            "top_p": 1.0,
+            "stop_list": [
+              "\nUser:",
+              "\n\nUser:"
+            ]
+          }
+        },
+        "llm_generate": {}
+      },
+      "generator_fingerprint": "073fbf42ca966bf58abbb9d019aa73a18ca5725d60c1d9aa70f3b3ed7e8140ac",
+      "retriever_profile": {
+        "type": "multi_collection",
+        "final_top_k": 8,
+        "sources": {
+          "docs": {
+            "settings": {
+              "filters": {},
+              "retrieval_profile": {
+                "bm25_top_k": 5,
+                "dense_top_k": 5,
+                "fusion": {
+                  "rrf_k": 60,
+                  "signal_weights": {
+                    "bm25": 1.0,
+                    "dense": 1.0
+                  },
+                  "type": "rrf"
+                },
+                "top_k": 5
+              },
+              "top_k": 5,
+              "weight": 1.0
+            },
+            "retriever_profile": {
+              "filters": {
+                "filters": []
+              },
+              "retrieval_profile": {
+                "bm25_top_k": 5,
+                "dense_top_k": 5,
+                "fusion": {
+                  "rrf_k": 60,
+                  "signal_weights": {
+                    "bm25": 1.0,
+                    "dense": 1.0
+                  },
+                  "type": "rrf"
+                },
+                "top_k": 5
+              },
+              "top_k": 5,
+              "type": "vector",
+              "vector_store": {
+                "backend": "qdrant",
+                "collection_name": "exp_docs_cs800_ov80",
+                "dense_model": "Qwen/Qwen3-Embedding-8B",
+                "dense_vector_name": "dense",
+                "sparse_model": null,
+                "sparse_vector_name": "sparse"
+              }
+            },
+            "retriever_fingerprint": "61def53a677224f8531b1faf7d8990ca298dbd9678f91c3202906bba107892d1"
+          },
+          "tickets": {
+            "settings": {
+              "filters": {},
+              "retrieval_profile": {
+                "bm25_top_k": 5,
+                "dense_top_k": 5,
+                "fusion": {
+                  "rrf_k": 60,
+                  "signal_weights": {
+                    "bm25": 1.0,
+                    "dense": 1.0
+                  },
+                  "type": "rrf"
+                },
+                "top_k": 5
+              },
+              "top_k": 5,
+              "weight": 1.0
+            },
+            "retriever_profile": {
+              "filters": {
+                "filters": []
+              },
+              "retrieval_profile": {
+                "bm25_top_k": 5,
+                "dense_top_k": 5,
+                "fusion": {
+                  "rrf_k": 60,
+                  "signal_weights": {
+                    "bm25": 1.0,
+                    "dense": 1.0
+                  },
+                  "type": "rrf"
+                },
+                "top_k": 5
+              },
+              "top_k": 5,
+              "type": "vector",
+              "vector_store": {
+                "backend": "qdrant",
+                "collection_name": "exp_tickets_cs800_ov80",
+                "dense_model": "Qwen/Qwen3-Embedding-8B",
+                "dense_vector_name": "dense",
+                "sparse_model": null,
+                "sparse_vector_name": "sparse"
+              }
+            },
+            "retriever_fingerprint": "e2a3475ddfe793e06ea10ba6ef0b51f02d9ed2fa6b2de7f9cc73f2e81f690a9f"
+          }
+        }
+      },
+      "retriever_fingerprint": "934271a9d46cac0f8454ccc972cce55e88693ee8028ac55499ceb34f3f638917",
+      "reranker_profile": {
+        "type": "rrf",
+        "rrf_k": 60,
+        "source_weights": {
+          "docs": 1.0,
+          "tickets": 1.0
+        },
+        "trace_enabled": true
+      },
+      "reranker_fingerprint": "919c0e51c02532aa66423a7292c247df070dea8c40b92335a6a692165fefb030",
+      "preset_name": "naive_combined",
+      "preset_description": "Naive docs+tickets baseline with RRF reranking.",
+      "condition_summary": {
+        "retriever_type": "multi_collection",
+        "source_type": "vector",
+        "final_top_k": 8,
+        "hybrid_profile": {
+          "dense_top_k": 5,
+          "bm25_top_k": 5,
+          "top_k": 5,
+          "fusion": {
+            "type": "rrf",
+            "rrf_k": 60,
+            "signal_weights": {
+              "dense": 1.0,
+              "bm25": 1.0
+            }
+          }
+        },
+        "sources": [
+          {
+            "top_k": 5,
+            "filters": {},
+            "weight": 1.0,
+            "retrieval_profile": {
+              "dense_top_k": 5,
+              "bm25_top_k": 5,
+              "top_k": 5,
+              "fusion": {
+                "type": "rrf",
+                "rrf_k": 60,
+                "signal_weights": {
+                  "dense": 1.0,
+                  "bm25": 1.0
+                }
+              }
+            },
+            "name": "docs",
+            "collection_name": "exp_docs_cs800_ov80"
+          },
+          {
+            "top_k": 5,
+            "filters": {},
+            "weight": 1.0,
+            "retrieval_profile": {
+              "dense_top_k": 5,
+              "bm25_top_k": 5,
+              "top_k": 5,
+              "fusion": {
+                "type": "rrf",
+                "rrf_k": 60,
+                "signal_weights": {
+                  "dense": 1.0,
+                  "bm25": 1.0
+                }
+              }
+            },
+            "name": "tickets",
+            "collection_name": "exp_tickets_cs800_ov80"
+          }
+        ],
+        "retriever_profile": {
+          "type": "multi_collection",
+          "source_type": "vector",
+          "final_top_k": 8,
+          "hybrid_profile": {
+            "dense_top_k": 5,
+            "bm25_top_k": 5,
+            "top_k": 5,
+            "fusion": {
+              "type": "rrf",
+              "rrf_k": 60,
+              "signal_weights": {
+                "dense": 1.0,
+                "bm25": 1.0
+              }
+            }
+          },
+          "sources": [
+            {
+              "top_k": 5,
+              "filters": {},
+              "weight": 1.0,
+              "retrieval_profile": {
+                "dense_top_k": 5,
+                "bm25_top_k": 5,
+                "top_k": 5,
+                "fusion": {
+                  "type": "rrf",
+                  "rrf_k": 60,
+                  "signal_weights": {
+                    "dense": 1.0,
+                    "bm25": 1.0
+                  }
+                }
+              },
+              "name": "docs",
+              "collection_name": "exp_docs_cs800_ov80"
+            },
+            {
+              "top_k": 5,
+              "filters": {},
+              "weight": 1.0,
+              "retrieval_profile": {
+                "dense_top_k": 5,
+                "bm25_top_k": 5,
+                "top_k": 5,
+                "fusion": {
+                  "type": "rrf",
+                  "rrf_k": 60,
+                  "signal_weights": {
+                    "dense": 1.0,
+                    "bm25": 1.0
+                  }
+                }
+              },
+              "name": "tickets",
+              "collection_name": "exp_tickets_cs800_ov80"
+            }
+          ]
+        },
+        "retriever_fingerprint": "120745670773d9f77196de685c11b3c3f9474b1bd4dd2747743f23faac23af24",
+        "reranker_profile": {
+          "type": "rrf",
+          "rrf_k": 60,
+          "source_weights": {
+            "docs": 1.0,
+            "tickets": 1.0
+          },
+          "trace_enabled": true
+        }
+      },
+      "condition_fingerprint": "5e8d1aba317cebbf023305c51a4461e050df1e5da0c53bc3745cf759baf85bcb",
+      "annotation_rows": 70,
+      "prep_total_rows": 70,
+      "prep_success_rows": 64,
+      "prep_failed_rows": 6,
+      "prep_elapsed_seconds": 0.0,
+      "prep_rate_rows_per_second": 0.0,
+      "prep_error_classes": {
+        "ValueError": 6
+      },
+      "prep_failure_classes": {
+        "empty_response": 6
+      },
+      "prep_failure_class_rates": {
+        "empty_response": 0.08571428571428572
+      },
+      "prep_failure_stages": {
+        "generation": 6
+      },
+      "prep_failure_stage_rates": {
+        "generation": 0.08571428571428572
+      },
+      "prep_response_statuses": {
+        "ok": 64,
+        "empty_response": 6
+      },
+      "prep_response_status_rates": {
+        "ok": 0.9142857142857143,
+        "empty_response": 0.08571428571428572
+      },
+      "prep_coverage": 0.9142857142857143,
+      "prep_empty_response_rate": 0.08571428571428572,
+      "infra_failure_rate": 0.0,
+      "run_validity": "VALID",
+      "run_policy": "official",
+      "latency_budget_report": {
+        "count": 64,
+        "elapsed_ms": {
+          "p50": 465101.0,
+          "p90": 546012.9,
+          "p95": 551243.15,
+          "max": 630021.0,
+          "mean": 456725.28125
+        },
+        "budget_utilization": {
+          "p50": 2.5838944444444447,
+          "p90": 3.033405,
+          "max": 3.5001166666666665
+        }
+      },
+      "prepared_source": "existing"
+    },
+    "tune_concurrency": true,
+    "trace_evaluator_llm": false,
+    "mlflow_parent_run_id": "00a219c5f89840bf970c8f41e15f2a13"
+  }
+}
