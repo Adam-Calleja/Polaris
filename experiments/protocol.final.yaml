@@ -805,6 +805,74 @@ stages:
           - *baseline_docs_ingest
           - *baseline_tickets_ingest
 
+  stage0b4_combined_chunking_followup:
+    type: "evaluation_grid"
+    dataset_path: "../data/test/ragas_one_hop_eval_dataset_final.dev.jsonl"
+    annotations_file: "../data/test/benchmark_annotations_final.csv"
+    repeats: 3
+    config_overrides:
+      retriever:
+        source_type: "vector"
+        <<: *budget_5_8
+    conditions:
+      - name: "docs_cs800_ov80_tickets_cs800_ov80"
+        preset: "naive_combined"
+        config_overrides:
+          vector_stores:
+            docs:
+              collection_name: "exp_docs_cs800_ov80"
+            tickets:
+              collection_name: "exp_tickets_cs800_ov80"
+          ingestion:
+            chunking:
+              sources:
+                docs:
+                  strategy: "markdown_token"
+                  chunk_size_tokens: 800
+                  overlap_tokens: 80
+                tickets:
+                  strategy: "jira_turns_token"
+                  chunk_size_tokens: 800
+                  overlap_tokens: 80
+      - name: "docs_cs1200_ov80_tickets_cs800_ov80"
+        preset: "naive_combined"
+        config_overrides:
+          vector_stores:
+            docs:
+              collection_name: "exp_docs_cs1200_ov80"
+            tickets:
+              collection_name: "exp_tickets_cs800_ov80"
+          ingestion:
+            chunking:
+              sources:
+                docs:
+                  strategy: "markdown_token"
+                  chunk_size_tokens: 1200
+                  overlap_tokens: 80
+                tickets:
+                  strategy: "jira_turns_token"
+                  chunk_size_tokens: 800
+                  overlap_tokens: 80
+      - name: "docs_cs800_ov0_tickets_cs800_ov80"
+        preset: "naive_combined"
+        config_overrides:
+          vector_stores:
+            docs:
+              collection_name: "exp_docs_cs800_ov0"
+            tickets:
+              collection_name: "exp_tickets_cs800_ov80"
+          ingestion:
+            chunking:
+              sources:
+                docs:
+                  strategy: "markdown_token"
+                  chunk_size_tokens: 800
+                  overlap_tokens: 0
+                tickets:
+                  strategy: "jira_turns_token"
+                  chunk_size_tokens: 800
+                  overlap_tokens: 80
+
   stage0c_retrieval_mode_pilot:
     type: "evaluation_grid"
     dataset_path: "../data/test/ragas_one_hop_eval_dataset_final.dev.jsonl"
