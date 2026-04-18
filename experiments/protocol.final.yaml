@@ -812,7 +812,7 @@ stages:
     repeats: 3
     config_overrides:
       embedder:
-        api_base: "http://embed6:80/v1"
+        api_base: "http://embed:80/v1"
     run_options:
       metrics:
         - "faithfulness"

@@ -7,18 +7,18 @@
       "factual_correctness"
     ],
     "skipped_metrics": [],
-    "selected_max_workers": 4,
+    "selected_max_workers": 1,
     "batch_size": 8,
     "run_config": {
       "timeout": 240,
       "max_retries": 0,
       "max_wait": 30,
-      "max_workers": 4,
+      "max_workers": 1,
       "log_tenacity": true,
       "seed": 42
     },
-    "duration_seconds": 17391.589990617,
-    "failure_rate": 0.023809523809523808,
+    "duration_seconds": 6466.379671155009,
+    "failure_rate": 0.0,
     "tuning_trials": []
   },
   "preset_name": "naive_combined",
@@ -158,7 +158,7 @@
     "dataset_path": "/app/data/test/ragas_one_hop_eval_dataset_final.dev.jsonl",
     "annotations_path": "/app/data/test/benchmark_annotations_final.csv",
     "prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0c_retrieval_mode_pilot/vector_naive_combined/run_03/prepared_input.json",
-    "reuse_prepared": true,
+    "reuse_prepared": false,
     "query_field": "query",
     "reference_field": "expected_answer",
     "id_field": "id",
@@ -456,8 +456,8 @@
     "prep_total_rows": 70,
     "prep_success_rows": 70,
     "prep_failed_rows": 0,
-    "prep_elapsed_seconds": 0.0,
-    "prep_rate_rows_per_second": 0.0,
+    "prep_elapsed_seconds": 550.4755528829992,
+    "prep_rate_rows_per_second": 0.12716277704502918,
     "prep_error_classes": {},
     "prep_failure_classes": {},
     "prep_failure_class_rates": {},
@@ -477,23 +477,24 @@
     "latency_budget_report": {
       "count": 70,
       "elapsed_ms": {
-        "p50": 65615.5,
-        "p90": 90262.5,
-        "p95": 94077.09999999999,
-        "max": 105270.0,
-        "mean": 63858.55714285714
+        "p50": 85149.0,
+        "p90": 195745.1,
+        "p95": 214898.34999999998,
+        "max": 242812.0,
+        "mean": 106380.72857142857
       },
       "budget_utilization": {
-        "p50": 0.3645305555555556,
-        "p90": 0.5014583333333333,
-        "max": 0.5848333333333333
+        "p50": 0.47304999999999997,
+        "p90": 1.0874727777777777,
+        "max": 1.3489555555555555
       }
     },
-    "prepared_source": "existing"
+    "persisted_prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0c_retrieval_mode_pilot/vector_naive_combined/run_03/prepared_input.json",
+    "prepared_source": "generated"
   },
   "tune_concurrency": true,
   "trace_evaluator_llm": false,
-  "mlflow_parent_run_id": "1f3d64d8fbcc4e9593056313a34e39e6",
+  "mlflow_parent_run_id": "730791d1f265448ea7f44415b2409bfd",
   "config_file": "/app/.polaris_experiment_stage0c_retrieval_mode_pilot__vector_naive_combined.yaml",
   "artifacts": {
     "scores_csv": "/app/artifacts/experiments/protocol_final_3runs/stage0c_retrieval_mode_pilot/vector_naive_combined/run_03/scores.csv",
@@ -640,7 +641,7 @@
       "dataset_path": "/app/data/test/ragas_one_hop_eval_dataset_final.dev.jsonl",
       "annotations_path": "/app/data/test/benchmark_annotations_final.csv",
       "prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0c_retrieval_mode_pilot/vector_naive_combined/run_03/prepared_input.json",
-      "reuse_prepared": true,
+      "reuse_prepared": false,
       "query_field": "query",
       "reference_field": "expected_answer",
       "id_field": "id",
@@ -938,8 +939,8 @@
       "prep_total_rows": 70,
       "prep_success_rows": 70,
       "prep_failed_rows": 0,
-      "prep_elapsed_seconds": 0.0,
-      "prep_rate_rows_per_second": 0.0,
+      "prep_elapsed_seconds": 550.4755528829992,
+      "prep_rate_rows_per_second": 0.12716277704502918,
       "prep_error_classes": {},
       "prep_failure_classes": {},
       "prep_failure_class_rates": {},
@@ -959,22 +960,23 @@
       "latency_budget_report": {
         "count": 70,
         "elapsed_ms": {
-          "p50": 65615.5,
-          "p90": 90262.5,
-          "p95": 94077.09999999999,
-          "max": 105270.0,
-          "mean": 63858.55714285714
+          "p50": 85149.0,
+          "p90": 195745.1,
+          "p95": 214898.34999999998,
+          "max": 242812.0,
+          "mean": 106380.72857142857
         },
         "budget_utilization": {
-          "p50": 0.3645305555555556,
-          "p90": 0.5014583333333333,
-          "max": 0.5848333333333333
+          "p50": 0.47304999999999997,
+          "p90": 1.0874727777777777,
+          "max": 1.3489555555555555
         }
       },
-      "prepared_source": "existing"
+      "persisted_prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0c_retrieval_mode_pilot/vector_naive_combined/run_03/prepared_input.json",
+      "prepared_source": "generated"
     },
     "tune_concurrency": true,
     "trace_evaluator_llm": false,
-    "mlflow_parent_run_id": "1f3d64d8fbcc4e9593056313a34e39e6"
+    "mlflow_parent_run_id": "730791d1f265448ea7f44415b2409bfd"
   }
 }

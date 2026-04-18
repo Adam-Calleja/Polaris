@@ -7,18 +7,18 @@
       "factual_correctness"
     ],
     "skipped_metrics": [],
-    "selected_max_workers": 4,
+    "selected_max_workers": 1,
     "batch_size": 8,
     "run_config": {
       "timeout": 240,
       "max_retries": 0,
       "max_wait": 30,
-      "max_workers": 4,
+      "max_workers": 1,
       "log_tenacity": true,
       "seed": 42
     },
-    "duration_seconds": 22677.251033008997,
-    "failure_rate": 0.06666666666666667,
+    "duration_seconds": 5589.121275999991,
+    "failure_rate": 0.01904761904761905,
     "tuning_trials": []
   },
   "preset_name": "naive_combined",
@@ -158,7 +158,7 @@
     "dataset_path": "/app/data/test/ragas_one_hop_eval_dataset_final.dev.jsonl",
     "annotations_path": "/app/data/test/benchmark_annotations_final.csv",
     "prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0c_retrieval_mode_pilot/dense_bm25_naive_combined/run_01/prepared_input.json",
-    "reuse_prepared": true,
+    "reuse_prepared": false,
     "query_field": "query",
     "reference_field": "expected_answer",
     "id_field": "id",
@@ -464,46 +464,59 @@
     "condition_fingerprint": "cbfa40eb7ee91c9982ff0d0204c1869db0ceb542c4e199c0a2b7d3ba09b2f4b9",
     "annotation_rows": 70,
     "prep_total_rows": 70,
-    "prep_success_rows": 70,
-    "prep_failed_rows": 0,
-    "prep_elapsed_seconds": 0.0,
-    "prep_rate_rows_per_second": 0.0,
-    "prep_error_classes": {},
-    "prep_failure_classes": {},
-    "prep_failure_class_rates": {},
-    "prep_failure_stages": {},
-    "prep_failure_stage_rates": {},
+    "prep_success_rows": 69,
+    "prep_failed_rows": 1,
+    "prep_elapsed_seconds": 2747.7947661550133,
+    "prep_rate_rows_per_second": 0.02547497391806701,
+    "prep_error_classes": {
+      "ValueError": 1
+    },
+    "prep_failure_classes": {
+      "empty_response": 1
+    },
+    "prep_failure_class_rates": {
+      "empty_response": 0.014285714285714285
+    },
+    "prep_failure_stages": {
+      "generation": 1
+    },
+    "prep_failure_stage_rates": {
+      "generation": 0.014285714285714285
+    },
     "prep_response_statuses": {
-      "ok": 70
+      "ok": 69,
+      "empty_response": 1
     },
     "prep_response_status_rates": {
-      "ok": 1.0
+      "ok": 0.9857142857142858,
+      "empty_response": 0.014285714285714285
     },
-    "prep_coverage": 1.0,
-    "prep_empty_response_rate": 0.0,
+    "prep_coverage": 0.9857142857142858,
+    "prep_empty_response_rate": 0.014285714285714285,
     "infra_failure_rate": 0.0,
     "run_validity": "VALID",
     "run_policy": "official",
     "latency_budget_report": {
-      "count": 70,
+      "count": 69,
       "elapsed_ms": {
-        "p50": 392462.0,
-        "p90": 552484.8,
-        "p95": 614389.3999999999,
-        "max": 867052.0,
-        "mean": 404510.84285714285
+        "p50": 509993.0,
+        "p90": 847407.0000000002,
+        "p95": 969426.8,
+        "max": 1024706.0,
+        "mean": 532437.5072463768
       },
       "budget_utilization": {
-        "p50": 2.1803444444444446,
-        "p90": 3.06936,
-        "max": 4.816955555555555
+        "p50": 2.8332944444444443,
+        "p90": 4.707816666666668,
+        "max": 5.692811111111111
       }
     },
-    "prepared_source": "existing"
+    "persisted_prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0c_retrieval_mode_pilot/dense_bm25_naive_combined/run_01/prepared_input.json",
+    "prepared_source": "generated"
   },
   "tune_concurrency": true,
   "trace_evaluator_llm": false,
-  "mlflow_parent_run_id": "4b155f920e5e429ebd60e0a880381474",
+  "mlflow_parent_run_id": "115463b0a4a04eccaeab64142bc708a5",
   "config_file": "/app/.polaris_experiment_stage0c_retrieval_mode_pilot__dense_bm25_naive_combined.yaml",
   "artifacts": {
     "scores_csv": "/app/artifacts/experiments/protocol_final_3runs/stage0c_retrieval_mode_pilot/dense_bm25_naive_combined/run_01/scores.csv",
@@ -650,7 +663,7 @@
       "dataset_path": "/app/data/test/ragas_one_hop_eval_dataset_final.dev.jsonl",
       "annotations_path": "/app/data/test/benchmark_annotations_final.csv",
       "prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0c_retrieval_mode_pilot/dense_bm25_naive_combined/run_01/prepared_input.json",
-      "reuse_prepared": true,
+      "reuse_prepared": false,
       "query_field": "query",
       "reference_field": "expected_answer",
       "id_field": "id",
@@ -956,45 +969,58 @@
       "condition_fingerprint": "cbfa40eb7ee91c9982ff0d0204c1869db0ceb542c4e199c0a2b7d3ba09b2f4b9",
       "annotation_rows": 70,
       "prep_total_rows": 70,
-      "prep_success_rows": 70,
-      "prep_failed_rows": 0,
-      "prep_elapsed_seconds": 0.0,
-      "prep_rate_rows_per_second": 0.0,
-      "prep_error_classes": {},
-      "prep_failure_classes": {},
-      "prep_failure_class_rates": {},
-      "prep_failure_stages": {},
-      "prep_failure_stage_rates": {},
+      "prep_success_rows": 69,
+      "prep_failed_rows": 1,
+      "prep_elapsed_seconds": 2747.7947661550133,
+      "prep_rate_rows_per_second": 0.02547497391806701,
+      "prep_error_classes": {
+        "ValueError": 1
+      },
+      "prep_failure_classes": {
+        "empty_response": 1
+      },
+      "prep_failure_class_rates": {
+        "empty_response": 0.014285714285714285
+      },
+      "prep_failure_stages": {
+        "generation": 1
+      },
+      "prep_failure_stage_rates": {
+        "generation": 0.014285714285714285
+      },
       "prep_response_statuses": {
-        "ok": 70
+        "ok": 69,
+        "empty_response": 1
       },
       "prep_response_status_rates": {
-        "ok": 1.0
+        "ok": 0.9857142857142858,
+        "empty_response": 0.014285714285714285
       },
-      "prep_coverage": 1.0,
-      "prep_empty_response_rate": 0.0,
+      "prep_coverage": 0.9857142857142858,
+      "prep_empty_response_rate": 0.014285714285714285,
       "infra_failure_rate": 0.0,
       "run_validity": "VALID",
       "run_policy": "official",
       "latency_budget_report": {
-        "count": 70,
+        "count": 69,
         "elapsed_ms": {
-          "p50": 392462.0,
-          "p90": 552484.8,
-          "p95": 614389.3999999999,
-          "max": 867052.0,
-          "mean": 404510.84285714285
+          "p50": 509993.0,
+          "p90": 847407.0000000002,
+          "p95": 969426.8,
+          "max": 1024706.0,
+          "mean": 532437.5072463768
         },
         "budget_utilization": {
-          "p50": 2.1803444444444446,
-          "p90": 3.06936,
-          "max": 4.816955555555555
+          "p50": 2.8332944444444443,
+          "p90": 4.707816666666668,
+          "max": 5.692811111111111
         }
       },
-      "prepared_source": "existing"
+      "persisted_prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0c_retrieval_mode_pilot/dense_bm25_naive_combined/run_01/prepared_input.json",
+      "prepared_source": "generated"
     },
     "tune_concurrency": true,
     "trace_evaluator_llm": false,
-    "mlflow_parent_run_id": "4b155f920e5e429ebd60e0a880381474"
+    "mlflow_parent_run_id": "115463b0a4a04eccaeab64142bc708a5"
   }
 }
