@@ -46,6 +46,7 @@ from polaris_rag.evaluation.evaluation_dataset import (
     build_prepared_rows_from_api,
     load_prepared_rows,
     load_raw_examples,
+    preprocess_rows_for_evaluation,
     persist_prepared_rows,
     to_evaluation_dataset,
 )
@@ -2714,7 +2715,27 @@ def main() -> None:
 
         from polaris_rag.evaluation.evaluator import Evaluator, write_outputs
 
-        dataset = to_evaluation_dataset(prepared_rows)
+        evaluation_rows, evaluation_preprocessing = preprocess_rows_for_evaluation(
+            prepared_rows,
+            preprocessing=_as_mapping(eval_cfg.get("preprocessing", {})),
+        )
+        if evaluation_preprocessing.get("enabled"):
+            tracking.log_flat_params(
+                evaluation_preprocessing,
+                prefix="evaluation_preprocessing",
+            )
+            truncated_rows = int(evaluation_preprocessing.get("truncated_rows", 0) or 0)
+            if truncated_rows > 0:
+                logger.warning(
+                    "Evaluation preprocessing truncated retrieved contexts for %s/%s rows "
+                    "(original_chars=%s processed_chars=%s).",
+                    truncated_rows,
+                    len(evaluation_rows),
+                    int(evaluation_preprocessing.get("original_total_context_characters", 0) or 0),
+                    int(evaluation_preprocessing.get("processed_total_context_characters", 0) or 0),
+                )
+
+        dataset = to_evaluation_dataset(evaluation_rows)
 
         with tracking.stage("ragas_evaluation") as evaluation_stage:
             evaluator = Evaluator.from_global_config(
@@ -2730,15 +2751,16 @@ def main() -> None:
                 "polaris.ragas_evaluation.execute",
                 attributes={"stage": "ragas_evaluation"},
                 inputs={
-                    "rows": len(prepared_rows),
+                    "rows": len(evaluation_rows),
                     "tune_concurrency": tune_concurrency,
                     "show_progress": interactive_progress,
+                    "evaluation_preprocessing": evaluation_preprocessing,
                 },
             ) as eval_trace:
                 with _phase_heartbeat("RAGAS evaluation", interval_seconds=60.0):
                     result = evaluator.evaluate(
                         dataset=dataset,
-                        source_rows=prepared_rows,
+                        source_rows=evaluation_rows,
                         tune_concurrency=tune_concurrency,
                         show_progress=interactive_progress,
                     )
@@ -2766,11 +2788,12 @@ def main() -> None:
                 "config_file": str(config_file),
                 **preset_context.manifest_fields(),
                 "dataset": dataset_manifest,
+                "evaluation_preprocessing": evaluation_preprocessing,
                 "tune_concurrency": tune_concurrency,
                 "trace_evaluator_llm": trace_evaluator_llm,
                 "mlflow_parent_run_id": tracking.run_id,
             },
-            source_rows=prepared_rows,
+            source_rows=evaluation_rows,
         )
 
         for artifact_path in artifacts.values():

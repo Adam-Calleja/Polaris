@@ -10,6 +10,7 @@ from polaris_rag.evaluation.evaluation_dataset import (
     load_raw_examples,
     load_sample_categories,
     load_sample_ids,
+    preprocess_rows_for_evaluation,
     stratified_split_raw_examples_by_annotation_labels,
     stratified_split_raw_examples_by_categories,
     split_raw_examples_by_ids,
@@ -991,3 +992,74 @@ def test_build_prepared_rows_fail_fast_retries_then_raises() -> None:
         )
 
     assert calls["count"] == 3
+
+
+def test_preprocess_rows_for_evaluation_clips_large_retrieved_contexts() -> None:
+    rows = [
+        {
+            "id": "row-1",
+            "user_input": "Q1",
+            "reference": "A1",
+            "response": "R1",
+            "retrieved_contexts": [
+                "abcdefgh",
+                "ijklmnop",
+                "qrstuvwx",
+            ],
+            "retrieved_context_ids": [
+                "doc-1",
+                "doc-2",
+                "doc-3",
+            ],
+            "metadata": {},
+        }
+    ]
+
+    processed_rows, summary = preprocess_rows_for_evaluation(
+        rows,
+        preprocessing={
+            "retrieved_contexts": {
+                "max_characters": 4,
+                "max_total_characters": 8,
+                "truncation_marker": "~",
+            }
+        },
+    )
+
+    assert rows[0]["retrieved_contexts"] == ["abcdefgh", "ijklmnop", "qrstuvwx"]
+    assert processed_rows[0]["retrieved_contexts"] == ["abc~", "ijk~"]
+    assert processed_rows[0]["retrieved_context_ids"] == ["doc-1", "doc-2"]
+    assert processed_rows[0]["metadata"]["evaluation_preprocessing"]["retrieved_contexts"] == {
+        "truncated": True,
+        "truncated_contexts": 3,
+        "original_count": 3,
+        "processed_count": 2,
+        "original_total_characters": 24,
+        "processed_total_characters": 8,
+        "max_characters": 4,
+        "max_total_characters": 8,
+    }
+    assert summary["enabled"] is True
+    assert summary["truncated_rows"] == 1
+    assert summary["truncated_contexts"] == 3
+    assert summary["processed_total_context_characters"] == 8
+
+
+def test_preprocess_rows_for_evaluation_is_noop_without_limits() -> None:
+    rows = [
+        {
+            "id": "row-1",
+            "user_input": "Q1",
+            "reference": "A1",
+            "response": "R1",
+            "retrieved_contexts": ["ctx-1"],
+            "retrieved_context_ids": ["doc-1"],
+            "metadata": {},
+        }
+    ]
+
+    processed_rows, summary = preprocess_rows_for_evaluation(rows, preprocessing={})
+
+    assert processed_rows is rows
+    assert summary["enabled"] is False
+    assert summary["truncated_rows"] == 0

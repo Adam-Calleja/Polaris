@@ -1805,6 +1805,190 @@ def persist_prepared_rows(rows: Iterable[dict[str, Any]], path: str | Path) -> P
     return p
 
 
+def _positive_int_or_none(value: Any) -> int | None:
+    """Return a strictly positive integer or ``None``."""
+
+    try:
+        resolved = int(value)
+    except (TypeError, ValueError):
+        return None
+    return resolved if resolved > 0 else None
+
+
+def _truncate_text_to_char_budget(
+    text: str,
+    *,
+    max_characters: int | None,
+    truncation_marker: str,
+) -> tuple[str, bool]:
+    """Clamp ``text`` to a character budget while preserving a marker."""
+
+    if max_characters is None or len(text) <= max_characters:
+        return text, False
+
+    marker = truncation_marker or ""
+    if not marker:
+        return text[:max_characters], True
+
+    if max_characters <= len(marker):
+        return marker[:max_characters], True
+
+    clipped = text[: max_characters - len(marker)].rstrip()
+    return f"{clipped}{marker}", True
+
+
+def _preprocess_retrieved_contexts(
+    contexts: list[str],
+    context_ids: list[str],
+    *,
+    max_characters: int | None,
+    max_total_characters: int | None,
+    truncation_marker: str,
+) -> tuple[list[str], list[str], dict[str, Any]]:
+    """Apply evaluator-facing clipping to one row's retrieved contexts."""
+
+    original_total_characters = sum(len(text) for text in contexts)
+    processed_contexts: list[str] = []
+    processed_ids: list[str] = []
+    truncated = False
+    truncated_contexts = 0
+    remaining_total = max_total_characters
+
+    for index, context in enumerate(contexts):
+        candidate = str(context or "")
+        context_truncated = False
+
+        if max_characters is not None:
+            candidate, did_truncate = _truncate_text_to_char_budget(
+                candidate,
+                max_characters=max_characters,
+                truncation_marker=truncation_marker,
+            )
+            truncated = truncated or did_truncate
+            context_truncated = context_truncated or did_truncate
+
+        if remaining_total is not None:
+            if remaining_total <= 0:
+                truncated = True
+                truncated_contexts += 1
+                break
+            candidate, did_truncate = _truncate_text_to_char_budget(
+                candidate,
+                max_characters=remaining_total,
+                truncation_marker=truncation_marker,
+            )
+            truncated = truncated or did_truncate
+            context_truncated = context_truncated or did_truncate
+            remaining_total -= len(candidate)
+
+        if not candidate:
+            truncated = True
+            truncated_contexts += 1
+            continue
+
+        if context_truncated:
+            truncated_contexts += 1
+        processed_contexts.append(candidate)
+        if index < len(context_ids):
+            processed_ids.append(context_ids[index])
+
+    summary = {
+        "truncated": truncated,
+        "truncated_contexts": truncated_contexts,
+        "original_count": len(contexts),
+        "processed_count": len(processed_contexts),
+        "original_total_characters": original_total_characters,
+        "processed_total_characters": sum(len(text) for text in processed_contexts),
+        "max_characters": max_characters,
+        "max_total_characters": max_total_characters,
+    }
+    return processed_contexts, processed_ids, summary
+
+
+def preprocess_rows_for_evaluation(
+    rows: list[dict[str, Any]],
+    *,
+    preprocessing: Mapping[str, Any] | None = None,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Return evaluator-safe copies of prepared rows.
+
+    The persisted prepared dataset should preserve the original retrieval output.
+    This helper creates shallow copies for the RAGAS scoring pass and clips large
+    ``retrieved_contexts`` payloads so evaluator prompts remain bounded.
+    """
+
+    preprocessing_cfg = _as_metadata_dict(preprocessing)
+    retrieved_cfg = _as_metadata_dict(preprocessing_cfg.get("retrieved_contexts"))
+    max_characters = _positive_int_or_none(retrieved_cfg.get("max_characters"))
+    max_total_characters = _positive_int_or_none(retrieved_cfg.get("max_total_characters"))
+    truncation_marker = str(
+        retrieved_cfg.get("truncation_marker", "\n...[truncated for evaluator]")
+        or "\n...[truncated for evaluator]"
+    )
+
+    original_total_context_characters = sum(
+        len(str(context or ""))
+        for row in rows
+        for context in list(row.get("retrieved_contexts", []) or [])
+    )
+
+    if max_characters is None and max_total_characters is None:
+        return rows, {
+            "enabled": False,
+            "processed_rows": len(rows),
+            "truncated_rows": 0,
+            "truncated_contexts": 0,
+            "original_total_context_characters": original_total_context_characters,
+            "processed_total_context_characters": original_total_context_characters,
+            "retrieved_contexts": {},
+        }
+
+    processed_rows: list[dict[str, Any]] = []
+    truncated_rows = 0
+    truncated_contexts = 0
+    processed_total_context_characters = 0
+
+    for row in rows:
+        copied = dict(row)
+        copied["metadata"] = dict(_as_metadata_dict(row.get("metadata")))
+
+        contexts = [str(item or "") for item in list(row.get("retrieved_contexts", []) or [])]
+        context_ids = [str(item or "") for item in list(row.get("retrieved_context_ids", []) or [])]
+        processed_contexts, processed_ids, summary = _preprocess_retrieved_contexts(
+            contexts,
+            context_ids,
+            max_characters=max_characters,
+            max_total_characters=max_total_characters,
+            truncation_marker=truncation_marker,
+        )
+        copied["retrieved_contexts"] = processed_contexts
+        copied["retrieved_context_ids"] = processed_ids
+        processed_total_context_characters += int(summary["processed_total_characters"])
+
+        if bool(summary["truncated"]):
+            truncated_rows += 1
+            truncated_contexts += int(summary.get("truncated_contexts", 0) or 0)
+            copied["metadata"]["evaluation_preprocessing"] = {
+                "retrieved_contexts": summary,
+            }
+
+        processed_rows.append(copied)
+
+    return processed_rows, {
+        "enabled": True,
+        "processed_rows": len(rows),
+        "truncated_rows": truncated_rows,
+        "truncated_contexts": truncated_contexts,
+        "original_total_context_characters": original_total_context_characters,
+        "processed_total_context_characters": processed_total_context_characters,
+        "retrieved_contexts": {
+            "max_characters": max_characters,
+            "max_total_characters": max_total_characters,
+            "truncation_marker": truncation_marker,
+        },
+    }
+
+
 def _coerce_sample_ids(values: Iterable[Any], *, source: str) -> list[str]:
     """Coerce sample IDs.
     
@@ -3450,6 +3634,7 @@ __all__ = [
     "load_raw_examples",
     "load_sample_categories",
     "load_sample_ids",
+    "preprocess_rows_for_evaluation",
     "persist_prepared_rows",
     "stratified_split_raw_examples_by_annotation_labels",
     "stratified_split_raw_examples_by_categories",
