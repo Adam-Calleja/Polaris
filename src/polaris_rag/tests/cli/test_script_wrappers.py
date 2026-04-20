@@ -46,6 +46,7 @@ def _install_stub_cli_module(monkeypatch, module_name: str, calls: list[dict[str
         ("benchmark_annotations.py", "polaris_rag.cli.benchmark_annotations"),
         ("build_authority_registry.py", "polaris_rag.cli.build_authority_registry"),
         ("build_external_authority_registry.py", "polaris_rag.cli.build_external_authority_registry"),
+        ("count_docstore_tickets.py", "polaris_rag.cli.count_docstore_tickets"),
         ("create_dev_test_sets.py", "polaris_rag.cli.create_dev_test_sets"),
         ("evaluate_rag.py", "polaris_rag.cli.evaluate_rag"),
         ("ingest_external_docs.py", "polaris_rag.cli.ingest_external_docs"),
