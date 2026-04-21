@@ -53,6 +53,10 @@ evaluation:
       - "faithfulness"
       - "answer_relevancy"
       - "factual_correctness"
+  preprocessing:
+    retrieved_contexts:
+      max_characters: 4000
+      max_total_characters: 20000
   run:
     timeout: 300
     max_retries: 0

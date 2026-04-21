@@ -18,7 +18,7 @@ evaluator_llm:
   model_name: "Qwen/Qwen2.5-72B-Instruct"
   api_base: "http://localhost:8080/v1"
   model_kwargs:
-    max_tokens: 1024
+    max_tokens: 256
     temperature: 0
     top_p: 0.9
     stop: ["</ANS>"]
@@ -32,3 +32,14 @@ embedder:
   max_retries: 3
   embed_batch_size: 2
   model_kwargs: {}
+
+evaluation:
+  run:
+    timeout: 300
+    max_retries: 0
+  adaptive_concurrency:
+    enabled: false
+  preprocessing:
+    retrieved_contexts:
+      max_characters: 4000
+      max_total_characters: 20000

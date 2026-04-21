@@ -4,8 +4,22 @@
 \section{Task Definition}
 \label{sec:task}
 
+This section formulates \ac{CSD3} user support as a single-hop, evidence-grounded question-answering task within a supervised internal support workflow. Given a user support query and a heterogeneous evidence base of local documentation, selected external documentation, and historical support tickets, the system must retrieve evidence passages suitable for answering the query. Suitability is defined not only by semantic relevance, but also by authority, freshness, and applicability to the current \ac{CSD3} environment. The system must then generate a first-response answer that is factually correct, faithful to the retrieved evidence, and appropriate to the current local operational context. This framing is consistent with prior work on retrieval-augmented generation and technical support \ac{QA}, which treats knowledge-intensive support tasks as depending on external evidence rather than parametric memory alone \citep{lewisRetrievalaugmentedGenerationKnowledgeintensive2020,yuTechnicalQuestionAnswering2021}. It also reflects recent findings that seemingly relevant evidence may still be unsuitable if it is outdates, weakly authoritative, or locally inapplicable \citep{liYouKnowWhat2024,hwangRetrievalAugmentedGenerationEstimation2025}.
+
+The task is deliberately scoped to text-accessible evidence and single-hop support queries. This restriction is intended to isolate the effect of retrieval design on answer quality. Including multi-hop reasoning or multimodal evidence would introduce additional sources of methodological variance, such as evidence-composition failures, attachment-interpretation errors, and inconsistent access to no-text artefacts, making it harder to attribute performance differences to heterogeneous-source retrieval and validity-aware reranking alone. The restriction also keeps the benchmark and system comparisons reproducible, since all evaluated conditions operate over the same visible textual evidence. As a result, the system does not attempt to interpret attachments, screenshots, log files, or other non-textual artefacts. Furthermore, it is not intended to replace expert staff or operate as a fully autonomous public-facing application. Instead, the goal is support grounded first-response assistance for realistic support queries, while preserving cautious behaviour when the available evidence is incomplete, conflicting, or of uncertain validity.
+
 \section{Data Sources and Knowledge Characteristics}
 \label{sec:data}
+
+The evidence base for this project consists of three heterogeneous source classes: local documentation, selected external documentation, and historical support tickets, which differ in authority, temporal stability, and local applicability. These differences mean that the sources cannot be treated as an interchangeable pool of evidence. 
+
+Local \ac{CSD3} documentation formed the primary documentary source in the system, acting as the main source of site-specific operational truth for supported workflows, policies, access conditions, and local configuration \citep{ResearchComputingServicesDocumentation,AskHPC}. Operationally, the local corpus was restricted to internal HTML pages reachable from the CSD3 documentation homepage within the \url{docs.hpc.cam.ac.uk/hpc/} subtree. The resulting local documentation index contained 44 pages. 
+
+Selected external documentation formed a supplementary documentary source, providing software-specific detail beyond what was available in the local \ac{CSD3} documentation. External sources were included only when they were stable official manuals for software or toolchains relevant to the \ac{CSD3} support domain and likely to provide software-specific detail missing from local documentation. Community-managed, overly broad, misaligned, or non-official documentation subtrees were excluded. The approved source set was defined in an external source registry and contained 13 sources, with a total of 662 pages. 
+
+Historical support tickets formed the third source class in this project, providing prior-case evidence from past support interactions that could be relevant to current queries. While tickets provide a potentially rich source of operational knowledge, they are also noisy, variable in wording, more sensitive to temporal decay than regularly updated documentation, and more sensitive from a privacy perspective \citep{rodenbeckTicketHubEnablingActionable2023,joslinGeneratingFrequentlyAsked2025}. This project considered all resolved support tickets from \ac{CSD3}'s start of operation in November 2017 to the first of April 2024, inclusive. Only tickets with the Jira status \texttt{Resolved} were ingested. Attachment content, screenshots, and log files were not interpreted. Media content was instead replaced with an \verb|[attachment]| placeholder in the preprocessed text. The resulting ticket index contained 89,905 tickets.
+
+Taken together, these source classes differ not only in coverage but also in evidential status. Local documentation is the primary source for current site-specific practice, external documentation contributes software specific detail, and historical tickets contribute prior-case troubleshooting context at the cost of greater noise, privacy sensitivity, and temporal risk. These differences mean that the corpus cannot be treated as a single pool of interchangeable text. Instead, source identity, freshness, and local applicability must be preserved in metadata and reflected in later retrieval and reranking decisions. 
 
 \section{Benchmark and Query Taxonomy}
 \label{sec:benchmark}
@@ -18,3 +32,9 @@
 
 \section{Ethical, Privacy, and Data-Governance Considerations}
 \label{sec:ethics_privacy_governance}
+
+TODO: Have I defined single-hop elsewhere? if not, where should I do so?
+
+TODO: Do I need to justify the faming of the project? E.g., why I am scoping it to text-accessible evidence and single-hop support queries?
+
+NOTE: should I list the external documentation somewhere? if so here? or in an appendix?
