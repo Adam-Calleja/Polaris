@@ -112,3 +112,18 @@ def test_factual_correctness_accepts_metric_config_overrides(monkeypatch: pytest
     assert captured["mode"] == "precision"
     assert captured["atomicity"] == "low"
     assert captured["coverage"] == "high"
+
+
+def test_semantic_similarity_requires_embeddings() -> None:
+    specs, _ = resolve_metric_specs(
+        dataset_columns={"response", "reference"},
+        requested_metrics=["semantic_similarity"],
+        auto_gate=True,
+    )
+
+    with pytest.raises(ValueError, match="requires an embedding model"):
+        instantiate_metrics(
+            specs,
+            llm=None,
+            embeddings=None,
+        )

@@ -151,6 +151,106 @@ def test_traced_client_logs_errors_and_reraises() -> None:
     assert trace.outputs == {"error": "RuntimeError: judge exploded"}
 
 
+def test_resolve_runtime_metrics_skips_embeddings_for_llm_only_metrics(monkeypatch) -> None:
+    built: list[str] = []
+    captured: dict[str, object] = {}
+
+    def _fake_build_llm(self, **kwargs):  # noqa: ANN001, ANN003
+        built.append("llm")
+        return "fake-llm"
+
+    def _fake_build_embeddings(self, **kwargs):  # noqa: ANN001, ANN003
+        built.append("embeddings")
+        return "fake-embeddings"
+
+    def _fake_instantiate_metrics(specs, *, llm, embeddings, metric_config=None):  # noqa: ANN001, ANN003
+        captured["metric_names"] = [spec.name for spec in specs]
+        captured["llm"] = llm
+        captured["embeddings"] = embeddings
+        return [object() for _ in specs]
+
+    class _FakeDataset:
+        def features(self) -> set[str]:
+            return {"user_input", "response", "retrieved_contexts"}
+
+    monkeypatch.setattr(evaluator.Evaluator, "_build_llm", _fake_build_llm)
+    monkeypatch.setattr(evaluator.Evaluator, "_build_embeddings", _fake_build_embeddings)
+    monkeypatch.setattr(evaluator, "instantiate_metrics", _fake_instantiate_metrics)
+
+    instance = evaluator.Evaluator(
+        llm_model="judge-model",
+        llm_api_base="http://localhost:8080/v1",
+        llm_api_key=None,
+        llm_kwargs={},
+        embedding_model="embed-model",
+        embedding_api_base="http://localhost:8081/v1",
+        embedding_api_key=None,
+        embedding_kwargs={},
+        requested_metrics=["faithfulness"],
+    )
+
+    metrics, skipped = instance._resolve_runtime_metrics(dataset=_FakeDataset())
+
+    assert [spec.name for spec, _ in metrics] == ["faithfulness"]
+    assert skipped == []
+    assert built == ["llm"]
+    assert captured["metric_names"] == ["faithfulness"]
+    assert captured["llm"] == "fake-llm"
+    assert captured["embeddings"] is None
+    assert instance.llm == "fake-llm"
+    assert instance.embeddings is None
+
+
+def test_resolve_runtime_metrics_skips_llm_and_embeddings_for_retrieval_metrics(monkeypatch) -> None:
+    built: list[str] = []
+    captured: dict[str, object] = {}
+
+    def _fake_build_llm(self, **kwargs):  # noqa: ANN001, ANN003
+        built.append("llm")
+        return "fake-llm"
+
+    def _fake_build_embeddings(self, **kwargs):  # noqa: ANN001, ANN003
+        built.append("embeddings")
+        return "fake-embeddings"
+
+    def _fake_instantiate_metrics(specs, *, llm, embeddings, metric_config=None):  # noqa: ANN001, ANN003
+        captured["metric_names"] = [spec.name for spec in specs]
+        captured["llm"] = llm
+        captured["embeddings"] = embeddings
+        return [object() for _ in specs]
+
+    class _FakeDataset:
+        def features(self) -> set[str]:
+            return {"retrieved_context_ids", "reference_context_ids"}
+
+    monkeypatch.setattr(evaluator.Evaluator, "_build_llm", _fake_build_llm)
+    monkeypatch.setattr(evaluator.Evaluator, "_build_embeddings", _fake_build_embeddings)
+    monkeypatch.setattr(evaluator, "instantiate_metrics", _fake_instantiate_metrics)
+
+    instance = evaluator.Evaluator(
+        llm_model="judge-model",
+        llm_api_base="http://localhost:8080/v1",
+        llm_api_key=None,
+        llm_kwargs={},
+        embedding_model="embed-model",
+        embedding_api_base="http://localhost:8081/v1",
+        embedding_api_key=None,
+        embedding_kwargs={},
+        requested_metrics=["retrieval_recall_at_k"],
+    )
+
+    metrics, skipped = instance._resolve_runtime_metrics(dataset=_FakeDataset())
+
+    assert [spec.name for spec, _ in metrics] == ["retrieval_recall_at_k"]
+    assert skipped == []
+    assert built == []
+    assert captured["metric_names"] == ["retrieval_recall_at_k"]
+    assert captured["llm"] is None
+    assert captured["embeddings"] is None
+    assert instance.llm is None
+    assert instance.embeddings is None
+
+
 def test_create_executor_uses_source_row_ids_for_trace_context(monkeypatch) -> None:
     class _FakeExecutor:
         def __init__(self, **kwargs):  # noqa: ANN003
