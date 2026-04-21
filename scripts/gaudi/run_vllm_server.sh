@@ -141,15 +141,27 @@ mkdir -p "${HF_CACHE_DIR}/hub" "${HF_CACHE_DIR}/transformers" "${RECIPE_CACHE_DI
 RECIPE_CACHE_DELETE_VALUE="$(recipe_cache_delete_value)"
 PT_HPU_RECIPE_CACHE_CONFIG_VALUE="${RECIPE_CACHE_DIR_CONTAINER},${RECIPE_CACHE_DELETE_VALUE},${RECIPE_CACHE_SIZE_MB}"
 
+if [[ "${NETWORK}" == "host" ]]; then
+  PORT="${HOST_PORT}"
+fi
+
+DOCKER_NETWORK_ARGS=(
+  --network "${NETWORK}"
+)
+if [[ "${NETWORK}" != "host" ]]; then
+  DOCKER_NETWORK_ARGS+=(
+    --network-alias "${NETWORK_ALIAS}"
+    -p "${HOST_PORT}:${PORT}"
+  )
+fi
+
 docker_cmd rm -f "${CONTAINER_NAME}" 2>/dev/null || true
 docker_cmd run --rm -d \
   --name "${CONTAINER_NAME}" \
   --runtime=habana \
   --cap-add=sys_nice \
   --ipc=host \
-  --network "${NETWORK}" \
-  --network-alias "${NETWORK_ALIAS}" \
-  -p "${HOST_PORT}:${PORT}" \
+  "${DOCKER_NETWORK_ARGS[@]}" \
   -e HF_TOKEN="${HF_TOKEN}" \
   -e HABANA_VISIBLE_DEVICES="${DEVICES}" \
   -e PT_HPU_LAZY_MODE=1 \
@@ -264,7 +276,10 @@ PYCODE
 
 echo "vLLM is starting on ${HOST}:${PORT}"
 echo "Container:          ${CONTAINER_NAME}"
-echo "Alias:              ${NETWORK_ALIAS}"
+echo "Network:            ${NETWORK}"
+if [[ "${NETWORK}" != "host" ]]; then
+  echo "Alias:              ${NETWORK_ALIAS}"
+fi
 echo "Model:              ${MODEL}"
 echo "Image:              ${IMG}"
 echo "TP:                 ${TENSOR_PARALLEL}"
@@ -277,6 +292,6 @@ echo "vLLM home:          ${VLLM_HOME_DIR}"
 echo "Recipe cache mode:  ${RECIPE_CACHE_DELETE_VALUE}"
 echo "Recipe cache dir:   ${RECIPE_CACHE_DIR_HOST}"
 echo "Logs:               sudo docker logs -f ${CONTAINER_NAME}"
-echo "Health:             curl -s http://localhost:${HOST_PORT}/v1/health | jq ."
-echo "Models:             curl -s http://localhost:${HOST_PORT}/v1/models | jq ."
+echo "Health:             curl -s http://localhost:${PORT}/v1/health | jq ."
+echo "Models:             curl -s http://localhost:${PORT}/v1/models | jq ."
 echo "Stop:               sudo docker rm -f ${CONTAINER_NAME}"
