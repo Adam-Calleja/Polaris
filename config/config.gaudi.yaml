@@ -10,20 +10,20 @@ generator_llm:
   request_timeout: 90
   max_retries: 1
   model_kwargs:
-    max_tokens: 4000
+    max_tokens: 2048
     temperature: 0.8
     top_p: 0.9
     stop_list: ["\nUser:", "\n\nUser:"]
 
 evaluator_llm:
   type: "OpenAILike"
-  model_name: "hosted_vllm/mistralai/Devstral-2-123B-Instruct-2512"
-  api_base: "https://llm.hpc.cam.ac.uk/v1"
+  model_name: "ibm-granite/granite-3.3-8b-instruct"
+  api_base: "http://vllm:8080/v1"
   api_key: "${POLARIS_LLM_API_KEY}"
   model_kwargs:
     temperature: 0
     top_p: 0.99
-    max_tokens: 4096
+    max_tokens: 2048
     instructor_mode: MD_JSON
 
 embedder:
@@ -54,6 +54,6 @@ evaluation:
       - "answer_relevancy"
       - "factual_correctness"
   run:
-    timeout: 240
+    timeout: 300
     max_retries: 0
     max_workers: 16
