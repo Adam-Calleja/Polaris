@@ -5,9 +5,12 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 
 MODEL=${MODEL:-meta-llama/Llama-3.3-70B-Instruct}
 PORT=${PORT:-8080}
+HOST_PORT=${HOST_PORT:-${PORT}}
 DEVICES=${DEVICES:-0,1,2,3}
 VOLUME=${VOLUME:-/mnt/data/ac2650/test}
 NETWORK=${NETWORK:-polaris_net}
+CONTAINER_NAME=${CONTAINER_NAME:-vllm-gaudi}
+NETWORK_ALIAS=${NETWORK_ALIAS:-vllm}
 
 VLLM_TAG=${VLLM_TAG:-v0.7.2+Gaudi-1.21.0}
 IMG=${IMG:-vault.habana.ai/gaudi-docker/1.21.0/rhel9.4/habanalabs/pytorch-installer-2.6.0:latest}
@@ -94,9 +97,9 @@ case "${MODEL}" in
     ;;
   Qwen/Qwen2.5-32B-Instruct)
     [[ -n "${MAX_MODEL_LEN}" ]] || MAX_MODEL_LEN=32768
-    [[ -n "${TENSOR_PARALLEL}" ]] || TENSOR_PARALLEL=4
+    [[ -n "${TENSOR_PARALLEL}" ]] || TENSOR_PARALLEL=1
     [[ -n "${GPU_MEMORY_UTILIZATION}" ]] || GPU_MEMORY_UTILIZATION=0.85
-    [[ -n "${MAX_NUM_SEQS}" ]] || MAX_NUM_SEQS=8
+    [[ -n "${MAX_NUM_SEQS}" ]] || MAX_NUM_SEQS=4
     ;;
   ibm-granite/granite-3.3-8b-instruct)
     [[ -n "${MAX_MODEL_LEN}" ]] || MAX_MODEL_LEN=65536
@@ -138,15 +141,15 @@ mkdir -p "${HF_CACHE_DIR}/hub" "${HF_CACHE_DIR}/transformers" "${RECIPE_CACHE_DI
 RECIPE_CACHE_DELETE_VALUE="$(recipe_cache_delete_value)"
 PT_HPU_RECIPE_CACHE_CONFIG_VALUE="${RECIPE_CACHE_DIR_CONTAINER},${RECIPE_CACHE_DELETE_VALUE},${RECIPE_CACHE_SIZE_MB}"
 
-docker_cmd rm -f vllm-gaudi 2>/dev/null || true
+docker_cmd rm -f "${CONTAINER_NAME}" 2>/dev/null || true
 docker_cmd run --rm -d \
-  --name vllm-gaudi \
+  --name "${CONTAINER_NAME}" \
   --runtime=habana \
   --cap-add=sys_nice \
   --ipc=host \
   --network "${NETWORK}" \
-  --network-alias vllm \
-  -p "${PORT}:${PORT}" \
+  --network-alias "${NETWORK_ALIAS}" \
+  -p "${HOST_PORT}:${PORT}" \
   -e HF_TOKEN="${HF_TOKEN}" \
   -e HABANA_VISIBLE_DEVICES="${DEVICES}" \
   -e PT_HPU_LAZY_MODE=1 \
@@ -260,6 +263,8 @@ PYCODE
   '
 
 echo "vLLM is starting on ${HOST}:${PORT}"
+echo "Container:          ${CONTAINER_NAME}"
+echo "Alias:              ${NETWORK_ALIAS}"
 echo "Model:              ${MODEL}"
 echo "Image:              ${IMG}"
 echo "TP:                 ${TENSOR_PARALLEL}"
@@ -267,10 +272,11 @@ echo "MaxLen:             ${MAX_MODEL_LEN}"
 echo "Blocks:             ${NUM_BLOCKS}"
 echo "GMU:                ${GPU_MEMORY_UTILIZATION}"
 echo "Seqs:               ${MAX_NUM_SEQS}"
+echo "Host port:          ${HOST_PORT}"
 echo "vLLM home:          ${VLLM_HOME_DIR}"
 echo "Recipe cache mode:  ${RECIPE_CACHE_DELETE_VALUE}"
 echo "Recipe cache dir:   ${RECIPE_CACHE_DIR_HOST}"
-echo "Logs:               sudo docker logs -f vllm-gaudi"
-echo "Health:             curl -s http://localhost:${PORT}/v1/health | jq ."
-echo "Models:             curl -s http://localhost:${PORT}/v1/models | jq ."
-echo "Stop:               sudo docker rm -f vllm-gaudi"
+echo "Logs:               sudo docker logs -f ${CONTAINER_NAME}"
+echo "Health:             curl -s http://localhost:${HOST_PORT}/v1/health | jq ."
+echo "Models:             curl -s http://localhost:${HOST_PORT}/v1/models | jq ."
+echo "Stop:               sudo docker rm -f ${CONTAINER_NAME}"
