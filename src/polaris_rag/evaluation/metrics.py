@@ -63,6 +63,8 @@ class MetricSpec:
     name: str
     required_columns: frozenset[str]
     builder: MetricBuilder
+    requires_llm: bool = False
+    requires_embeddings: bool = False
 
 
 def _as_mapping(value: Any) -> Mapping[str, Any]:
@@ -116,7 +118,7 @@ METRIC_REGISTRY: dict[str, MetricSpec] = {
     "retrieval_recall_at_k": MetricSpec(
         name="retrieval_recall_at_k",
         required_columns=frozenset({"retrieved_context_ids", "reference_context_ids"}),
-        builder=lambda llm, embeddings: _AsyncRetrievalMetric(
+        builder=lambda llm, embeddings, options=None: _AsyncRetrievalMetric(
             name="retrieval_recall_at_k",
             scorer=_retrieval_recall_at_k,
         ),
@@ -124,7 +126,7 @@ METRIC_REGISTRY: dict[str, MetricSpec] = {
     "retrieval_ndcg_at_10": MetricSpec(
         name="retrieval_ndcg_at_10",
         required_columns=frozenset({"retrieved_context_ids", "reference_context_ids"}),
-        builder=lambda llm, embeddings: _AsyncRetrievalMetric(
+        builder=lambda llm, embeddings, options=None: _AsyncRetrievalMetric(
             name="retrieval_ndcg_at_10",
             scorer=_retrieval_ndcg_at_10,
         ),
@@ -133,46 +135,56 @@ METRIC_REGISTRY: dict[str, MetricSpec] = {
         name="context_precision_without_reference",
         required_columns=frozenset({"user_input", "response", "retrieved_contexts"}),
         builder=lambda llm, embeddings, options=None: ContextPrecisionWithoutReference(llm=llm),
+        requires_llm=True,
     ),
     "context_recall": MetricSpec(
         name="context_recall",
         required_columns=frozenset({"user_input", "retrieved_contexts", "reference"}),
         builder=lambda llm, embeddings, options=None: ContextRecall(llm=llm),
+        requires_llm=True,
     ),
     "context_entity_recall": MetricSpec(
         name="context_entity_recall",
         required_columns=frozenset({"retrieved_contexts", "reference"}),
         builder=lambda llm, embeddings, options=None: ContextEntityRecall(llm=llm),
+        requires_llm=True,
     ),
     "faithfulness": MetricSpec(
         name="faithfulness",
         required_columns=frozenset({"user_input", "response", "retrieved_contexts"}),
         builder=lambda llm, embeddings, options=None: Faithfulness(llm=llm),
+        requires_llm=True,
     ),
     "answer_relevancy": MetricSpec(
         name="answer_relevancy",
         required_columns=frozenset({"user_input", "response"}),
         builder=lambda llm, embeddings, options=None: AnswerRelevancy(llm=llm, embeddings=embeddings),
+        requires_llm=True,
+        requires_embeddings=True,
     ),
     "factual_correctness": MetricSpec(
         name="factual_correctness",
         required_columns=frozenset({"response", "reference"}),
         builder=_build_factual_correctness_metric,
+        requires_llm=True,
     ),
     "semantic_similarity": MetricSpec(
         name="semantic_similarity",
         required_columns=frozenset({"response", "reference"}),
         builder=lambda llm, embeddings, options=None: SemanticSimilarity(embeddings=embeddings),
+        requires_embeddings=True,
     ),
     "noise_sensitivity": MetricSpec(
         name="noise_sensitivity",
         required_columns=frozenset({"user_input", "response", "reference", "retrieved_contexts"}),
         builder=lambda llm, embeddings, options=None: NoiseSensitivity(llm=llm, mode="relevant"),
+        requires_llm=True,
     ),
     "summary_score": MetricSpec(
         name="summary_score",
         required_columns=frozenset({"response", "reference_contexts"}),
         builder=lambda llm, embeddings, options=None: SummaryScore(llm=llm),
+        requires_llm=True,
     ),
 }
 
@@ -348,10 +360,14 @@ def instantiate_metrics(
     """
 
     config_by_name = _as_mapping(metric_config)
-    return [
-        spec.builder(llm, embeddings, _as_mapping(config_by_name.get(spec.name)))
-        for spec in specs
-    ]
+    instances: list[Any] = []
+    for spec in specs:
+        if spec.requires_llm and llm is None:
+            raise ValueError(f"Metric '{spec.name}' requires an evaluator LLM, but none was configured.")
+        if spec.requires_embeddings and embeddings is None:
+            raise ValueError(f"Metric '{spec.name}' requires an embedding model, but none was configured.")
+        instances.append(spec.builder(llm, embeddings, _as_mapping(config_by_name.get(spec.name))))
+    return instances
 
 
 __all__ = [

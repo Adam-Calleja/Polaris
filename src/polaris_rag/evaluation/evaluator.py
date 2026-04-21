@@ -885,18 +885,20 @@ class Evaluator:
                 "Evaluator LLM tracing was enabled without a trace_factory; evaluator requests will not be traced."
             )
 
-        self.llm = self._build_llm(
-            model=llm_model,
-            api_base=llm_api_base,
-            api_key=llm_api_key,
-            llm_kwargs=llm_kwargs or {},
-        )
-        self.embeddings = self._build_embeddings(
-            model=embedding_model,
-            api_base=embedding_api_base,
-            api_key=embedding_api_key,
-            embedding_kwargs=embedding_kwargs or {},
-        )
+        self._llm_config = {
+            "model": llm_model,
+            "api_base": llm_api_base,
+            "api_key": llm_api_key,
+            "llm_kwargs": dict(llm_kwargs or {}),
+        }
+        self._embedding_config = {
+            "model": embedding_model,
+            "api_base": embedding_api_base,
+            "api_key": embedding_api_key,
+            "embedding_kwargs": dict(embedding_kwargs or {}),
+        }
+        self.llm: Any | None = None
+        self.embeddings: Any | None = None
 
     def register_metric(self, metric_name: str) -> None:
         """Add a metric to the active requested metric list.
@@ -1166,6 +1168,18 @@ class Evaluator:
 
         return embeddings
 
+    def _ensure_llm(self) -> Any:
+        """Build and cache the evaluator LLM the first time a metric needs it."""
+        if self.llm is None:
+            self.llm = self._build_llm(**self._llm_config)
+        return self.llm
+
+    def _ensure_embeddings(self) -> Any:
+        """Build and cache embeddings the first time a metric needs them."""
+        if self.embeddings is None:
+            self.embeddings = self._build_embeddings(**self._embedding_config)
+        return self.embeddings
+
     def _resolve_runtime_metrics(
         self,
         *,
@@ -1189,10 +1203,12 @@ class Evaluator:
             requested_metrics=self.requested_metrics,
             auto_gate=self.auto_gate_metrics,
         )
+        llm = self._ensure_llm() if any(spec.requires_llm for spec in specs) else None
+        embeddings = self._ensure_embeddings() if any(spec.requires_embeddings for spec in specs) else None
         instances = instantiate_metrics(
             specs,
-            llm=self.llm,
-            embeddings=self.embeddings,
+            llm=llm,
+            embeddings=embeddings,
             metric_config=self.metric_overrides,
         )
         return list(zip(specs, instances)), skipped
@@ -1538,9 +1554,9 @@ class Evaluator:
         run_config = self._clone_run_config(max_workers=selected_workers)
 
         # Propagate selected run config to model wrappers.
-        if hasattr(self.llm, "set_run_config"):
+        if self.llm is not None and hasattr(self.llm, "set_run_config"):
             self.llm.set_run_config(run_config)
-        if hasattr(self.embeddings, "set_run_config"):
+        if self.embeddings is not None and hasattr(self.embeddings, "set_run_config"):
             self.embeddings.set_run_config(run_config)
 
         batch_size = self._batch_size_for_workers(selected_workers, self.batch_size)
@@ -1674,6 +1690,10 @@ class Evaluator:
             )
 
         run_config = self._clone_run_config(max_workers=selected_workers)
+        if self.llm is not None and hasattr(self.llm, "set_run_config"):
+            self.llm.set_run_config(run_config)
+        if self.embeddings is not None and hasattr(self.embeddings, "set_run_config"):
+            self.embeddings.set_run_config(run_config)
         batch_size = self._batch_size_for_workers(selected_workers, self.batch_size)
 
         executor, rows, metric_names = self._create_executor(
