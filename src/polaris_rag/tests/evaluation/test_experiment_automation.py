@@ -492,6 +492,67 @@ def test_run_experiment_stage_evaluate_phase_reuses_prepared_rows(
     assert record["conditions"][0]["ingestion_skipped"] is True
 
 
+def test_run_experiment_stage_evaluate_phase_can_allow_stale_prepared_rows(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    (repo_root / "scripts").mkdir()
+    base_config = tmp_path / "config.yaml"
+    base_config.write_text("prompt_name: test\n", encoding="utf-8")
+
+    manifest_path = _write_manifest(
+        tmp_path,
+        {
+            "artifacts_root": "artifacts/experiments",
+            "base_config": "config.yaml",
+            "stages": {
+                "stage4_source_ablation": {
+                    "type": "evaluation_grid",
+                    "dataset_path": "test.jsonl",
+                    "repeats": 1,
+                    "conditions": [
+                        {
+                            "name": "docs_only",
+                            "preset": "docs_only",
+                        }
+                    ],
+                }
+            },
+        },
+    )
+
+    stage_root = tmp_path / "artifacts" / "experiments" / "stage4_source_ablation"
+    prepared_path = stage_root / "docs_only" / "run_01" / "prepared_input.json"
+    prepared_path.parent.mkdir(parents=True, exist_ok=True)
+    prepared_path.write_text("[]", encoding="utf-8")
+
+    calls: list[list[str]] = []
+
+    def _fake_run(command, check, cwd):
+        calls.append(list(command))
+        assert check is True
+        assert Path(cwd) == repo_root
+        return None
+
+    monkeypatch.setattr(automation, "REPO_ROOT", repo_root)
+    monkeypatch.setattr(automation.subprocess, "run", _fake_run)
+
+    record = automation.run_experiment_stage(
+        manifest_path=manifest_path,
+        stage_name="stage4_source_ablation",
+        execution_phase="evaluate",
+        allow_stale_prepared=True,
+        dry_run=False,
+    )
+
+    assert record["execution_phase"] == "evaluate"
+    assert len(calls) == 1
+    assert "--reuse-prepared" in calls[0]
+    assert "--allow-stale-prepared" in calls[0]
+
+
 def test_run_experiment_stage_evaluate_phase_requires_existing_prepared_rows(
     tmp_path: Path,
     monkeypatch,

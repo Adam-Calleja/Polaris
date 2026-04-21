@@ -708,6 +708,66 @@ def test_resolve_prepared_rows_rejects_reuse_when_generator_fingerprint_differs(
         )
 
 
+def test_resolve_prepared_rows_allows_stale_reuse_when_opted_in(monkeypatch, tmp_path, caplog) -> None:
+    prepared_path = tmp_path / "prepared.json"
+    prepared_path.write_text(
+        '[{"id":"row-1","user_input":"Q1","reference":"A1","response":"R1","retrieved_contexts":["ctx-1"],'
+        '"retrieved_context_ids":["doc-1"],"metadata":{"generator_fingerprint":"old-generator","retriever_fingerprint":"'
+        'old-retriever","reranker_fingerprint":"old-reranker"}}]',
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(
+        evaluate_rag,
+        "_resolve_generator_metadata",
+        lambda cfg, *, generation_mode, generation_cfg, args: (
+            {"mode": generation_mode, "generator_llm": {"model_name": "new-generator"}},
+            "new-generator",
+        ),
+    )
+    monkeypatch.setattr(
+        evaluate_rag,
+        "_resolve_retriever_metadata",
+        lambda cfg: ({"type": "hybrid"}, "new-retriever"),
+    )
+    monkeypatch.setattr(
+        evaluate_rag,
+        "_resolve_reranker_metadata",
+        lambda cfg: ({"type": "rrf"}, "new-reranker"),
+    )
+
+    args = Namespace(
+        dataset_path=None,
+        prepared_path=str(prepared_path),
+        reuse_prepared=True,
+        allow_stale_prepared=True,
+        generation_workers=1,
+        generation_mode="pipeline",
+        generation_max_attempts=None,
+        generation_retry_initial_backoff=None,
+        generation_retry_max_backoff=None,
+        generation_retry_jitter=None,
+        generation_retry_on_empty_response=None,
+        replay_failures_from=None,
+    )
+
+    cfg = _cfg_with_reranker(tmp_path, {"type": "rrf", "rrf_k": 60})
+
+    with caplog.at_level(logging.WARNING):
+        rows, manifest = evaluate_rag._resolve_prepared_rows(
+            cfg=cfg,
+            args=args,
+            eval_cfg={"dataset": {"prepared_path": str(prepared_path)}, "generation": {"workers": 1, "mode": "pipeline"}},
+            show_progress=False,
+        )
+
+    assert len(rows) == 1
+    assert manifest["prepared_source"] == "existing"
+    assert manifest["prepared_validation_skipped"] is True
+    assert manifest["allow_stale_prepared"] is True
+    assert "--allow-stale-prepared" in caplog.text
+
+
 def test_resolve_prepared_rows_reuses_existing_rows_without_building_container(
     monkeypatch,
     tmp_path,

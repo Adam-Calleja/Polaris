@@ -1605,6 +1605,14 @@ def parse_args() -> argparse.Namespace:
         help="If set, use prepared dataset when available",
     )
     parser.add_argument(
+        "--allow-stale-prepared",
+        action="store_true",
+        help=(
+            "If set with --reuse-prepared, skip prepared-row fingerprint validation "
+            "and evaluate the existing prepared rows anyway"
+        ),
+    )
+    parser.add_argument(
         "--prepare-only",
         action="store_true",
         help="Prepare dataset rows and exit before RAGAS scoring",
@@ -2090,6 +2098,7 @@ def _resolve_prepared_rows(
     annotations_path = Path(str(annotations_path_raw)).expanduser().resolve() if annotations_path_raw else None
 
     reuse_prepared = args.reuse_prepared or _as_bool(dataset_cfg.get("reuse_prepared"), False)
+    allow_stale_prepared = bool(getattr(args, "allow_stale_prepared", False))
 
     query_field = str(dataset_cfg.get("query_field", "query"))
     reference_field = str(dataset_cfg.get("reference_field", "expected_answer"))
@@ -2130,6 +2139,7 @@ def _resolve_prepared_rows(
         "annotations_path": str(annotations_path) if annotations_path else None,
         "prepared_path": str(prepared_path) if prepared_path else None,
         "reuse_prepared": bool(reuse_prepared),
+        "allow_stale_prepared": bool(allow_stale_prepared),
         "query_field": query_field,
         "reference_field": reference_field,
         "id_field": id_field,
@@ -2187,22 +2197,30 @@ def _resolve_prepared_rows(
                 validate_summaries=False,
             )
             manifest["annotation_rows"] = len(rows)
-        _assert_prepared_rows_match_reranker(
-            rows,
-            expected_fingerprint=reranker_fingerprint,
-        )
-        _assert_prepared_rows_match_generator(
-            rows,
-            expected_fingerprint=generator_fingerprint,
-        )
-        _assert_prepared_rows_match_retriever(
-            rows,
-            expected_fingerprint=retriever_fingerprint,
-        )
-        _assert_prepared_rows_match_condition(
-            rows,
-            expected_fingerprint=preset_context.condition_fingerprint if preset_context is not None else None,
-        )
+        if allow_stale_prepared:
+            logger.warning(
+                "Reusing prepared rows from %s without fingerprint validation because "
+                "--allow-stale-prepared was set. Results may reflect a different "
+                "generator, retriever, reranker, or evaluation preset configuration.",
+                prepared_path,
+            )
+        else:
+            _assert_prepared_rows_match_reranker(
+                rows,
+                expected_fingerprint=reranker_fingerprint,
+            )
+            _assert_prepared_rows_match_generator(
+                rows,
+                expected_fingerprint=generator_fingerprint,
+            )
+            _assert_prepared_rows_match_retriever(
+                rows,
+                expected_fingerprint=retriever_fingerprint,
+            )
+            _assert_prepared_rows_match_condition(
+                rows,
+                expected_fingerprint=preset_context.condition_fingerprint if preset_context is not None else None,
+            )
         manifest.update(
             _prep_stats(
                 rows,
@@ -2212,6 +2230,7 @@ def _resolve_prepared_rows(
             )
         )
         manifest["prepared_source"] = "existing"
+        manifest["prepared_validation_skipped"] = bool(allow_stale_prepared)
         return rows, manifest
 
     if replay_failures_from:
@@ -2651,6 +2670,7 @@ def main() -> None:
                 "runtime.show_progress": str(show_progress),
                 "runtime.interactive_progress": str(interactive_progress),
                 "runtime.prepare_only": str(prepare_only),
+                "runtime.allow_stale_prepared": str(bool(getattr(args, "allow_stale_prepared", False))),
                 "runtime.tune_concurrency": str(tune_concurrency),
                 "runtime.trace_evaluator_llm": str(trace_evaluator_llm),
                 "runtime.preset": str(getattr(args, "preset", None) or ""),

@@ -340,6 +340,22 @@ docker compose run --no-deps --rm eval \
   --prepare-only
 ```
 
+To score an existing prepared file even when its recorded generator/retriever/
+reranker fingerprints no longer match the active config:
+
+```bash
+docker compose run --no-deps --rm eval \
+  polaris-eval -c /app/config/config.yaml \
+  --dataset-path /app/data/test/ragas_one_hop_eval_dataset_final.test.jsonl \
+  --prepared-path /app/data/test/prepared_test_rows_final.json \
+  --reuse-prepared \
+  --allow-stale-prepared
+```
+
+This bypass is intentionally explicit. Use it only when you want to score the
+saved prepared rows as-is, even though they were produced under a different
+generator, retriever, reranker, or preset configuration.
+
 ### Reranker Switching During Evaluation
 
 Reranker choice is config-driven. Change `retriever.rerank` in the config you

@@ -42,6 +42,11 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Render configs and write the execution record without running subprocesses.",
     )
+    parser.add_argument(
+        "--allow-stale-prepared",
+        action="store_true",
+        help="For evaluate runs that reuse prepared rows, skip prepared-row fingerprint validation.",
+    )
     return parser.parse_args()
 
 
@@ -54,6 +59,7 @@ def main() -> None:
         stage_name=args.stage,
         selected_conditions=list(args.condition) or None,
         execution_phase=args.phase,
+        allow_stale_prepared=bool(args.allow_stale_prepared),
         dry_run=bool(args.dry_run),
     )
     print(f"Stage complete: {record['stage_name']}")

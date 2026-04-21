@@ -115,6 +115,7 @@ def run_experiment_stage(
     stage_name: str,
     selected_conditions: Sequence[str] | None = None,
     execution_phase: str = BOTH_PHASE,
+    allow_stale_prepared: bool = False,
     dry_run: bool = False,
 ) -> dict[str, Any]:
     """Execute one manifest stage and persist an execution record."""
@@ -139,6 +140,7 @@ def run_experiment_stage(
             stage_dir=stage_dir,
             selected_conditions=selected_conditions,
             execution_phase=resolved_phase,
+            allow_stale_prepared=allow_stale_prepared,
             dry_run=dry_run,
         )
     elif stage_type == SPLIT_STAGE:
@@ -267,6 +269,7 @@ def _run_evaluation_grid_stage(
     stage_dir: Path,
     selected_conditions: Sequence[str] | None,
     execution_phase: str,
+    allow_stale_prepared: bool,
     dry_run: bool,
 ) -> dict[str, Any]:
     conditions = _stage_conditions(stage_spec, selected_conditions)
@@ -346,6 +349,8 @@ def _run_evaluation_grid_stage(
             _merged_run_options(manifest, stage_spec, condition_spec),
             execution_phase=execution_phase,
         )
+        if allow_stale_prepared:
+            run_options["allow_stale_prepared"] = True
 
         condition_record = {
             "name": condition_name,
@@ -611,6 +616,8 @@ def _build_evaluate_command(
     command.extend(_append_bool_cli_option("--trace-evaluator-llm", run_options.get("trace_evaluator_llm")))
     if bool(run_options.get("reuse_prepared", False)):
         command.append("--reuse-prepared")
+    if bool(run_options.get("allow_stale_prepared", False)):
+        command.append("--allow-stale-prepared")
     if bool(run_options.get("prepare_only", False)):
         command.append("--prepare-only")
     if bool(run_options.get("no_tune_concurrency", False)):
