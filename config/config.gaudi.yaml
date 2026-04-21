@@ -23,7 +23,7 @@ evaluator_llm:
   model_kwargs:
     temperature: 0
     top_p: 0.99
-    max_tokens: 4096
+    max_tokens: 256
     instructor_mode: MD_JSON
 
 embedder:
@@ -53,6 +53,10 @@ evaluation:
       - "faithfulness"
       - "answer_relevancy"
       - "factual_correctness"
+  preprocessing:
+    retrieved_contexts:
+      max_characters: 4000
+      max_total_characters: 20000
   run:
     timeout: 240
     max_retries: 0
