@@ -1,0 +1,77 @@
+\chapter{Benchmark Taxonomy Label Definitions}
+\label{app:benchmark-taxonomy-labels}
+
+This appendix defines the multi-label taxonomy used to annotate benchmark queries for later subgroup analysis. Each field captures a distinct property of the query or of the minimum evidence conditions required for a correct answer. 
+
+\newcommand{\topcode}[1]{\parbox[t]{\linewidth}{\raggedright\ttfamily #1}}
+\newcommand{\toptext}[1]{\parbox[t]{\linewidth}{\raggedright #1}}
+
+\begingroup
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.15}
+
+\begin{longtable}{>{\raggedright\arraybackslash}p{2.6cm}
+                  >{\raggedright\arraybackslash}p{3.3cm}
+                  >{\raggedright\arraybackslash}p{3.6cm}
+                  >{\raggedright\arraybackslash}p{4.8cm}}
+\caption{Benchmark taxonomy label definitions and allowed values.}
+\label{tab:benchmark-taxonomy-labels} \\
+
+\hline
+Field & What it captures & Allowed values & Annotation rule \\
+\hline
+\endfirsthead
+
+\multicolumn{4}{l}{\textit{Table \thetable{} continued from previous page}} \\
+\hline
+Field & What it captures & Allowed values & Annotation rule \\
+\hline
+\endhead
+
+\hline
+\multicolumn{4}{r}{\textit{Continued on next page}} \\
+\endfoot
+
+\hline
+\endlastfoot
+
+\topcode{source\_\newline needed} &
+\toptext{The minimum evidence class needed for a correct answer} &
+\topcode{docs\newline tickets\newline both} &
+\toptext{Labels describe the task, not the current retrieval result or the current vector-store contents. Assign the minimum evidence class required for a correct answer.} \\
+
+\topcode{docs\_scope\_\newline needed} &
+\toptext{Which class of official documentation is authoritative when documentary evidence is needed} &
+\topcode{local\_official\newline external\_official\newline local\_and\_external\newline none} &
+\toptext{Use \texttt{none} only when \texttt{source\_needed=tickets}. Queries with \texttt{source\_needed=docs} or \texttt{both} must not use \texttt{none}.} \\
+
+\topcode{validity\_\newline sensitive} &
+\toptext{Whether correctness depends on current system, partition, service, workflow, or compatibility truth} &
+\topcode{yes\newline no} &
+\toptext{Mark \texttt{yes} when current local operational truth is central to correctness; mark \texttt{no} when the answer is sufficiently stable.} \\
+
+\topcode{attachment\_\newline dependent} &
+\toptext{Whether visible text alone is sufficient, or whether unseen attachments materially determine correct handling} &
+\topcode{yes\newline no} &
+\toptext{Mark \texttt{yes} when screenshots, logs, uploaded documents, or other unseen attachments materially affect the correct first response.} \\
+
+\topcode{query\_type} &
+\toptext{The broad problem family represented by the query} &
+\topcode{local\_operational\newline software\_version\newline general\_how\_to} &
+\toptext{Assign the dominant problem family: local service truth, version-sensitive software or toolchain issues, or stable procedural guidance.} \\
+
+\topcode{version\_\newline sensitive} &
+\toptext{Whether correctness depends materially on a software or toolchain version} &
+\topcode{yes\newline no} &
+\toptext{Mark \texttt{yes} when version differences could change the correct guidance or resolution.} \\
+
+\topcode{system\_scope\_\newline required} &
+\toptext{Whether correctness depends on a particular system, service, partition, or platform} &
+\topcode{yes\newline no} &
+\toptext{Mark \texttt{yes} when the answer would differ materially across systems or execution environments.} \\
+
+\end{longtable}
+\endgroup
+
+Where multiple interpretations were possible, labels were assigned according to the minimum evidence needed for a correct and locally applicable first-response answer. 

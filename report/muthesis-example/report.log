@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.3.18)  21 APR 2026 10:15
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.3.18)  23 APR 2026 00:57
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -156,28 +156,60 @@ Package: uniquecounter 2019/12/15 v1.4 Provide unlimited unique counter (HO)
 Package uniquecounter Info: New unique counter `rerunfilecheck' on input line 284.
 )
 \Hy@SectionHShift=\skip53
+) (/usr/local/texlive/2026/texmf-dist/tex/latex/tools/longtable.sty
+Package: longtable 2025-10-13 v4.24 Multi-page Table package (DPC)
+\LTleft=\skip54
+\LTright=\skip55
+\LTpre=\skip56
+\LTpost=\skip57
+\LTchunksize=\count297
+\LTcapwidth=\dimen155
+\LT@head=\box53
+\LT@firsthead=\box54
+\LT@foot=\box55
+\LT@lastfoot=\box56
+\LT@gbox=\box57
+\LT@cols=\count298
+\LT@rows=\count299
+\c@LT@tables=\count300
+\c@LT@chunks=\count301
+\LT@p@ftn=\toks20
+) (/usr/local/texlive/2026/texmf-dist/tex/latex/tools/array.sty
+Package: array 2025/09/25 v2.6n Tabular extension package (FMi)
+\col@sep=\dimen156
+\ar@mcellbox=\box58
+\extrarowheight=\dimen157
+\NC@list=\toks21
+\extratabsurround=\skip58
+\backup@length=\skip59
+\ar@cellbox=\box59
+) (/usr/local/texlive/2026/texmf-dist/tex/latex/makecell/makecell.sty
+Package: makecell 2009/08/03 V0.1e Managing of Tab Column Heads and Cells
+\rotheadsize=\dimen158
+\c@nlinenum=\count302
+\TeXr@lab=\toks22
 )
-Package hyperref Info: Option `colorlinks' set `true' on input line 15.
+Package hyperref Info: Option `colorlinks' set `true' on input line 18.
  (/usr/local/texlive/2026/texmf-dist/tex/latex/listings/listings.sty
-\lst@mode=\count297
-\lst@gtempboxa=\box53
-\lst@token=\toks20
-\lst@length=\count298
-\lst@currlwidth=\dimen155
-\lst@column=\count299
-\lst@pos=\count300
-\lst@lostspace=\dimen156
-\lst@width=\dimen157
-\lst@newlines=\count301
-\lst@lineno=\count302
-\lst@maxwidth=\dimen158
+\lst@mode=\count303
+\lst@gtempboxa=\box60
+\lst@token=\toks23
+\lst@length=\count304
+\lst@currlwidth=\dimen159
+\lst@column=\count305
+\lst@pos=\count306
+\lst@lostspace=\dimen160
+\lst@width=\dimen161
+\lst@newlines=\count307
+\lst@lineno=\count308
+\lst@maxwidth=\dimen162
  (/usr/local/texlive/2026/texmf-dist/tex/latex/listings/lstpatch.sty
 File: lstpatch.sty 2025/11/14 1.11b (Carsten Heinz)
 ) (/usr/local/texlive/2026/texmf-dist/tex/latex/listings/lstmisc.sty
 File: lstmisc.sty 2025/11/14 1.11b (Carsten Heinz)
-\c@lstnumber=\count303
-\lst@skipnumbers=\count304
-\lst@framebox=\box54
+\c@lstnumber=\count309
+\lst@skipnumbers=\count310
+\lst@framebox=\box61
 ) (/usr/local/texlive/2026/texmf-dist/tex/latex/listings/listings.cfg
 File: listings.cfg 2025/11/14 1.11b listings configuration
 ))
@@ -229,15 +261,15 @@ Package: acronym 2025/01/17 v1.50 Support for acronyms (Tobias Oetiker)
  (/usr/local/texlive/2026/texmf-dist/tex/latex/bigfoot/suffix.sty
 Package: suffix 2006/07/15 1.5a Variant command support
 ) (/usr/local/texlive/2026/texmf-dist/tex/generic/xstring/xstring.sty (/usr/local/texlive/2026/texmf-dist/tex/generic/xstring/xstring.tex
-\xs_counta=\count305
-\xs_countb=\count306
+\xs_counta=\count311
+\xs_countb=\count312
 )
 Package: xstring 2023/08/22 v1.86 String manipulations (CT)
 )
-\AC@clearlist=\toks21
+\AC@clearlist=\toks24
 ) (/usr/local/texlive/2026/texmf-dist/tex/latex/l3backend/l3backend-pdftex.def
 File: l3backend-pdftex.def 2025-10-09 L3 backend support: PDF output (pdfTeX)
-\l__color_backend_stack_int=\count307
+\l__color_backend_stack_int=\count313
 ) (./report.aux (./chapter1.aux) (./chapter2.aux) (./chapter3.aux) (./chapter4.aux) (./chapter5.aux) (./chapter6.aux
 
 LaTeX Warning: Label `sec:source-ablation' multiply defined.
@@ -251,44 +283,44 @@ LaTeX Warning: Label `sec:external-document-scope-ablation' multiply defined.
 
 LaTeX Warning: Label `sec:tuned-finalist-comparison' multiply defined.
 
-) (./chapter7.aux) (./chapter8.aux) (./appendix1.aux))
+) (./chapter7.aux) (./chapter8.aux) (./appendix1.aux) (./appendix2.aux))
 \openout1 = `report.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 38.
-LaTeX Font Info:    ... okay on input line 38.
-LaTeX Font Info:    Checking defaults for OMS/pzccm/m/n on input line 38.
-LaTeX Font Info:    Trying to load font information for OMS+pzccm on input line 38.
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 41.
+LaTeX Font Info:    ... okay on input line 41.
+LaTeX Font Info:    Checking defaults for OMS/pzccm/m/n on input line 41.
+LaTeX Font Info:    Trying to load font information for OMS+pzccm on input line 41.
  (/usr/local/texlive/2026/texmf-dist/tex/latex/psnfss/omspzccm.fd
 File: omspzccm.fd 2000/01/03 Fontinst v1.801 font definitions for OMS/pzccm.
 )
-LaTeX Font Info:    ... okay on input line 38.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 38.
-LaTeX Font Info:    ... okay on input line 38.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 38.
-LaTeX Font Info:    ... okay on input line 38.
-LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 38.
-LaTeX Font Info:    ... okay on input line 38.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 38.
-LaTeX Font Info:    ... okay on input line 38.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 38.
-LaTeX Font Info:    ... okay on input line 38.
-LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 38.
-LaTeX Font Info:    ... okay on input line 38.
-LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 38.
-LaTeX Font Info:    ... okay on input line 38.
+LaTeX Font Info:    ... okay on input line 41.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 41.
+LaTeX Font Info:    ... okay on input line 41.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 41.
+LaTeX Font Info:    ... okay on input line 41.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 41.
+LaTeX Font Info:    ... okay on input line 41.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 41.
+LaTeX Font Info:    ... okay on input line 41.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 41.
+LaTeX Font Info:    ... okay on input line 41.
+LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 41.
+LaTeX Font Info:    ... okay on input line 41.
+LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 41.
+LaTeX Font Info:    ... okay on input line 41.
  (/usr/local/texlive/2026/texmf-dist/tex/context/base/mkii/supp-pdf.mkii
 [Loading MPS to PDF converter (version 2006.09.02).]
-\scratchcounter=\count308
-\scratchdimen=\dimen159
-\scratchbox=\box55
-\nofMPsegments=\count309
-\nofMParguments=\count310
-\everyMPshowfont=\toks22
-\MPscratchCnt=\count311
-\MPscratchDim=\dimen160
-\MPnumerator=\count312
-\makeMPintoPDFobject=\count313
-\everyMPtoPDFconversion=\toks23
+\scratchcounter=\count314
+\scratchdimen=\dimen163
+\scratchbox=\box62
+\nofMPsegments=\count315
+\nofMParguments=\count316
+\everyMPshowfont=\toks25
+\MPscratchCnt=\count317
+\MPscratchDim=\dimen164
+\MPnumerator=\count318
+\makeMPintoPDFobject=\count319
+\everyMPtoPDFconversion=\toks26
 ) (/usr/local/texlive/2026/texmf-dist/tex/latex/epstopdf-pkg/epstopdf-base.sty
 Package: epstopdf-base 2020-01-24 v2.11 Base part for package epstopdf
  (/usr/local/texlive/2026/texmf-dist/tex/latex/grfext/grfext.sty
@@ -307,12 +339,12 @@ File: color.cfg 2016/01/02 v1.6 sample color configuration
 )
 Package color Info: Driver file: pdftex.def on input line 149.
  (/usr/local/texlive/2026/texmf-dist/tex/latex/graphics/mathcolor.ltx))
-Package hyperref Info: Link coloring ON on input line 38.
+Package hyperref Info: Link coloring ON on input line 41.
  (./report.out) (./report.out)
 \@outlinefile=\write3
 \openout3 = `report.out'.
 
-\c@lstlisting=\count314
+\c@lstlisting=\count320
  [1
 
 {/usr/local/texlive/2026/texmf-var/fonts/map/pdftex/updmap/pdftex.map}{/usr/local/texlive/2026/texmf-dist/fonts/enc/dvips/base/8r.enc}] (./report.toc
@@ -341,13 +373,18 @@ LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <7> not available
 \openout4 = `report.toc'.
 
  (./word.count)
-Underfull \hbox (badness 10000) in paragraph at lines 51--51
+Underfull \hbox (badness 10000) in paragraph at lines 54--54
 
  []
 
 [4] (./report.lot
 Package acronym Info: Label `acro:CSD3' newly defined as it shall be overridden
 although it is yet undefined on input line 4.
+
+Overfull \hbox (5.14026pt too wide) in paragraph at lines 15--15
+ [][] [][][]\OT1/ptm/m/n/12 Approved ex-ter-nal doc-u-men-ta-tion source fam-i-lies in-cluded in the frozen 
+ []
+
 )
 \tf@lot=\write5
 \openout5 = `report.lot'.
@@ -375,12 +412,12 @@ Underfull \hbox (badness 10000) in paragraph at lines 1--4
 ] [9
 
 ]
-Overfull \hbox (1.14229pt too wide) in paragraph at lines 59--59
+Overfull \hbox (1.14229pt too wide) in paragraph at lines 62--62
 \OT1/ptm/m/n/12 right works in the the-sis, for ex-am-ple graphs and ta-bles (``Re-pro-duc-tions''), which
  []
 
 
-Overfull \hbox (22.88693pt too wide) in paragraph at lines 59--59
+Overfull \hbox (22.88693pt too wide) in paragraph at lines 62--62
 \OT1/ptm/m/n/12 Uni-ver-sity Li-brary, The Uni-ver-sity Li-brary's reg-u-la-tions (see [][]$\OT1/pcr/m/n/12 http : / / www . library .
  []
 
@@ -398,7 +435,7 @@ although it is yet undefined on input line 7.
 Package acronym Info: Label `acro:HPC' newly defined as it shall be overridden
 although it is yet undefined on input line 7.
 Package acronym Info: Label `acro:RCS' overridden on input line 7.
-<graphs/ticket_counts.pdf, id=540, 431.17964pt x 254.86092pt>
+<graphs/ticket_counts.pdf, id=567, 431.17964pt x 254.86092pt>
 File: graphs/ticket_counts.pdf Graphic file (type pdf)
 <use graphs/ticket_counts.pdf>
 Package pdftex.def Info: graphs/ticket_counts.pdf  used on input line 13.
@@ -473,12 +510,12 @@ LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <6> not available
 (Font)              Font shape `OT1/ptm/b/n' tried instead on input line 36.
 
 Underfull \hbox (badness 1122) in paragraph at lines 41--41
-[]\OT1/ptm/m/n/10.95 Retrieval ne-ces-
+[]|\OT1/ptm/m/n/10.95 Retrieval ne-ces-
  []
 
 
 Underfull \hbox (badness 10000) in paragraph at lines 42--42
-[]\OT1/ptm/m/n/10.95 Avoids in-dis-
+[]|\OT1/ptm/m/n/10.95 Avoids in-dis-
  []
 
 
@@ -498,12 +535,12 @@ Underfull \hbox (badness 10000) in paragraph at lines 42--42
 
 
 Underfull \hbox (badness 1028) in paragraph at lines 43--44
-[]\OT1/ptm/m/n/10.95 Does not model het-ero-
+[]|\OT1/ptm/m/n/10.95 Does not model het-ero-
  []
 
 
 Underfull \hbox (badness 10000) in paragraph at lines 45--45
-[]\OT1/ptm/m/n/10.95 Query--
+[]|\OT1/ptm/m/n/10.95 Query--
  []
 
 
@@ -513,7 +550,7 @@ Underfull \hbox (badness 10000) in paragraph at lines 45--45
 
 
 Underfull \hbox (badness 10000) in paragraph at lines 46--46
-[]\OT1/ptm/m/n/10.95 Detects when
+[]|\OT1/ptm/m/n/10.95 Detects when
  []
 
 
@@ -523,12 +560,12 @@ Underfull \hbox (badness 3635) in paragraph at lines 46--46
 
 
 Underfull \hbox (badness 5274) in paragraph at lines 49--49
-[]\OT1/ptm/m/n/10.95 Source re-li-a-bil-
+[]|\OT1/ptm/m/n/10.95 Source re-li-a-bil-
  []
 
 
 Underfull \hbox (badness 10000) in paragraph at lines 50--50
-[]\OT1/ptm/m/n/10.95 Prioritises re-li-
+[]|\OT1/ptm/m/n/10.95 Prioritises re-li-
  []
 
 
@@ -543,12 +580,12 @@ Underfull \hbox (badness 4569) in paragraph at lines 50--50
 
 [22]
 Underfull \hbox (badness 10000) in paragraph at lines 75--75
-[]\OT1/ptm/m/n/10.95 Local doc-u-
+[]|\OT1/ptm/m/n/10.95 Local doc-u-
  []
 
 
 Underfull \hbox (badness 10000) in paragraph at lines 76--76
-[]\OT1/ptm/m/n/10.95 Primary au-
+[]|\OT1/ptm/m/n/10.95 Primary au-
  []
 
 
@@ -563,7 +600,7 @@ Underfull \hbox (badness 10000) in paragraph at lines 76--76
 
 
 Underfull \hbox (badness 10000) in paragraph at lines 77--77
-[]\OT1/ptm/m/n/10.95 Records sup-ported
+[]|\OT1/ptm/m/n/10.95 Records sup-ported
  []
 
 
@@ -578,7 +615,7 @@ Underfull \hbox (badness 10000) in paragraph at lines 77--77
 
 
 Underfull \hbox (badness 3229) in paragraph at lines 78--78
-[]\OT1/ptm/m/n/10.95 May omit low-level
+[]|\OT1/ptm/m/n/10.95 May omit low-level
  []
 
 
@@ -593,7 +630,7 @@ Underfull \hbox (badness 5519) in paragraph at lines 79--80
 
 
 Underfull \hbox (badness 10000) in paragraph at lines 80--80
-[]\OT1/ptm/m/n/10.95 External
+[]|\OT1/ptm/m/n/10.95 External
  []
 
 
@@ -608,7 +645,7 @@ Underfull \hbox (badness 10000) in paragraph at lines 80--80
 
 
 Underfull \hbox (badness 6364) in paragraph at lines 81--81
-[]\OT1/ptm/m/n/10.95 Secondary for
+[]|\OT1/ptm/m/n/10.95 Secondary for
  []
 
 
@@ -628,7 +665,7 @@ Underfull \hbox (badness 1163) in paragraph at lines 81--81
 
 
 Underfull \hbox (badness 10000) in paragraph at lines 82--82
-[]\OT1/ptm/m/n/10.95 Provides tool be-
+[]|\OT1/ptm/m/n/10.95 Provides tool be-
  []
 
 
@@ -638,7 +675,7 @@ Underfull \hbox (badness 3919) in paragraph at lines 82--82
 
 
 Underfull \hbox (badness 1609) in paragraph at lines 83--83
-[]\OT1/ptm/m/n/10.95 Can be rel-e-vant yet
+[]|\OT1/ptm/m/n/10.95 Can be rel-e-vant yet
  []
 
 
@@ -653,7 +690,7 @@ Underfull \hbox (badness 1412) in paragraph at lines 83--83
 
 
 Underfull \hbox (badness 10000) in paragraph at lines 85--85
-[]\OT1/ptm/m/n/10.95 Historical
+[]|\OT1/ptm/m/n/10.95 Historical
  []
 
 
@@ -678,7 +715,7 @@ Underfull \hbox (badness 10000) in paragraph at lines 86--86
 
 
 Underfull \hbox (badness 10000) in paragraph at lines 87--87
-[]\OT1/ptm/m/n/10.95 Preserves con-crete
+[]|\OT1/ptm/m/n/10.95 Preserves con-crete
  []
 
 
@@ -693,7 +730,7 @@ Underfull \hbox (badness 10000) in paragraph at lines 87--87
 
 
 Underfull \hbox (badness 1648) in paragraph at lines 88--88
-[]\OT1/ptm/m/n/10.95 Lagging, noisy, and
+[]|\OT1/ptm/m/n/10.95 Lagging, noisy, and
  []
 
 
@@ -708,7 +745,7 @@ Underfull \hbox (badness 6608) in paragraph at lines 88--88
 
 
 Underfull \hbox (badness 10000) in paragraph at lines 89--90
-[]\OT1/ptm/m/n/10.95 Use with fresh-ness
+[]|\OT1/ptm/m/n/10.95 Use with fresh-ness
  []
 
 
@@ -771,29 +808,574 @@ Overfull \hbox (7.68326pt too wide) in paragraph at lines 7--8
  []
 
 
-Underfull \vbox (badness 4752) has occurred while \output is active []
+Overfull \hbox (2.67947pt too wide) in paragraph at lines 7--8
+\OT1/ptm/m/n/12 answering task within a su-per-vised in-ter-nal sup-port work-flow. Given a natural-language
+ []
 
- [30
+[30
 
 
 
 
 ]
-Overfull \hbox (1.79208pt too wide) in paragraph at lines 18--19
-\OT1/ptm/m/n/12 ap-proved source set was de-fined in an ex-ter-nal source reg-istry and con-tained 13 sources,
+Overfull \hbox (10.6084pt too wide) in paragraph at lines 11--12
+[]\OT1/ptm/m/n/12 The in-tended out-put of the sys-tem is not an au-tonomous fi-nal res-o-lu-tion, but evidence-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 25--25
+[]|\OT1/ptm/m/n/10.95 Main ex-
+ []
+
+
+Underfull \hbox (badness 1789) in paragraph at lines 27--27
+[]|\OT1/ptm/m/n/10.95 Local doc-u-
+ []
+
+
+Underfull \hbox (badness 6961) in paragraph at lines 27--27
+\OT1/ptm/m/n/10.95 specific prac-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 27--27
+[]|\OT1/ptm/m/n/10.95 Internal HTML
+ []
+
+
+Underfull \hbox (badness 7047) in paragraph at lines 27--27
+\OT1/ptm/m/n/10.95 pages within the
+ []
+
+
+Underfull \hbox (badness 2285) in paragraph at lines 27--27
+\OT1/ptm/m/n/10.95 core [][] doc-u-
+ []
+
+
+Underfull \hbox (badness 1616) in paragraph at lines 27--27
+\OT1/ptm/m/n/10.95 men-ta-tion sub-tree;
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 27--27
+[]|\OT1/ptm/m/n/10.95 Out-of-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 27--27
+\OT1/ptm/m/n/10.95 non-HTML
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 27--28
+[]|\OT1/ptm/m/n/10.95 Highest lo-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 27--28
+\OT1/ptm/m/n/10.95 cal au-thor-ity;
+ []
+
+
+Underfull \hbox (badness 7631) in paragraph at lines 27--28
+\OT1/ptm/m/n/10.95 should dom-i-nate
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 27--28
+\OT1/ptm/m/n/10.95 ques-tions about
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 27--28
+\OT1/ptm/m/n/10.95 sup-ported work-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 27--28
+\OT1/ptm/m/n/10.95 flows, pol-icy,
+ []
+
+
+Underfull \hbox (badness 1097) in paragraph at lines 27--28
+\OT1/ptm/m/n/10.95 ac-cess, and con-
+ []
+
+
+Underfull \hbox (badness 1789) in paragraph at lines 28--28
+\OT1/ptm/m/n/10.95 ter-nal doc-u-
+ []
+
+
+Overfull \hbox (0.86009pt too wide) in paragraph at lines 28--28
+[]|\OT1/ptm/m/n/10.95 Supplementary
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 28--28
+\OT1/ptm/m/n/10.95 soft-ware and
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 28--28
+\OT1/ptm/m/n/10.95 toolchain de-
+ []
+
+
+Overfull \hbox (4.76073pt too wide) in paragraph at lines 28--28
+[]|\OT1/ptm/m/n/10.95 Community-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 28--28
+\OT1/ptm/m/n/10.95 managed,
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 28--28
+\OT1/ptm/m/n/10.95 non-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 28--28
+\OT1/ptm/m/n/10.95 official,
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 28--28
+\OT1/ptm/m/n/10.95 overly
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 28--28
+\OT1/ptm/m/n/10.95 broad, or
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 28--28
+\OT1/ptm/m/n/10.95 mis-aligned
+ []
+
+
+Underfull \hbox (badness 5064) in paragraph at lines 28--29
+[]|\OT1/ptm/m/n/10.95 Useful for soft-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 28--29
+\OT1/ptm/m/n/10.95 ware be-haviour,
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 28--29
+\OT1/ptm/m/n/10.95 but should not
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 28--29
+\OT1/ptm/m/n/10.95 over-ride lo-cal
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 29--29
+[]|\OT1/ptm/m/n/10.95 Historical
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 29--29
+\OT1/ptm/m/n/10.95 sup-port
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 29--29
+[]|\OT1/ptm/m/n/10.95 Prior-case
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 29--29
+\OT1/ptm/m/n/10.95 trou-bleshoot-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 29--29
+\OT1/ptm/m/n/10.95 ing ev-i-dence
+ []
+
+
+Underfull \hbox (badness 2027) in paragraph at lines 29--29
+\OT1/ptm/m/n/10.95 from re-solved
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 29--29
+[]|\OT1/ptm/m/n/10.95 Resolved [][]
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 29--29
+\OT1/ptm/m/n/10.95 sup-port tick-ets
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 29--29
+\OT1/ptm/m/n/10.95 from Novem-ber
+ []
+
+
+Underfull \hbox (badness 4981) in paragraph at lines 29--29
+\OT1/ptm/m/n/10.95 2017 to 1 April
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 29--29
+\OT1/ptm/m/n/10.95 2026 in-clu-sive;
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 29--29
+[]|\OT1/ptm/m/n/10.95 Unresolved
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 29--29
+\OT1/ptm/m/n/10.95 tick-ets
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 29--29
+\OT1/ptm/m/n/10.95 re-triev-able
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 29--30
+[]|\OT1/ptm/m/n/10.95 High cov-er-age
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 29--30
+\OT1/ptm/m/n/10.95 for re-cur-ring
+ []
+
+
+Underfull \hbox (badness 2582) in paragraph at lines 29--30
+\OT1/ptm/m/n/10.95 is-sues and di-ag-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 29--30
+\OT1/ptm/m/n/10.95 nos-tic con-text,
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 29--30
+\OT1/ptm/m/n/10.95 privacy-sensitive,
  []
 
 [31]
-Overfull \hbox (25.80722pt too wide) in paragraph at lines 30--30
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [32] [33]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [34]
+Underfull \hbox (badness 5847) in paragraph at lines 89--90
+[]|\OT1/ptm/m/n/10 In this set-ting, rel-e-vant ev-i-
+ []
+
+
+Underfull \hbox (badness 5460) in paragraph at lines 91--91
+\OT1/ptm/m/n/10 grounded first-response an-swer rather
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 91--92
+[]|\OT1/ptm/m/n/10 The project con-cerns staff-
+ []
+
+
+Underfull \hbox (badness 7326) in paragraph at lines 91--92
+\OT1/ptm/m/n/10 assisted sup-port, not gen-eral
+ []
+
+
+Underfull \hbox (badness 3460) in paragraph at lines 93--94
+[]|\OT1/ptm/m/n/10 The in-tended de-ploy-ment set-
+ []
+
+
+Underfull \hbox (badness 2452) in paragraph at lines 97--97
+\OT1/ptm/m/n/10 thor-i-ta-tive and cur-rent ev-i-dence when
+ []
+
+
+Underfull \hbox (badness 3396) in paragraph at lines 99--100
+\OT1/ptm/m/n/10 port guid-ance is op-er-a-tionally
+ []
+
+
+Underfull \hbox (badness 1077) in paragraph at lines 101--101
+[]|\OT1/ptm/m/n/10 The bench-marked sys-tem con-fig-u-ra-tion
+ []
+
+
+Underfull \hbox (badness 3668) in paragraph at lines 103--104
+[]|\OT1/ptm/m/n/10 This keeps the prob-lem con-
+ []
+
+
+Underfull \hbox (badness 1975) in paragraph at lines 107--108
+[]|\OT1/ptm/m/n/10 This avoids in-tro-duc-ing mul-ti-
+ []
+
+
+Underfull \hbox (badness 4940) in paragraph at lines 109--110
+[]|\OT1/ptm/m/n/10 In this het-ero-ge-neous set-ting,
+ []
+
+
+Underfull \hbox (badness 5133) in paragraph at lines 109--110
+\OT1/ptm/m/n/10 mul-ti-ple valid ev-i-dence paths
+ []
+
+
+Underfull \hbox (badness 1237) in paragraph at lines 109--110
+\OT1/ptm/m/n/10 may sup-port a cor-rect an-swer,
+ []
+
+
+Underfull \hbox (badness 6510) in paragraph at lines 111--111
+[]|\OT1/ptm/m/n/10 The sys-tem is not re-quired to au-
+ []
+
+
+Underfull \hbox (badness 6725) in paragraph at lines 111--112
+[]|\OT1/ptm/m/n/10 These cases fall out-side the
+ []
+
+
+ignored: Infinite glue shrinkage found in box being split [35]
+Overfull \hbox (25.80722pt too wide) in paragraph at lines 118--118
 []\OT1/ptm/b/n/17.28 Success Cri-te-ria and Requirement-to-Evaluation Map-
  []
 
-) [32]
+[36]
+Overfull \hbox (57.07135pt too wide) in alignment at lines 128--135
+ [] [] [] [] [] 
+ []
+
+
+Overfull \hbox (57.07135pt too wide) in alignment at lines 135--141
+ [] [] [] [] [] 
+ []
+
+
+Overfull \hbox (57.07135pt too wide) in alignment at lines 141--145
+ [] [] [] [] [] 
+ []
+
+
+Overfull \hbox (57.07135pt too wide) in alignment at lines 145--148
+ [] [] [] [] [] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 152--152
+\OT1/ptm/m/n/10 vinc-ing held-out test-set
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 152--152
+\OT1/ptm/m/n/10 lo-cal doc-u-men-ta-tion and
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 152--152
+\OT1/ptm/m/n/10 his-tor-i-cal sup-port tick-ets
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 153--153
+[]|\OT1/ptm/m/n/10 Comparative bench-mark
+ []
+
+
+Underfull \hbox (badness 1609) in paragraph at lines 153--153
+\OT1/ptm/m/n/10 op-ment/test pro-to-col, with
+ []
+
+
+Underfull \hbox (badness 2189) in paragraph at lines 154--155
+[]|\OT1/ptm/m/n/10 Met if held-out test re-sults
+ []
+
+
+Underfull \hbox (badness 1867) in paragraph at lines 154--155
+\OT1/ptm/m/n/10 sup-port a clear com-par-a-tive
+ []
+
+
+Underfull \hbox (badness 6978) in paragraph at lines 154--155
+\OT1/ptm/m/n/10 con-clu-sion about com-bined
+ []
+
+
+Underfull \hbox (badness 6741) in paragraph at lines 154--155
+\OT1/ptm/m/n/10 base-lines, judged pri-mar-ily
+ []
+
+
+Underfull \hbox (badness 5490) in paragraph at lines 154--155
+\OT1/ptm/m/n/10 by an-swer cor-rect-ness and
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 158--158
+\OT1/ptm/m/n/10 vinc-ing held-out test-set
+ []
+
+
+Underfull \hbox (badness 1112) in paragraph at lines 158--158
+\OT1/ptm/m/n/10 an-swer to whether validity-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 158--158
+\OT1/ptm/m/n/10 aware rerank-ing im-proves
+ []
+
+
+Underfull \hbox (badness 1975) in paragraph at lines 159--159
+[]|\OT1/ptm/m/n/10 Comparative ab-la-tion runs
+ []
+
+
+Underfull \hbox (badness 2205) in paragraph at lines 160--161
+\OT1/ptm/m/n/10 a jus-ti-fied con-clu-sion about
+ []
+
+
+Underfull \hbox (badness 3354) in paragraph at lines 160--161
+\OT1/ptm/m/n/10 the ef-fect of validity-aware
+ []
+
+
+Underfull \hbox (badness 3713) in paragraph at lines 160--161
+\OT1/ptm/m/n/10 rerank-ing, whether the ob-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 165--165
+[]|\OT1/ptm/m/n/10 Source-ablation sub-group
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 165--165
+\OT1/ptm/m/n/10 anal-y-sis on bench-mark
+ []
+
+
+Underfull \hbox (badness 2846) in paragraph at lines 166--167
+\OT1/ptm/m/n/10 con-di-tion-ally use-ful for the
+ []
+
+
+Underfull \hbox (badness 1127) in paragraph at lines 172--173
+[]|\OT1/ptm/m/n/10 Met if the sys-tem can ex-e-
+ []
+
+
+Underfull \hbox (badness 1515) in paragraph at lines 172--173
+\OT1/ptm/m/n/10 re-view-able first-response an-
+ []
+
+
+Underfull \hbox (badness 1259) in paragraph at lines 176--176
+[]|\OT1/ptm/m/n/10 The sys-tem can in-gest and
+ []
+
+
+Underfull \hbox (badness 1360) in paragraph at lines 176--176
+\OT1/ptm/m/n/10 re-trieve from het-ero-ge-neous
+ []
+
+
+Underfull \hbox (badness 5985) in paragraph at lines 176--176
+\OT1/ptm/m/n/10 ducible and source-distinct
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 177--177
+[]|\OT1/ptm/m/n/10 Corpus au-dit, meta-data
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 177--177
+\OT1/ptm/m/n/10 in-spec-tion, and source-
+ []
+
+
+Underfull \hbox (badness 1558) in paragraph at lines 178--179
+[]|\OT1/ptm/m/n/10 Met if lo-cal doc-u-men-ta-tion,
+ []
+
+
+Underfull \hbox (badness 1831) in paragraph at lines 178--179
+\OT1/ptm/m/n/10 ex-ter-nal doc-u-men-ta-tion, and
+ []
+
+
+Underfull \hbox (badness 5878) in paragraph at lines 182--182
+\OT1/ptm/m/n/10 an-no-ta-tions, and a frozen
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 182--182
+\OT1/ptm/m/n/10 de-vel-op-ment/test eval-u-a-tion
+ []
+
+
+Underfull \hbox (badness 1708) in paragraph at lines 183--183
+[]|\OT1/ptm/m/n/10 Audit of bench-mark files,
+ []
+
+
+Underfull \hbox (badness 1122) in paragraph at lines 184--185
+\OT1/ptm/m/n/10 no-ta-tions, with no post hoc
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 189--189
+[]|\OT1/ptm/m/n/10 Review of ex-per-i-men-tal
+ []
+
+
+Underfull \hbox (badness 4805) in paragraph at lines 189--189
+\OT1/ptm/m/n/10 con-trols, frozen arte-facts,
+ []
+
+
+Underfull \hbox (badness 3557) in paragraph at lines 189--189
+\OT1/ptm/m/n/10 held-out test re-sults, and
+ []
+
+
+Overfull \hbox (57.07135pt too wide) in alignment at lines 148--192
+ [] [] [] [] [] 
+ []
+
+
+ignored: Infinite glue shrinkage found in box being split
+Overfull \hbox (2.73805pt too wide) has occurred while \output is active
+\OT1/ptm/m/sl/12 3.5.  SUCCESS CRITERIA AND REQUIREMENT-TO-EVALUATION MAPPING \OT1/ptm/m/n/12 37
+ []
+
+[37]) [38] [39]
 \openout2 = `chapter4.aux'.
 
  (./chapter4.tex
 Chapter 4.
-) [33
+) [40
 
 
 
@@ -806,7 +1388,7 @@ Chapter 5.
 )
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
- [34
+ [41
 
 
 
@@ -814,12 +1396,12 @@ Underfull \vbox (badness 10000) has occurred while \output is active []
 ]
 Overfull \vbox (233.79532pt too high) has occurred while \output is active []
 
- [35]
+ [42]
 \openout2 = `chapter6.aux'.
 
  (./chapter6.tex
 Chapter 6.
-) [36
+) [43
 
 
 
@@ -829,7 +1411,7 @@ Chapter 6.
 
  (./chapter7.tex
 Chapter 7.
-) [37
+) [44
 
 
 
@@ -839,12 +1421,12 @@ Chapter 7.
 
  (./chapter8.tex
 Chapter 8.
-) [38
+) [45
 
 
 
 
-] (./report.bbl [39
+] (./report.bbl [46
 
 
 
@@ -858,7 +1440,7 @@ Underfull \hbox (badness 10000) in paragraph at lines 45--46
 []\OT1/ptm/m/n/12 ``CSD3 Up-grade Oc-to-ber 2021 --- CSD3 1.0 doc-u-men-ta-tion,''
  []
 
-[40] [41]
+[47] [48]
 LaTeX Font Info:    Font shape `OMS/ptm/m/n' in size <12> not available
 (Font)              Font shape `OMS/pzccm/m/n' tried instead on input line 87.
 
@@ -871,12 +1453,251 @@ Underfull \hbox (badness 2865) in paragraph at lines 87--88
 \OT1/ptm/m/n/12 tion \OMS/pzccm/m/n/12 j \OT1/ptm/m/n/12 Pro-ceed-ings of the AAAI Con-fer-ence on Ar-ti-fi-cial In-tel-li-gence,''
  []
 
-) [42]
+) [49]
 \openout2 = `appendix1.aux'.
 
+ (./appendix1.tex
+Appendix A.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <10> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 34.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <7.4> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 34.
 
-No file appendix1.tex.
-(./report.aux (./chapter1.aux) (./chapter2.aux) (./chapter3.aux) (./chapter4.aux) (./chapter5.aux) (./chapter6.aux) (./chapter7.aux) (./chapter8.aux) (./appendix1.aux))
+Underfull \hbox (badness 10000) in paragraph at lines 34--34
+[]|[][]$\OT1/pcr/m/n/10 https : / / slurm . schedmd .
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 37--37
+[]|\OT1/ptm/m/n/10 CUDA
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 38--38
+[]|[][]$\OT1/pcr/m/n/10 https : / / docs . nvidia . com /
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 41--41
+[]|\OT1/ptm/m/n/10 Intel oneAPI
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 42--42
+[]|[][]$\OT1/pcr/m/n/10 https : / / www . intel . com /
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 42--42
+\OT1/pcr/m/n/10 content / www / us / en / docs /
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 45--45
+[]|\OT1/ptm/m/n/10 Open MPI
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 46--46
+[]|[][]$\OT1/pcr/m/n/10 https : / / docs . open-[]mpi .
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 46--46
+\OT1/pcr/m/n/10 org / en / main/$[][]\OT1/ptm/m/n/10 ; [][]$\OT1/pcr/m/n/10 https :
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 46--46
+\OT1/pcr/m/n/10 / / docs . open-[]mpi . org / en /
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 49--49
+[]|\OT1/ptm/m/n/10 PyTorch (soft-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 50--50
+[]|[][]$\OT1/pcr/m/n/10 https : / / docs . pytorch .
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 54--54
+[]|[][]$\OT1/pcr/m/n/10 https : / / www . tensorflow .
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 54--54
+\OT1/pcr/m/n/10 org / api _ docs$[][]\OT1/ptm/m/n/10 ; [][]$\OT1/pcr/m/n/10 https : / /
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 57--57
+[]|\OT1/ptm/m/n/10 GROMACS
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 58--58
+[]|[][]$\OT1/pcr/m/n/10 https : / / manual . gromacs .
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 58--58
+\OT1/pcr/m/n/10 org / documentation /
+ []
+
+
+Underfull \hbox (badness 3158) in paragraph at lines 61--61
+[]|\OT1/ptm/m/n/10 LAMMPS (soft-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 62--62
+[]|[][]$\OT1/pcr/m/n/10 https : / / docs . lammps . org /
+ []
+
+
+Underfull \hbox (badness 4927) in paragraph at lines 63--64
+[]|\OT1/ptm/m/n/10 Input syn-tax, pack-age be-haviour, and
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 65--65
+[]|\OT1/ptm/m/n/10 OpenFOAM
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 66--66
+[]|[][]$\OT1/pcr/m/n/10 https : / / doc . cfd . direct /
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 69--69
+[]|\OT1/ptm/m/n/10 OpenMM (soft-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 70--70
+[]|[][]$\OT1/pcr/m/n/10 https : / / docs . openmm . org /
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 71--72
+[]|\OT1/ptm/m/n/10 GPU-accelerated molec-u-lar sim-u-la-tion,
+ []
+
+
+Underfull \hbox (badness 1184) in paragraph at lines 71--72
+\OT1/ptm/m/n/10 soft-ware us-age, and con-fig-u-ra-tion ques-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 73--73
+[]|\OT1/ptm/m/n/10 Intel MPI
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 74--74
+[]|[][]$\OT1/pcr/m/n/10 https : / / www . intel .
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 74--74
+\OT1/pcr/m/n/10 com / content / www / us /
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 74--74
+\OT1/pcr/m/n/10 en / docs / mpi-[]library /
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 74--74
+\OT1/pcr/m/n/10 developer-[]guide-[]linux /
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 75--76
+[]|\OT1/ptm/m/n/10 MPI run-time be-haviour, com-mu-ni-ca-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 75--76
+\OT1/ptm/m/n/10 tion li-braries, and parallel-execution
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 77--77
+[]|\OT1/ptm/m/n/10 SingularityCE
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 78--78
+[]|[][]$\OT1/pcr/m/n/10 https : / / docs . sylabs .
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 78--78
+\OT1/pcr/m/n/10 io / guides / latest /
+ []
+
+
+Underfull \hbox (badness 2181) in paragraph at lines 79--80
+[]|\OT1/ptm/m/n/10 Container ex-e-cu-tion, bind mounts, and
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 82--82
+[]|[][]$\OT1/pcr/m/n/10 https : / / spack .
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 82--82
+\OT1/pcr/m/n/10 readthedocs . io / en /
+ []
+
+
+ignored: Infinite glue shrinkage found in box being split [50
+
+
+]) [51]
+\openout2 = `appendix2.aux'.
+
+ (./appendix2.tex
+Appendix B.
+
+Overfull \hbox (26.30994pt too wide) in alignment at lines 17--24
+ [] [] [] [] 
+ []
+
+
+Overfull \hbox (26.30994pt too wide) in alignment at lines 24--30
+ [] [] [] [] 
+ []
+
+
+Overfull \hbox (26.30994pt too wide) in alignment at lines 30--34
+ [] [] [] [] 
+ []
+
+
+Overfull \hbox (26.30994pt too wide) in alignment at lines 34--37
+ [] [] [] [] 
+ []
+
+
+Overfull \hbox (26.30994pt too wide) in alignment at lines 37--74
+ [] [] [] [] 
+ []
+
+
+ignored: Infinite glue shrinkage found in box being split [52
+
+
+
+
+]) [53] (./report.aux (./chapter1.aux) (./chapter2.aux) (./chapter3.aux) (./chapter4.aux) (./chapter5.aux) (./chapter6.aux) (./chapter7.aux) (./chapter8.aux) (./appendix1.aux) (./appendix2.aux))
  ***********
 LaTeX2e <2025-11-01>
 L3 programming layer <2026-01-19>
@@ -886,21 +1707,21 @@ L3 programming layer <2026-01-19>
 LaTeX Warning: There were multiply-defined labels.
 
 Package rerunfilecheck Info: File `report.out' has not changed.
-(rerunfilecheck)             Checksum: A2D10B3C7AD82E7188E04A0F5763FED3;16253.
+(rerunfilecheck)             Checksum: F3FB4EF29872BF3EFF9ECE717AC3C61A;16736.
  ) 
 Here is how much of TeX's memory you used:
- 12055 strings out of 467525
- 187775 string characters out of 5418982
- 609263 words of memory out of 5000000
- 40556 multiletter control sequences out of 15000+600000
- 667585 words of font info for 110 fonts, out of 8000000 for 9000
+ 12476 strings out of 467525
+ 193769 string characters out of 5418982
+ 624021 words of memory out of 5000000
+ 40935 multiletter control sequences out of 15000+600000
+ 676807 words of font info for 129 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 75i,11n,79p,2002b,652s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 75i,11n,79p,2002b,695s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/local/texlive/2026/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
-Output written on report.pdf (42 pages, 192739 bytes).
+Output written on report.pdf (53 pages, 221817 bytes).
 PDF statistics:
- 1167 PDF objects out of 1200 (max. 8388607)
- 1058 compressed objects within 11 object streams
- 175 named destinations out of 1000 (max. 500000)
- 654 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 1315 PDF objects out of 1440 (max. 8388607)
+ 1193 compressed objects within 12 object streams
+ 194 named destinations out of 1000 (max. 500000)
+ 670 words of extra memory for PDF output out of 10000 (max. 10000000)
 

@@ -1,0 +1,88 @@
+\chapter{Approved External Documentation Sources}
+\label{app:external-sources}
+
+This appendix lists the approved external documentation source families included in the frozen external documentation snapshot used for parameter tuning and final evaluation. These sources were selected as stable, official documentation sources relevant to the \ac{CSD3} support domain. The list documents the approved source boundaries used for corpus construction. 
+
+\begingroup
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.1}
+
+\begin{longtable}{p{2.5cm} p{4.4cm} p{6.1cm}}
+\caption{Approved external documentation source families included in the frozen external documentation snapshot used for parameter tuning and final evaluation.}
+\label{tab:approved-external-sources} \\
+
+\hline
+Source & Approved scope & Support relevance \\
+\hline
+\endfirsthead
+
+\multicolumn{3}{l}{\textit{Table \thetable{} continued from previous page}} \\
+\hline
+Source & Approved scope & Support relevance \\
+\hline
+\endhead
+
+\hline
+\multicolumn{3}{r}{\textit{Continued on next page}} \\
+\endfoot
+
+\hline
+\endlastfoot
+
+Slurm (software) &
+\url{https://slurm.schedmd.com/} &
+Scheduler usage, job submission, resource requests, and runtime behaviour. \\
+
+CUDA (toolchain) &
+\url{https://docs.nvidia.com/cuda/} &
+GPU programming, CUDA runtime, and accelerator-specific software issues. \\
+
+Intel oneAPI (toolchain) &
+\url{https://www.intel.com/content/www/us/en/docs/oneapi/} &
+Intel compilers, build configuration, optimisation, and environment setup. \\
+
+Open MPI (toolchain) &
+\url{https://docs.open-mpi.org/en/main/}; \url{https://docs.open-mpi.org/en/v5.0.x/} &
+MPI execution, communication behaviour, and version-sensitive runtime detail. \\
+
+PyTorch (software) &
+\url{https://docs.pytorch.org/docs/stable/} &
+Distributed training, GPU use, Python environments, and framework-specific queries. \\
+
+TensorFlow (software) &
+\url{https://www.tensorflow.org/api_docs}; \url{https://www.tensorflow.org/guide} &
+Framework APIs, environment setup, and model-execution issues. \\
+
+GROMACS (software) &
+\url{https://manual.gromacs.org/documentation/current/} &
+Molecular simulation usage, command syntax, and software-specific troubleshooting. \\
+
+LAMMPS (software) &
+\url{https://docs.lammps.org/stable/} &
+Input syntax, package behaviour, and software-specific execution detail. \\
+
+OpenFOAM (software) &
+\url{https://doc.cfd.direct/openfoam/user-guide-v13/} &
+Solver usage, case setup, and computational fluid dynamics support issues. \\
+
+OpenMM (software) &
+\url{https://docs.openmm.org/latest/userguide/} &
+GPU-accelerated molecular simulation, software usage, and configuration questions. \\
+
+Intel MPI (toolchain) &
+\url{https://www.intel.com/content/www/us/en/docs/mpi-library/developer-guide-linux/2021-16/} &
+MPI runtime behaviour, communication libraries, and parallel-execution troubleshooting. \\
+
+SingularityCE (software) &
+\url{https://docs.sylabs.io/guides/latest/user-guide/} &
+Container execution, bind mounts, and software-environment portability on HPC systems. \\
+
+Spack (software) &
+\url{https://spack.readthedocs.io/en/latest/} &
+Package installation, environment composition, and reproducible build workflows. \\
+
+\end{longtable}
+\endgroup
+
+The approved scope for each source was controlled through the external source registry by restricting crawls to specified domains and included URL prefixes, while excluding archive, release-note, API, PDF, or otherwise misaligned subtrees where appropriate. This ensures that the external corpus remained focused on stable, official, and support-relevant documentation rather than becoming an unrestricted crawl of general web content. 

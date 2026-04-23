@@ -11,6 +11,7 @@ A level-1 auxiliary file: chapter7.aux
 A level-1 auxiliary file: chapter8.aux
 The style file: IEEEtranN.bst
 A level-1 auxiliary file: appendix1.aux
+A level-1 auxiliary file: appendix2.aux
 Reallocated singl_function (elt_size=4) to 100 items from 50.
 Reallocated singl_function (elt_size=4) to 100 items from 50.
 Reallocated singl_function (elt_size=4) to 100 items from 50.
@@ -28,45 +29,45 @@ Warning--empty journal in RAGAS
 Warning--empty year in RAGAS
 
 Done.
-You've used 21 entries,
+You've used 22 entries,
             4855 wiz_defined-function locations,
-            1101 strings with 16535 characters,
-and the built_in function-call counts, 25693 in all, are:
-= -- 1872
-> -- 1217
-< -- 151
-+ -- 579
-- -- 298
-* -- 1581
-:= -- 3459
-add.period$ -- 57
-call.type$ -- 21
-change.case$ -- 60
-chr.to.int$ -- 423
-cite$ -- 26
-duplicate$ -- 1634
-empty$ -- 1918
-format.name$ -- 341
-if$ -- 5852
+            1109 strings with 16759 characters,
+and the built_in function-call counts, 26636 in all, are:
+= -- 1962
+> -- 1232
+< -- 162
++ -- 589
+- -- 300
+* -- 1625
+:= -- 3601
+add.period$ -- 59
+call.type$ -- 22
+change.case$ -- 62
+chr.to.int$ -- 448
+cite$ -- 27
+duplicate$ -- 1697
+empty$ -- 1983
+format.name$ -- 344
+if$ -- 6068
 int.to.chr$ -- 1
-int.to.str$ -- 22
-missing$ -- 335
-newline$ -- 89
-num.names$ -- 72
-pop$ -- 971
+int.to.str$ -- 23
+missing$ -- 342
+newline$ -- 92
+num.names$ -- 75
+pop$ -- 984
 preamble$ -- 1
-purify$ -- 21
+purify$ -- 22
 quote$ -- 2
-skip$ -- 1672
+skip$ -- 1746
 stack$ -- 0
-substring$ -- 1038
-swap$ -- 1268
-text.length$ -- 15
+substring$ -- 1097
+swap$ -- 1322
+text.length$ -- 17
 text.prefix$ -- 0
 top$ -- 6
-type$ -- 332
+type$ -- 348
 warning$ -- 2
-while$ -- 102
+while$ -- 108
 width$ -- 0
-write$ -- 255
+write$ -- 267
 (There were 2 warnings)
