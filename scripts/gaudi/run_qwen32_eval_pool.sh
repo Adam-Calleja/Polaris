@@ -7,11 +7,13 @@ MODEL=${MODEL:-Qwen/Qwen2.5-32B-Instruct}
 NETWORK=${NETWORK:-polaris_net}
 BASE_STATE=${BASE_STATE:-${HOME}/.cache/polaris-gaudi}
 SHARED_HF_CACHE=${SHARED_HF_CACHE:-${BASE_STATE}/shared-hf-cache}
+DEVICES=${DEVICES:-0,1,2,3}
 MAX_MODEL_LEN=${MAX_MODEL_LEN:-32768}
 MAX_NUM_SEQS=${MAX_NUM_SEQS:-2}
 GPU_MEMORY_UTILIZATION=${GPU_MEMORY_UTILIZATION:-0.90}
 VLLM_SKIP_WARMUP=${VLLM_SKIP_WARMUP:-true}
 LB_HOST_PORT=${LB_HOST_PORT:-18080}
+FIRST_HOST_PORT=${FIRST_HOST_PORT:-18081}
 START_LB=${START_LB:-true}
 
 : "${HF_TOKEN:?Set HF_TOKEN in your environment (export HF_TOKEN=...)}"
@@ -23,6 +25,40 @@ if [[ ! -d "${SHARED_HF_CACHE}" ]]; then
 fi
 
 mkdir -p "${BASE_STATE}"
+
+declare -a DEVICE_IDS=()
+
+parse_devices() {
+  local devices_csv="$1"
+  local raw_devices=()
+  local device_id
+  local old_ifs="${IFS}"
+
+  if [[ -z "${devices_csv//[[:space:]]/}" ]]; then
+    echo "ERROR: DEVICES must contain at least one device id." >&2
+    exit 1
+  fi
+
+  IFS=',' read -r -a raw_devices <<< "${devices_csv}"
+  IFS="${old_ifs}"
+
+  DEVICE_IDS=()
+  for device_id in "${raw_devices[@]}"; do
+    device_id="${device_id//[[:space:]]/}"
+
+    if [[ -z "${device_id}" ]]; then
+      echo "ERROR: DEVICES contains an empty entry: ${devices_csv}" >&2
+      exit 1
+    fi
+
+    if [[ "${device_id,,}" == "all" ]]; then
+      echo "ERROR: DEVICES=all is not supported here; provide an explicit comma-separated device list." >&2
+      exit 1
+    fi
+
+    DEVICE_IDS+=("${device_id}")
+  done
+}
 
 start_replica() {
   local replica_num="$1"
@@ -50,25 +86,32 @@ start_replica() {
   "${SCRIPT_DIR}/run_vllm_server.sh"
 }
 
-start_replica 1 0 18081
-start_replica 2 1 18082
-start_replica 3 2 18083
-start_replica 4 3 18084
+parse_devices "${DEVICES}"
+
+for idx in "${!DEVICE_IDS[@]}"; do
+  start_replica \
+    "$((idx + 1))" \
+    "${DEVICE_IDS[idx]}" \
+    "$((FIRST_HOST_PORT + idx))"
+done
 
 if [[ "${START_LB,,}" == "true" || "${START_LB}" == "1" || "${START_LB,,}" == "yes" ]]; then
   echo "Starting HAProxy load balancer on localhost:${LB_HOST_PORT}"
-  NETWORK="${NETWORK}" HOST_PORT="${LB_HOST_PORT}" "${SCRIPT_DIR}/run_haproxy_eval_lb.sh"
+  NETWORK="${NETWORK}" \
+  HOST_PORT="${LB_HOST_PORT}" \
+  REPLICA_COUNT="${#DEVICE_IDS[@]}" \
+  "${SCRIPT_DIR}/run_haproxy_eval_lb.sh"
 fi
 
 echo
 echo "Pool startup complete."
 echo "Shared HF cache:    ${SHARED_HF_CACHE}"
 echo "Replica state root: ${BASE_STATE}"
+echo "Devices:            ${DEVICES}"
 echo "Replicas:"
-echo "  qwen-eval-1 -> http://localhost:18081/v1"
-echo "  qwen-eval-2 -> http://localhost:18082/v1"
-echo "  qwen-eval-3 -> http://localhost:18083/v1"
-echo "  qwen-eval-4 -> http://localhost:18084/v1"
+for idx in "${!DEVICE_IDS[@]}"; do
+  echo "  qwen-eval-$((idx + 1)) (HPU ${DEVICE_IDS[idx]}) -> http://localhost:$((FIRST_HOST_PORT + idx))/v1"
+done
 if [[ "${START_LB,,}" == "true" || "${START_LB}" == "1" || "${START_LB,,}" == "yes" ]]; then
   echo "Load balancer:      http://localhost:${LB_HOST_PORT}/v1"
 fi
