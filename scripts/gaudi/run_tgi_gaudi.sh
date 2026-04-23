@@ -6,7 +6,7 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 MODEL=${MODEL:-Qwen/Qwen2.5-72B-Instruct}
 PORT=${PORT:-8080}
 HOST=${HOST:-0.0.0.0}
-DEVICES=${DEVICES:-0,1,6,5}
+DEVICES=${DEVICES:-0,1,2,3}
 VOLUME=${VOLUME:-${HOME}/.cache/polaris-gaudi}
 NETWORK=${NETWORK:-polaris_net}
 

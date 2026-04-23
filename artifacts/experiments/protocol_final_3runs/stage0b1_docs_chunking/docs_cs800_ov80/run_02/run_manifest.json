@@ -7,18 +7,18 @@
       "factual_correctness"
     ],
     "skipped_metrics": [],
-    "selected_max_workers": 24,
-    "batch_size": 48,
+    "selected_max_workers": 28,
+    "batch_size": 56,
     "run_config": {
       "timeout": 300,
       "max_retries": 0,
       "max_wait": 30,
-      "max_workers": 24,
+      "max_workers": 28,
       "log_tenacity": true,
       "seed": 42
     },
-    "duration_seconds": 5.202711985002679,
-    "failure_rate": 1.0,
+    "duration_seconds": 1038.0472787610051,
+    "failure_rate": 0.02857142857142857,
     "tuning_trials": []
   },
   "preset_name": "docs_only",
@@ -363,7 +363,7 @@
   },
   "tune_concurrency": true,
   "trace_evaluator_llm": false,
-  "mlflow_parent_run_id": "34f360d98b67422bad0eae54b23c98b3",
+  "mlflow_parent_run_id": "57e5123fec354b9d86a6c6e8dc3ebad0",
   "config_file": "/app/.polaris_experiment_stage0b1_docs_chunking__docs_cs800_ov80.yaml",
   "artifacts": {
     "scores_csv": "/app/artifacts/experiments/protocol_final_3runs/stage0b1_docs_chunking/docs_cs800_ov80/run_02/scores.csv",
@@ -728,6 +728,6 @@
     },
     "tune_concurrency": true,
     "trace_evaluator_llm": false,
-    "mlflow_parent_run_id": "34f360d98b67422bad0eae54b23c98b3"
+    "mlflow_parent_run_id": "57e5123fec354b9d86a6c6e8dc3ebad0"
   }
 }

@@ -19,7 +19,7 @@ generator_candidates:
     generator_llm:
       type: "openai_like"
       model_name: "meta-llama/Llama-3.3-70B-Instruct"
-      api_base: "http://vllm:8080/v1"
+      api_base: "http://llama33-70b:8080/v1"
       api_key: "${POLARIS_LLM_API_KEY}"
       request_timeout: 90
       max_retries: 1
@@ -58,7 +58,7 @@ generator_candidates:
     generator_llm:
       type: "openai_like"
       model_name: "mistralai/Mistral-Large-Instruct-2407"
-      api_base: "http://vllm:8080/v1"
+      api_base: "http://mistral:8080/v1"
       api_key: "${POLARIS_LLM_API_KEY}"
       request_timeout: 90
       max_retries: 1
@@ -361,13 +361,18 @@ defaults:
     evaluation:
       generation:
         mode: "pipeline"
-        workers: 4
+        workers: 16
       run:
-        max_workers: 1
+        max_workers: 28
       adaptive_concurrency:
         enabled: false
       dataset:
         reuse_prepared: false
+      metrics:
+        config:
+          factual_correctness:
+            atomicity: "high"
+            coverage: "high"
   run_options:
     metrics:
       - "factual_correctness"
@@ -427,10 +432,10 @@ stages:
         - "factual_correctness"
         - "faithfulness"
     conditions:
-      - name: "qwen25_32b_naive_combined"
+      - name: "llama33_naive_combined"
         preset: "naive_combined"
         config_overrides:
-          <<: *qwen25_32b_generator
+          <<: *llama33_generator
       - name: "mixtral8x22b_naive_combined"
         preset: "naive_combined"
         config_overrides:
@@ -453,12 +458,13 @@ stages:
         metrics:
           config:
             factual_correctness:
-              atomicity: "low"
+              atomicity: "high"
               coverage: "high"
     run_options:
       metrics:
         - "faithfulness"
         - "context_recall"
+        - "factual_correctness"
     conditions:
       - name: "docs_cs400_ov0"
         preset: "docs_only"
@@ -637,6 +643,7 @@ stages:
       metrics:
         - "faithfulness"
         - "context_recall"
+        - "factual_correctness"
     conditions:
       - name: "tickets_cs600_ov0"
         preset: "tickets_only"
@@ -818,7 +825,7 @@ stages:
         metrics:
           config:
             factual_correctness:
-              atomicity: "low"
+              atomicity: "high"
               coverage: "high"
     run_options:
       metrics:
@@ -892,6 +899,12 @@ stages:
     config_overrides:
       embedder:
         api_base: "http://embed:80/v1"
+      evaluation:
+        metrics:
+          config:
+            factual_correctness:
+              atomicity: "high"
+              coverage: "high"
     run_options:
       metrics:
         - "faithfulness"

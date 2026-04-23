@@ -1,0 +1,22 @@
+{
+  "rows": 70,
+  "selected_metrics": [
+    "faithfulness",
+    "context_recall",
+    "factual_correctness"
+  ],
+  "skipped_metrics": [],
+  "selected_max_workers": 24,
+  "batch_size": 48,
+  "run_config": {
+    "timeout": 300,
+    "max_retries": 0,
+    "max_wait": 30,
+    "max_workers": 24,
+    "log_tenacity": true,
+    "seed": 42
+  },
+  "duration_seconds": 1320.1687031299953,
+  "failure_rate": 0.023809523809523808,
+  "tuning_trials": []
+}

@@ -1,0 +1,260 @@
+{
+  "dataset_path": "/app/data/test/ragas_one_hop_eval_dataset_final.dev.jsonl",
+  "annotations_path": "/app/data/test/benchmark_annotations_final.csv",
+  "prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0b2_ticket_chunking/tickets_cs600_ov0/run_03/prepared_input.json",
+  "reuse_prepared": false,
+  "allow_stale_prepared": false,
+  "query_field": "query",
+  "reference_field": "expected_answer",
+  "id_field": "id",
+  "generation_workers": 16,
+  "generation_mode": "pipeline",
+  "evaluation_policy": "official",
+  "generation_deadlines": {
+    "policy": "official",
+    "client_total_seconds": 200.0,
+    "server_total_seconds": 180.0,
+    "retrieval_cap_seconds": 30.0,
+    "cleanup_reserve_seconds": 5.0,
+    "client_total_ms": 200000,
+    "server_total_ms": 180000,
+    "retrieval_cap_ms": 30000,
+    "cleanup_reserve_ms": 5000
+  },
+  "max_infra_failure_rate": 0.01,
+  "generation_retries": {
+    "max_attempts": 1,
+    "initial_backoff_seconds": 1.0,
+    "max_backoff_seconds": 8.0,
+    "jitter_seconds": 0.25,
+    "retry_on_empty_response": true
+  },
+  "generator_profile": {
+    "mode": "pipeline",
+    "generator_llm": {
+      "type": "openai_like",
+      "model_name": "meta-llama/Llama-3.3-70B-Instruct",
+      "api_base": "http://llama33-70b:8080/v1",
+      "request_timeout": 90,
+      "max_retries": 1,
+      "model_kwargs": {
+        "temperature": 0,
+        "top_p": 1.0,
+        "stop_list": [
+          "\nUser:",
+          "\n\nUser:"
+        ]
+      }
+    },
+    "llm_generate": {}
+  },
+  "generator_fingerprint": "7332e13455d286644f81e288d04015cb1bbf352c2a669e22edc47f2a9a8e9a0b",
+  "retriever_profile": {
+    "type": "multi_collection",
+    "final_top_k": 8,
+    "sources": {
+      "tickets": {
+        "settings": {
+          "filters": {},
+          "retrieval_profile": {
+            "bm25_top_k": 5,
+            "dense_top_k": 5,
+            "fusion": {
+              "rrf_k": 60,
+              "signal_weights": {
+                "bm25": 1.0,
+                "dense": 1.0
+              },
+              "type": "rrf"
+            },
+            "top_k": 5
+          },
+          "top_k": 5,
+          "weight": 1.0
+        },
+        "retriever_profile": {
+          "filters": {
+            "filters": []
+          },
+          "retrieval_profile": {
+            "bm25_top_k": 5,
+            "dense_top_k": 5,
+            "fusion": {
+              "rrf_k": 60,
+              "signal_weights": {
+                "bm25": 1.0,
+                "dense": 1.0
+              },
+              "type": "rrf"
+            },
+            "top_k": 5
+          },
+          "top_k": 5,
+          "type": "vector",
+          "vector_store": {
+            "backend": "qdrant",
+            "collection_name": "exp_tickets_cs600_ov0",
+            "dense_model": "Qwen/Qwen3-Embedding-8B",
+            "dense_vector_name": "dense",
+            "sparse_model": null,
+            "sparse_vector_name": "sparse"
+          }
+        },
+        "retriever_fingerprint": "dcc6ffd2703fd3d44896e24aecb387a2b88418f8f6bbfbb951851df94374a400"
+      }
+    }
+  },
+  "retriever_fingerprint": "f62d8d78ce536585124d0a0d2af1d5ce10a9cb05bbdea5b77e9f2dc8c8e17bf9",
+  "reranker_profile": {
+    "type": "rrf",
+    "rrf_k": 60,
+    "source_weights": {
+      "tickets": 1.0
+    },
+    "trace_enabled": true
+  },
+  "reranker_fingerprint": "1e67308a2dc1755c785369b265e6f2d6ea4c0d1cf13632e88c9b6580f8263a85",
+  "preset_name": "tickets_only",
+  "preset_description": "Tickets-only baseline with RRF reranking.",
+  "condition_summary": {
+    "retriever_type": "multi_collection",
+    "source_type": "vector",
+    "final_top_k": 8,
+    "hybrid_profile": {
+      "dense_top_k": 5,
+      "bm25_top_k": 5,
+      "top_k": 5,
+      "fusion": {
+        "type": "rrf",
+        "rrf_k": 60,
+        "signal_weights": {
+          "dense": 1.0,
+          "bm25": 1.0
+        }
+      }
+    },
+    "sources": [
+      {
+        "top_k": 5,
+        "filters": {},
+        "weight": 1.0,
+        "retrieval_profile": {
+          "dense_top_k": 5,
+          "bm25_top_k": 5,
+          "top_k": 5,
+          "fusion": {
+            "type": "rrf",
+            "rrf_k": 60,
+            "signal_weights": {
+              "dense": 1.0,
+              "bm25": 1.0
+            }
+          }
+        },
+        "name": "tickets",
+        "collection_name": "exp_tickets_cs600_ov0"
+      }
+    ],
+    "retriever_profile": {
+      "type": "multi_collection",
+      "source_type": "vector",
+      "final_top_k": 8,
+      "hybrid_profile": {
+        "dense_top_k": 5,
+        "bm25_top_k": 5,
+        "top_k": 5,
+        "fusion": {
+          "type": "rrf",
+          "rrf_k": 60,
+          "signal_weights": {
+            "dense": 1.0,
+            "bm25": 1.0
+          }
+        }
+      },
+      "sources": [
+        {
+          "top_k": 5,
+          "filters": {},
+          "weight": 1.0,
+          "retrieval_profile": {
+            "dense_top_k": 5,
+            "bm25_top_k": 5,
+            "top_k": 5,
+            "fusion": {
+              "type": "rrf",
+              "rrf_k": 60,
+              "signal_weights": {
+                "dense": 1.0,
+                "bm25": 1.0
+              }
+            }
+          },
+          "name": "tickets",
+          "collection_name": "exp_tickets_cs600_ov0"
+        }
+      ]
+    },
+    "retriever_fingerprint": "1d2d77f0be1330c962876f24fd269ab996ce8263f51c067c89066bc156068094",
+    "reranker_profile": {
+      "type": "rrf",
+      "rrf_k": 60,
+      "source_weights": {
+        "tickets": 1.0
+      },
+      "trace_enabled": true
+    }
+  },
+  "condition_fingerprint": "3ddc67de608b7715fe1419baf2f98d287c27db5266dc2558761f32626d3aab54",
+  "annotation_rows": 70,
+  "prep_total_rows": 70,
+  "prep_success_rows": 69,
+  "prep_failed_rows": 1,
+  "prep_elapsed_seconds": 333.78459859899976,
+  "prep_rate_rows_per_second": 0.20971608724252794,
+  "prep_error_classes": {
+    "BadRequestError": 1
+  },
+  "prep_failure_classes": {
+    "api_internal_error": 1
+  },
+  "prep_failure_class_rates": {
+    "api_internal_error": 0.014285714285714285
+  },
+  "prep_failure_stages": {
+    "api": 1
+  },
+  "prep_failure_stage_rates": {
+    "api": 0.014285714285714285
+  },
+  "prep_response_statuses": {
+    "ok": 69,
+    "error": 1
+  },
+  "prep_response_status_rates": {
+    "ok": 0.9857142857142858,
+    "error": 0.014285714285714285
+  },
+  "prep_coverage": 0.9857142857142858,
+  "prep_empty_response_rate": 0.0,
+  "infra_failure_rate": 0.014285714285714285,
+  "run_validity": "INVALID",
+  "run_policy": "official",
+  "latency_budget_report": {
+    "count": 69,
+    "elapsed_ms": {
+      "p50": 68413.0,
+      "p90": 75434.00000000001,
+      "p95": 80201.6,
+      "max": 81327.0,
+      "mean": 57359.333333333336
+    },
+    "budget_utilization": {
+      "p50": 0.3800722222222222,
+      "p90": 0.4190777777777779,
+      "max": 0.45181666666666664
+    }
+  },
+  "persisted_prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0b2_ticket_chunking/tickets_cs600_ov0/run_03/prepared_input.json",
+  "prepared_source": "generated"
+}

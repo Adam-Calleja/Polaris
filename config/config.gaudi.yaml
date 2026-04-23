@@ -5,7 +5,7 @@ generator_llm:
   # model_name: "llama-cam"
   # api_base: "https://llm.hpc.cam.ac.uk/v1"
   model_name: "mistralai/Mistral-Large-Instruct-2407"
-  api_base: "http://vllm:8080/v1"
+  api_base: "http://mistral:8080/v1"
   api_key: "${POLARIS_LLM_API_KEY}"
   request_timeout: 90
   max_retries: 1
@@ -17,8 +17,8 @@ generator_llm:
 
 evaluator_llm:
   type: "OpenAILike"
-  model_name: "ibm-granite/granite-3.3-8b-instruct"
-  api_base: "http://vllm:8080/v1"
+  model_name: "Qwen/Qwen2.5-32B-Instruct"
+  api_base: "http://vllm-eval-lb:8080/v1"
   api_key: "${POLARIS_LLM_API_KEY}"
   model_kwargs:
     temperature: 0
