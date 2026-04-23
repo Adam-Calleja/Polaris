@@ -3,6 +3,7 @@
   "annotations_path": "/app/data/test/benchmark_annotations_final.csv",
   "prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0b2_ticket_chunking/tickets_cs800_ov80/run_01/prepared_input.json",
   "reuse_prepared": true,
+  "allow_stale_prepared": false,
   "query_field": "query",
   "reference_field": "expected_answer",
   "id_field": "id",
@@ -33,7 +34,7 @@
     "generator_llm": {
       "type": "openai_like",
       "model_name": "mistralai/Mistral-Large-Instruct-2407",
-      "api_base": "http://vllm:8080/v1",
+      "api_base": "http://mistral:8080/v1",
       "request_timeout": 90,
       "max_retries": 1,
       "model_kwargs": {
@@ -47,7 +48,7 @@
     },
     "llm_generate": {}
   },
-  "generator_fingerprint": "073fbf42ca966bf58abbb9d019aa73a18ca5725d60c1d9aa70f3b3ed7e8140ac",
+  "generator_fingerprint": "933650173b8202eb4e65ceda3941a9a4370151c3c33b373840e30d503261a3fa",
   "retriever_profile": {
     "type": "multi_collection",
     "final_top_k": 8,
@@ -56,16 +57,16 @@
         "settings": {
           "filters": {},
           "retrieval_profile": {
+            "bm25_top_k": 5,
             "dense_top_k": 5,
             "fusion": {
               "rrf_k": 60,
               "signal_weights": {
-                "dense": 1.0,
-                "sparse": 1.0
+                "bm25": 1.0,
+                "dense": 1.0
               },
               "type": "rrf"
             },
-            "sparse_top_k": 5,
             "top_k": 5
           },
           "top_k": 5,
@@ -76,16 +77,16 @@
             "filters": []
           },
           "retrieval_profile": {
+            "bm25_top_k": 5,
             "dense_top_k": 5,
             "fusion": {
               "rrf_k": 60,
               "signal_weights": {
-                "dense": 1.0,
-                "sparse": 1.0
+                "bm25": 1.0,
+                "dense": 1.0
               },
               "type": "rrf"
             },
-            "sparse_top_k": 5,
             "top_k": 5
           },
           "top_k": 5,
@@ -99,11 +100,11 @@
             "sparse_vector_name": "sparse"
           }
         },
-        "retriever_fingerprint": "27d67f1e6a3d7bc7f5e5a133aebefc346402464476ba4791015d1f137f391f71"
+        "retriever_fingerprint": "e2a3475ddfe793e06ea10ba6ef0b51f02d9ed2fa6b2de7f9cc73f2e81f690a9f"
       }
     }
   },
-  "retriever_fingerprint": "3951f2f6f9861c47bb9fe1e404bc33f8952a5cd9272808ef5be934c488f849d6",
+  "retriever_fingerprint": "8b256991c59d53a95be01c7990eae9f78da9c4eca0d7d768f487d5f90903aa2d",
   "reranker_profile": {
     "type": "rrf",
     "rrf_k": 60,
@@ -121,14 +122,14 @@
     "final_top_k": 8,
     "hybrid_profile": {
       "dense_top_k": 5,
-      "sparse_top_k": 5,
+      "bm25_top_k": 5,
       "top_k": 5,
       "fusion": {
         "type": "rrf",
         "rrf_k": 60,
         "signal_weights": {
           "dense": 1.0,
-          "sparse": 1.0
+          "bm25": 1.0
         }
       }
     },
@@ -139,14 +140,14 @@
         "weight": 1.0,
         "retrieval_profile": {
           "dense_top_k": 5,
-          "sparse_top_k": 5,
+          "bm25_top_k": 5,
           "top_k": 5,
           "fusion": {
             "type": "rrf",
             "rrf_k": 60,
             "signal_weights": {
               "dense": 1.0,
-              "sparse": 1.0
+              "bm25": 1.0
             }
           }
         },
@@ -160,14 +161,14 @@
       "final_top_k": 8,
       "hybrid_profile": {
         "dense_top_k": 5,
-        "sparse_top_k": 5,
+        "bm25_top_k": 5,
         "top_k": 5,
         "fusion": {
           "type": "rrf",
           "rrf_k": 60,
           "signal_weights": {
             "dense": 1.0,
-            "sparse": 1.0
+            "bm25": 1.0
           }
         }
       },
@@ -178,14 +179,14 @@
           "weight": 1.0,
           "retrieval_profile": {
             "dense_top_k": 5,
-            "sparse_top_k": 5,
+            "bm25_top_k": 5,
             "top_k": 5,
             "fusion": {
               "type": "rrf",
               "rrf_k": 60,
               "signal_weights": {
                 "dense": 1.0,
-                "sparse": 1.0
+                "bm25": 1.0
               }
             }
           },
@@ -194,7 +195,7 @@
         }
       ]
     },
-    "retriever_fingerprint": "2da25eea38abc12080ebde63f5acdb037c58a3c828c78b2b8246ee1779339de6",
+    "retriever_fingerprint": "12df5d07d61c4b4997e2593d26651362a0bf1bc3aeef2174bb6fc5397bbbd153",
     "reranker_profile": {
       "type": "rrf",
       "rrf_k": 60,
@@ -204,43 +205,56 @@
       "trace_enabled": true
     }
   },
-  "condition_fingerprint": "abd5a53282bf92cd47da899825780140ad298856f5b0a2a0125c73a6641df2ee",
+  "condition_fingerprint": "883437cdf6fe184299937cea5138960b9cbc526fd9d9054e3ae748339c8cf276",
   "annotation_rows": 70,
   "prep_total_rows": 70,
-  "prep_success_rows": 70,
-  "prep_failed_rows": 0,
+  "prep_success_rows": 66,
+  "prep_failed_rows": 4,
   "prep_elapsed_seconds": 0.0,
   "prep_rate_rows_per_second": 0.0,
-  "prep_error_classes": {},
-  "prep_failure_classes": {},
-  "prep_failure_class_rates": {},
-  "prep_failure_stages": {},
-  "prep_failure_stage_rates": {},
+  "prep_error_classes": {
+    "BadRequestError": 4
+  },
+  "prep_failure_classes": {
+    "api_internal_error": 4
+  },
+  "prep_failure_class_rates": {
+    "api_internal_error": 0.05714285714285714
+  },
+  "prep_failure_stages": {
+    "api": 4
+  },
+  "prep_failure_stage_rates": {
+    "api": 0.05714285714285714
+  },
   "prep_response_statuses": {
-    "ok": 70
+    "ok": 66,
+    "error": 4
   },
   "prep_response_status_rates": {
-    "ok": 1.0
+    "ok": 0.9428571428571428,
+    "error": 0.05714285714285714
   },
-  "prep_coverage": 1.0,
+  "prep_coverage": 0.9428571428571428,
   "prep_empty_response_rate": 0.0,
-  "infra_failure_rate": 0.0,
-  "run_validity": "VALID",
+  "infra_failure_rate": 0.05714285714285714,
+  "run_validity": "INVALID",
   "run_policy": "official",
   "latency_budget_report": {
-    "count": 70,
+    "count": 66,
     "elapsed_ms": {
-      "p50": 48858.5,
-      "p90": 82165.6,
-      "p95": 88125.54999999999,
-      "max": 113034.0,
-      "mean": 52490.985714285714
+      "p50": 67005.0,
+      "p90": 100631.5,
+      "p95": 113640.5,
+      "max": 126597.0,
+      "mean": 68629.30303030302
     },
     "budget_utilization": {
-      "p50": 0.2714361111111111,
-      "p90": 0.4564755555555556,
-      "max": 0.6279666666666667
+      "p50": 0.37224999999999997,
+      "p90": 0.5590638888888889,
+      "max": 0.7033166666666667
     }
   },
-  "prepared_source": "existing"
+  "prepared_source": "existing",
+  "prepared_validation_skipped": false
 }

@@ -36,7 +36,7 @@
             "--preset",
             "docs_only",
             "--metrics",
-            "factual_correctness,faithfulness,context_recall",
+            "faithfulness,context_recall,factual_correctness",
             "--generation-mode",
             "pipeline",
             "--generation-workers",
@@ -67,7 +67,7 @@
             "--preset",
             "docs_only",
             "--metrics",
-            "factual_correctness,faithfulness,context_recall",
+            "faithfulness,context_recall,factual_correctness",
             "--generation-mode",
             "pipeline",
             "--generation-workers",
@@ -98,7 +98,7 @@
             "--preset",
             "docs_only",
             "--metrics",
-            "factual_correctness,faithfulness,context_recall",
+            "faithfulness,context_recall,factual_correctness",
             "--generation-mode",
             "pipeline",
             "--generation-workers",
@@ -117,29 +117,7 @@
       "config_path": "/app/.polaris_experiment_stage0b1_docs_chunking__docs_cs400_ov80.yaml",
       "preset": "docs_only",
       "execution_phase": "prepare",
-      "ingestion_commands": [
-        [
-          "/usr/local/bin/python",
-          "/app/scripts/ingest_html_documents.py",
-          "-c",
-          "/app/.polaris_experiment_stage0b1_docs_chunking__docs_cs400_ov80.yaml",
-          "-p",
-          "https://docs.hpc.cam.ac.uk/hpc/index.html",
-          "--ingest-internal-links",
-          "--persist-dir",
-          "../data/storage/exp_docs_cs400_ov80",
-          "--qdrant-collection-name",
-          "exp_docs_cs400_ov80",
-          "--source",
-          "docs",
-          "--chunking-strategy",
-          "markdown_token",
-          "--chunk-size-tokens",
-          "400",
-          "--chunk-overlap-tokens",
-          "80"
-        ]
-      ],
+      "ingestion_commands": [],
       "runs": [
         {
           "repeat_index": 1,
@@ -162,7 +140,7 @@
             "--preset",
             "docs_only",
             "--metrics",
-            "factual_correctness,faithfulness,context_recall",
+            "faithfulness,context_recall,factual_correctness",
             "--generation-mode",
             "pipeline",
             "--generation-workers",
@@ -193,7 +171,7 @@
             "--preset",
             "docs_only",
             "--metrics",
-            "factual_correctness,faithfulness,context_recall",
+            "faithfulness,context_recall,factual_correctness",
             "--generation-mode",
             "pipeline",
             "--generation-workers",
@@ -224,7 +202,7 @@
             "--preset",
             "docs_only",
             "--metrics",
-            "factual_correctness,faithfulness,context_recall",
+            "faithfulness,context_recall,factual_correctness",
             "--generation-mode",
             "pipeline",
             "--generation-workers",
@@ -235,7 +213,7 @@
           ]
         }
       ],
-      "ingestion_skipped": false
+      "ingestion_skipped": true
     },
     {
       "name": "docs_cs800_ov0",
@@ -243,29 +221,7 @@
       "config_path": "/app/.polaris_experiment_stage0b1_docs_chunking__docs_cs800_ov0.yaml",
       "preset": "docs_only",
       "execution_phase": "prepare",
-      "ingestion_commands": [
-        [
-          "/usr/local/bin/python",
-          "/app/scripts/ingest_html_documents.py",
-          "-c",
-          "/app/.polaris_experiment_stage0b1_docs_chunking__docs_cs800_ov0.yaml",
-          "-p",
-          "https://docs.hpc.cam.ac.uk/hpc/index.html",
-          "--ingest-internal-links",
-          "--persist-dir",
-          "../data/storage/exp_docs_cs800_ov0",
-          "--qdrant-collection-name",
-          "exp_docs_cs800_ov0",
-          "--source",
-          "docs",
-          "--chunking-strategy",
-          "markdown_token",
-          "--chunk-size-tokens",
-          "800",
-          "--chunk-overlap-tokens",
-          "0"
-        ]
-      ],
+      "ingestion_commands": [],
       "runs": [
         {
           "repeat_index": 1,
@@ -288,7 +244,7 @@
             "--preset",
             "docs_only",
             "--metrics",
-            "factual_correctness,faithfulness,context_recall",
+            "faithfulness,context_recall,factual_correctness",
             "--generation-mode",
             "pipeline",
             "--generation-workers",
@@ -319,7 +275,7 @@
             "--preset",
             "docs_only",
             "--metrics",
-            "factual_correctness,faithfulness,context_recall",
+            "faithfulness,context_recall,factual_correctness",
             "--generation-mode",
             "pipeline",
             "--generation-workers",
@@ -350,7 +306,7 @@
             "--preset",
             "docs_only",
             "--metrics",
-            "factual_correctness,faithfulness,context_recall",
+            "faithfulness,context_recall,factual_correctness",
             "--generation-mode",
             "pipeline",
             "--generation-workers",
@@ -361,7 +317,7 @@
           ]
         }
       ],
-      "ingestion_skipped": false
+      "ingestion_skipped": true
     },
     {
       "name": "docs_cs800_ov80",
@@ -369,29 +325,7 @@
       "config_path": "/app/.polaris_experiment_stage0b1_docs_chunking__docs_cs800_ov80.yaml",
       "preset": "docs_only",
       "execution_phase": "prepare",
-      "ingestion_commands": [
-        [
-          "/usr/local/bin/python",
-          "/app/scripts/ingest_html_documents.py",
-          "-c",
-          "/app/.polaris_experiment_stage0b1_docs_chunking__docs_cs800_ov80.yaml",
-          "-p",
-          "https://docs.hpc.cam.ac.uk/hpc/index.html",
-          "--ingest-internal-links",
-          "--persist-dir",
-          "../data/storage/exp_docs_cs800_ov80",
-          "--qdrant-collection-name",
-          "exp_docs_cs800_ov80",
-          "--source",
-          "docs",
-          "--chunking-strategy",
-          "markdown_token",
-          "--chunk-size-tokens",
-          "800",
-          "--chunk-overlap-tokens",
-          "80"
-        ]
-      ],
+      "ingestion_commands": [],
       "runs": [
         {
           "repeat_index": 1,
@@ -414,7 +348,7 @@
             "--preset",
             "docs_only",
             "--metrics",
-            "factual_correctness,faithfulness,context_recall",
+            "faithfulness,context_recall,factual_correctness",
             "--generation-mode",
             "pipeline",
             "--generation-workers",
@@ -445,7 +379,7 @@
             "--preset",
             "docs_only",
             "--metrics",
-            "factual_correctness,faithfulness,context_recall",
+            "faithfulness,context_recall,factual_correctness",
             "--generation-mode",
             "pipeline",
             "--generation-workers",
@@ -476,7 +410,7 @@
             "--preset",
             "docs_only",
             "--metrics",
-            "factual_correctness,faithfulness,context_recall",
+            "faithfulness,context_recall,factual_correctness",
             "--generation-mode",
             "pipeline",
             "--generation-workers",
@@ -487,7 +421,7 @@
           ]
         }
       ],
-      "ingestion_skipped": false
+      "ingestion_skipped": true
     },
     {
       "name": "docs_cs1200_ov0",
@@ -495,29 +429,7 @@
       "config_path": "/app/.polaris_experiment_stage0b1_docs_chunking__docs_cs1200_ov0.yaml",
       "preset": "docs_only",
       "execution_phase": "prepare",
-      "ingestion_commands": [
-        [
-          "/usr/local/bin/python",
-          "/app/scripts/ingest_html_documents.py",
-          "-c",
-          "/app/.polaris_experiment_stage0b1_docs_chunking__docs_cs1200_ov0.yaml",
-          "-p",
-          "https://docs.hpc.cam.ac.uk/hpc/index.html",
-          "--ingest-internal-links",
-          "--persist-dir",
-          "../data/storage/exp_docs_cs1200_ov0",
-          "--qdrant-collection-name",
-          "exp_docs_cs1200_ov0",
-          "--source",
-          "docs",
-          "--chunking-strategy",
-          "markdown_token",
-          "--chunk-size-tokens",
-          "1200",
-          "--chunk-overlap-tokens",
-          "0"
-        ]
-      ],
+      "ingestion_commands": [],
       "runs": [
         {
           "repeat_index": 1,
@@ -540,7 +452,7 @@
             "--preset",
             "docs_only",
             "--metrics",
-            "factual_correctness,faithfulness,context_recall",
+            "faithfulness,context_recall,factual_correctness",
             "--generation-mode",
             "pipeline",
             "--generation-workers",
@@ -571,7 +483,7 @@
             "--preset",
             "docs_only",
             "--metrics",
-            "factual_correctness,faithfulness,context_recall",
+            "faithfulness,context_recall,factual_correctness",
             "--generation-mode",
             "pipeline",
             "--generation-workers",
@@ -602,7 +514,7 @@
             "--preset",
             "docs_only",
             "--metrics",
-            "factual_correctness,faithfulness,context_recall",
+            "faithfulness,context_recall,factual_correctness",
             "--generation-mode",
             "pipeline",
             "--generation-workers",
@@ -613,7 +525,7 @@
           ]
         }
       ],
-      "ingestion_skipped": false
+      "ingestion_skipped": true
     },
     {
       "name": "docs_cs1200_ov80",
@@ -621,29 +533,7 @@
       "config_path": "/app/.polaris_experiment_stage0b1_docs_chunking__docs_cs1200_ov80.yaml",
       "preset": "docs_only",
       "execution_phase": "prepare",
-      "ingestion_commands": [
-        [
-          "/usr/local/bin/python",
-          "/app/scripts/ingest_html_documents.py",
-          "-c",
-          "/app/.polaris_experiment_stage0b1_docs_chunking__docs_cs1200_ov80.yaml",
-          "-p",
-          "https://docs.hpc.cam.ac.uk/hpc/index.html",
-          "--ingest-internal-links",
-          "--persist-dir",
-          "../data/storage/exp_docs_cs1200_ov80",
-          "--qdrant-collection-name",
-          "exp_docs_cs1200_ov80",
-          "--source",
-          "docs",
-          "--chunking-strategy",
-          "markdown_token",
-          "--chunk-size-tokens",
-          "1200",
-          "--chunk-overlap-tokens",
-          "80"
-        ]
-      ],
+      "ingestion_commands": [],
       "runs": [
         {
           "repeat_index": 1,
@@ -666,7 +556,7 @@
             "--preset",
             "docs_only",
             "--metrics",
-            "factual_correctness,faithfulness,context_recall",
+            "faithfulness,context_recall,factual_correctness",
             "--generation-mode",
             "pipeline",
             "--generation-workers",
@@ -697,7 +587,7 @@
             "--preset",
             "docs_only",
             "--metrics",
-            "factual_correctness,faithfulness,context_recall",
+            "faithfulness,context_recall,factual_correctness",
             "--generation-mode",
             "pipeline",
             "--generation-workers",
@@ -728,7 +618,7 @@
             "--preset",
             "docs_only",
             "--metrics",
-            "factual_correctness,faithfulness,context_recall",
+            "faithfulness,context_recall,factual_correctness",
             "--generation-mode",
             "pipeline",
             "--generation-workers",
@@ -739,8 +629,8 @@
           ]
         }
       ],
-      "ingestion_skipped": false
+      "ingestion_skipped": true
     }
   ],
-  "executed_at": "2026-04-11T14:04:48.927637+00:00"
+  "executed_at": "2026-04-23T01:35:57.268206+00:00"
 }

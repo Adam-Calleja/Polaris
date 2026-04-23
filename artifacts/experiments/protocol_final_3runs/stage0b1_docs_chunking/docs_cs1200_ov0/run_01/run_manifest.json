@@ -3,40 +3,41 @@
     "rows": 70,
     "selected_metrics": [
       "faithfulness",
-      "context_recall"
+      "context_recall",
+      "factual_correctness"
     ],
     "skipped_metrics": [],
-    "selected_max_workers": 1,
-    "batch_size": 8,
+    "selected_max_workers": 24,
+    "batch_size": 48,
     "run_config": {
-      "timeout": 240,
+      "timeout": 300,
       "max_retries": 0,
       "max_wait": 30,
-      "max_workers": 1,
+      "max_workers": 24,
       "log_tenacity": true,
       "seed": 42
     },
-    "duration_seconds": 9923.804291866953,
-    "failure_rate": 0.0,
+    "duration_seconds": 5.235817619002773,
+    "failure_rate": 1.0,
     "tuning_trials": []
   },
   "preset_name": "docs_only",
   "preset_description": "Docs-only baseline with RRF reranking.",
-  "condition_fingerprint": "722ee1ef3340dddb1d2cb653c1cb1d67d5bbb8852998b7bfee0c78f010a80724",
+  "condition_fingerprint": "357a78386988c8d87914ff805e515154ec6b4fda43a08ecd5552421ab9ef95fa",
   "condition_summary": {
     "retriever_type": "multi_collection",
     "source_type": "vector",
     "final_top_k": 8,
     "hybrid_profile": {
       "dense_top_k": 5,
-      "sparse_top_k": 5,
+      "bm25_top_k": 5,
       "top_k": 5,
       "fusion": {
         "type": "rrf",
         "rrf_k": 60,
         "signal_weights": {
           "dense": 1.0,
-          "sparse": 1.0
+          "bm25": 1.0
         }
       }
     },
@@ -47,14 +48,14 @@
         "weight": 1.0,
         "retrieval_profile": {
           "dense_top_k": 5,
-          "sparse_top_k": 5,
+          "bm25_top_k": 5,
           "top_k": 5,
           "fusion": {
             "type": "rrf",
             "rrf_k": 60,
             "signal_weights": {
               "dense": 1.0,
-              "sparse": 1.0
+              "bm25": 1.0
             }
           }
         },
@@ -68,14 +69,14 @@
       "final_top_k": 8,
       "hybrid_profile": {
         "dense_top_k": 5,
-        "sparse_top_k": 5,
+        "bm25_top_k": 5,
         "top_k": 5,
         "fusion": {
           "type": "rrf",
           "rrf_k": 60,
           "signal_weights": {
             "dense": 1.0,
-            "sparse": 1.0
+            "bm25": 1.0
           }
         }
       },
@@ -86,14 +87,14 @@
           "weight": 1.0,
           "retrieval_profile": {
             "dense_top_k": 5,
-            "sparse_top_k": 5,
+            "bm25_top_k": 5,
             "top_k": 5,
             "fusion": {
               "type": "rrf",
               "rrf_k": 60,
               "signal_weights": {
                 "dense": 1.0,
-                "sparse": 1.0
+                "bm25": 1.0
               }
             }
           },
@@ -102,7 +103,7 @@
         }
       ]
     },
-    "retriever_fingerprint": "0a221f3671915c2d65d0786bb7490dc33d99dd5a5c92ba988fd647be172f0b26",
+    "retriever_fingerprint": "d8e5989e0268e77e461e1f0789a738fc3cfe3325abf969cf8f8d4b90bd72d591",
     "reranker_profile": {
       "type": "rrf",
       "rrf_k": 60,
@@ -117,6 +118,7 @@
     "annotations_path": "/app/data/test/benchmark_annotations_final.csv",
     "prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0b1_docs_chunking/docs_cs1200_ov0/run_01/prepared_input.json",
     "reuse_prepared": true,
+    "allow_stale_prepared": false,
     "query_field": "query",
     "reference_field": "expected_answer",
     "id_field": "id",
@@ -147,7 +149,7 @@
       "generator_llm": {
         "type": "openai_like",
         "model_name": "mistralai/Mistral-Large-Instruct-2407",
-        "api_base": "http://vllm:8080/v1",
+        "api_base": "http://mistral:8080/v1",
         "request_timeout": 90,
         "max_retries": 1,
         "model_kwargs": {
@@ -161,7 +163,7 @@
       },
       "llm_generate": {}
     },
-    "generator_fingerprint": "073fbf42ca966bf58abbb9d019aa73a18ca5725d60c1d9aa70f3b3ed7e8140ac",
+    "generator_fingerprint": "933650173b8202eb4e65ceda3941a9a4370151c3c33b373840e30d503261a3fa",
     "retriever_profile": {
       "type": "multi_collection",
       "final_top_k": 8,
@@ -170,16 +172,16 @@
           "settings": {
             "filters": {},
             "retrieval_profile": {
+              "bm25_top_k": 5,
               "dense_top_k": 5,
               "fusion": {
                 "rrf_k": 60,
                 "signal_weights": {
-                  "dense": 1.0,
-                  "sparse": 1.0
+                  "bm25": 1.0,
+                  "dense": 1.0
                 },
                 "type": "rrf"
               },
-              "sparse_top_k": 5,
               "top_k": 5
             },
             "top_k": 5,
@@ -190,16 +192,16 @@
               "filters": []
             },
             "retrieval_profile": {
+              "bm25_top_k": 5,
               "dense_top_k": 5,
               "fusion": {
                 "rrf_k": 60,
                 "signal_weights": {
-                  "dense": 1.0,
-                  "sparse": 1.0
+                  "bm25": 1.0,
+                  "dense": 1.0
                 },
                 "type": "rrf"
               },
-              "sparse_top_k": 5,
               "top_k": 5
             },
             "top_k": 5,
@@ -209,19 +211,15 @@
               "collection_name": "exp_docs_cs1200_ov0",
               "dense_model": "Qwen/Qwen3-Embedding-8B",
               "dense_vector_name": "dense",
-              "sparse_model": {
-                "batch_size": 16,
-                "model_name": "prithivida/Splade_PP_en_v1",
-                "type": "fastembed"
-              },
+              "sparse_model": null,
               "sparse_vector_name": "sparse"
             }
           },
-          "retriever_fingerprint": "a75240d1febe6d27c500252c9d91032e235ef4d04731bf80de83a23ec44a386c"
+          "retriever_fingerprint": "6bf318412b047f7497df6350e56a74e354391f79b00746635274e690fd5f58d1"
         }
       }
     },
-    "retriever_fingerprint": "fd8d282932b3b5e9081d6a165a0534a925d409f592e5a66c876a57ff610af740",
+    "retriever_fingerprint": "184ba725471ba2635b01c5ab5b1d79405c4271aabbd22662ee4d3379a3bea352",
     "reranker_profile": {
       "type": "rrf",
       "rrf_k": 60,
@@ -239,14 +237,14 @@
       "final_top_k": 8,
       "hybrid_profile": {
         "dense_top_k": 5,
-        "sparse_top_k": 5,
+        "bm25_top_k": 5,
         "top_k": 5,
         "fusion": {
           "type": "rrf",
           "rrf_k": 60,
           "signal_weights": {
             "dense": 1.0,
-            "sparse": 1.0
+            "bm25": 1.0
           }
         }
       },
@@ -257,14 +255,14 @@
           "weight": 1.0,
           "retrieval_profile": {
             "dense_top_k": 5,
-            "sparse_top_k": 5,
+            "bm25_top_k": 5,
             "top_k": 5,
             "fusion": {
               "type": "rrf",
               "rrf_k": 60,
               "signal_weights": {
                 "dense": 1.0,
-                "sparse": 1.0
+                "bm25": 1.0
               }
             }
           },
@@ -278,14 +276,14 @@
         "final_top_k": 8,
         "hybrid_profile": {
           "dense_top_k": 5,
-          "sparse_top_k": 5,
+          "bm25_top_k": 5,
           "top_k": 5,
           "fusion": {
             "type": "rrf",
             "rrf_k": 60,
             "signal_weights": {
               "dense": 1.0,
-              "sparse": 1.0
+              "bm25": 1.0
             }
           }
         },
@@ -296,14 +294,14 @@
             "weight": 1.0,
             "retrieval_profile": {
               "dense_top_k": 5,
-              "sparse_top_k": 5,
+              "bm25_top_k": 5,
               "top_k": 5,
               "fusion": {
                 "type": "rrf",
                 "rrf_k": 60,
                 "signal_weights": {
                   "dense": 1.0,
-                  "sparse": 1.0
+                  "bm25": 1.0
                 }
               }
             },
@@ -312,7 +310,7 @@
           }
         ]
       },
-      "retriever_fingerprint": "0a221f3671915c2d65d0786bb7490dc33d99dd5a5c92ba988fd647be172f0b26",
+      "retriever_fingerprint": "d8e5989e0268e77e461e1f0789a738fc3cfe3325abf969cf8f8d4b90bd72d591",
       "reranker_profile": {
         "type": "rrf",
         "rrf_k": 60,
@@ -322,7 +320,7 @@
         "trace_enabled": true
       }
     },
-    "condition_fingerprint": "722ee1ef3340dddb1d2cb653c1cb1d67d5bbb8852998b7bfee0c78f010a80724",
+    "condition_fingerprint": "357a78386988c8d87914ff805e515154ec6b4fda43a08ecd5552421ab9ef95fa",
     "annotation_rows": 70,
     "prep_total_rows": 70,
     "prep_success_rows": 70,
@@ -348,23 +346,24 @@
     "latency_budget_report": {
       "count": 70,
       "elapsed_ms": {
-        "p50": 77698.0,
-        "p90": 128917.2,
-        "p95": 145080.34999999998,
-        "max": 169227.0,
-        "mean": 83216.08571428571
+        "p50": 55582.5,
+        "p90": 71508.1,
+        "p95": 73782.15,
+        "max": 98083.0,
+        "mean": 53848.84285714286
       },
       "budget_utilization": {
-        "p50": 0.43165555555555557,
-        "p90": 0.7162066666666667,
-        "max": 0.94015
+        "p50": 0.3087916666666667,
+        "p90": 0.3972672222222222,
+        "max": 0.5449055555555555
       }
     },
-    "prepared_source": "existing"
+    "prepared_source": "existing",
+    "prepared_validation_skipped": false
   },
   "tune_concurrency": true,
   "trace_evaluator_llm": false,
-  "mlflow_parent_run_id": "53a8fe8f8fb3461ab345930edb5d942a",
+  "mlflow_parent_run_id": "9dc57114408d43c089be5c1cc1b8946b",
   "config_file": "/app/.polaris_experiment_stage0b1_docs_chunking__docs_cs1200_ov0.yaml",
   "artifacts": {
     "scores_csv": "/app/artifacts/experiments/protocol_final_3runs/stage0b1_docs_chunking/docs_cs1200_ov0/run_01/scores.csv",
@@ -382,14 +381,14 @@
       "final_top_k": 8,
       "hybrid_profile": {
         "dense_top_k": 5,
-        "sparse_top_k": 5,
+        "bm25_top_k": 5,
         "top_k": 5,
         "fusion": {
           "type": "rrf",
           "rrf_k": 60,
           "signal_weights": {
             "dense": 1.0,
-            "sparse": 1.0
+            "bm25": 1.0
           }
         }
       },
@@ -400,14 +399,14 @@
           "weight": 1.0,
           "retrieval_profile": {
             "dense_top_k": 5,
-            "sparse_top_k": 5,
+            "bm25_top_k": 5,
             "top_k": 5,
             "fusion": {
               "type": "rrf",
               "rrf_k": 60,
               "signal_weights": {
                 "dense": 1.0,
-                "sparse": 1.0
+                "bm25": 1.0
               }
             }
           },
@@ -421,14 +420,14 @@
         "final_top_k": 8,
         "hybrid_profile": {
           "dense_top_k": 5,
-          "sparse_top_k": 5,
+          "bm25_top_k": 5,
           "top_k": 5,
           "fusion": {
             "type": "rrf",
             "rrf_k": 60,
             "signal_weights": {
               "dense": 1.0,
-              "sparse": 1.0
+              "bm25": 1.0
             }
           }
         },
@@ -439,14 +438,14 @@
             "weight": 1.0,
             "retrieval_profile": {
               "dense_top_k": 5,
-              "sparse_top_k": 5,
+              "bm25_top_k": 5,
               "top_k": 5,
               "fusion": {
                 "type": "rrf",
                 "rrf_k": 60,
                 "signal_weights": {
                   "dense": 1.0,
-                  "sparse": 1.0
+                  "bm25": 1.0
                 }
               }
             },
@@ -455,7 +454,7 @@
           }
         ]
       },
-      "retriever_fingerprint": "0a221f3671915c2d65d0786bb7490dc33d99dd5a5c92ba988fd647be172f0b26",
+      "retriever_fingerprint": "d8e5989e0268e77e461e1f0789a738fc3cfe3325abf969cf8f8d4b90bd72d591",
       "reranker_profile": {
         "type": "rrf",
         "rrf_k": 60,
@@ -465,12 +464,13 @@
         "trace_enabled": true
       }
     },
-    "condition_fingerprint": "722ee1ef3340dddb1d2cb653c1cb1d67d5bbb8852998b7bfee0c78f010a80724",
+    "condition_fingerprint": "357a78386988c8d87914ff805e515154ec6b4fda43a08ecd5552421ab9ef95fa",
     "dataset": {
       "dataset_path": "/app/data/test/ragas_one_hop_eval_dataset_final.dev.jsonl",
       "annotations_path": "/app/data/test/benchmark_annotations_final.csv",
       "prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0b1_docs_chunking/docs_cs1200_ov0/run_01/prepared_input.json",
       "reuse_prepared": true,
+      "allow_stale_prepared": false,
       "query_field": "query",
       "reference_field": "expected_answer",
       "id_field": "id",
@@ -501,7 +501,7 @@
         "generator_llm": {
           "type": "openai_like",
           "model_name": "mistralai/Mistral-Large-Instruct-2407",
-          "api_base": "http://vllm:8080/v1",
+          "api_base": "http://mistral:8080/v1",
           "request_timeout": 90,
           "max_retries": 1,
           "model_kwargs": {
@@ -515,7 +515,7 @@
         },
         "llm_generate": {}
       },
-      "generator_fingerprint": "073fbf42ca966bf58abbb9d019aa73a18ca5725d60c1d9aa70f3b3ed7e8140ac",
+      "generator_fingerprint": "933650173b8202eb4e65ceda3941a9a4370151c3c33b373840e30d503261a3fa",
       "retriever_profile": {
         "type": "multi_collection",
         "final_top_k": 8,
@@ -524,16 +524,16 @@
             "settings": {
               "filters": {},
               "retrieval_profile": {
+                "bm25_top_k": 5,
                 "dense_top_k": 5,
                 "fusion": {
                   "rrf_k": 60,
                   "signal_weights": {
-                    "dense": 1.0,
-                    "sparse": 1.0
+                    "bm25": 1.0,
+                    "dense": 1.0
                   },
                   "type": "rrf"
                 },
-                "sparse_top_k": 5,
                 "top_k": 5
               },
               "top_k": 5,
@@ -544,16 +544,16 @@
                 "filters": []
               },
               "retrieval_profile": {
+                "bm25_top_k": 5,
                 "dense_top_k": 5,
                 "fusion": {
                   "rrf_k": 60,
                   "signal_weights": {
-                    "dense": 1.0,
-                    "sparse": 1.0
+                    "bm25": 1.0,
+                    "dense": 1.0
                   },
                   "type": "rrf"
                 },
-                "sparse_top_k": 5,
                 "top_k": 5
               },
               "top_k": 5,
@@ -563,19 +563,15 @@
                 "collection_name": "exp_docs_cs1200_ov0",
                 "dense_model": "Qwen/Qwen3-Embedding-8B",
                 "dense_vector_name": "dense",
-                "sparse_model": {
-                  "batch_size": 16,
-                  "model_name": "prithivida/Splade_PP_en_v1",
-                  "type": "fastembed"
-                },
+                "sparse_model": null,
                 "sparse_vector_name": "sparse"
               }
             },
-            "retriever_fingerprint": "a75240d1febe6d27c500252c9d91032e235ef4d04731bf80de83a23ec44a386c"
+            "retriever_fingerprint": "6bf318412b047f7497df6350e56a74e354391f79b00746635274e690fd5f58d1"
           }
         }
       },
-      "retriever_fingerprint": "fd8d282932b3b5e9081d6a165a0534a925d409f592e5a66c876a57ff610af740",
+      "retriever_fingerprint": "184ba725471ba2635b01c5ab5b1d79405c4271aabbd22662ee4d3379a3bea352",
       "reranker_profile": {
         "type": "rrf",
         "rrf_k": 60,
@@ -593,14 +589,14 @@
         "final_top_k": 8,
         "hybrid_profile": {
           "dense_top_k": 5,
-          "sparse_top_k": 5,
+          "bm25_top_k": 5,
           "top_k": 5,
           "fusion": {
             "type": "rrf",
             "rrf_k": 60,
             "signal_weights": {
               "dense": 1.0,
-              "sparse": 1.0
+              "bm25": 1.0
             }
           }
         },
@@ -611,14 +607,14 @@
             "weight": 1.0,
             "retrieval_profile": {
               "dense_top_k": 5,
-              "sparse_top_k": 5,
+              "bm25_top_k": 5,
               "top_k": 5,
               "fusion": {
                 "type": "rrf",
                 "rrf_k": 60,
                 "signal_weights": {
                   "dense": 1.0,
-                  "sparse": 1.0
+                  "bm25": 1.0
                 }
               }
             },
@@ -632,14 +628,14 @@
           "final_top_k": 8,
           "hybrid_profile": {
             "dense_top_k": 5,
-            "sparse_top_k": 5,
+            "bm25_top_k": 5,
             "top_k": 5,
             "fusion": {
               "type": "rrf",
               "rrf_k": 60,
               "signal_weights": {
                 "dense": 1.0,
-                "sparse": 1.0
+                "bm25": 1.0
               }
             }
           },
@@ -650,14 +646,14 @@
               "weight": 1.0,
               "retrieval_profile": {
                 "dense_top_k": 5,
-                "sparse_top_k": 5,
+                "bm25_top_k": 5,
                 "top_k": 5,
                 "fusion": {
                   "type": "rrf",
                   "rrf_k": 60,
                   "signal_weights": {
                     "dense": 1.0,
-                    "sparse": 1.0
+                    "bm25": 1.0
                   }
                 }
               },
@@ -666,7 +662,7 @@
             }
           ]
         },
-        "retriever_fingerprint": "0a221f3671915c2d65d0786bb7490dc33d99dd5a5c92ba988fd647be172f0b26",
+        "retriever_fingerprint": "d8e5989e0268e77e461e1f0789a738fc3cfe3325abf969cf8f8d4b90bd72d591",
         "reranker_profile": {
           "type": "rrf",
           "rrf_k": 60,
@@ -676,7 +672,7 @@
           "trace_enabled": true
         }
       },
-      "condition_fingerprint": "722ee1ef3340dddb1d2cb653c1cb1d67d5bbb8852998b7bfee0c78f010a80724",
+      "condition_fingerprint": "357a78386988c8d87914ff805e515154ec6b4fda43a08ecd5552421ab9ef95fa",
       "annotation_rows": 70,
       "prep_total_rows": 70,
       "prep_success_rows": 70,
@@ -702,22 +698,36 @@
       "latency_budget_report": {
         "count": 70,
         "elapsed_ms": {
-          "p50": 77698.0,
-          "p90": 128917.2,
-          "p95": 145080.34999999998,
-          "max": 169227.0,
-          "mean": 83216.08571428571
+          "p50": 55582.5,
+          "p90": 71508.1,
+          "p95": 73782.15,
+          "max": 98083.0,
+          "mean": 53848.84285714286
         },
         "budget_utilization": {
-          "p50": 0.43165555555555557,
-          "p90": 0.7162066666666667,
-          "max": 0.94015
+          "p50": 0.3087916666666667,
+          "p90": 0.3972672222222222,
+          "max": 0.5449055555555555
         }
       },
-      "prepared_source": "existing"
+      "prepared_source": "existing",
+      "prepared_validation_skipped": false
+    },
+    "evaluation_preprocessing": {
+      "enabled": true,
+      "processed_rows": 70,
+      "truncated_rows": 70,
+      "truncated_contexts": 266,
+      "original_total_context_characters": 1464614,
+      "processed_total_context_characters": 1259597,
+      "retrieved_contexts": {
+        "max_characters": 4000,
+        "max_total_characters": 20000,
+        "truncation_marker": "\n...[truncated for evaluator]"
+      }
     },
     "tune_concurrency": true,
     "trace_evaluator_llm": false,
-    "mlflow_parent_run_id": "53a8fe8f8fb3461ab345930edb5d942a"
+    "mlflow_parent_run_id": "9dc57114408d43c089be5c1cc1b8946b"
   }
 }
