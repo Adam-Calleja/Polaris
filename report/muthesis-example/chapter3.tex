@@ -4,37 +4,197 @@
 \section{Task Definition}
 \label{sec:task}
 
-This section formulates \ac{CSD3} user support as a single-hop, evidence-grounded question-answering task within a supervised internal support workflow. Given a user support query and a heterogeneous evidence base of local documentation, selected external documentation, and historical support tickets, the system must retrieve evidence passages suitable for answering the query. Suitability is defined not only by semantic relevance, but also by authority, freshness, and applicability to the current \ac{CSD3} environment. The system must then generate a first-response answer that is factually correct, faithful to the retrieved evidence, and appropriate to the current local operational context. This framing is consistent with prior work on retrieval-augmented generation and technical support \ac{QA}, which treats knowledge-intensive support tasks as depending on external evidence rather than parametric memory alone \citep{lewisRetrievalaugmentedGenerationKnowledgeintensive2020,yuTechnicalQuestionAnswering2021}. It also reflects recent findings that seemingly relevant evidence may still be unsuitable if it is outdates, weakly authoritative, or locally inapplicable \citep{liYouKnowWhat2024,hwangRetrievalAugmentedGenerationEstimation2025}.
+This section formulates \ac{CSD3} user support as a single-hop, evidence-grounded question-answering task within a supervised internal support workflow. Given a natural-language support query and a heterogeneous evidence base consisting of local documentation, selected external documentation, and historical support tickets, the system must retrieve evidence passages that are not only semantically relevant, but also sufficiently authoritative, current, and locally applicable to the present \ac{CSD3} environment. It must then generate a first-response answer suitable for staff-assisted use: factually correct, faithful to the retrieved evidence, and appropriately qualified for the local operational context. This framing is consistent with retrieval-augmented generation for knowledge-intensive tasks, where answer quality depends on access to external evidence rather than parametric memory alone \citep{lewisRetrievalaugmentedGenerationKnowledgeintensive2020}, and with technical support \ac{QA}, which is naturally structured as a retrieve-then-read problem \citep{yuTechnicalQuestionAnswering2021}. It also reflects recent findings that apparently relevant evidence may still be unsuitable if it is out of scope, out of date, or drawn from less reliable sources \citep{liYouKnowWhat2024,hwangRetrievalAugmentedGenerationEstimation2025}. 
 
-The task is deliberately scoped to text-accessible evidence and single-hop support queries. This restriction is intended to isolate the effect of retrieval design on answer quality. Including multi-hop reasoning or multimodal evidence would introduce additional sources of methodological variance, such as evidence-composition failures, attachment-interpretation errors, and inconsistent access to no-text artefacts, making it harder to attribute performance differences to heterogeneous-source retrieval and validity-aware reranking alone. The restriction also keeps the benchmark and system comparisons reproducible, since all evaluated conditions operate over the same visible textual evidence. As a result, the system does not attempt to interpret attachments, screenshots, log files, or other non-textual artefacts. Furthermore, it is not intended to replace expert staff or operate as a fully autonomous public-facing application. Instead, the goal is support grounded first-response assistance for realistic support queries, while preserving cautious behaviour when the available evidence is incomplete, conflicting, or of uncertain validity.
+In this dissertation, a query is treated as single-hop when it can be answered from one passage, or a small set of closely related passages, retrieved in a single retrieval step, without subsequent query reformulation, multi-stage decomposition, or chained intermediate retrieval. The task is further scoped to documentation text and visible ticket text. Uploaded attachments and embedded media, including screenshots and log files, are excluded from retrieval even where they contain text. This is a methodological restriction that was chosen to reduce confounding from evidence-composition failures and multimodal interpretation errors, so that performance differences can be attributed more cleanly to heterogeneous-source retrieval and validity-aware reranking. It also keeps the benchmark reproducible by ensuring that all evaluated conditions operate over the same visible textual evidence. 
+
+The intended output of the system is not an autonomous final resolution, but evidence-grounded first-response assistance for realistic \ac{CSD3} support queries. The system is therefore designed for use within a supervised workflow, where retrieved evidence and generated answers can be reviewed by support staff before action is taken. Within this setting, the system should prefer cautious, qualified assistance when the available evidence is incomplete, conflicting, stale, or otherwise uncertain, rather than forcing an overconfident resolution. This operational framing aligns the task with the practical requirements of internal \ac{HPC} support while preserving a controlled scope for later evaluation. 
 
 \section{Data Sources and Knowledge Characteristics}
 \label{sec:data}
 
-The evidence base for this project consists of three heterogeneous source classes: local documentation, selected external documentation, and historical support tickets, which differ in authority, temporal stability, and local applicability. These differences mean that the sources cannot be treated as an interchangeable pool of evidence. 
+The evidence base for this project consists of three heterogeneous source classes: local documentation, selected external documentation, and historical support tickets. These sources were indexed as source-distinct corpora rather than flattened into a single undifferentiated text pool, because they differ in evidential role, authority, temporal stability, and local applicability. Table \ref{tab:source-class-summary} summarises the operational role and retrieval implications of each source class.
 
-Local \ac{CSD3} documentation formed the primary documentary source in the system, acting as the main source of site-specific operational truth for supported workflows, policies, access conditions, and local configuration \citep{ResearchComputingServicesDocumentation,AskHPC}. Operationally, the local corpus was restricted to internal HTML pages reachable from the CSD3 documentation homepage within the \url{docs.hpc.cam.ac.uk/hpc/} subtree. The resulting local documentation index contained 44 pages. 
+\begin{table}[t]
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{p{2.0cm} p{2.3cm} p{3.0cm} p{1.8cm} p{2.8cm}}
+\hline
+Source class & Evidential role & Inclusion basis and scale & Main exclusions & Retrieval implication \\
+\hline
+Local documentation & Primary record of current site-specific practice & Internal HTML pages within the core \ac{CSD3} documentation subtree; 44 pages & Out-of-subtree and non-HTML material & Highest local authority; should dominate questions about supported workflows, policy, access, and configuration \\
+Selected external documentation & Supplementary software and toolchain detail & Stable official manuals relevant to the \ac{CSD3} support domain; 13 sources, 662 pages & Community-managed, non-official, overly broad, or misaligned subtrees & Useful for software behaviour, syntax, and APIs, but should not override local policy or configuration evidence \\
+Historical support tickets & Prior-case troubleshooting evidence from resolved interactions & Resolved \ac{CSD3} support tickets from November 2017 to 1 April 2026 inclusive; 89,905 tickets & Unresolved tickets and attachment/media contents as retrievable evidence & High coverage for recurring issues and diagnostic context, but noisier, more privacy-sensitive, and more temporally fragile than documentation \\
+\hline
+\end{tabular}
+\caption{Operational summary of the three source classes included in the project corpus. Counts and date bounds refer to the frozen corpus snapshot used for parameter tuning and final evaluation. The full external source list is given in Appendix \ref{app:external-sources}.}
+\label{tab:source-class-summary}
+\end{table}
 
-Selected external documentation formed a supplementary documentary source, providing software-specific detail beyond what was available in the local \ac{CSD3} documentation. External sources were included only when they were stable official manuals for software or toolchains relevant to the \ac{CSD3} support domain and likely to provide software-specific detail missing from local documentation. Community-managed, overly broad, misaligned, or non-official documentation subtrees were excluded. The approved source set was defined in an external source registry and contained 13 sources, with a total of 662 pages. 
+Local \ac{CSD3} documentation formed the primary documentary source in the system, since it records the workflows, policies, access conditions, and locally supported configurations that define current site-specific practice \citep{ResearchComputingServicesDocumentation,AskHPC}. Operationally, the local corpus was restricted to internal HTML pages reachable from the CSD3 documentation homepage within the \url{docs.hpc.cam.ac.uk/hpc/} subtree. This restriction prioritised pages that directly express current local operational guidance and excluded loosely related material outside the core documentation boundary. The resulting frozen local documentation snapshot used in parameter tuning and final evaluation contained 44 pages. In retrieval terms, this source acts as the default authority for questions about what is currently supported on \ac{CSD3}. 
 
-Historical support tickets formed the third source class in this project, providing prior-case evidence from past support interactions that could be relevant to current queries. While tickets provide a potentially rich source of operational knowledge, they are also noisy, variable in wording, more sensitive to temporal decay than regularly updated documentation, and more sensitive from a privacy perspective \citep{rodenbeckTicketHubEnablingActionable2023,joslinGeneratingFrequentlyAsked2025}. This project considered all resolved support tickets from \ac{CSD3}'s start of operation in November 2017 to the first of April 2024, inclusive. Only tickets with the Jira status \texttt{Resolved} were ingested. Attachment content, screenshots, and log files were not interpreted. Media content was instead replaced with an \verb|[attachment]| placeholder in the preprocessed text. The resulting ticket index contained 89,905 tickets.
+Selected external documentation formed a supplementary documentary source, extending coverage when queries depended on software-specific detail not fully captured in the local documentation \citep{AskHPC}. Sources were included only when they were stable official manuals for software or toolchains relevant to the \ac{CSD3} support domain and likely to contribute detail on software behaviour, syntax, APIs, or configuration beyond the local corpus. Community-managed, non-official, overly broad, or otherwise misaligned documentation subtrees were excluded. The approved set was defined in an external source registry and the frozen external documentation snapshot used for parameter tuning and final evaluation contained 13 sources, with a total of 662 pages. The full approved source list is provided in Appendix \ref{app:external-sources}. While these documents expand technical coverage, they do not displace local documentation as the deciding source on site-specific policy, permissions, or configuration. 
 
-Taken together, these source classes differ not only in coverage but also in evidential status. Local documentation is the primary source for current site-specific practice, external documentation contributes software specific detail, and historical tickets contribute prior-case troubleshooting context at the cost of greater noise, privacy sensitivity, and temporal risk. These differences mean that the corpus cannot be treated as a single pool of interchangeable text. Instead, source identity, freshness, and local applicability must be preserved in metadata and reflected in later retrieval and reranking decisions. 
+Historical support tickets formed the third source class, providing prior-case evidence from past support interactions that may contain diagnostic context, troubleshooting paths, and previously successful resolutions \citep{rodenbeckTicketHubEnablingActionable2023,joslinGeneratingFrequentlyAsked2025}. This project considered all resolved \ac{CSD3} support tickets from November 2017 to 1 April 2026 inclusive. Only tickets with the Jira status \texttt{Resolved} were ingested. Attachment and embedded media content were not semantically interpreted during ingestion. Instead, media references were converted into textual placeholders indicating that an attachment was present without treating its contents as retrievable evidence. This preserved ticket conversation context while keeping the corpus within the text-accessible scope defined in Section \ref{sec:task}. The resulting frozen ticket snapshot used for parameter tuning and final evaluation contained 89,905 tickets. Compared with documentation, tickets provide richer prior-case detail, but are also noisier, more lexically variable, more privacy-sensitive, and more vulnerable to temporal decay \citep{rodenbeckTicketHubEnablingActionable2023,joslinGeneratingFrequentlyAsked2025}. 
+
+Taken together, these source classes were deliberately retained as distinct evidential categories rather than being merged into a single homogeneous corpus. Source identity, temporal fields, and authority-related metadata therefore needed to be preserved so that later retrieval and reranking could prefer current local documentation for site-specific questions, use external manuals as supplementary software evidence, and exploit historical tickets primarily as prior-case troubleshooting support.
 
 \section{Benchmark and Query Taxonomy}
 \label{sec:benchmark}
 
+This section describes the construction of the benchmark dataset used for parameter tuning and final evaluation, along with the query taxonomy used for later performance analysis. This benchmark was designed to reflect realistic \ac{CSD3} support queries while remaining within the single-hop, text-accessible scope defined in Section \ref{sec:task}. 
+
+To ground the benchmark in realistic operational demand, the Head of \ac{HPC} Services at the University of Cambridge Research Computing Services was consulted to identify a comprehensive set of realistic user-support topics. This consultation resulted in a set of $47$ representative support-topic keywords spanning a broad range of common \ac{CSD3} support themes. These keywords were used as seed topics for benchmark construction, rather than for the final query taxonomy. The $47$ keywords were queried through the Jira API to retrieve candidate tickets, ordered by resolution date with the most recent first. For each keyword, candidate tickets were screened manually, with duplicates across keyword searches removed before final selection. Candidate tickets were then manually reviewed for inclusion based on realism, relevance to \ac{CSD3} support, diversity of query types, and alignment with the scoped task definition. Recently resolved tickets were prioritised to ensure that the benchmark reflected current support demand and could be answered from the frozen evidence snapshot. Tickets were excluded if they were duplicative, clearly out of scope, dependent on unseen attachments, or required additional information that would not be available to the system at inference time. The final benchmark size of $100$ queries was chosen to preserve broad topical coverage while keeping later evaluation tractable.  
+
+The resulting benchmark dataset contained $100$ standalone evaluation queries, each derived from the initial user-facing query of a selected support ticket. This prevented trivial retrieval of the original ticket and reduced benchmark contamination, ensuring that system performance reflected generalisation over the remaining evidence base rather than recovery of a near-duplicate source instance. This benchmark therefore follows the general logic of test-collection-based \ac{IR} evaluation, in which a fixed query set is evaluated against a fixed evidence corpus \citep{sandersonTestCollectionBased2010}. However, it is not a full Cranfield-style collection, since no exhaustive relevance judgements or fixed gold contexts were identified for each query. No fixed reference passage set was attached to each query, since in the heterogeneous support setting there may be multiple valid evidence combinations that could support a correct answer. Pre-specifying a single target context would therefore impose an artificially narrow notion of retrieval success. 
+
+To support later subgroup analysis, the benchmark taxonomy was implemented as a multi-label annotation scheme rather than as a single topic label. Each query was annotated across seven categories: the minimum evidence source needed for a correct answer; the required documentary scope; whether correctness depends on current local operational truth; whether unseen attachments materially affected the response; the broad query family; whether the query was explicitly version-sensitive; and whether the answer depended on a particular system, service, partition, or platform. The full label definitions and allowed values are provided in Appendix \ref{app:benchmark-taxonomy-labels}. All taxonomy labels were assigned manually by the author. However, this benchmarks remains subject to several limitations: topic labels were curated from a single expert rather than through a consensus process; keyword-based candidate retrieval may miss differently phrased tickets, and manual curation and annotation introduce researcher bias. 
+
 \section{Requirements and Constraints}
 \label{sec:requirements_and_constraints}
+
+This section formalises the practical requirements and constraints that follow from the task definition, heterogeneous evidence setting, and benchmark methodology developed in Sections \ref{sec:task} to \ref{sec:benchmark}. It translates the problem formulation into explicit system requirements against which later design and evaluation decisions can be judged. To support a more rigorous methodology, the requirements are grouped into three classes: functional requirements, which define what the system must do; quality requirements, which define the standard the system should achieve; and constraints, which define the intended scope and limits of the project. These requirements and constraints are summarised in Table \ref{tab:requirements-and-constraints}, which also provides the rationale needed for direct mapping into the success criteria defined in Section \ref{sec:success_criteria}.
+
+\begingroup
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.15}
+
+\begin{longtable}{p{0.9cm} p{5.9cm} p{1.8cm} p{4.7cm}}
+\caption{Functional requirements, quality requirements, and scope constraints derived from the project task definition and benchmark design.}
+\label{tab:requirements-and-constraints} \\
+
+\hline
+ID & Requirement & Type & Rationale \\
+\hline
+\endfirsthead
+
+\multicolumn{4}{l}{\textit{Table \thetable{} continued from previous page}} \\
+\hline
+ID & Requirement & Type & Rationale \\
+\hline
+\endhead
+
+\hline
+\multicolumn{4}{r}{\textit{Continued on next page}} \\
+\endfoot
+
+\hline
+\endlastfoot
+
+R1 & The system must retrieve candidate evidence from all three source classes: local documentation, selected external documentation, and historical support tickets. & Functional & The task is defined over a heterogeneous evidence base, so retrieval must not assume a single uniform corpus. \\
+
+R2 & The system must rank retrieved evidence using source-aware validity criteria rather than semantic relevance alone. & Functional & In this setting, relevant evidence may still be outdated, non-authoritative, or locally inapplicable. \\
+
+R3 & The system must generate an evidence-grounded first-response answer rather than an unsupported free-form response. & Functional & The project concerns staff-assisted support, not general conversational helpfulness. \\
+
+R4 & The system must support supervised use by producing outputs that can be reviewed by support staff. & Functional & The intended deployment setting is assistive rather than autonomous. \\
+
+Q1 & Answers should be factually faithful to the retrieved evidence. & Quality & Hallucinated or weakly grounded answers are especially harmful in technical support. \\
+
+Q2 & The system should prioritise locally authoritative and current evidence when these conflict with more generic or outdated sources. & Quality & Local operational truth has priority over generic or outdated documentation. \\
+
+Q3 & The system should avoid overconfident resolution when the available evidence is incomplete, conflicting, or uncertain. & Quality & Overconfident but incorrect support guidance is operationally risky. \\
+
+Q4 & The benchmarked system configuration should be reproducible from frozen corpora and benchmark definitions. & Quality & Evaluation claims are only defensible if the setup is stable and auditable. \\
+
+C1 & The task is restricted to single-hop support queries. & Constraint & This keeps the problem controlled and avoids confounding from multi-stage reasoning. \\
+
+C2 & The task is restricted to evidence available in document text and visible ticket text. & Constraint & This keeps all evaluated conditions within the same visible evidence space. \\
+
+C3 & Attachments and embedded media are excluded from semantic interpretation. & Constraint & This avoids introducing multimodal processing as an uncontrolled source of variance. \\
+
+C4 & The evaluation does not assume exhaustive gold retrieval contexts for benchmark queries. & Constraint & In this heterogeneous setting, multiple valid evidence paths may support a correct answer, making a single exhaustive target context inappropriate. \\
+
+C5 & The system is not required to autonomously resolve out-of-scope, multi-stage, or attachment-dependent cases. & Constraint & These cases fall outside the project's controlled task definition. \\
+
+\end{longtable}
+\endgroup
+
+These requirements define the formal contract for the project rather than a broad statement of aspiration. They specify both the intended capabilities of the system and the conditions under which its evaluation claims can be considered valid. Section \ref{sec:success_criteria} will later map each requirement into corresponding success criteria and evaluation conditions. 
 
 \section{Success Criteria and Requirement-to-Evaluation Mapping}
 \label{sec:success_criteria}
 
+This section translates the functional requirements, quality requirements, and constraints defined in Section \ref{sec:requirements_and_constraints} into explicit success criteria and defines how each of these criteria will be evaluated. It formalises the success criteria already stated in Chapter \ref{cha:intro} by mapping \texttt{SC1} to \texttt{SC7} onto the requirements of the project. Table \ref{tab:requirement-evaluation-mapping} summarises this mapping, together with the evaluation method and decision bases used to judge whether each criterion has been met. All comparative claims are made under a frozen development and test protocol in which development data is used for tuning and design decisions, while final conclusions are based on held-out test results. 
+
+\begingroup
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.15}
+
+\begin{longtable}{p{0.9cm} p{1.7cm} p{4.2cm} p{4.0cm} p{4.3cm}}
+\caption{Success-criteria and requirement-to-evaluation mapping for the project.}
+\label{tab:requirement-evaluation-mapping} \\
+
+\hline
+SC & Req. IDs & Success criterion & Evaluation method & Decision basis \\
+\hline
+\endfirsthead
+
+\multicolumn{5}{l}{\textit{Table \thetable{} continued from previous page}} \\
+\hline
+SC & Req. IDs & Success criterion & Evaluation method & Decision basis \\
+\hline
+\endhead
+
+\hline
+\multicolumn{5}{r}{\textit{Continued on next page}} \\
+\endfoot
+
+\hline
+\endlastfoot
+
+SC1 &
+R1, R3, Q1 &
+The project provides a convincing held-out test-set answer to whether combining local documentation and historical support tickets improves factual correctness over single-source baselines. &
+Comparative benchmark runs under a frozen development/test protocol, with development data used for tuning and held-out test data used for final comparison. &
+Met if held-out test results support a clear comparative conclusion about combined retrieval versus single-source baselines, judged primarily by answer correctness and checked against faithfulness. \\
+
+SC2 &
+R2, Q1, Q2 &
+The project provides a convincing held-out test-set answer to whether validity-aware reranking improves over naive combined retrieval. &
+Comparative ablation runs on the held-out benchmark, including subgroup analysis of validity-sensitive queries. &
+Met if held-out results support a justified conclusion about the effect of validity-aware reranking, whether the observed effect is positive, neutral, or conditional. \\
+
+SC3 &
+R1, Q2 &
+The project reaches a justified conclusion about the role of external documentation for software-specific queries. &
+Source-ablation subgroup analysis on benchmark subsets requiring external or mixed documentary scope. &
+Met if the evaluation shows, on held-out queries, whether external documentation is beneficial, unnecessary, or only conditionally useful for the scoped query class. \\
+
+SC4 &
+R3, R4, C1, C2, C3, C5 &
+A working end-to-end RAG assistant is implemented for supervised, single-hop, text-accessible CSD3 support QA. &
+End-to-end system demonstration and benchmark execution on in-scope queries. &
+Met if the system can execute the full pipeline, produce reviewable first-response answers, and remain within the scoped task definition. \\
+
+SC5 &
+R1, Q4 &
+The system can ingest and retrieve from heterogeneous support sources in a reproducible and source-distinct way. &
+Corpus audit, metadata inspection, and source-specific retrieval runs under common system settings. &
+Met if local documentation, external documentation, and historical tickets can each be indexed, retrieved, and analysed separately and in combination, with source identity preserved. \\
+
+SC6 &
+Q4, C1, C2, C3, C4 &
+A fixed benchmark, verified annotations, and a frozen development/test evaluation protocol are produced for the in-scope query class. &
+Audit of benchmark files, split definitions, annotation codebook, and review-status controls. &
+Met if final experiments use the frozen benchmark artefacts and only manually verified annotations, with no post hoc change to test queries or evaluation protocol. \\
+
+SC7 &
+Q1, Q3, Q4, C4, C5 &
+The final conclusions are supported by controlled experiments, reproducible artefacts, and honest failure analysis. &
+Review of experimental controls, frozen artefacts, held-out test results, and structured error analysis. &
+Met if the final claims are tied directly to the held-out evaluation, reproducible inputs, and explicit analysis of limitations, uncertainty, and failure cases. \\
+
+\end{longtable}
+\endgroup
+
+Not all success criteria in Table \ref{tab:requirement-evaluation-mapping} are evaluated in the same way. Some are primarily comparative and quantitative, particularly those concerning source combination, validity-aware reranking, and the role of external documentation. Others are primarily compliance or quality criteria, assessed through corpus audits, benchmark controls, faithfulness judgments, and structured error analysis. Therefore, success does not require perfect performance on every benchmark query. Instead, it requires that the held-out evaluation provides a justified answer to the project's research questions, that the system behaves credibly within the scoped task definition, and that the final conclusions are supported by reproducible artefacts and honest analysis of limitations and failure cases.
+
 \section{Ethical, Privacy, and Data-Governance Considerations}
 \label{sec:ethics_privacy_governance}
 
-TODO: Have I defined single-hop elsewhere? if not, where should I do so?
-
-TODO: Do I need to justify the faming of the project? E.g., why I am scoping it to text-accessible evidence and single-hop support queries?
-
-NOTE: should I list the external documentation somewhere? if so here? or in an appendix?
+This project uses real internal support tickets as a primary data source. As a result, its main ethical concerns are privacy, confidentiality, and the risk of unsafe operational advice. Historical tickets were not anonymised before ingestion, however this is justified by the intended development setting: the system is designed only for internal use within the CSD3 support service, where authorised staff already handle these records as part of normal support operations. Preserving the original ticket text also avoids distorting the operational context needed for realistic retrieval and evaluation. However, although the internal ticket corpus was not anonymised for system development, any ticket excerpts or illustrative examples included in the dissertation will be anonymised and minimised to avoid disclosing unecessary personal or operationally sensitive information. Risk was further reduced through governance and scope control: access was limited to internal project use, frozen corpora and benchmark artefacts were not intended for public release, attachment contents were excluded from semantic interpretation, and the system was framed as supervised first-response assistance rather than autonomous resolution. Residual risks remain. In particular, retrieved ticket text may contain personal information or incomplete context, and that generated answers may still be wrong. Furthermore, personally identifiable information present in retrieved ticket text could be reproduced unnecessarily in generated answers. These risks are acknowledged explicitly and mitigated through restricted access, staff oversight, and evaluation focused on faithfulness and cautious behaviour. 
