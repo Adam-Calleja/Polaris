@@ -1,10 +1,8 @@
 {
   "stage_name": "stage0a_generator_selection",
-  "rows": 9,
+  "rows": 3,
   "conditions": [
-    "llama33_naive_combined",
-    "mistral_large_2407_naive_combined",
-    "mixtral8x22b_naive_combined"
+    "mistral_large_2407_naive_combined"
   ],
   "metrics": [
     "factual_correctness",

@@ -6,37 +6,37 @@
       "faithfulness"
     ],
     "skipped_metrics": [],
-    "selected_max_workers": 8,
-    "batch_size": 16,
+    "selected_max_workers": 28,
+    "batch_size": 56,
     "run_config": {
-      "timeout": 240,
+      "timeout": 300,
       "max_retries": 0,
       "max_wait": 30,
-      "max_workers": 8,
+      "max_workers": 28,
       "log_tenacity": true,
       "seed": 42
     },
-    "duration_seconds": 5537.0409943269915,
-    "failure_rate": 0.02857142857142857,
+    "duration_seconds": 637.7380748920259,
+    "failure_rate": 0.014285714285714285,
     "tuning_trials": []
   },
   "preset_name": "naive_combined",
   "preset_description": "Naive docs+tickets baseline with RRF reranking.",
-  "condition_fingerprint": "2029f1d3dc7835c5b004aec074e3de4c1ac92f38f95af14fe041bfb0aad6b606",
+  "condition_fingerprint": "2cbc46128ba5c89783f18a05b44b0b9b0301de6fd2ae58531e572d7256fa63c3",
   "condition_summary": {
     "retriever_type": "multi_collection",
     "source_type": "vector",
     "final_top_k": 8,
     "hybrid_profile": {
       "dense_top_k": 5,
-      "sparse_top_k": 5,
+      "bm25_top_k": 5,
       "top_k": 5,
       "fusion": {
         "type": "rrf",
         "rrf_k": 60,
         "signal_weights": {
           "dense": 1.0,
-          "sparse": 1.0
+          "bm25": 1.0
         }
       }
     },
@@ -47,14 +47,14 @@
         "weight": 1.0,
         "retrieval_profile": {
           "dense_top_k": 5,
-          "sparse_top_k": 5,
+          "bm25_top_k": 5,
           "top_k": 5,
           "fusion": {
             "type": "rrf",
             "rrf_k": 60,
             "signal_weights": {
               "dense": 1.0,
-              "sparse": 1.0
+              "bm25": 1.0
             }
           }
         },
@@ -67,14 +67,14 @@
         "weight": 1.0,
         "retrieval_profile": {
           "dense_top_k": 5,
-          "sparse_top_k": 5,
+          "bm25_top_k": 5,
           "top_k": 5,
           "fusion": {
             "type": "rrf",
             "rrf_k": 60,
             "signal_weights": {
               "dense": 1.0,
-              "sparse": 1.0
+              "bm25": 1.0
             }
           }
         },
@@ -88,14 +88,14 @@
       "final_top_k": 8,
       "hybrid_profile": {
         "dense_top_k": 5,
-        "sparse_top_k": 5,
+        "bm25_top_k": 5,
         "top_k": 5,
         "fusion": {
           "type": "rrf",
           "rrf_k": 60,
           "signal_weights": {
             "dense": 1.0,
-            "sparse": 1.0
+            "bm25": 1.0
           }
         }
       },
@@ -106,14 +106,14 @@
           "weight": 1.0,
           "retrieval_profile": {
             "dense_top_k": 5,
-            "sparse_top_k": 5,
+            "bm25_top_k": 5,
             "top_k": 5,
             "fusion": {
               "type": "rrf",
               "rrf_k": 60,
               "signal_weights": {
                 "dense": 1.0,
-                "sparse": 1.0
+                "bm25": 1.0
               }
             }
           },
@@ -126,14 +126,14 @@
           "weight": 1.0,
           "retrieval_profile": {
             "dense_top_k": 5,
-            "sparse_top_k": 5,
+            "bm25_top_k": 5,
             "top_k": 5,
             "fusion": {
               "type": "rrf",
               "rrf_k": 60,
               "signal_weights": {
                 "dense": 1.0,
-                "sparse": 1.0
+                "bm25": 1.0
               }
             }
           },
@@ -142,7 +142,7 @@
         }
       ]
     },
-    "retriever_fingerprint": "227b1f0ad852716afc88dd2b21e264fe8d3bb20da68967c73e8f1cc517917ea7",
+    "retriever_fingerprint": "7b04fea3065b51dcb614998ebe179b8af6a5c47610031db3743f390f2f558eb1",
     "reranker_profile": {
       "type": "rrf",
       "rrf_k": 60,
@@ -158,10 +158,11 @@
     "annotations_path": "/app/data/test/benchmark_annotations_final.csv",
     "prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/mistral_large_2407_naive_combined/run_01/prepared_input.json",
     "reuse_prepared": true,
+    "allow_stale_prepared": false,
     "query_field": "query",
     "reference_field": "expected_answer",
     "id_field": "id",
-    "generation_workers": 1,
+    "generation_workers": 16,
     "generation_mode": "pipeline",
     "evaluation_policy": "official",
     "generation_deadlines": {
@@ -186,9 +187,9 @@
     "generator_profile": {
       "mode": "pipeline",
       "generator_llm": {
-        "type": "openai_like",
+        "type": "openai_chat",
         "model_name": "mistralai/Mistral-Large-Instruct-2407",
-        "api_base": "http://vllm:8080/v1",
+        "api_base": "http://mistral:8080/v1",
         "request_timeout": 90,
         "max_retries": 1,
         "model_kwargs": {
@@ -202,7 +203,7 @@
       },
       "llm_generate": {}
     },
-    "generator_fingerprint": "073fbf42ca966bf58abbb9d019aa73a18ca5725d60c1d9aa70f3b3ed7e8140ac",
+    "generator_fingerprint": "331ab042c3aca71076db105943b5b1efe6e8b86635c29c7e88d086ad082d4d86",
     "retriever_profile": {
       "type": "multi_collection",
       "final_top_k": 8,
@@ -211,16 +212,16 @@
           "settings": {
             "filters": {},
             "retrieval_profile": {
+              "bm25_top_k": 5,
               "dense_top_k": 5,
               "fusion": {
                 "rrf_k": 60,
                 "signal_weights": {
-                  "dense": 1.0,
-                  "sparse": 1.0
+                  "bm25": 1.0,
+                  "dense": 1.0
                 },
                 "type": "rrf"
               },
-              "sparse_top_k": 5,
               "top_k": 5
             },
             "top_k": 5,
@@ -231,16 +232,16 @@
               "filters": []
             },
             "retrieval_profile": {
+              "bm25_top_k": 5,
               "dense_top_k": 5,
               "fusion": {
                 "rrf_k": 60,
                 "signal_weights": {
-                  "dense": 1.0,
-                  "sparse": 1.0
+                  "bm25": 1.0,
+                  "dense": 1.0
                 },
                 "type": "rrf"
               },
-              "sparse_top_k": 5,
               "top_k": 5
             },
             "top_k": 5,
@@ -250,30 +251,26 @@
               "collection_name": "support_docs_stage0a",
               "dense_model": "Qwen/Qwen3-Embedding-8B",
               "dense_vector_name": "dense",
-              "sparse_model": {
-                "batch_size": 16,
-                "model_name": "prithivida/Splade_PP_en_v1",
-                "type": "fastembed"
-              },
+              "sparse_model": null,
               "sparse_vector_name": "sparse"
             }
           },
-          "retriever_fingerprint": "13b37ca52eedc998ea2de5949e17f1b269d10feb008fbc27fdbe6e837721d875"
+          "retriever_fingerprint": "bbb2dd254cec6f9900140af8eefd5060d76bbf820f87833470e881f169753980"
         },
         "tickets": {
           "settings": {
             "filters": {},
             "retrieval_profile": {
+              "bm25_top_k": 5,
               "dense_top_k": 5,
               "fusion": {
                 "rrf_k": 60,
                 "signal_weights": {
-                  "dense": 1.0,
-                  "sparse": 1.0
+                  "bm25": 1.0,
+                  "dense": 1.0
                 },
                 "type": "rrf"
               },
-              "sparse_top_k": 5,
               "top_k": 5
             },
             "top_k": 5,
@@ -284,16 +281,16 @@
               "filters": []
             },
             "retrieval_profile": {
+              "bm25_top_k": 5,
               "dense_top_k": 5,
               "fusion": {
                 "rrf_k": 60,
                 "signal_weights": {
-                  "dense": 1.0,
-                  "sparse": 1.0
+                  "bm25": 1.0,
+                  "dense": 1.0
                 },
                 "type": "rrf"
               },
-              "sparse_top_k": 5,
               "top_k": 5
             },
             "top_k": 5,
@@ -303,19 +300,15 @@
               "collection_name": "support_tickets_stage0a",
               "dense_model": "Qwen/Qwen3-Embedding-8B",
               "dense_vector_name": "dense",
-              "sparse_model": {
-                "batch_size": 16,
-                "model_name": "prithivida/Splade_PP_en_v1",
-                "type": "fastembed"
-              },
+              "sparse_model": null,
               "sparse_vector_name": "sparse"
             }
           },
-          "retriever_fingerprint": "43039c53a9262f0dd88b0eb7c5fa56a6e612c1b539129262ef3a20535940e4e2"
+          "retriever_fingerprint": "93892dd81d61f42b10e07228a7697686b82d46ddbd72e4ce17d53431413109d3"
         }
       }
     },
-    "retriever_fingerprint": "bff232e88dca1227dde8d6621adb2fb03bb9f07c0cb42418553537cbded823b4",
+    "retriever_fingerprint": "8f1fda64ab5f5d27826a153183b36aa9aef582eee8396130969b055aa938b572",
     "reranker_profile": {
       "type": "rrf",
       "rrf_k": 60,
@@ -334,14 +327,14 @@
       "final_top_k": 8,
       "hybrid_profile": {
         "dense_top_k": 5,
-        "sparse_top_k": 5,
+        "bm25_top_k": 5,
         "top_k": 5,
         "fusion": {
           "type": "rrf",
           "rrf_k": 60,
           "signal_weights": {
             "dense": 1.0,
-            "sparse": 1.0
+            "bm25": 1.0
           }
         }
       },
@@ -352,14 +345,14 @@
           "weight": 1.0,
           "retrieval_profile": {
             "dense_top_k": 5,
-            "sparse_top_k": 5,
+            "bm25_top_k": 5,
             "top_k": 5,
             "fusion": {
               "type": "rrf",
               "rrf_k": 60,
               "signal_weights": {
                 "dense": 1.0,
-                "sparse": 1.0
+                "bm25": 1.0
               }
             }
           },
@@ -372,14 +365,14 @@
           "weight": 1.0,
           "retrieval_profile": {
             "dense_top_k": 5,
-            "sparse_top_k": 5,
+            "bm25_top_k": 5,
             "top_k": 5,
             "fusion": {
               "type": "rrf",
               "rrf_k": 60,
               "signal_weights": {
                 "dense": 1.0,
-                "sparse": 1.0
+                "bm25": 1.0
               }
             }
           },
@@ -393,14 +386,14 @@
         "final_top_k": 8,
         "hybrid_profile": {
           "dense_top_k": 5,
-          "sparse_top_k": 5,
+          "bm25_top_k": 5,
           "top_k": 5,
           "fusion": {
             "type": "rrf",
             "rrf_k": 60,
             "signal_weights": {
               "dense": 1.0,
-              "sparse": 1.0
+              "bm25": 1.0
             }
           }
         },
@@ -411,14 +404,14 @@
             "weight": 1.0,
             "retrieval_profile": {
               "dense_top_k": 5,
-              "sparse_top_k": 5,
+              "bm25_top_k": 5,
               "top_k": 5,
               "fusion": {
                 "type": "rrf",
                 "rrf_k": 60,
                 "signal_weights": {
                   "dense": 1.0,
-                  "sparse": 1.0
+                  "bm25": 1.0
                 }
               }
             },
@@ -431,14 +424,14 @@
             "weight": 1.0,
             "retrieval_profile": {
               "dense_top_k": 5,
-              "sparse_top_k": 5,
+              "bm25_top_k": 5,
               "top_k": 5,
               "fusion": {
                 "type": "rrf",
                 "rrf_k": 60,
                 "signal_weights": {
                   "dense": 1.0,
-                  "sparse": 1.0
+                  "bm25": 1.0
                 }
               }
             },
@@ -447,7 +440,7 @@
           }
         ]
       },
-      "retriever_fingerprint": "227b1f0ad852716afc88dd2b21e264fe8d3bb20da68967c73e8f1cc517917ea7",
+      "retriever_fingerprint": "7b04fea3065b51dcb614998ebe179b8af6a5c47610031db3743f390f2f558eb1",
       "reranker_profile": {
         "type": "rrf",
         "rrf_k": 60,
@@ -458,61 +451,50 @@
         "trace_enabled": true
       }
     },
-    "condition_fingerprint": "2029f1d3dc7835c5b004aec074e3de4c1ac92f38f95af14fe041bfb0aad6b606",
+    "condition_fingerprint": "2cbc46128ba5c89783f18a05b44b0b9b0301de6fd2ae58531e572d7256fa63c3",
     "annotation_rows": 70,
     "prep_total_rows": 70,
-    "prep_success_rows": 69,
-    "prep_failed_rows": 1,
+    "prep_success_rows": 70,
+    "prep_failed_rows": 0,
     "prep_elapsed_seconds": 0.0,
     "prep_rate_rows_per_second": 0.0,
-    "prep_error_classes": {
-      "ValueError": 1
-    },
-    "prep_failure_classes": {
-      "empty_response": 1
-    },
-    "prep_failure_class_rates": {
-      "empty_response": 0.014285714285714285
-    },
-    "prep_failure_stages": {
-      "generation": 1
-    },
-    "prep_failure_stage_rates": {
-      "generation": 0.014285714285714285
-    },
+    "prep_error_classes": {},
+    "prep_failure_classes": {},
+    "prep_failure_class_rates": {},
+    "prep_failure_stages": {},
+    "prep_failure_stage_rates": {},
     "prep_response_statuses": {
-      "ok": 69,
-      "empty_response": 1
+      "ok": 70
     },
     "prep_response_status_rates": {
-      "ok": 0.9857142857142858,
-      "empty_response": 0.014285714285714285
+      "ok": 1.0
     },
-    "prep_coverage": 0.9857142857142858,
-    "prep_empty_response_rate": 0.014285714285714285,
+    "prep_coverage": 1.0,
+    "prep_empty_response_rate": 0.0,
     "infra_failure_rate": 0.0,
     "run_validity": "VALID",
     "run_policy": "official",
     "latency_budget_report": {
-      "count": 69,
+      "count": 70,
       "elapsed_ms": {
-        "p50": 44543.0,
-        "p90": 71233.6,
-        "p95": 74505.59999999999,
-        "max": 110906.0,
-        "mean": 47790.72463768116
+        "p50": 89983.5,
+        "p90": 133811.7,
+        "p95": 147837.59999999998,
+        "max": 168279.0,
+        "mean": 94392.34285714285
       },
       "budget_utilization": {
-        "p50": 0.2474611111111111,
-        "p90": 0.3957422222222223,
-        "max": 0.6161444444444445
+        "p50": 0.4999083333333333,
+        "p90": 0.7433983333333334,
+        "max": 0.9348833333333333
       }
     },
-    "prepared_source": "existing"
+    "prepared_source": "existing",
+    "prepared_validation_skipped": false
   },
   "tune_concurrency": true,
   "trace_evaluator_llm": false,
-  "mlflow_parent_run_id": "66350e9e785a4c5e8c5bae6ee8ca42c7",
+  "mlflow_parent_run_id": "8deda23d91d048f88b18af27f83e613d",
   "config_file": "/app/.polaris_experiment_stage0a_generator_selection__mistral_large_2407_naive_combined.yaml",
   "artifacts": {
     "scores_csv": "/app/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/mistral_large_2407_naive_combined/run_01/scores.csv",
@@ -530,14 +512,14 @@
       "final_top_k": 8,
       "hybrid_profile": {
         "dense_top_k": 5,
-        "sparse_top_k": 5,
+        "bm25_top_k": 5,
         "top_k": 5,
         "fusion": {
           "type": "rrf",
           "rrf_k": 60,
           "signal_weights": {
             "dense": 1.0,
-            "sparse": 1.0
+            "bm25": 1.0
           }
         }
       },
@@ -548,14 +530,14 @@
           "weight": 1.0,
           "retrieval_profile": {
             "dense_top_k": 5,
-            "sparse_top_k": 5,
+            "bm25_top_k": 5,
             "top_k": 5,
             "fusion": {
               "type": "rrf",
               "rrf_k": 60,
               "signal_weights": {
                 "dense": 1.0,
-                "sparse": 1.0
+                "bm25": 1.0
               }
             }
           },
@@ -568,14 +550,14 @@
           "weight": 1.0,
           "retrieval_profile": {
             "dense_top_k": 5,
-            "sparse_top_k": 5,
+            "bm25_top_k": 5,
             "top_k": 5,
             "fusion": {
               "type": "rrf",
               "rrf_k": 60,
               "signal_weights": {
                 "dense": 1.0,
-                "sparse": 1.0
+                "bm25": 1.0
               }
             }
           },
@@ -589,14 +571,14 @@
         "final_top_k": 8,
         "hybrid_profile": {
           "dense_top_k": 5,
-          "sparse_top_k": 5,
+          "bm25_top_k": 5,
           "top_k": 5,
           "fusion": {
             "type": "rrf",
             "rrf_k": 60,
             "signal_weights": {
               "dense": 1.0,
-              "sparse": 1.0
+              "bm25": 1.0
             }
           }
         },
@@ -607,14 +589,14 @@
             "weight": 1.0,
             "retrieval_profile": {
               "dense_top_k": 5,
-              "sparse_top_k": 5,
+              "bm25_top_k": 5,
               "top_k": 5,
               "fusion": {
                 "type": "rrf",
                 "rrf_k": 60,
                 "signal_weights": {
                   "dense": 1.0,
-                  "sparse": 1.0
+                  "bm25": 1.0
                 }
               }
             },
@@ -627,14 +609,14 @@
             "weight": 1.0,
             "retrieval_profile": {
               "dense_top_k": 5,
-              "sparse_top_k": 5,
+              "bm25_top_k": 5,
               "top_k": 5,
               "fusion": {
                 "type": "rrf",
                 "rrf_k": 60,
                 "signal_weights": {
                   "dense": 1.0,
-                  "sparse": 1.0
+                  "bm25": 1.0
                 }
               }
             },
@@ -643,7 +625,7 @@
           }
         ]
       },
-      "retriever_fingerprint": "227b1f0ad852716afc88dd2b21e264fe8d3bb20da68967c73e8f1cc517917ea7",
+      "retriever_fingerprint": "7b04fea3065b51dcb614998ebe179b8af6a5c47610031db3743f390f2f558eb1",
       "reranker_profile": {
         "type": "rrf",
         "rrf_k": 60,
@@ -654,16 +636,17 @@
         "trace_enabled": true
       }
     },
-    "condition_fingerprint": "2029f1d3dc7835c5b004aec074e3de4c1ac92f38f95af14fe041bfb0aad6b606",
+    "condition_fingerprint": "2cbc46128ba5c89783f18a05b44b0b9b0301de6fd2ae58531e572d7256fa63c3",
     "dataset": {
       "dataset_path": "/app/data/test/ragas_one_hop_eval_dataset_final.dev.jsonl",
       "annotations_path": "/app/data/test/benchmark_annotations_final.csv",
       "prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/mistral_large_2407_naive_combined/run_01/prepared_input.json",
       "reuse_prepared": true,
+      "allow_stale_prepared": false,
       "query_field": "query",
       "reference_field": "expected_answer",
       "id_field": "id",
-      "generation_workers": 1,
+      "generation_workers": 16,
       "generation_mode": "pipeline",
       "evaluation_policy": "official",
       "generation_deadlines": {
@@ -688,9 +671,9 @@
       "generator_profile": {
         "mode": "pipeline",
         "generator_llm": {
-          "type": "openai_like",
+          "type": "openai_chat",
           "model_name": "mistralai/Mistral-Large-Instruct-2407",
-          "api_base": "http://vllm:8080/v1",
+          "api_base": "http://mistral:8080/v1",
           "request_timeout": 90,
           "max_retries": 1,
           "model_kwargs": {
@@ -704,7 +687,7 @@
         },
         "llm_generate": {}
       },
-      "generator_fingerprint": "073fbf42ca966bf58abbb9d019aa73a18ca5725d60c1d9aa70f3b3ed7e8140ac",
+      "generator_fingerprint": "331ab042c3aca71076db105943b5b1efe6e8b86635c29c7e88d086ad082d4d86",
       "retriever_profile": {
         "type": "multi_collection",
         "final_top_k": 8,
@@ -713,16 +696,16 @@
             "settings": {
               "filters": {},
               "retrieval_profile": {
+                "bm25_top_k": 5,
                 "dense_top_k": 5,
                 "fusion": {
                   "rrf_k": 60,
                   "signal_weights": {
-                    "dense": 1.0,
-                    "sparse": 1.0
+                    "bm25": 1.0,
+                    "dense": 1.0
                   },
                   "type": "rrf"
                 },
-                "sparse_top_k": 5,
                 "top_k": 5
               },
               "top_k": 5,
@@ -733,16 +716,16 @@
                 "filters": []
               },
               "retrieval_profile": {
+                "bm25_top_k": 5,
                 "dense_top_k": 5,
                 "fusion": {
                   "rrf_k": 60,
                   "signal_weights": {
-                    "dense": 1.0,
-                    "sparse": 1.0
+                    "bm25": 1.0,
+                    "dense": 1.0
                   },
                   "type": "rrf"
                 },
-                "sparse_top_k": 5,
                 "top_k": 5
               },
               "top_k": 5,
@@ -752,30 +735,26 @@
                 "collection_name": "support_docs_stage0a",
                 "dense_model": "Qwen/Qwen3-Embedding-8B",
                 "dense_vector_name": "dense",
-                "sparse_model": {
-                  "batch_size": 16,
-                  "model_name": "prithivida/Splade_PP_en_v1",
-                  "type": "fastembed"
-                },
+                "sparse_model": null,
                 "sparse_vector_name": "sparse"
               }
             },
-            "retriever_fingerprint": "13b37ca52eedc998ea2de5949e17f1b269d10feb008fbc27fdbe6e837721d875"
+            "retriever_fingerprint": "bbb2dd254cec6f9900140af8eefd5060d76bbf820f87833470e881f169753980"
           },
           "tickets": {
             "settings": {
               "filters": {},
               "retrieval_profile": {
+                "bm25_top_k": 5,
                 "dense_top_k": 5,
                 "fusion": {
                   "rrf_k": 60,
                   "signal_weights": {
-                    "dense": 1.0,
-                    "sparse": 1.0
+                    "bm25": 1.0,
+                    "dense": 1.0
                   },
                   "type": "rrf"
                 },
-                "sparse_top_k": 5,
                 "top_k": 5
               },
               "top_k": 5,
@@ -786,16 +765,16 @@
                 "filters": []
               },
               "retrieval_profile": {
+                "bm25_top_k": 5,
                 "dense_top_k": 5,
                 "fusion": {
                   "rrf_k": 60,
                   "signal_weights": {
-                    "dense": 1.0,
-                    "sparse": 1.0
+                    "bm25": 1.0,
+                    "dense": 1.0
                   },
                   "type": "rrf"
                 },
-                "sparse_top_k": 5,
                 "top_k": 5
               },
               "top_k": 5,
@@ -805,19 +784,15 @@
                 "collection_name": "support_tickets_stage0a",
                 "dense_model": "Qwen/Qwen3-Embedding-8B",
                 "dense_vector_name": "dense",
-                "sparse_model": {
-                  "batch_size": 16,
-                  "model_name": "prithivida/Splade_PP_en_v1",
-                  "type": "fastembed"
-                },
+                "sparse_model": null,
                 "sparse_vector_name": "sparse"
               }
             },
-            "retriever_fingerprint": "43039c53a9262f0dd88b0eb7c5fa56a6e612c1b539129262ef3a20535940e4e2"
+            "retriever_fingerprint": "93892dd81d61f42b10e07228a7697686b82d46ddbd72e4ce17d53431413109d3"
           }
         }
       },
-      "retriever_fingerprint": "bff232e88dca1227dde8d6621adb2fb03bb9f07c0cb42418553537cbded823b4",
+      "retriever_fingerprint": "8f1fda64ab5f5d27826a153183b36aa9aef582eee8396130969b055aa938b572",
       "reranker_profile": {
         "type": "rrf",
         "rrf_k": 60,
@@ -836,14 +811,14 @@
         "final_top_k": 8,
         "hybrid_profile": {
           "dense_top_k": 5,
-          "sparse_top_k": 5,
+          "bm25_top_k": 5,
           "top_k": 5,
           "fusion": {
             "type": "rrf",
             "rrf_k": 60,
             "signal_weights": {
               "dense": 1.0,
-              "sparse": 1.0
+              "bm25": 1.0
             }
           }
         },
@@ -854,14 +829,14 @@
             "weight": 1.0,
             "retrieval_profile": {
               "dense_top_k": 5,
-              "sparse_top_k": 5,
+              "bm25_top_k": 5,
               "top_k": 5,
               "fusion": {
                 "type": "rrf",
                 "rrf_k": 60,
                 "signal_weights": {
                   "dense": 1.0,
-                  "sparse": 1.0
+                  "bm25": 1.0
                 }
               }
             },
@@ -874,14 +849,14 @@
             "weight": 1.0,
             "retrieval_profile": {
               "dense_top_k": 5,
-              "sparse_top_k": 5,
+              "bm25_top_k": 5,
               "top_k": 5,
               "fusion": {
                 "type": "rrf",
                 "rrf_k": 60,
                 "signal_weights": {
                   "dense": 1.0,
-                  "sparse": 1.0
+                  "bm25": 1.0
                 }
               }
             },
@@ -895,14 +870,14 @@
           "final_top_k": 8,
           "hybrid_profile": {
             "dense_top_k": 5,
-            "sparse_top_k": 5,
+            "bm25_top_k": 5,
             "top_k": 5,
             "fusion": {
               "type": "rrf",
               "rrf_k": 60,
               "signal_weights": {
                 "dense": 1.0,
-                "sparse": 1.0
+                "bm25": 1.0
               }
             }
           },
@@ -913,14 +888,14 @@
               "weight": 1.0,
               "retrieval_profile": {
                 "dense_top_k": 5,
-                "sparse_top_k": 5,
+                "bm25_top_k": 5,
                 "top_k": 5,
                 "fusion": {
                   "type": "rrf",
                   "rrf_k": 60,
                   "signal_weights": {
                     "dense": 1.0,
-                    "sparse": 1.0
+                    "bm25": 1.0
                   }
                 }
               },
@@ -933,14 +908,14 @@
               "weight": 1.0,
               "retrieval_profile": {
                 "dense_top_k": 5,
-                "sparse_top_k": 5,
+                "bm25_top_k": 5,
                 "top_k": 5,
                 "fusion": {
                   "type": "rrf",
                   "rrf_k": 60,
                   "signal_weights": {
                     "dense": 1.0,
-                    "sparse": 1.0
+                    "bm25": 1.0
                   }
                 }
               },
@@ -949,7 +924,7 @@
             }
           ]
         },
-        "retriever_fingerprint": "227b1f0ad852716afc88dd2b21e264fe8d3bb20da68967c73e8f1cc517917ea7",
+        "retriever_fingerprint": "7b04fea3065b51dcb614998ebe179b8af6a5c47610031db3743f390f2f558eb1",
         "reranker_profile": {
           "type": "rrf",
           "rrf_k": 60,
@@ -960,60 +935,62 @@
           "trace_enabled": true
         }
       },
-      "condition_fingerprint": "2029f1d3dc7835c5b004aec074e3de4c1ac92f38f95af14fe041bfb0aad6b606",
+      "condition_fingerprint": "2cbc46128ba5c89783f18a05b44b0b9b0301de6fd2ae58531e572d7256fa63c3",
       "annotation_rows": 70,
       "prep_total_rows": 70,
-      "prep_success_rows": 69,
-      "prep_failed_rows": 1,
+      "prep_success_rows": 70,
+      "prep_failed_rows": 0,
       "prep_elapsed_seconds": 0.0,
       "prep_rate_rows_per_second": 0.0,
-      "prep_error_classes": {
-        "ValueError": 1
-      },
-      "prep_failure_classes": {
-        "empty_response": 1
-      },
-      "prep_failure_class_rates": {
-        "empty_response": 0.014285714285714285
-      },
-      "prep_failure_stages": {
-        "generation": 1
-      },
-      "prep_failure_stage_rates": {
-        "generation": 0.014285714285714285
-      },
+      "prep_error_classes": {},
+      "prep_failure_classes": {},
+      "prep_failure_class_rates": {},
+      "prep_failure_stages": {},
+      "prep_failure_stage_rates": {},
       "prep_response_statuses": {
-        "ok": 69,
-        "empty_response": 1
+        "ok": 70
       },
       "prep_response_status_rates": {
-        "ok": 0.9857142857142858,
-        "empty_response": 0.014285714285714285
+        "ok": 1.0
       },
-      "prep_coverage": 0.9857142857142858,
-      "prep_empty_response_rate": 0.014285714285714285,
+      "prep_coverage": 1.0,
+      "prep_empty_response_rate": 0.0,
       "infra_failure_rate": 0.0,
       "run_validity": "VALID",
       "run_policy": "official",
       "latency_budget_report": {
-        "count": 69,
+        "count": 70,
         "elapsed_ms": {
-          "p50": 44543.0,
-          "p90": 71233.6,
-          "p95": 74505.59999999999,
-          "max": 110906.0,
-          "mean": 47790.72463768116
+          "p50": 89983.5,
+          "p90": 133811.7,
+          "p95": 147837.59999999998,
+          "max": 168279.0,
+          "mean": 94392.34285714285
         },
         "budget_utilization": {
-          "p50": 0.2474611111111111,
-          "p90": 0.3957422222222223,
-          "max": 0.6161444444444445
+          "p50": 0.4999083333333333,
+          "p90": 0.7433983333333334,
+          "max": 0.9348833333333333
         }
       },
-      "prepared_source": "existing"
+      "prepared_source": "existing",
+      "prepared_validation_skipped": false
+    },
+    "evaluation_preprocessing": {
+      "enabled": true,
+      "processed_rows": 70,
+      "truncated_rows": 64,
+      "truncated_contexts": 193,
+      "original_total_context_characters": 2433328,
+      "processed_total_context_characters": 1364783,
+      "retrieved_contexts": {
+        "max_characters": 4000,
+        "max_total_characters": 20000,
+        "truncation_marker": "\n...[truncated for evaluator]"
+      }
     },
     "tune_concurrency": true,
     "trace_evaluator_llm": false,
-    "mlflow_parent_run_id": "66350e9e785a4c5e8c5bae6ee8ca42c7"
+    "mlflow_parent_run_id": "8deda23d91d048f88b18af27f83e613d"
   }
 }
