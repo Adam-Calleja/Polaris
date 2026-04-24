@@ -56,7 +56,7 @@ generator_candidates:
         stop_list: ["\nUser:", "\n\nUser:"]
   mistral_large_2407: &mistral_large_2407_generator
     generator_llm:
-      type: "openai_like"
+      type: "openai_chat"
       model_name: "mistralai/Mistral-Large-Instruct-2407"
       api_base: "http://mistral:8080/v1"
       api_key: "${POLARIS_LLM_API_KEY}"
@@ -90,9 +90,9 @@ prompt_configs:
 
 selected_collections: &selected_vector_store_collections
   docs:
-    collection_name: "exp_docs_cs1200_ov0"
+    collection_name: "exp_docs_cs1200_ov80"
   tickets:
-    collection_name: "exp_tickets_cs800_ov80"
+    collection_name: "exp_tickets_cs1000_ov0"
   external_docs:
     collection_name: "exp_external_docs_selected"
 
@@ -100,11 +100,11 @@ selected_chunking_sources: &selected_chunking_sources
   docs:
     strategy: "markdown_token"
     chunk_size_tokens: 1200
-    overlap_tokens: 0
+    overlap_tokens: 80
   tickets:
     strategy: "jira_turns_token"
-    chunk_size_tokens: 800
-    overlap_tokens: 80
+    chunk_size_tokens: 1000
+    overlap_tokens: 0
   external_docs:
     strategy: "markdown_token"
     chunk_size_tokens: 800
@@ -805,12 +805,17 @@ stages:
       retriever:
         source_type: "vector"
         <<: *budget_5_8
+    run_options:
+      metrics:
+        - "faithfulness"
+        - "context_recall"
+        - "factual_correctness"
     conditions:
       - name: "combined_selected_chunking"
         preset: "naive_combined"
-        ingest:
-          - *baseline_docs_ingest
-          - *baseline_tickets_ingest
+        # ingest:
+        #   - *baseline_docs_ingest
+        #   - *baseline_tickets_ingest
 
   stage0b4_combined_chunking_followup:
     type: "evaluation_grid"

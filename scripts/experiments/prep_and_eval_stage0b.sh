@@ -111,6 +111,8 @@ READY_TIMEOUT_SECONDS=7200 \
 bash scripts/gaudi/run_qwen32_eval_pool.sh
 
 # Run evaluation only after the Qwen pool is ready.
+
+MANIFEST_IN_CONTAINER="/app/experiments/protocol.final.yaml"
 sudo docker compose "${COMPOSE_FILES[@]}" run --no-deps --rm \
   -v "${PWD}/experiments:/app/experiments" \
   -v "${PWD}/artifacts:/app/artifacts" \
