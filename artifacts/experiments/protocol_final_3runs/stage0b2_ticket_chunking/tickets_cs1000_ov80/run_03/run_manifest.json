@@ -7,18 +7,18 @@
       "factual_correctness"
     ],
     "skipped_metrics": [],
-    "selected_max_workers": 24,
-    "batch_size": 48,
+    "selected_max_workers": 28,
+    "batch_size": 56,
     "run_config": {
       "timeout": 300,
       "max_retries": 0,
       "max_wait": 30,
-      "max_workers": 24,
+      "max_workers": 28,
       "log_tenacity": true,
       "seed": 42
     },
-    "duration_seconds": 5.370844205004687,
-    "failure_rate": 1.0,
+    "duration_seconds": 1187.5651251840027,
+    "failure_rate": 0.05238095238095238,
     "tuning_trials": []
   },
   "preset_name": "tickets_only",
@@ -375,7 +375,7 @@
   },
   "tune_concurrency": true,
   "trace_evaluator_llm": false,
-  "mlflow_parent_run_id": "459d3450785741f0949f19390eb1e745",
+  "mlflow_parent_run_id": "52140116bc914463833adb47a53f6860",
   "config_file": "/app/.polaris_experiment_stage0b2_ticket_chunking__tickets_cs1000_ov80.yaml",
   "artifacts": {
     "scores_csv": "/app/artifacts/experiments/protocol_final_3runs/stage0b2_ticket_chunking/tickets_cs1000_ov80/run_03/scores.csv",
@@ -752,6 +752,6 @@
     },
     "tune_concurrency": true,
     "trace_evaluator_llm": false,
-    "mlflow_parent_run_id": "459d3450785741f0949f19390eb1e745"
+    "mlflow_parent_run_id": "52140116bc914463833adb47a53f6860"
   }
 }

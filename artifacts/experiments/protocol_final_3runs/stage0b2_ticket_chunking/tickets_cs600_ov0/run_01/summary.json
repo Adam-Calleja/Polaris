@@ -6,17 +6,17 @@
     "factual_correctness"
   ],
   "skipped_metrics": [],
-  "selected_max_workers": 24,
-  "batch_size": 48,
+  "selected_max_workers": 28,
+  "batch_size": 56,
   "run_config": {
     "timeout": 300,
     "max_retries": 0,
     "max_wait": 30,
-    "max_workers": 24,
+    "max_workers": 28,
     "log_tenacity": true,
     "seed": 42
   },
-  "duration_seconds": 5.156682793996879,
-  "failure_rate": 1.0,
+  "duration_seconds": 1056.7943307559908,
+  "failure_rate": 0.04285714285714286,
   "tuning_trials": []
 }
