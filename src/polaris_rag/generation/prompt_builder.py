@@ -17,9 +17,42 @@ PromptBuilder
 from typing import Optional, List, Dict, Any, Union
 from pathlib import Path
 import json
+import re
 from jinja2 import Template
 import warnings
 from importlib import resources
+
+
+_ASSISTANT_SUFFIX_PATTERN = re.compile(r"(?:\n\s*)?Assistant:\s*$", re.IGNORECASE)
+
+
+def _strip_trailing_assistant_marker(text: str) -> str:
+    """Remove a trailing ``Assistant:`` cue from a rendered chat user turn."""
+    return _ASSISTANT_SUFFIX_PATTERN.sub("", text).rstrip()
+
+
+def _render_text(template_text: Optional[str], **kwargs: Any) -> str:
+    """Render a template fragment to text."""
+    if not template_text:
+        return ""
+    return Template(template_text).render(**kwargs)
+
+
+def _split_example_transcript(content: str) -> list[dict[str, str]] | None:
+    """Split a flattened ``User ... Assistant ...`` example into chat messages."""
+    for marker in ("\n\nAssistant:", "\nAssistant:"):
+        if marker not in content:
+            continue
+        user_content, assistant_content = content.split(marker, 1)
+        user_content = user_content.strip()
+        assistant_content = assistant_content.strip()
+        messages: list[dict[str, str]] = []
+        if user_content:
+            messages.append({"role": "user", "content": user_content})
+        if assistant_content:
+            messages.append({"role": "assistant", "content": assistant_content})
+        return messages
+    return None
 
 class PromptTemplate:
     """Represents a single named prompt template.
@@ -92,6 +125,43 @@ class PromptTemplate:
             parts.append(self.user)
         template_str = "\n".join(parts)
         return Template(template_str).render(**kwargs)
+
+    def render_messages(self, **kwargs) -> List[Dict[str, str]]:
+        """Render the template as structured chat messages."""
+        messages: List[Dict[str, str]] = []
+
+        system_text = _render_text(self.system, **kwargs).strip()
+        if system_text:
+            messages.append({"role": "system", "content": system_text})
+
+        for example in self.few_shot:
+            structured_messages = example.get("messages")
+            if isinstance(structured_messages, list):
+                for item in structured_messages:
+                    if not isinstance(item, dict):
+                        continue
+                    role = str(item.get("role", "user")).strip() or "user"
+                    content = _render_text(item.get("content", ""), **kwargs).strip()
+                    if content:
+                        messages.append({"role": role, "content": content})
+                continue
+
+            content = _render_text(example.get("content", ""), **kwargs).strip()
+            if not content:
+                continue
+            split_messages = _split_example_transcript(content)
+            if split_messages is not None:
+                messages.extend(split_messages)
+                continue
+
+            role = str(example.get("role", "user")).strip() or "user"
+            messages.append({"role": role, "content": _strip_trailing_assistant_marker(content)})
+
+        user_text = _strip_trailing_assistant_marker(_render_text(self.user, **kwargs)).strip()
+        if user_text:
+            messages.append({"role": "user", "content": user_text})
+
+        return messages
 
 
 class PromptBuilder:
@@ -361,3 +431,8 @@ class PromptBuilder:
         """
         template = self.get_template(name)
         return template.render(**kwargs)
+
+    def build_messages(self, name: str, **kwargs) -> List[Dict[str, str]]:
+        """Build and render structured chat messages by template name."""
+        template = self.get_template(name)
+        return template.render_messages(**kwargs)

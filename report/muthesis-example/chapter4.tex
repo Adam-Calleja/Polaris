@@ -4,11 +4,41 @@
 \section{System Overview}
 \label{sec:system-overview}
 
+This chapter describes Polaris, a retrieval-augmented assistant designed for supervised \ac{CSD3} support question answering. It implements the design requirements defined in Chapter~\ref{cha:problem} as a modular retrieval-augmented support system. Its architecture separates offline evidence preparation from runtime query handling so that corpus construction, metadata enrichment, retrieval, generation, and auditability can be controlled independently. The system indexes local documentation, external official documentation, and historical support tickets into source distinct stores, with authority and validity metadata used to preserve differences in reliability and operational relevance. This separation is central to Polaris's design, allowing runtime retrieval to combine heterogeneous evidence while still exposing the metadata needed for reviewable support responses. 
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=\textwidth]{graphs/polaris_architecture.pdf}
+    \caption[High-level architecture of Polaris.]{High-level architecture of Polaris. Offline corpus construction converts local documentation, external official documentation, and resolved support tickets into source-distinct retrieval stores enriched with authority and validity metadata. At runtime, the API coordinates registry-backed query-constraint extraction, multi-collection retrieval, configurable reranking, context resolution, prompt construction, generation, and reviewable evidence-grounded response output.}
+    \label{fig:polaris-architecture}
+\end{figure}
+
+Figure~\ref{fig:polaris-architecture} separates Polaris into offline corpus construction and runtime answer generation. Offline construction ingests the evidence sources, converts them into a consistent representation, enriches them with metadata, and indexes them into source-distinct Qdrant collections and document stores \citep{CollectionsQdrant}. At runtime, the FastAPI service coordinates registry-backed query interpretation, multi-collection retrieval, reranking, context resolution, prompt construction, LLM generation, and response packing. The observability layer records traces, prompt versions, feedback, and run artefacts, supporting reproducibility and making system behaviour auditable during evaluation and debugging. 
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=\textwidth]{graphs/polaris_query_flow.pdf}
+    \caption[Runtime query flow in Polaris.]{Runtime query flow in Polaris. A user query is validated by the API, converted into registry-backed retrieval constraints, matched against configured source-distinct stores, fused and reranked, resolved into final evidence contexts, passed to the generation prompt, and repackaged with output cleanup, evidence status, and trace outputs before a reviewable response is returned.}
+    \label{fig:polaris-query-flow}
+\end{figure}
+
+Figure~\ref{fig:polaris-query-flow} illustrates how an individual user query moves through the system. A query is first validated by the API and associated with runtime tracing information. The system then extracts registry-backed constraints, such as software, version, scope, and intent signals, before retrieving evidence from the configured source-distinct stores. Retrieved candidates are then fused and ranked using \ac{RRF}, with validity signals available where enabled. The selected evidence is resolved into final contexts, rendered into the generation prompt, and passed to the LLM. The generated answer is then packaged by trimming output drift, deriving an evidence status from the retrieved context count, and logging the relevant outputs for auditability.  
+
+The remainder of this chapter decomposes this overview into the main implementation decisions and design trade-offs made during Polaris's development. 
+
 \section{Baseline Systems}
 \label{sec:baseline-systems}
 
+This project implements a series of baseline systems to evaluate the impact of specific design choices in Polaris. Each baseline system is a controlled comparison version of the main Polaris system, with specific design choices removed to isolate their effects. The generator, API pipeline, prompt format, and evaluation protocol are held constant across all systems to ensure that any observed differences in performance can be attributed to the design choices being evaluated.
+
+Two baseline systems are implemented with respect to \hyperref[rq:1-source]{Research Question 1}. The first, \texttt{docs\_only}, is a documentation-only system that retrieves from the local \ac{CSD3} documentation collection. It measures how far local documentation alone can support user queries. The second, \texttt{tickets\_only}, is a ticket-only system that retrieves from the historical support ticket collection. It measures how far historical resolutions alone can support user queries. Comparing these baselines to the full Polaris system, which retrieves from both sources, allows us to evaluate whether combining heterogeneous evidence improves answer quality.
+
+A single baseline system is implemented with respect to \hyperref[rq:2-validity]{Research Question 2}. This baseline, \texttt{naive\_combined}, uses both local documentation and historical tickets with standard \ac{RRF} retrieval, but without validity-aware reranking. This allows us to evaluate whether the validity-aware reranking design in Polaris improves answer quality. Further retrieval variants are also implemented as part of an ablation study, however these are not treated as formal baselines. 
+
 \section{Corpus Ingestion and Representation}
 \label{sec:corpus-ingestion-representation}
+
+This section describes how the evidence sources are ingested, 
 
 \section{Authority Registry and Metadata Extraction}
 \label{sec:authority-registry-metadata-extraction}

@@ -38,11 +38,11 @@ This project is scoped to evidence-grounded first response assistance for \ac{CS
 To investigate the problems introduced by the heterogeneous evidence base, this project addresses the following research questions (RQ), along with the associated hypotheses (H):
 
 \begin{itemize}
-    \item \textbf{RQ1:} Does combining local \ac{CSD3} documentation with historical support-ticket evidence improve the factual correctness of answers, relative to single-source retrieval?
+    \item \textbf{RQ1:} \label{rq:1-source} Does combining local \ac{CSD3} documentation with historical support-ticket evidence improve the factual correctness of answers, relative to single-source retrieval?
     \begin{itemize}
         \item \textbf{H1:} Combined retrieval will outperform documentation-only and ticket-only baselines in factual correctness, particularly for case-specific troubleshooting queries for which local documentation and historical resolutions provide complementary evidence.  
     \end{itemize}
-    \item \textbf{RQ2:} Does validity-aware reranking improve the factual correctness and faithfulness of answers, relative to source-agnostic relevance-based retrieval over the same heterogeneous corpus?
+    \item \textbf{RQ2:} \label{rq:2-validity} Does validity-aware reranking improve the factual correctness and faithfulness of answers, relative to source-agnostic relevance-based retrieval over the same heterogeneous corpus?
     \begin{itemize}
         \item \textbf{H2:} Validity-aware reranking will outperform source-agnostic retrieval by reducing the selection of outdated, weakly authoritative, or locally inapplicable evidence, with the largest gains on version-sensitive and current-policy queries.
     \end{itemize}
@@ -113,3 +113,5 @@ The full experimental protocol is further described in Chapter \ref{cha:methodol
 \label{sec:structure}
 
 This report is structured with each subsequent chapter building on the previous, providing further background and context for the project. Chapter \ref{cha:background} reviews relevant literature on \ac{HPC} user support, \ac{RAG} systems, evidence quality in retrieval, and the evaluation of \ac{RAG} systems. Chapter \ref{cha:problem} formalises the problem definition, requirements, success criteria, and ethical considerations for the project. Chapter \ref{cha:system-design-implementation} describes the design and implementation of the system, including the corpus construction, retrieval design, and overall system architecture. Chapter \ref{cha:methodology} outlines the experimental methodology used to evaluate the research questions. Chapter \ref{cha:results} presents the results of the experiments, while Chapter \ref{cha:discussion} provides an analysis of the findings, their implications, and limitations. Finally, Chapter \ref{cha:conclusion} summarises the contributions of the project and suggests directions for future work.
+
+NOTE: 1.4 - SHORRTEN AND PUT INTO TABLE

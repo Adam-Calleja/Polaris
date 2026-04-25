@@ -134,8 +134,7 @@ class RAGPipeline:
             Language model interface for text generation.
         llm_generate_defaults : dict or None, optional
             Default keyword arguments forwarded to ``llm.generate``. If ``None``,
-            sensible defaults for stop sequences, temperature, and max tokens
-            are applied.
+            sensible defaults for temperature and max tokens are applied.
         """
         self.retriever = retriever
         self.prompt_builder = prompt_builder
@@ -144,7 +143,6 @@ class RAGPipeline:
         self.context_resolver = context_resolver
         self.query_constraint_parser = query_constraint_parser
         self.llm_generate_defaults = llm_generate_defaults or {
-            'stop': ['\nUser:', '\n\nUser:'],
             'temperature': 0.2,
             'max_tokens': 1024,
         }
@@ -302,18 +300,30 @@ class RAGPipeline:
                     question=query,
                     docs=resolved_contexts,
                 )
+                prompt_messages = None
+                if getattr(self.llm, "supports_chat_messages", False) and hasattr(self.prompt_builder, "build_messages"):
+                    prompt_messages = self.prompt_builder.build_messages(
+                        name=self.prompt_name,
+                        question=query,
+                        docs=resolved_contexts,
+                    )
                 set_span_outputs(
                     prompt_span,
                     {
                         "prompt": prompt,
+                        "prompt_messages": prompt_messages,
                         "resolved_contexts": self._serialize_nodes(resolved_contexts),
                     },
                 )
 
             gen_kwargs = {**self.llm_generate_defaults, **call_overrides}
+            generation_input = prompt_messages if prompt_messages is not None else prompt
+            generation_inputs = {"prompt": prompt, "llm_generate": gen_kwargs}
+            if prompt_messages is not None:
+                generation_inputs["prompt_messages"] = prompt_messages
             with start_span(
                 "rag.pipeline.generate",
-                inputs={"prompt": prompt, "llm_generate": gen_kwargs},
+                inputs=generation_inputs,
             ) as generation_span:
                 if request_budget is not None:
                     set_span_attributes(generation_span, request_budget.to_attributes())
@@ -326,7 +336,7 @@ class RAGPipeline:
                     )
                     gen_kwargs["timeout_seconds"] = generation_timeout_seconds
                 try:
-                    raw_output = self.llm.generate(prompt, **gen_kwargs)
+                    raw_output = self.llm.generate(generation_input, **gen_kwargs)
                 except RequestBudgetExceededError:
                     set_span_attributes(
                         generation_span,
@@ -402,6 +412,7 @@ class RAGPipeline:
                 pipeline_span,
                 {
                     "prompt": prompt,
+                    "prompt_messages": prompt_messages,
                     "raw_response": raw_output,
                     "response": response,
                     "retrieved_contexts": self._serialize_nodes(resolved_contexts),
@@ -430,6 +441,7 @@ class RAGPipeline:
 
         return {
             "prompt": prompt,
+            "prompt_messages": prompt_messages,
             "raw_response": raw_output,
             "response": response,
             "source_nodes": resolved_contexts,

@@ -47,6 +47,19 @@ class _FakePromptBuilder:
         return f"PROMPT::{name}::{kwargs.get('question')}"
 
 
+class _FakeChatPromptBuilder(_FakePromptBuilder):
+    def __init__(self) -> None:
+        super().__init__()
+        self.message_calls: list[dict[str, object]] = []
+
+    def build_messages(self, name: str, **kwargs):
+        self.message_calls.append({"name": name, "kwargs": dict(kwargs)})
+        return [
+            {"role": "system", "content": f"SYSTEM::{name}"},
+            {"role": "user", "content": f"USER::{kwargs.get('question')}"},
+        ]
+
+
 class _FakeLLM:
     def __init__(self) -> None:
         self.calls: list[dict[str, object]] = []
@@ -54,6 +67,10 @@ class _FakeLLM:
     def generate(self, prompt: str, **kwargs):
         self.calls.append({"prompt": prompt, "kwargs": dict(kwargs)})
         return "ANSWER"
+
+
+class _FakeChatLLM(_FakeLLM):
+    supports_chat_messages = True
 
 
 class _FakeResolver:
@@ -169,6 +186,29 @@ def test_pipeline_uses_resolved_contexts_for_prompt_and_output() -> None:
     assert docs[0].node.text == "FULL-TICKET"
     assert result["source_nodes"][0].node.id_ == "ticket-1"
     assert result["raw_source_nodes"][0].node.id_ == "doc-1"
+
+
+def test_pipeline_uses_structured_messages_for_chat_models() -> None:
+    retriever = _FakeRetriever()
+    prompt_builder = _FakeChatPromptBuilder()
+    llm = _FakeChatLLM()
+
+    pipeline = RAGPipeline(
+        retriever=retriever,
+        prompt_builder=prompt_builder,
+        prompt_name="hpc_prompt",
+        llm=llm,
+    )
+
+    result = pipeline.run("How do I submit a job?")
+
+    assert result["prompt"] == "PROMPT::hpc_prompt::How do I submit a job?"
+    assert result["prompt_messages"] == [
+        {"role": "system", "content": "SYSTEM::hpc_prompt"},
+        {"role": "user", "content": "USER::How do I submit a job?"},
+    ]
+    assert llm.calls[0]["prompt"] == result["prompt_messages"]
+    assert prompt_builder.message_calls[0]["kwargs"]["docs"][0].node.id_ == "doc-1"
 
 
 def test_pipeline_includes_and_forwards_query_constraints() -> None:

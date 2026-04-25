@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.3.18)  23 APR 2026 00:57
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.3.18)  25 APR 2026 23:30
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -435,7 +435,7 @@ although it is yet undefined on input line 7.
 Package acronym Info: Label `acro:HPC' newly defined as it shall be overridden
 although it is yet undefined on input line 7.
 Package acronym Info: Label `acro:RCS' overridden on input line 7.
-<graphs/ticket_counts.pdf, id=567, 431.17964pt x 254.86092pt>
+<graphs/ticket_counts.pdf, id=575, 431.17964pt x 254.86092pt>
 File: graphs/ticket_counts.pdf Graphic file (type pdf)
 <use graphs/ticket_counts.pdf>
 Package pdftex.def Info: graphs/ticket_counts.pdf  used on input line 13.
@@ -1375,12 +1375,27 @@ Overfull \hbox (2.73805pt too wide) has occurred while \output is active
 
  (./chapter4.tex
 Chapter 4.
-) [40
+<graphs/polaris_architecture.pdf, id=1150, 522.33847pt x 375.71468pt>
+File: graphs/polaris_architecture.pdf Graphic file (type pdf)
+<use graphs/polaris_architecture.pdf>
+Package pdftex.def Info: graphs/polaris_architecture.pdf  used on input line 11.
+(pdftex.def)             Requested size: 412.56496pt x 296.76547pt.
+<graphs/polaris_query_flow.pdf, id=1153, 510.96394pt x 283.3245pt>
+File: graphs/polaris_query_flow.pdf Graphic file (type pdf)
+<use graphs/polaris_query_flow.pdf>
+Package pdftex.def Info: graphs/polaris_query_flow.pdf  used on input line 20.
+(pdftex.def)             Requested size: 412.56496pt x 228.77393pt.
+Package acronym Info: Label `acro:RRF' newly defined as it shall be overridden
+although it is yet undefined on input line 25.
+[40
 
 
 
 
 ]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [41 <./graphs/polaris_architecture.pdf>] [42 <./graphs/polaris_query_flow.pdf>]) [43]
 \openout2 = `chapter5.aux'.
 
  (./chapter5.tex
@@ -1388,7 +1403,7 @@ Chapter 5.
 )
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
- [41
+ [44
 
 
 
@@ -1396,12 +1411,12 @@ Underfull \vbox (badness 10000) has occurred while \output is active []
 ]
 Overfull \vbox (233.79532pt too high) has occurred while \output is active []
 
- [42]
+ [45]
 \openout2 = `chapter6.aux'.
 
  (./chapter6.tex
 Chapter 6.
-) [43
+) [46
 
 
 
@@ -1411,7 +1426,7 @@ Chapter 6.
 
  (./chapter7.tex
 Chapter 7.
-) [44
+) [47
 
 
 
@@ -1421,12 +1436,12 @@ Chapter 7.
 
  (./chapter8.tex
 Chapter 8.
-) [45
+) [48
 
 
 
 
-] (./report.bbl [46
+] (./report.bbl [49
 
 
 
@@ -1440,7 +1455,7 @@ Underfull \hbox (badness 10000) in paragraph at lines 45--46
 []\OT1/ptm/m/n/12 ``CSD3 Up-grade Oc-to-ber 2021 --- CSD3 1.0 doc-u-men-ta-tion,''
  []
 
-[47] [48]
+[50] [51]
 LaTeX Font Info:    Font shape `OMS/ptm/m/n' in size <12> not available
 (Font)              Font shape `OMS/pzccm/m/n' tried instead on input line 87.
 
@@ -1453,7 +1468,12 @@ Underfull \hbox (badness 2865) in paragraph at lines 87--88
 \OT1/ptm/m/n/12 tion \OMS/pzccm/m/n/12 j \OT1/ptm/m/n/12 Pro-ceed-ings of the AAAI Con-fer-ence on Ar-ti-fi-cial In-tel-li-gence,''
  []
 
-) [49]
+
+Underfull \hbox (badness 10000) in paragraph at lines 93--94
+[]\OT1/ptm/m/n/12 ``Collections - Qdrant,'' https://qdrant.tech/documentation/manage-
+ []
+
+) [52]
 \openout2 = `appendix1.aux'.
 
  (./appendix1.tex
@@ -1658,10 +1678,10 @@ Underfull \hbox (badness 10000) in paragraph at lines 82--82
  []
 
 
-ignored: Infinite glue shrinkage found in box being split [50
+ignored: Infinite glue shrinkage found in box being split [53
 
 
-]) [51]
+]) [54]
 \openout2 = `appendix2.aux'.
 
  (./appendix2.tex
@@ -1692,12 +1712,12 @@ Overfull \hbox (26.30994pt too wide) in alignment at lines 37--74
  []
 
 
-ignored: Infinite glue shrinkage found in box being split [52
+ignored: Infinite glue shrinkage found in box being split [55
 
 
 
 
-]) [53] (./report.aux (./chapter1.aux) (./chapter2.aux) (./chapter3.aux) (./chapter4.aux) (./chapter5.aux) (./chapter6.aux) (./chapter7.aux) (./chapter8.aux) (./appendix1.aux) (./appendix2.aux))
+]) [56] (./report.aux (./chapter1.aux) (./chapter2.aux) (./chapter3.aux) (./chapter4.aux) (./chapter5.aux) (./chapter6.aux) (./chapter7.aux) (./chapter8.aux) (./appendix1.aux) (./appendix2.aux))
  ***********
 LaTeX2e <2025-11-01>
 L3 programming layer <2026-01-19>
@@ -1710,18 +1730,18 @@ Package rerunfilecheck Info: File `report.out' has not changed.
 (rerunfilecheck)             Checksum: F3FB4EF29872BF3EFF9ECE717AC3C61A;16736.
  ) 
 Here is how much of TeX's memory you used:
- 12476 strings out of 467525
- 193769 string characters out of 5418982
- 624021 words of memory out of 5000000
- 40935 multiletter control sequences out of 15000+600000
+ 12511 strings out of 467525
+ 194635 string characters out of 5418982
+ 624361 words of memory out of 5000000
+ 40962 multiletter control sequences out of 15000+600000
  676807 words of font info for 129 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  75i,11n,79p,2002b,695s stack positions out of 10000i,1000n,20000p,200000b,200000s
-</usr/local/texlive/2026/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
-Output written on report.pdf (53 pages, 221817 bytes).
+</usr/local/texlive/2026/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/helvetic/uhvb8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/helvetic/uhvr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
+Output written on report.pdf (56 pages, 259453 bytes).
 PDF statistics:
- 1315 PDF objects out of 1440 (max. 8388607)
- 1193 compressed objects within 12 object streams
- 194 named destinations out of 1000 (max. 500000)
- 670 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 1375 PDF objects out of 1440 (max. 8388607)
+ 1241 compressed objects within 13 object streams
+ 202 named destinations out of 1000 (max. 500000)
+ 680 words of extra memory for PDF output out of 10000 (max. 10000000)
 
