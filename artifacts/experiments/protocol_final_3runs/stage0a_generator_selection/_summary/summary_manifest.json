@@ -1,8 +1,9 @@
 {
   "stage_name": "stage0a_generator_selection",
-  "rows": 6,
+  "rows": 9,
   "conditions": [
     "devstral_naive_combined",
+    "llama33_naive_combined",
     "mistral_large_2407_naive_combined"
   ],
   "metrics": [

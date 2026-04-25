@@ -1,36 +1,36 @@
 {
   "stage_name": "stage0a_generator_selection",
   "stage_type": "evaluation_grid",
-  "execution_phase": "both",
+  "execution_phase": "evaluate",
   "dry_run": false,
   "dataset_path": "/app/data/test/ragas_one_hop_eval_dataset_final.dev.jsonl",
   "annotations_file": "/app/data/test/benchmark_annotations_final.csv",
   "repeats": 3,
   "conditions": [
     {
-      "name": "devstral_naive_combined",
-      "slug": "devstral_naive_combined",
-      "config_path": "/app/.polaris_experiment_stage0a_generator_selection__devstral_naive_combined.yaml",
+      "name": "llama33_naive_combined",
+      "slug": "llama33_naive_combined",
+      "config_path": "/app/.polaris_experiment_stage0a_generator_selection__llama33_naive_combined.yaml",
       "preset": "naive_combined",
-      "execution_phase": "both",
+      "execution_phase": "evaluate",
       "ingestion_commands": [],
       "runs": [
         {
           "repeat_index": 1,
-          "execution_phase": "both",
-          "output_dir": "/app/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/devstral_naive_combined/run_01",
-          "prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/devstral_naive_combined/run_01/prepared_input.json",
+          "execution_phase": "evaluate",
+          "output_dir": "/app/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/llama33_naive_combined/run_01",
+          "prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/llama33_naive_combined/run_01/prepared_input.json",
           "command": [
             "/usr/local/bin/python",
             "/app/scripts/evaluate_rag.py",
             "-c",
-            "/app/.polaris_experiment_stage0a_generator_selection__devstral_naive_combined.yaml",
+            "/app/.polaris_experiment_stage0a_generator_selection__llama33_naive_combined.yaml",
             "--dataset-path",
             "/app/data/test/ragas_one_hop_eval_dataset_final.dev.jsonl",
             "--prepared-path",
-            "/app/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/devstral_naive_combined/run_01/prepared_input.json",
+            "/app/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/llama33_naive_combined/run_01/prepared_input.json",
             "--output-dir",
-            "/app/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/devstral_naive_combined/run_01",
+            "/app/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/llama33_naive_combined/run_01",
             "--annotations-file",
             "/app/data/test/benchmark_annotations_final.csv",
             "--preset",
@@ -42,25 +42,26 @@
             "--generation-workers",
             "16",
             "--evaluation-policy",
-            "official"
+            "official",
+            "--reuse-prepared"
           ]
         },
         {
           "repeat_index": 2,
-          "execution_phase": "both",
-          "output_dir": "/app/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/devstral_naive_combined/run_02",
-          "prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/devstral_naive_combined/run_02/prepared_input.json",
+          "execution_phase": "evaluate",
+          "output_dir": "/app/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/llama33_naive_combined/run_02",
+          "prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/llama33_naive_combined/run_02/prepared_input.json",
           "command": [
             "/usr/local/bin/python",
             "/app/scripts/evaluate_rag.py",
             "-c",
-            "/app/.polaris_experiment_stage0a_generator_selection__devstral_naive_combined.yaml",
+            "/app/.polaris_experiment_stage0a_generator_selection__llama33_naive_combined.yaml",
             "--dataset-path",
             "/app/data/test/ragas_one_hop_eval_dataset_final.dev.jsonl",
             "--prepared-path",
-            "/app/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/devstral_naive_combined/run_02/prepared_input.json",
+            "/app/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/llama33_naive_combined/run_02/prepared_input.json",
             "--output-dir",
-            "/app/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/devstral_naive_combined/run_02",
+            "/app/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/llama33_naive_combined/run_02",
             "--annotations-file",
             "/app/data/test/benchmark_annotations_final.csv",
             "--preset",
@@ -72,25 +73,26 @@
             "--generation-workers",
             "16",
             "--evaluation-policy",
-            "official"
+            "official",
+            "--reuse-prepared"
           ]
         },
         {
           "repeat_index": 3,
-          "execution_phase": "both",
-          "output_dir": "/app/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/devstral_naive_combined/run_03",
-          "prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/devstral_naive_combined/run_03/prepared_input.json",
+          "execution_phase": "evaluate",
+          "output_dir": "/app/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/llama33_naive_combined/run_03",
+          "prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/llama33_naive_combined/run_03/prepared_input.json",
           "command": [
             "/usr/local/bin/python",
             "/app/scripts/evaluate_rag.py",
             "-c",
-            "/app/.polaris_experiment_stage0a_generator_selection__devstral_naive_combined.yaml",
+            "/app/.polaris_experiment_stage0a_generator_selection__llama33_naive_combined.yaml",
             "--dataset-path",
             "/app/data/test/ragas_one_hop_eval_dataset_final.dev.jsonl",
             "--prepared-path",
-            "/app/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/devstral_naive_combined/run_03/prepared_input.json",
+            "/app/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/llama33_naive_combined/run_03/prepared_input.json",
             "--output-dir",
-            "/app/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/devstral_naive_combined/run_03",
+            "/app/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/llama33_naive_combined/run_03",
             "--annotations-file",
             "/app/data/test/benchmark_annotations_final.csv",
             "--preset",
@@ -102,12 +104,13 @@
             "--generation-workers",
             "16",
             "--evaluation-policy",
-            "official"
+            "official",
+            "--reuse-prepared"
           ]
         }
       ],
       "ingestion_skipped": false
     }
   ],
-  "executed_at": "2026-04-25T19:23:48.018098+00:00"
+  "executed_at": "2026-04-25T20:42:59.659012+00:00"
 }

@@ -81,6 +81,22 @@
   },
   {
     "stage_name": "stage0a_generator_selection",
+    "condition_name": "llama33_naive_combined",
+    "condition_slug": "llama33_naive_combined",
+    "repeat_index": 1,
+    "run_dir": "/app/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/llama33_naive_combined/run_01",
+    "config_file": "/app/.polaris_experiment_stage0a_generator_selection__llama33_naive_combined.yaml",
+    "preset_name": "naive_combined",
+    "condition_fingerprint": "2cbc46128ba5c89783f18a05b44b0b9b0301de6fd2ae58531e572d7256fa63c3",
+    "rows": 70,
+    "duration_seconds": 825.0921152549563,
+    "failure_rate": 0.02857142857142857,
+    "selected_max_workers": 28,
+    "factual_correctness": 0.31074626865671634,
+    "faithfulness": 0.5386312749484106
+  },
+  {
+    "stage_name": "stage0a_generator_selection",
     "condition_name": "mistral_large_2407_naive_combined",
     "condition_slug": "mistral_large_2407_naive_combined",
     "repeat_index": 3,
@@ -94,5 +110,37 @@
     "selected_max_workers": 28,
     "factual_correctness": 0.3097014925373136,
     "faithfulness": 0.5023769623884041
+  },
+  {
+    "stage_name": "stage0a_generator_selection",
+    "condition_name": "llama33_naive_combined",
+    "condition_slug": "llama33_naive_combined",
+    "repeat_index": 2,
+    "run_dir": "/app/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/llama33_naive_combined/run_02",
+    "config_file": "/app/.polaris_experiment_stage0a_generator_selection__llama33_naive_combined.yaml",
+    "preset_name": "naive_combined",
+    "condition_fingerprint": "2cbc46128ba5c89783f18a05b44b0b9b0301de6fd2ae58531e572d7256fa63c3",
+    "rows": 70,
+    "duration_seconds": 743.8713322399999,
+    "failure_rate": 0.14285714285714285,
+    "selected_max_workers": 28,
+    "factual_correctness": 0.09402985074626867,
+    "faithfulness": 0.33091425346142334
+  },
+  {
+    "stage_name": "stage0a_generator_selection",
+    "condition_name": "llama33_naive_combined",
+    "condition_slug": "llama33_naive_combined",
+    "repeat_index": 3,
+    "run_dir": "/app/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/llama33_naive_combined/run_03",
+    "config_file": "/app/.polaris_experiment_stage0a_generator_selection__llama33_naive_combined.yaml",
+    "preset_name": "naive_combined",
+    "condition_fingerprint": "2cbc46128ba5c89783f18a05b44b0b9b0301de6fd2ae58531e572d7256fa63c3",
+    "rows": 70,
+    "duration_seconds": 663.0527623399976,
+    "failure_rate": 0.16428571428571428,
+    "selected_max_workers": 28,
+    "factual_correctness": 0.07261538461538462,
+    "faithfulness": 0.2974358974358975
   }
 ]

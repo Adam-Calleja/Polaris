@@ -1,3 +1,4 @@
 condition_name,runs,preset_name,duration_seconds_mean,duration_seconds_min,duration_seconds_max,duration_seconds_std,failure_rate_mean,failure_rate_min,failure_rate_max,failure_rate_std,factual_correctness_mean,factual_correctness_min,factual_correctness_max,factual_correctness_std,faithfulness_mean,faithfulness_min,faithfulness_max,faithfulness_std
 devstral_naive_combined,3,naive_combined,745.122349,733.672625,759.309356,10.643622,0.016667,0.014286,0.021429,0.003367,0.317883,0.316471,0.319118,0.001088,0.402234,0.385517,0.427016,0.017876
+llama33_naive_combined,3,naive_combined,744.005403,663.052762,825.092115,66.152357,0.111905,0.028571,0.164286,0.059571,0.159131,0.072615,0.310746,0.107564,0.388994,0.297436,0.538631,0.106689
 mistral_large_2407_naive_combined,3,naive_combined,898.461966,865.244781,958.827118,42.756462,0.038095,0.028571,0.050000,0.008909,0.315490,0.309701,0.320308,0.004384,0.485721,0.457765,0.502377,0.019888
