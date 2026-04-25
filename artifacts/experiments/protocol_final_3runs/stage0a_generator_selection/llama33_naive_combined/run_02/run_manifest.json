@@ -16,13 +16,13 @@
       "log_tenacity": true,
       "seed": 42
     },
-    "duration_seconds": 743.8713322399999,
-    "failure_rate": 0.14285714285714285,
+    "duration_seconds": 819.1123021930107,
+    "failure_rate": 0.05,
     "tuning_trials": []
   },
   "preset_name": "naive_combined",
   "preset_description": "Naive docs+tickets baseline with RRF reranking.",
-  "condition_fingerprint": "2cbc46128ba5c89783f18a05b44b0b9b0301de6fd2ae58531e572d7256fa63c3",
+  "condition_fingerprint": "55e96655000984864840fe54a4149f6d1b2f48bbc34ded179d3c8d8f7872a9c6",
   "condition_summary": {
     "retriever_type": "multi_collection",
     "source_type": "vector",
@@ -59,7 +59,7 @@
           }
         },
         "name": "docs",
-        "collection_name": "support_docs_stage0a"
+        "collection_name": "exp_docs_cs1200_ov80"
       },
       {
         "top_k": 5,
@@ -79,7 +79,7 @@
           }
         },
         "name": "tickets",
-        "collection_name": "support_tickets_stage0a"
+        "collection_name": "exp_tickets_cs1000_ov0"
       }
     ],
     "retriever_profile": {
@@ -118,7 +118,7 @@
             }
           },
           "name": "docs",
-          "collection_name": "support_docs_stage0a"
+          "collection_name": "exp_docs_cs1200_ov80"
         },
         {
           "top_k": 5,
@@ -138,11 +138,11 @@
             }
           },
           "name": "tickets",
-          "collection_name": "support_tickets_stage0a"
+          "collection_name": "exp_tickets_cs1000_ov0"
         }
       ]
     },
-    "retriever_fingerprint": "7b04fea3065b51dcb614998ebe179b8af6a5c47610031db3743f390f2f558eb1",
+    "retriever_fingerprint": "398d0292461b20cbc46788f04a783da796810bded8e29db418186efb96c81325",
     "reranker_profile": {
       "type": "rrf",
       "rrf_k": 60,
@@ -157,7 +157,7 @@
     "dataset_path": "/app/data/test/ragas_one_hop_eval_dataset_final.dev.jsonl",
     "annotations_path": "/app/data/test/benchmark_annotations_final.csv",
     "prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/llama33_naive_combined/run_02/prepared_input.json",
-    "reuse_prepared": true,
+    "reuse_prepared": false,
     "allow_stale_prepared": false,
     "query_field": "query",
     "reference_field": "expected_answer",
@@ -187,9 +187,9 @@
     "generator_profile": {
       "mode": "pipeline",
       "generator_llm": {
-        "type": "openai_like",
-        "model_name": "meta-llama/Llama-3.3-70B-Instruct",
-        "api_base": "http://llama33-70b:8080/v1",
+        "type": "openai_chat",
+        "model_name": "meta-llama/Llama-3.3-70B-Instruct:novita",
+        "api_base": "https://router.huggingface.co/v1",
         "request_timeout": 90,
         "max_retries": 1,
         "model_kwargs": {
@@ -203,7 +203,7 @@
       },
       "llm_generate": {}
     },
-    "generator_fingerprint": "7332e13455d286644f81e288d04015cb1bbf352c2a669e22edc47f2a9a8e9a0b",
+    "generator_fingerprint": "c60bdf82dde7e46f1eb6c7bb842d1819b6fc9330734d2d11d07a369e77a4d042",
     "retriever_profile": {
       "type": "multi_collection",
       "final_top_k": 8,
@@ -248,14 +248,14 @@
             "type": "vector",
             "vector_store": {
               "backend": "qdrant",
-              "collection_name": "support_docs_stage0a",
+              "collection_name": "exp_docs_cs1200_ov80",
               "dense_model": "Qwen/Qwen3-Embedding-8B",
               "dense_vector_name": "dense",
               "sparse_model": null,
               "sparse_vector_name": "sparse"
             }
           },
-          "retriever_fingerprint": "bbb2dd254cec6f9900140af8eefd5060d76bbf820f87833470e881f169753980"
+          "retriever_fingerprint": "9b7770b5b46ceed77b485f088dc03a5f686b517dcb5daedf363d8ac1b42ad96a"
         },
         "tickets": {
           "settings": {
@@ -297,18 +297,18 @@
             "type": "vector",
             "vector_store": {
               "backend": "qdrant",
-              "collection_name": "support_tickets_stage0a",
+              "collection_name": "exp_tickets_cs1000_ov0",
               "dense_model": "Qwen/Qwen3-Embedding-8B",
               "dense_vector_name": "dense",
               "sparse_model": null,
               "sparse_vector_name": "sparse"
             }
           },
-          "retriever_fingerprint": "93892dd81d61f42b10e07228a7697686b82d46ddbd72e4ce17d53431413109d3"
+          "retriever_fingerprint": "3bd8993042f60056e3bdb5c7f633f4f7c4a2cbe1e9da5570051429dd063e2509"
         }
       }
     },
-    "retriever_fingerprint": "8f1fda64ab5f5d27826a153183b36aa9aef582eee8396130969b055aa938b572",
+    "retriever_fingerprint": "7208b930a8368e8c3f908f1acaec6a30f3b2fcfaa6cfced546b21756d2096c16",
     "reranker_profile": {
       "type": "rrf",
       "rrf_k": 60,
@@ -357,7 +357,7 @@
             }
           },
           "name": "docs",
-          "collection_name": "support_docs_stage0a"
+          "collection_name": "exp_docs_cs1200_ov80"
         },
         {
           "top_k": 5,
@@ -377,7 +377,7 @@
             }
           },
           "name": "tickets",
-          "collection_name": "support_tickets_stage0a"
+          "collection_name": "exp_tickets_cs1000_ov0"
         }
       ],
       "retriever_profile": {
@@ -416,7 +416,7 @@
               }
             },
             "name": "docs",
-            "collection_name": "support_docs_stage0a"
+            "collection_name": "exp_docs_cs1200_ov80"
           },
           {
             "top_k": 5,
@@ -436,11 +436,11 @@
               }
             },
             "name": "tickets",
-            "collection_name": "support_tickets_stage0a"
+            "collection_name": "exp_tickets_cs1000_ov0"
           }
         ]
       },
-      "retriever_fingerprint": "7b04fea3065b51dcb614998ebe179b8af6a5c47610031db3743f390f2f558eb1",
+      "retriever_fingerprint": "398d0292461b20cbc46788f04a783da796810bded8e29db418186efb96c81325",
       "reranker_profile": {
         "type": "rrf",
         "rrf_k": 60,
@@ -451,62 +451,50 @@
         "trace_enabled": true
       }
     },
-    "condition_fingerprint": "2cbc46128ba5c89783f18a05b44b0b9b0301de6fd2ae58531e572d7256fa63c3",
+    "condition_fingerprint": "55e96655000984864840fe54a4149f6d1b2f48bbc34ded179d3c8d8f7872a9c6",
     "annotation_rows": 70,
     "prep_total_rows": 70,
-    "prep_success_rows": 68,
-    "prep_failed_rows": 2,
-    "prep_elapsed_seconds": 0.0,
-    "prep_rate_rows_per_second": 0.0,
-    "prep_error_classes": {
-      "BadRequestError": 2
-    },
-    "prep_failure_classes": {
-      "api_internal_error": 2
-    },
-    "prep_failure_class_rates": {
-      "api_internal_error": 0.02857142857142857
-    },
-    "prep_failure_stages": {
-      "api": 2
-    },
-    "prep_failure_stage_rates": {
-      "api": 0.02857142857142857
-    },
+    "prep_success_rows": 70,
+    "prep_failed_rows": 0,
+    "prep_elapsed_seconds": 257.40919314697385,
+    "prep_rate_rows_per_second": 0.27194055948122975,
+    "prep_error_classes": {},
+    "prep_failure_classes": {},
+    "prep_failure_class_rates": {},
+    "prep_failure_stages": {},
+    "prep_failure_stage_rates": {},
     "prep_response_statuses": {
-      "ok": 68,
-      "error": 2
+      "ok": 70
     },
     "prep_response_status_rates": {
-      "ok": 0.9714285714285714,
-      "error": 0.02857142857142857
+      "ok": 1.0
     },
-    "prep_coverage": 0.9714285714285714,
+    "prep_coverage": 1.0,
     "prep_empty_response_rate": 0.0,
-    "infra_failure_rate": 0.02857142857142857,
-    "run_validity": "INVALID",
+    "infra_failure_rate": 0.0,
+    "run_validity": "VALID",
     "run_policy": "official",
     "latency_budget_report": {
-      "count": 68,
+      "count": 70,
       "elapsed_ms": {
-        "p50": 73868.0,
-        "p90": 92372.0,
-        "p95": 92672.4,
-        "max": 92987.0,
-        "mean": 73197.42647058824
+        "p50": 45790.0,
+        "p90": 80266.0,
+        "p95": 86830.15,
+        "max": 107545.0,
+        "mean": 40811.92857142857
       },
       "budget_utilization": {
-        "p50": 0.4103777777777778,
-        "p90": 0.5131777777777777,
-        "max": 0.5165944444444445
+        "p50": 0.2543888888888889,
+        "p90": 0.4459222222222222,
+        "max": 0.5974722222222222
       }
     },
-    "prepared_source": "existing",
-    "prepared_validation_skipped": false
+    "persisted_prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/llama33_naive_combined/run_02/prepared_input.json",
+    "prepared_source": "generated"
   },
   "tune_concurrency": true,
   "trace_evaluator_llm": false,
-  "mlflow_parent_run_id": "5338c1ea07364d6bb08f2bcff8d381ca",
+  "mlflow_parent_run_id": "d59b312bb4c440c9a5a437a06c897fca",
   "config_file": "/app/.polaris_experiment_stage0a_generator_selection__llama33_naive_combined.yaml",
   "artifacts": {
     "scores_csv": "/app/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/llama33_naive_combined/run_02/scores.csv",
@@ -554,7 +542,7 @@
             }
           },
           "name": "docs",
-          "collection_name": "support_docs_stage0a"
+          "collection_name": "exp_docs_cs1200_ov80"
         },
         {
           "top_k": 5,
@@ -574,7 +562,7 @@
             }
           },
           "name": "tickets",
-          "collection_name": "support_tickets_stage0a"
+          "collection_name": "exp_tickets_cs1000_ov0"
         }
       ],
       "retriever_profile": {
@@ -613,7 +601,7 @@
               }
             },
             "name": "docs",
-            "collection_name": "support_docs_stage0a"
+            "collection_name": "exp_docs_cs1200_ov80"
           },
           {
             "top_k": 5,
@@ -633,11 +621,11 @@
               }
             },
             "name": "tickets",
-            "collection_name": "support_tickets_stage0a"
+            "collection_name": "exp_tickets_cs1000_ov0"
           }
         ]
       },
-      "retriever_fingerprint": "7b04fea3065b51dcb614998ebe179b8af6a5c47610031db3743f390f2f558eb1",
+      "retriever_fingerprint": "398d0292461b20cbc46788f04a783da796810bded8e29db418186efb96c81325",
       "reranker_profile": {
         "type": "rrf",
         "rrf_k": 60,
@@ -648,12 +636,12 @@
         "trace_enabled": true
       }
     },
-    "condition_fingerprint": "2cbc46128ba5c89783f18a05b44b0b9b0301de6fd2ae58531e572d7256fa63c3",
+    "condition_fingerprint": "55e96655000984864840fe54a4149f6d1b2f48bbc34ded179d3c8d8f7872a9c6",
     "dataset": {
       "dataset_path": "/app/data/test/ragas_one_hop_eval_dataset_final.dev.jsonl",
       "annotations_path": "/app/data/test/benchmark_annotations_final.csv",
       "prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/llama33_naive_combined/run_02/prepared_input.json",
-      "reuse_prepared": true,
+      "reuse_prepared": false,
       "allow_stale_prepared": false,
       "query_field": "query",
       "reference_field": "expected_answer",
@@ -683,9 +671,9 @@
       "generator_profile": {
         "mode": "pipeline",
         "generator_llm": {
-          "type": "openai_like",
-          "model_name": "meta-llama/Llama-3.3-70B-Instruct",
-          "api_base": "http://llama33-70b:8080/v1",
+          "type": "openai_chat",
+          "model_name": "meta-llama/Llama-3.3-70B-Instruct:novita",
+          "api_base": "https://router.huggingface.co/v1",
           "request_timeout": 90,
           "max_retries": 1,
           "model_kwargs": {
@@ -699,7 +687,7 @@
         },
         "llm_generate": {}
       },
-      "generator_fingerprint": "7332e13455d286644f81e288d04015cb1bbf352c2a669e22edc47f2a9a8e9a0b",
+      "generator_fingerprint": "c60bdf82dde7e46f1eb6c7bb842d1819b6fc9330734d2d11d07a369e77a4d042",
       "retriever_profile": {
         "type": "multi_collection",
         "final_top_k": 8,
@@ -744,14 +732,14 @@
               "type": "vector",
               "vector_store": {
                 "backend": "qdrant",
-                "collection_name": "support_docs_stage0a",
+                "collection_name": "exp_docs_cs1200_ov80",
                 "dense_model": "Qwen/Qwen3-Embedding-8B",
                 "dense_vector_name": "dense",
                 "sparse_model": null,
                 "sparse_vector_name": "sparse"
               }
             },
-            "retriever_fingerprint": "bbb2dd254cec6f9900140af8eefd5060d76bbf820f87833470e881f169753980"
+            "retriever_fingerprint": "9b7770b5b46ceed77b485f088dc03a5f686b517dcb5daedf363d8ac1b42ad96a"
           },
           "tickets": {
             "settings": {
@@ -793,18 +781,18 @@
               "type": "vector",
               "vector_store": {
                 "backend": "qdrant",
-                "collection_name": "support_tickets_stage0a",
+                "collection_name": "exp_tickets_cs1000_ov0",
                 "dense_model": "Qwen/Qwen3-Embedding-8B",
                 "dense_vector_name": "dense",
                 "sparse_model": null,
                 "sparse_vector_name": "sparse"
               }
             },
-            "retriever_fingerprint": "93892dd81d61f42b10e07228a7697686b82d46ddbd72e4ce17d53431413109d3"
+            "retriever_fingerprint": "3bd8993042f60056e3bdb5c7f633f4f7c4a2cbe1e9da5570051429dd063e2509"
           }
         }
       },
-      "retriever_fingerprint": "8f1fda64ab5f5d27826a153183b36aa9aef582eee8396130969b055aa938b572",
+      "retriever_fingerprint": "7208b930a8368e8c3f908f1acaec6a30f3b2fcfaa6cfced546b21756d2096c16",
       "reranker_profile": {
         "type": "rrf",
         "rrf_k": 60,
@@ -853,7 +841,7 @@
               }
             },
             "name": "docs",
-            "collection_name": "support_docs_stage0a"
+            "collection_name": "exp_docs_cs1200_ov80"
           },
           {
             "top_k": 5,
@@ -873,7 +861,7 @@
               }
             },
             "name": "tickets",
-            "collection_name": "support_tickets_stage0a"
+            "collection_name": "exp_tickets_cs1000_ov0"
           }
         ],
         "retriever_profile": {
@@ -912,7 +900,7 @@
                 }
               },
               "name": "docs",
-              "collection_name": "support_docs_stage0a"
+              "collection_name": "exp_docs_cs1200_ov80"
             },
             {
               "top_k": 5,
@@ -932,11 +920,11 @@
                 }
               },
               "name": "tickets",
-              "collection_name": "support_tickets_stage0a"
+              "collection_name": "exp_tickets_cs1000_ov0"
             }
           ]
         },
-        "retriever_fingerprint": "7b04fea3065b51dcb614998ebe179b8af6a5c47610031db3743f390f2f558eb1",
+        "retriever_fingerprint": "398d0292461b20cbc46788f04a783da796810bded8e29db418186efb96c81325",
         "reranker_profile": {
           "type": "rrf",
           "rrf_k": 60,
@@ -947,66 +935,54 @@
           "trace_enabled": true
         }
       },
-      "condition_fingerprint": "2cbc46128ba5c89783f18a05b44b0b9b0301de6fd2ae58531e572d7256fa63c3",
+      "condition_fingerprint": "55e96655000984864840fe54a4149f6d1b2f48bbc34ded179d3c8d8f7872a9c6",
       "annotation_rows": 70,
       "prep_total_rows": 70,
-      "prep_success_rows": 68,
-      "prep_failed_rows": 2,
-      "prep_elapsed_seconds": 0.0,
-      "prep_rate_rows_per_second": 0.0,
-      "prep_error_classes": {
-        "BadRequestError": 2
-      },
-      "prep_failure_classes": {
-        "api_internal_error": 2
-      },
-      "prep_failure_class_rates": {
-        "api_internal_error": 0.02857142857142857
-      },
-      "prep_failure_stages": {
-        "api": 2
-      },
-      "prep_failure_stage_rates": {
-        "api": 0.02857142857142857
-      },
+      "prep_success_rows": 70,
+      "prep_failed_rows": 0,
+      "prep_elapsed_seconds": 257.40919314697385,
+      "prep_rate_rows_per_second": 0.27194055948122975,
+      "prep_error_classes": {},
+      "prep_failure_classes": {},
+      "prep_failure_class_rates": {},
+      "prep_failure_stages": {},
+      "prep_failure_stage_rates": {},
       "prep_response_statuses": {
-        "ok": 68,
-        "error": 2
+        "ok": 70
       },
       "prep_response_status_rates": {
-        "ok": 0.9714285714285714,
-        "error": 0.02857142857142857
+        "ok": 1.0
       },
-      "prep_coverage": 0.9714285714285714,
+      "prep_coverage": 1.0,
       "prep_empty_response_rate": 0.0,
-      "infra_failure_rate": 0.02857142857142857,
-      "run_validity": "INVALID",
+      "infra_failure_rate": 0.0,
+      "run_validity": "VALID",
       "run_policy": "official",
       "latency_budget_report": {
-        "count": 68,
+        "count": 70,
         "elapsed_ms": {
-          "p50": 73868.0,
-          "p90": 92372.0,
-          "p95": 92672.4,
-          "max": 92987.0,
-          "mean": 73197.42647058824
+          "p50": 45790.0,
+          "p90": 80266.0,
+          "p95": 86830.15,
+          "max": 107545.0,
+          "mean": 40811.92857142857
         },
         "budget_utilization": {
-          "p50": 0.4103777777777778,
-          "p90": 0.5131777777777777,
-          "max": 0.5165944444444445
+          "p50": 0.2543888888888889,
+          "p90": 0.4459222222222222,
+          "max": 0.5974722222222222
         }
       },
-      "prepared_source": "existing",
-      "prepared_validation_skipped": false
+      "persisted_prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/llama33_naive_combined/run_02/prepared_input.json",
+      "prepared_source": "generated"
     },
     "evaluation_preprocessing": {
       "enabled": true,
       "processed_rows": 70,
-      "truncated_rows": 62,
-      "truncated_contexts": 184,
-      "original_total_context_characters": 2254558,
-      "processed_total_context_characters": 1324797,
+      "truncated_rows": 70,
+      "truncated_contexts": 344,
+      "original_total_context_characters": 2700662,
+      "processed_total_context_characters": 1389275,
       "retrieved_contexts": {
         "max_characters": 4000,
         "max_total_characters": 20000,
@@ -1015,6 +991,6 @@
     },
     "tune_concurrency": true,
     "trace_evaluator_llm": false,
-    "mlflow_parent_run_id": "5338c1ea07364d6bb08f2bcff8d381ca"
+    "mlflow_parent_run_id": "d59b312bb4c440c9a5a437a06c897fca"
   }
 }

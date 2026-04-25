@@ -16,13 +16,13 @@
       "log_tenacity": true,
       "seed": 42
     },
-    "duration_seconds": 825.0921152549563,
-    "failure_rate": 0.02857142857142857,
+    "duration_seconds": 719.9411294710007,
+    "failure_rate": 0.04285714285714286,
     "tuning_trials": []
   },
   "preset_name": "naive_combined",
   "preset_description": "Naive docs+tickets baseline with RRF reranking.",
-  "condition_fingerprint": "2cbc46128ba5c89783f18a05b44b0b9b0301de6fd2ae58531e572d7256fa63c3",
+  "condition_fingerprint": "55e96655000984864840fe54a4149f6d1b2f48bbc34ded179d3c8d8f7872a9c6",
   "condition_summary": {
     "retriever_type": "multi_collection",
     "source_type": "vector",
@@ -59,7 +59,7 @@
           }
         },
         "name": "docs",
-        "collection_name": "support_docs_stage0a"
+        "collection_name": "exp_docs_cs1200_ov80"
       },
       {
         "top_k": 5,
@@ -79,7 +79,7 @@
           }
         },
         "name": "tickets",
-        "collection_name": "support_tickets_stage0a"
+        "collection_name": "exp_tickets_cs1000_ov0"
       }
     ],
     "retriever_profile": {
@@ -118,7 +118,7 @@
             }
           },
           "name": "docs",
-          "collection_name": "support_docs_stage0a"
+          "collection_name": "exp_docs_cs1200_ov80"
         },
         {
           "top_k": 5,
@@ -138,11 +138,11 @@
             }
           },
           "name": "tickets",
-          "collection_name": "support_tickets_stage0a"
+          "collection_name": "exp_tickets_cs1000_ov0"
         }
       ]
     },
-    "retriever_fingerprint": "7b04fea3065b51dcb614998ebe179b8af6a5c47610031db3743f390f2f558eb1",
+    "retriever_fingerprint": "398d0292461b20cbc46788f04a783da796810bded8e29db418186efb96c81325",
     "reranker_profile": {
       "type": "rrf",
       "rrf_k": 60,
@@ -157,7 +157,7 @@
     "dataset_path": "/app/data/test/ragas_one_hop_eval_dataset_final.dev.jsonl",
     "annotations_path": "/app/data/test/benchmark_annotations_final.csv",
     "prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/llama33_naive_combined/run_01/prepared_input.json",
-    "reuse_prepared": true,
+    "reuse_prepared": false,
     "allow_stale_prepared": false,
     "query_field": "query",
     "reference_field": "expected_answer",
@@ -187,9 +187,9 @@
     "generator_profile": {
       "mode": "pipeline",
       "generator_llm": {
-        "type": "openai_like",
-        "model_name": "meta-llama/Llama-3.3-70B-Instruct",
-        "api_base": "http://llama33-70b:8080/v1",
+        "type": "openai_chat",
+        "model_name": "meta-llama/Llama-3.3-70B-Instruct:novita",
+        "api_base": "https://router.huggingface.co/v1",
         "request_timeout": 90,
         "max_retries": 1,
         "model_kwargs": {
@@ -203,7 +203,7 @@
       },
       "llm_generate": {}
     },
-    "generator_fingerprint": "7332e13455d286644f81e288d04015cb1bbf352c2a669e22edc47f2a9a8e9a0b",
+    "generator_fingerprint": "c60bdf82dde7e46f1eb6c7bb842d1819b6fc9330734d2d11d07a369e77a4d042",
     "retriever_profile": {
       "type": "multi_collection",
       "final_top_k": 8,
@@ -248,14 +248,14 @@
             "type": "vector",
             "vector_store": {
               "backend": "qdrant",
-              "collection_name": "support_docs_stage0a",
+              "collection_name": "exp_docs_cs1200_ov80",
               "dense_model": "Qwen/Qwen3-Embedding-8B",
               "dense_vector_name": "dense",
               "sparse_model": null,
               "sparse_vector_name": "sparse"
             }
           },
-          "retriever_fingerprint": "bbb2dd254cec6f9900140af8eefd5060d76bbf820f87833470e881f169753980"
+          "retriever_fingerprint": "9b7770b5b46ceed77b485f088dc03a5f686b517dcb5daedf363d8ac1b42ad96a"
         },
         "tickets": {
           "settings": {
@@ -297,18 +297,18 @@
             "type": "vector",
             "vector_store": {
               "backend": "qdrant",
-              "collection_name": "support_tickets_stage0a",
+              "collection_name": "exp_tickets_cs1000_ov0",
               "dense_model": "Qwen/Qwen3-Embedding-8B",
               "dense_vector_name": "dense",
               "sparse_model": null,
               "sparse_vector_name": "sparse"
             }
           },
-          "retriever_fingerprint": "93892dd81d61f42b10e07228a7697686b82d46ddbd72e4ce17d53431413109d3"
+          "retriever_fingerprint": "3bd8993042f60056e3bdb5c7f633f4f7c4a2cbe1e9da5570051429dd063e2509"
         }
       }
     },
-    "retriever_fingerprint": "8f1fda64ab5f5d27826a153183b36aa9aef582eee8396130969b055aa938b572",
+    "retriever_fingerprint": "7208b930a8368e8c3f908f1acaec6a30f3b2fcfaa6cfced546b21756d2096c16",
     "reranker_profile": {
       "type": "rrf",
       "rrf_k": 60,
@@ -357,7 +357,7 @@
             }
           },
           "name": "docs",
-          "collection_name": "support_docs_stage0a"
+          "collection_name": "exp_docs_cs1200_ov80"
         },
         {
           "top_k": 5,
@@ -377,7 +377,7 @@
             }
           },
           "name": "tickets",
-          "collection_name": "support_tickets_stage0a"
+          "collection_name": "exp_tickets_cs1000_ov0"
         }
       ],
       "retriever_profile": {
@@ -416,7 +416,7 @@
               }
             },
             "name": "docs",
-            "collection_name": "support_docs_stage0a"
+            "collection_name": "exp_docs_cs1200_ov80"
           },
           {
             "top_k": 5,
@@ -436,11 +436,11 @@
               }
             },
             "name": "tickets",
-            "collection_name": "support_tickets_stage0a"
+            "collection_name": "exp_tickets_cs1000_ov0"
           }
         ]
       },
-      "retriever_fingerprint": "7b04fea3065b51dcb614998ebe179b8af6a5c47610031db3743f390f2f558eb1",
+      "retriever_fingerprint": "398d0292461b20cbc46788f04a783da796810bded8e29db418186efb96c81325",
       "reranker_profile": {
         "type": "rrf",
         "rrf_k": 60,
@@ -451,62 +451,62 @@
         "trace_enabled": true
       }
     },
-    "condition_fingerprint": "2cbc46128ba5c89783f18a05b44b0b9b0301de6fd2ae58531e572d7256fa63c3",
+    "condition_fingerprint": "55e96655000984864840fe54a4149f6d1b2f48bbc34ded179d3c8d8f7872a9c6",
     "annotation_rows": 70,
     "prep_total_rows": 70,
-    "prep_success_rows": 69,
-    "prep_failed_rows": 1,
-    "prep_elapsed_seconds": 0.0,
-    "prep_rate_rows_per_second": 0.0,
+    "prep_success_rows": 68,
+    "prep_failed_rows": 2,
+    "prep_elapsed_seconds": 271.13595165498555,
+    "prep_rate_rows_per_second": 0.2581730662154071,
     "prep_error_classes": {
-      "BadRequestError": 1
+      "UnexpectedResponse": 2
     },
     "prep_failure_classes": {
-      "api_internal_error": 1
+      "api_internal_error": 2
     },
     "prep_failure_class_rates": {
-      "api_internal_error": 0.014285714285714285
+      "api_internal_error": 0.02857142857142857
     },
     "prep_failure_stages": {
-      "api": 1
+      "api": 2
     },
     "prep_failure_stage_rates": {
-      "api": 0.014285714285714285
+      "api": 0.02857142857142857
     },
     "prep_response_statuses": {
-      "ok": 69,
-      "error": 1
+      "ok": 68,
+      "error": 2
     },
     "prep_response_status_rates": {
-      "ok": 0.9857142857142858,
-      "error": 0.014285714285714285
+      "ok": 0.9714285714285714,
+      "error": 0.02857142857142857
     },
-    "prep_coverage": 0.9857142857142858,
+    "prep_coverage": 0.9714285714285714,
     "prep_empty_response_rate": 0.0,
-    "infra_failure_rate": 0.014285714285714285,
+    "infra_failure_rate": 0.02857142857142857,
     "run_validity": "INVALID",
     "run_policy": "official",
     "latency_budget_report": {
-      "count": 69,
+      "count": 68,
       "elapsed_ms": {
-        "p50": 76534.0,
-        "p90": 94380.6,
-        "p95": 95469.2,
-        "max": 95735.0,
-        "mean": 68100.13043478261
+        "p50": 52343.5,
+        "p90": 76252.9,
+        "p95": 94062.2,
+        "max": 101642.0,
+        "mean": 45405.41176470588
       },
       "budget_utilization": {
-        "p50": 0.4251888888888889,
-        "p90": 0.5243366666666667,
-        "max": 0.5318611111111111
+        "p50": 0.29079722222222226,
+        "p90": 0.4236272222222222,
+        "max": 0.5646777777777777
       }
     },
-    "prepared_source": "existing",
-    "prepared_validation_skipped": false
+    "persisted_prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/llama33_naive_combined/run_01/prepared_input.json",
+    "prepared_source": "generated"
   },
   "tune_concurrency": true,
   "trace_evaluator_llm": false,
-  "mlflow_parent_run_id": "d831289f864d478caff9be0b8e656622",
+  "mlflow_parent_run_id": "872b3191cc614c13ac1baf262a02c219",
   "config_file": "/app/.polaris_experiment_stage0a_generator_selection__llama33_naive_combined.yaml",
   "artifacts": {
     "scores_csv": "/app/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/llama33_naive_combined/run_01/scores.csv",
@@ -554,7 +554,7 @@
             }
           },
           "name": "docs",
-          "collection_name": "support_docs_stage0a"
+          "collection_name": "exp_docs_cs1200_ov80"
         },
         {
           "top_k": 5,
@@ -574,7 +574,7 @@
             }
           },
           "name": "tickets",
-          "collection_name": "support_tickets_stage0a"
+          "collection_name": "exp_tickets_cs1000_ov0"
         }
       ],
       "retriever_profile": {
@@ -613,7 +613,7 @@
               }
             },
             "name": "docs",
-            "collection_name": "support_docs_stage0a"
+            "collection_name": "exp_docs_cs1200_ov80"
           },
           {
             "top_k": 5,
@@ -633,11 +633,11 @@
               }
             },
             "name": "tickets",
-            "collection_name": "support_tickets_stage0a"
+            "collection_name": "exp_tickets_cs1000_ov0"
           }
         ]
       },
-      "retriever_fingerprint": "7b04fea3065b51dcb614998ebe179b8af6a5c47610031db3743f390f2f558eb1",
+      "retriever_fingerprint": "398d0292461b20cbc46788f04a783da796810bded8e29db418186efb96c81325",
       "reranker_profile": {
         "type": "rrf",
         "rrf_k": 60,
@@ -648,12 +648,12 @@
         "trace_enabled": true
       }
     },
-    "condition_fingerprint": "2cbc46128ba5c89783f18a05b44b0b9b0301de6fd2ae58531e572d7256fa63c3",
+    "condition_fingerprint": "55e96655000984864840fe54a4149f6d1b2f48bbc34ded179d3c8d8f7872a9c6",
     "dataset": {
       "dataset_path": "/app/data/test/ragas_one_hop_eval_dataset_final.dev.jsonl",
       "annotations_path": "/app/data/test/benchmark_annotations_final.csv",
       "prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/llama33_naive_combined/run_01/prepared_input.json",
-      "reuse_prepared": true,
+      "reuse_prepared": false,
       "allow_stale_prepared": false,
       "query_field": "query",
       "reference_field": "expected_answer",
@@ -683,9 +683,9 @@
       "generator_profile": {
         "mode": "pipeline",
         "generator_llm": {
-          "type": "openai_like",
-          "model_name": "meta-llama/Llama-3.3-70B-Instruct",
-          "api_base": "http://llama33-70b:8080/v1",
+          "type": "openai_chat",
+          "model_name": "meta-llama/Llama-3.3-70B-Instruct:novita",
+          "api_base": "https://router.huggingface.co/v1",
           "request_timeout": 90,
           "max_retries": 1,
           "model_kwargs": {
@@ -699,7 +699,7 @@
         },
         "llm_generate": {}
       },
-      "generator_fingerprint": "7332e13455d286644f81e288d04015cb1bbf352c2a669e22edc47f2a9a8e9a0b",
+      "generator_fingerprint": "c60bdf82dde7e46f1eb6c7bb842d1819b6fc9330734d2d11d07a369e77a4d042",
       "retriever_profile": {
         "type": "multi_collection",
         "final_top_k": 8,
@@ -744,14 +744,14 @@
               "type": "vector",
               "vector_store": {
                 "backend": "qdrant",
-                "collection_name": "support_docs_stage0a",
+                "collection_name": "exp_docs_cs1200_ov80",
                 "dense_model": "Qwen/Qwen3-Embedding-8B",
                 "dense_vector_name": "dense",
                 "sparse_model": null,
                 "sparse_vector_name": "sparse"
               }
             },
-            "retriever_fingerprint": "bbb2dd254cec6f9900140af8eefd5060d76bbf820f87833470e881f169753980"
+            "retriever_fingerprint": "9b7770b5b46ceed77b485f088dc03a5f686b517dcb5daedf363d8ac1b42ad96a"
           },
           "tickets": {
             "settings": {
@@ -793,18 +793,18 @@
               "type": "vector",
               "vector_store": {
                 "backend": "qdrant",
-                "collection_name": "support_tickets_stage0a",
+                "collection_name": "exp_tickets_cs1000_ov0",
                 "dense_model": "Qwen/Qwen3-Embedding-8B",
                 "dense_vector_name": "dense",
                 "sparse_model": null,
                 "sparse_vector_name": "sparse"
               }
             },
-            "retriever_fingerprint": "93892dd81d61f42b10e07228a7697686b82d46ddbd72e4ce17d53431413109d3"
+            "retriever_fingerprint": "3bd8993042f60056e3bdb5c7f633f4f7c4a2cbe1e9da5570051429dd063e2509"
           }
         }
       },
-      "retriever_fingerprint": "8f1fda64ab5f5d27826a153183b36aa9aef582eee8396130969b055aa938b572",
+      "retriever_fingerprint": "7208b930a8368e8c3f908f1acaec6a30f3b2fcfaa6cfced546b21756d2096c16",
       "reranker_profile": {
         "type": "rrf",
         "rrf_k": 60,
@@ -853,7 +853,7 @@
               }
             },
             "name": "docs",
-            "collection_name": "support_docs_stage0a"
+            "collection_name": "exp_docs_cs1200_ov80"
           },
           {
             "top_k": 5,
@@ -873,7 +873,7 @@
               }
             },
             "name": "tickets",
-            "collection_name": "support_tickets_stage0a"
+            "collection_name": "exp_tickets_cs1000_ov0"
           }
         ],
         "retriever_profile": {
@@ -912,7 +912,7 @@
                 }
               },
               "name": "docs",
-              "collection_name": "support_docs_stage0a"
+              "collection_name": "exp_docs_cs1200_ov80"
             },
             {
               "top_k": 5,
@@ -932,11 +932,11 @@
                 }
               },
               "name": "tickets",
-              "collection_name": "support_tickets_stage0a"
+              "collection_name": "exp_tickets_cs1000_ov0"
             }
           ]
         },
-        "retriever_fingerprint": "7b04fea3065b51dcb614998ebe179b8af6a5c47610031db3743f390f2f558eb1",
+        "retriever_fingerprint": "398d0292461b20cbc46788f04a783da796810bded8e29db418186efb96c81325",
         "reranker_profile": {
           "type": "rrf",
           "rrf_k": 60,
@@ -947,66 +947,66 @@
           "trace_enabled": true
         }
       },
-      "condition_fingerprint": "2cbc46128ba5c89783f18a05b44b0b9b0301de6fd2ae58531e572d7256fa63c3",
+      "condition_fingerprint": "55e96655000984864840fe54a4149f6d1b2f48bbc34ded179d3c8d8f7872a9c6",
       "annotation_rows": 70,
       "prep_total_rows": 70,
-      "prep_success_rows": 69,
-      "prep_failed_rows": 1,
-      "prep_elapsed_seconds": 0.0,
-      "prep_rate_rows_per_second": 0.0,
+      "prep_success_rows": 68,
+      "prep_failed_rows": 2,
+      "prep_elapsed_seconds": 271.13595165498555,
+      "prep_rate_rows_per_second": 0.2581730662154071,
       "prep_error_classes": {
-        "BadRequestError": 1
+        "UnexpectedResponse": 2
       },
       "prep_failure_classes": {
-        "api_internal_error": 1
+        "api_internal_error": 2
       },
       "prep_failure_class_rates": {
-        "api_internal_error": 0.014285714285714285
+        "api_internal_error": 0.02857142857142857
       },
       "prep_failure_stages": {
-        "api": 1
+        "api": 2
       },
       "prep_failure_stage_rates": {
-        "api": 0.014285714285714285
+        "api": 0.02857142857142857
       },
       "prep_response_statuses": {
-        "ok": 69,
-        "error": 1
+        "ok": 68,
+        "error": 2
       },
       "prep_response_status_rates": {
-        "ok": 0.9857142857142858,
-        "error": 0.014285714285714285
+        "ok": 0.9714285714285714,
+        "error": 0.02857142857142857
       },
-      "prep_coverage": 0.9857142857142858,
+      "prep_coverage": 0.9714285714285714,
       "prep_empty_response_rate": 0.0,
-      "infra_failure_rate": 0.014285714285714285,
+      "infra_failure_rate": 0.02857142857142857,
       "run_validity": "INVALID",
       "run_policy": "official",
       "latency_budget_report": {
-        "count": 69,
+        "count": 68,
         "elapsed_ms": {
-          "p50": 76534.0,
-          "p90": 94380.6,
-          "p95": 95469.2,
-          "max": 95735.0,
-          "mean": 68100.13043478261
+          "p50": 52343.5,
+          "p90": 76252.9,
+          "p95": 94062.2,
+          "max": 101642.0,
+          "mean": 45405.41176470588
         },
         "budget_utilization": {
-          "p50": 0.4251888888888889,
-          "p90": 0.5243366666666667,
-          "max": 0.5318611111111111
+          "p50": 0.29079722222222226,
+          "p90": 0.4236272222222222,
+          "max": 0.5646777777777777
         }
       },
-      "prepared_source": "existing",
-      "prepared_validation_skipped": false
+      "persisted_prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/llama33_naive_combined/run_01/prepared_input.json",
+      "prepared_source": "generated"
     },
     "evaluation_preprocessing": {
       "enabled": true,
       "processed_rows": 70,
-      "truncated_rows": 63,
-      "truncated_contexts": 186,
-      "original_total_context_characters": 2282713,
-      "processed_total_context_characters": 1344783,
+      "truncated_rows": 68,
+      "truncated_contexts": 335,
+      "original_total_context_characters": 2595914,
+      "processed_total_context_characters": 1349275,
       "retrieved_contexts": {
         "max_characters": 4000,
         "max_total_characters": 20000,
@@ -1015,6 +1015,6 @@
     },
     "tune_concurrency": true,
     "trace_evaluator_llm": false,
-    "mlflow_parent_run_id": "d831289f864d478caff9be0b8e656622"
+    "mlflow_parent_run_id": "872b3191cc614c13ac1baf262a02c219"
   }
 }

@@ -17,10 +17,10 @@ base_config: "../config/config.gaudi.yaml"
 generator_candidates:
   llama33: &llama33_generator
     generator_llm:
-      type: "openai_like"
-      model_name: "meta-llama/Llama-3.3-70B-Instruct"
-      api_base: "http://llama33-70b:8080/v1"
-      api_key: "${POLARIS_LLM_API_KEY}"
+      type: "openai_chat"
+      model_name: "meta-llama/Llama-3.3-70B-Instruct:novita"
+      api_base: "https://router.huggingface.co/v1"
+      api_key: "${HF_TOKEN_TEST}"
       request_timeout: 90
       max_retries: 1
       model_kwargs:
@@ -420,13 +420,13 @@ stages:
     annotations_file: "../data/test/benchmark_annotations_final.csv"
     repeats: 3
     config_overrides:
-      vector_stores:
-        docs:
-          collection_name: "support_docs_stage0a"
-        tickets:
-          collection_name: "support_tickets_stage0a"
-      storage_context:
-        persist_dir: "/app/data/storage/support_tickets_stage0a"
+      # vector_stores:
+      #   docs:
+      #     collection_name: "support_docs_stage0a"
+      #   tickets:
+      #     collection_name: "support_tickets_stage0a"
+      # storage_context:
+      #   persist_dir: "/app/data/storage/support_tickets_stage0a"
       ingestion:
         chunking:
           sources:

@@ -82,6 +82,7 @@ services:
     environment:
       POLARIS_CONFIG: /app/config/config.yaml
       POLARIS_LLM_API_KEY: ${POLARIS_LLM_API_KEY}
+      HF_TOKEN_TEST: ${HF_TOKEN_TEST}
       GEMINI_API_KEY: ${GEMINI_API_KEY}
       JIRA_API_TOKEN: ${JIRA_API_TOKEN}
       EMBED_API_BASE: http://embed:80/v1
