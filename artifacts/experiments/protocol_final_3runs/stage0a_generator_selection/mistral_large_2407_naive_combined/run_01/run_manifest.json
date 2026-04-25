@@ -16,8 +16,8 @@
       "log_tenacity": true,
       "seed": 42
     },
-    "duration_seconds": 637.7380748920259,
-    "failure_rate": 0.014285714285714285,
+    "duration_seconds": 958.8271183379984,
+    "failure_rate": 0.03571428571428571,
     "tuning_trials": []
   },
   "preset_name": "naive_combined",
@@ -187,9 +187,9 @@
     "generator_profile": {
       "mode": "pipeline",
       "generator_llm": {
-        "type": "openai_chat",
+        "type": "openai_like",
         "model_name": "mistralai/Mistral-Large-Instruct-2407",
-        "api_base": "http://mistral:8080/v1",
+        "api_base": "http://vllm:8080/v1",
         "request_timeout": 90,
         "max_retries": 1,
         "model_kwargs": {
@@ -203,7 +203,7 @@
       },
       "llm_generate": {}
     },
-    "generator_fingerprint": "331ab042c3aca71076db105943b5b1efe6e8b86635c29c7e88d086ad082d4d86",
+    "generator_fingerprint": "073fbf42ca966bf58abbb9d019aa73a18ca5725d60c1d9aa70f3b3ed7e8140ac",
     "retriever_profile": {
       "type": "multi_collection",
       "final_top_k": 8,
@@ -477,16 +477,16 @@
     "latency_budget_report": {
       "count": 70,
       "elapsed_ms": {
-        "p50": 89983.5,
-        "p90": 133811.7,
-        "p95": 147837.59999999998,
-        "max": 168279.0,
-        "mean": 94392.34285714285
+        "p50": 174903.0,
+        "p90": 238091.80000000002,
+        "p95": 261378.85,
+        "max": 309124.0,
+        "mean": 169491.67142857143
       },
       "budget_utilization": {
-        "p50": 0.4999083333333333,
-        "p90": 0.7433983333333334,
-        "max": 0.9348833333333333
+        "p50": 0.9716833333333333,
+        "p90": 1.3227322222222224,
+        "max": 1.7173555555555555
       }
     },
     "prepared_source": "existing",
@@ -494,7 +494,7 @@
   },
   "tune_concurrency": true,
   "trace_evaluator_llm": false,
-  "mlflow_parent_run_id": "8deda23d91d048f88b18af27f83e613d",
+  "mlflow_parent_run_id": "2388f015a378461ba342e08e1ce547a1",
   "config_file": "/app/.polaris_experiment_stage0a_generator_selection__mistral_large_2407_naive_combined.yaml",
   "artifacts": {
     "scores_csv": "/app/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/mistral_large_2407_naive_combined/run_01/scores.csv",
@@ -671,9 +671,9 @@
       "generator_profile": {
         "mode": "pipeline",
         "generator_llm": {
-          "type": "openai_chat",
+          "type": "openai_like",
           "model_name": "mistralai/Mistral-Large-Instruct-2407",
-          "api_base": "http://mistral:8080/v1",
+          "api_base": "http://vllm:8080/v1",
           "request_timeout": 90,
           "max_retries": 1,
           "model_kwargs": {
@@ -687,7 +687,7 @@
         },
         "llm_generate": {}
       },
-      "generator_fingerprint": "331ab042c3aca71076db105943b5b1efe6e8b86635c29c7e88d086ad082d4d86",
+      "generator_fingerprint": "073fbf42ca966bf58abbb9d019aa73a18ca5725d60c1d9aa70f3b3ed7e8140ac",
       "retriever_profile": {
         "type": "multi_collection",
         "final_top_k": 8,
@@ -961,16 +961,16 @@
       "latency_budget_report": {
         "count": 70,
         "elapsed_ms": {
-          "p50": 89983.5,
-          "p90": 133811.7,
-          "p95": 147837.59999999998,
-          "max": 168279.0,
-          "mean": 94392.34285714285
+          "p50": 174903.0,
+          "p90": 238091.80000000002,
+          "p95": 261378.85,
+          "max": 309124.0,
+          "mean": 169491.67142857143
         },
         "budget_utilization": {
-          "p50": 0.4999083333333333,
-          "p90": 0.7433983333333334,
-          "max": 0.9348833333333333
+          "p50": 0.9716833333333333,
+          "p90": 1.3227322222222224,
+          "max": 1.7173555555555555
         }
       },
       "prepared_source": "existing",
@@ -981,7 +981,7 @@
       "processed_rows": 70,
       "truncated_rows": 64,
       "truncated_contexts": 193,
-      "original_total_context_characters": 2433328,
+      "original_total_context_characters": 2425745,
       "processed_total_context_characters": 1364783,
       "retrieved_contexts": {
         "max_characters": 4000,
@@ -991,6 +991,6 @@
     },
     "tune_concurrency": true,
     "trace_evaluator_llm": false,
-    "mlflow_parent_run_id": "8deda23d91d048f88b18af27f83e613d"
+    "mlflow_parent_run_id": "2388f015a378461ba342e08e1ce547a1"
   }
 }

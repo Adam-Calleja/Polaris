@@ -16,8 +16,8 @@
       "log_tenacity": true,
       "seed": 42
     },
-    "duration_seconds": 642.1118555930152,
-    "failure_rate": 0.02142857142857143,
+    "duration_seconds": 871.313999548991,
+    "failure_rate": 0.05,
     "tuning_trials": []
   },
   "preset_name": "naive_combined",
@@ -187,9 +187,9 @@
     "generator_profile": {
       "mode": "pipeline",
       "generator_llm": {
-        "type": "openai_chat",
+        "type": "openai_like",
         "model_name": "mistralai/Mistral-Large-Instruct-2407",
-        "api_base": "http://mistral:8080/v1",
+        "api_base": "http://vllm:8080/v1",
         "request_timeout": 90,
         "max_retries": 1,
         "model_kwargs": {
@@ -203,7 +203,7 @@
       },
       "llm_generate": {}
     },
-    "generator_fingerprint": "331ab042c3aca71076db105943b5b1efe6e8b86635c29c7e88d086ad082d4d86",
+    "generator_fingerprint": "073fbf42ca966bf58abbb9d019aa73a18ca5725d60c1d9aa70f3b3ed7e8140ac",
     "retriever_profile": {
       "type": "multi_collection",
       "final_top_k": 8,
@@ -477,16 +477,16 @@
     "latency_budget_report": {
       "count": 70,
       "elapsed_ms": {
-        "p50": 93057.0,
-        "p90": 136451.1,
-        "p95": 152231.8,
-        "max": 168513.0,
-        "mean": 92964.14285714286
+        "p50": 96871.0,
+        "p90": 154181.0,
+        "p95": 163120.95,
+        "max": 195193.0,
+        "mean": 101192.34285714285
       },
       "budget_utilization": {
-        "p50": 0.5169833333333334,
-        "p90": 0.7580616666666666,
-        "max": 0.9361833333333334
+        "p50": 0.5381722222222223,
+        "p90": 0.8565611111111111,
+        "max": 1.0844055555555556
       }
     },
     "prepared_source": "existing",
@@ -494,7 +494,7 @@
   },
   "tune_concurrency": true,
   "trace_evaluator_llm": false,
-  "mlflow_parent_run_id": "a0b4bf6f4cbf41d8bf7541f8d5352b22",
+  "mlflow_parent_run_id": "107470e4712d47f490844048acb6c167",
   "config_file": "/app/.polaris_experiment_stage0a_generator_selection__mistral_large_2407_naive_combined.yaml",
   "artifacts": {
     "scores_csv": "/app/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/mistral_large_2407_naive_combined/run_02/scores.csv",
@@ -671,9 +671,9 @@
       "generator_profile": {
         "mode": "pipeline",
         "generator_llm": {
-          "type": "openai_chat",
+          "type": "openai_like",
           "model_name": "mistralai/Mistral-Large-Instruct-2407",
-          "api_base": "http://mistral:8080/v1",
+          "api_base": "http://vllm:8080/v1",
           "request_timeout": 90,
           "max_retries": 1,
           "model_kwargs": {
@@ -687,7 +687,7 @@
         },
         "llm_generate": {}
       },
-      "generator_fingerprint": "331ab042c3aca71076db105943b5b1efe6e8b86635c29c7e88d086ad082d4d86",
+      "generator_fingerprint": "073fbf42ca966bf58abbb9d019aa73a18ca5725d60c1d9aa70f3b3ed7e8140ac",
       "retriever_profile": {
         "type": "multi_collection",
         "final_top_k": 8,
@@ -961,16 +961,16 @@
       "latency_budget_report": {
         "count": 70,
         "elapsed_ms": {
-          "p50": 93057.0,
-          "p90": 136451.1,
-          "p95": 152231.8,
-          "max": 168513.0,
-          "mean": 92964.14285714286
+          "p50": 96871.0,
+          "p90": 154181.0,
+          "p95": 163120.95,
+          "max": 195193.0,
+          "mean": 101192.34285714285
         },
         "budget_utilization": {
-          "p50": 0.5169833333333334,
-          "p90": 0.7580616666666666,
-          "max": 0.9361833333333334
+          "p50": 0.5381722222222223,
+          "p90": 0.8565611111111111,
+          "max": 1.0844055555555556
         }
       },
       "prepared_source": "existing",
@@ -981,7 +981,7 @@
       "processed_rows": 70,
       "truncated_rows": 64,
       "truncated_contexts": 193,
-      "original_total_context_characters": 2425745,
+      "original_total_context_characters": 2446901,
       "processed_total_context_characters": 1364783,
       "retrieved_contexts": {
         "max_characters": 4000,
@@ -991,6 +991,6 @@
     },
     "tune_concurrency": true,
     "trace_evaluator_llm": false,
-    "mlflow_parent_run_id": "a0b4bf6f4cbf41d8bf7541f8d5352b22"
+    "mlflow_parent_run_id": "107470e4712d47f490844048acb6c167"
   }
 }

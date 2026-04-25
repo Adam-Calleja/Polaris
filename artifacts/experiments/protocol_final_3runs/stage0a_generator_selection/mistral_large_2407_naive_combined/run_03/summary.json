@@ -15,7 +15,7 @@
     "log_tenacity": true,
     "seed": 42
   },
-  "duration_seconds": 655.6212151520012,
-  "failure_rate": 0.014285714285714285,
+  "duration_seconds": 865.2447805689881,
+  "failure_rate": 0.02857142857142857,
   "tuning_trials": []
 }

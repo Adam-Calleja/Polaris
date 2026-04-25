@@ -1,0 +1,12 @@
+{
+  "stage_name": "stage0a_generator_selection",
+  "rows": 3,
+  "conditions": [
+    "mistral_large_2407_naive_combined"
+  ],
+  "metrics": [
+    "factual_correctness",
+    "faithfulness"
+  ],
+  "comparison_repeat": "latest"
+}

@@ -3,17 +3,17 @@
     "stage_name": "stage0a_generator_selection",
     "condition_name": "mistral_large_2407_naive_combined",
     "condition_slug": "mistral_large_2407_naive_combined",
-    "repeat_index": 3,
-    "run_dir": "/app/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/mistral_large_2407_naive_combined/run_03",
+    "repeat_index": 2,
+    "run_dir": "/app/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/mistral_large_2407_naive_combined/run_02",
     "config_file": "/app/.polaris_experiment_stage0a_generator_selection__mistral_large_2407_naive_combined.yaml",
     "preset_name": "naive_combined",
     "condition_fingerprint": "2cbc46128ba5c89783f18a05b44b0b9b0301de6fd2ae58531e572d7256fa63c3",
     "rows": 70,
-    "duration_seconds": 655.6212151520012,
-    "failure_rate": 0.014285714285714285,
+    "duration_seconds": 871.313999548991,
+    "failure_rate": 0.05,
     "selected_max_workers": 28,
-    "factual_correctness": 0.3154411764705882,
-    "faithfulness": 0.5023992545736242
+    "factual_correctness": 0.3203076923076923,
+    "faithfulness": 0.45776541677276966
   },
   {
     "stage_name": "stage0a_generator_selection",
@@ -25,26 +25,26 @@
     "preset_name": "naive_combined",
     "condition_fingerprint": "2cbc46128ba5c89783f18a05b44b0b9b0301de6fd2ae58531e572d7256fa63c3",
     "rows": 70,
-    "duration_seconds": 637.7380748920259,
-    "failure_rate": 0.014285714285714285,
+    "duration_seconds": 958.8271183379984,
+    "failure_rate": 0.03571428571428571,
     "selected_max_workers": 28,
-    "factual_correctness": 0.3130882352941176,
-    "faithfulness": 0.4372251526055154
+    "factual_correctness": 0.31646153846153846,
+    "faithfulness": 0.4970217648462894
   },
   {
     "stage_name": "stage0a_generator_selection",
     "condition_name": "mistral_large_2407_naive_combined",
     "condition_slug": "mistral_large_2407_naive_combined",
-    "repeat_index": 2,
-    "run_dir": "/app/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/mistral_large_2407_naive_combined/run_02",
+    "repeat_index": 3,
+    "run_dir": "/app/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/mistral_large_2407_naive_combined/run_03",
     "config_file": "/app/.polaris_experiment_stage0a_generator_selection__mistral_large_2407_naive_combined.yaml",
     "preset_name": "naive_combined",
     "condition_fingerprint": "2cbc46128ba5c89783f18a05b44b0b9b0301de6fd2ae58531e572d7256fa63c3",
     "rows": 70,
-    "duration_seconds": 642.1118555930152,
-    "failure_rate": 0.02142857142857143,
+    "duration_seconds": 865.2447805689881,
+    "failure_rate": 0.02857142857142857,
     "selected_max_workers": 28,
-    "factual_correctness": 0.31253731343283586,
-    "faithfulness": 0.4644384980099266
+    "factual_correctness": 0.3097014925373136,
+    "faithfulness": 0.5023769623884041
   }
 ]

@@ -56,9 +56,9 @@ generator_candidates:
         stop_list: ["\nUser:", "\n\nUser:"]
   mistral_large_2407: &mistral_large_2407_generator
     generator_llm:
-      type: "openai_chat"
+      type: "openai_like"
       model_name: "mistralai/Mistral-Large-Instruct-2407"
-      api_base: "http://mistral:8080/v1"
+      api_base: "http://vllm:8080/v1"
       api_key: "${POLARIS_LLM_API_KEY}"
       request_timeout: 90
       max_retries: 1
@@ -66,7 +66,7 @@ generator_candidates:
         max_tokens: 1024
         temperature: 0
         top_p: 1.0
-        stop_list: ["\nUser:", "\n\nUser:"]
+        # stop_list: ["\nUser:", "\n\nUser:"]
 
 prompt_configs:
   generic_prompt: &generic_prompt_config

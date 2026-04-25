@@ -1,0 +1,2 @@
+condition_name,runs,preset_name,duration_seconds_mean,duration_seconds_min,duration_seconds_max,duration_seconds_std,failure_rate_mean,failure_rate_min,failure_rate_max,failure_rate_std,factual_correctness_mean,factual_correctness_min,factual_correctness_max,factual_correctness_std,faithfulness_mean,faithfulness_min,faithfulness_max,faithfulness_std
+mistral_large_2407_naive_combined,3,naive_combined,645.157049,637.738075,655.621215,7.611683,0.016667,0.014286,0.021429,0.003367,0.313689,0.312537,0.315441,0.001259,0.468021,0.437225,0.502399,0.026728

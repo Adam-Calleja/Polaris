@@ -32,9 +32,9 @@
   "generator_profile": {
     "mode": "pipeline",
     "generator_llm": {
-      "type": "openai_chat",
+      "type": "openai_like",
       "model_name": "mistralai/Mistral-Large-Instruct-2407",
-      "api_base": "http://mistral:8080/v1",
+      "api_base": "http://vllm:8080/v1",
       "request_timeout": 90,
       "max_retries": 1,
       "model_kwargs": {
@@ -48,7 +48,7 @@
     },
     "llm_generate": {}
   },
-  "generator_fingerprint": "331ab042c3aca71076db105943b5b1efe6e8b86635c29c7e88d086ad082d4d86",
+  "generator_fingerprint": "073fbf42ca966bf58abbb9d019aa73a18ca5725d60c1d9aa70f3b3ed7e8140ac",
   "retriever_profile": {
     "type": "multi_collection",
     "final_top_k": 8,
@@ -322,16 +322,16 @@
   "latency_budget_report": {
     "count": 70,
     "elapsed_ms": {
-      "p50": 93057.0,
-      "p90": 136451.1,
-      "p95": 152231.8,
-      "max": 168513.0,
-      "mean": 92964.14285714286
+      "p50": 96871.0,
+      "p90": 154181.0,
+      "p95": 163120.95,
+      "max": 195193.0,
+      "mean": 101192.34285714285
     },
     "budget_utilization": {
-      "p50": 0.5169833333333334,
-      "p90": 0.7580616666666666,
-      "max": 0.9361833333333334
+      "p50": 0.5381722222222223,
+      "p90": 0.8565611111111111,
+      "max": 1.0844055555555556
     }
   },
   "prepared_source": "existing",
