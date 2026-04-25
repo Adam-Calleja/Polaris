@@ -67,6 +67,20 @@ generator_candidates:
         temperature: 0
         top_p: 1.0
         # stop_list: ["\nUser:", "\n\nUser:"]
+  devstral: &devstral_generator
+    generator_llm:
+      type: "openai_chat"
+      model_name: "hosted_vllm/mistralai/Devstral-2-123B-Instruct-2512"
+      api_base: "https://llm.hpc.cam.ac.uk/v1"
+      api_key: "${POLARIS_LLM_API_KEY}"
+      request_timeout: 90
+      max_retries: 1
+      model_kwargs:
+        max_tokens: 1024
+        temperature: 0
+        top_p: 1.0
+        stop_list: []
+
 
 prompt_configs:
   generic_prompt: &generic_prompt_config
@@ -444,6 +458,10 @@ stages:
         preset: "naive_combined"
         config_overrides:
           <<: *mistral_large_2407_generator
+      - name: "devstral_naive_combined"
+        preset: "naive_combined"
+        config_overrides:
+          <<: *devstral_generator
 
   stage0b1_docs_chunking:
     type: "evaluation_grid"
