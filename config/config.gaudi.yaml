@@ -61,6 +61,7 @@ evaluation:
     timeout: 300
     max_retries: 0
     max_workers: 16
+    batch_size: 210
   generation:
     retries:
       max_attempts: 3

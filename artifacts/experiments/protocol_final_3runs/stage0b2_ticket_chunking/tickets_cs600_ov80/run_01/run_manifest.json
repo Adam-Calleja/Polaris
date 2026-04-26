@@ -8,7 +8,7 @@
     ],
     "skipped_metrics": [],
     "selected_max_workers": 28,
-    "batch_size": 56,
+    "batch_size": 210,
     "run_config": {
       "timeout": 300,
       "max_retries": 0,
@@ -17,8 +17,8 @@
       "log_tenacity": true,
       "seed": 42
     },
-    "duration_seconds": 1040.2640881630068,
-    "failure_rate": 0.05238095238095238,
+    "duration_seconds": 346.52165026095463,
+    "failure_rate": 0.6476190476190476,
     "tuning_trials": []
   },
   "preset_name": "tickets_only",
@@ -117,7 +117,7 @@
     "dataset_path": "/app/data/test/ragas_one_hop_eval_dataset_final.dev.jsonl",
     "annotations_path": "/app/data/test/benchmark_annotations_final.csv",
     "prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0b2_ticket_chunking/tickets_cs600_ov80/run_01/prepared_input.json",
-    "reuse_prepared": true,
+    "reuse_prepared": false,
     "allow_stale_prepared": false,
     "query_field": "query",
     "reference_field": "expected_answer",
@@ -138,7 +138,7 @@
     },
     "max_infra_failure_rate": 0.01,
     "generation_retries": {
-      "max_attempts": 1,
+      "max_attempts": 3,
       "initial_backoff_seconds": 1.0,
       "max_backoff_seconds": 8.0,
       "jitter_seconds": 0.25,
@@ -147,23 +147,20 @@
     "generator_profile": {
       "mode": "pipeline",
       "generator_llm": {
-        "type": "openai_like",
-        "model_name": "mistralai/Mistral-Large-Instruct-2407",
-        "api_base": "http://mistral:8080/v1",
+        "type": "openai_chat",
+        "model_name": "meta-llama/Llama-3.3-70B-Instruct:novita",
+        "api_base": "https://router.huggingface.co/v1",
         "request_timeout": 90,
         "max_retries": 1,
         "model_kwargs": {
           "temperature": 0,
           "top_p": 1.0,
-          "stop_list": [
-            "\nUser:",
-            "\n\nUser:"
-          ]
+          "stop_list": []
         }
       },
       "llm_generate": {}
     },
-    "generator_fingerprint": "933650173b8202eb4e65ceda3941a9a4370151c3c33b373840e30d503261a3fa",
+    "generator_fingerprint": "d8497e587288b92270cc9f5eccb7437a78427b9be742d8c8d0b70a4576ef16c9",
     "retriever_profile": {
       "type": "multi_collection",
       "final_top_k": 8,
@@ -323,59 +320,59 @@
     "condition_fingerprint": "04f2e6f6893435acf0d8026eec32c4ac5d7f0b3b85b545d43a3b641b47e1b513",
     "annotation_rows": 70,
     "prep_total_rows": 70,
-    "prep_success_rows": 67,
-    "prep_failed_rows": 3,
-    "prep_elapsed_seconds": 0.0,
-    "prep_rate_rows_per_second": 0.0,
+    "prep_success_rows": 25,
+    "prep_failed_rows": 45,
+    "prep_elapsed_seconds": 328.0011841339874,
+    "prep_rate_rows_per_second": 0.21341386368716653,
     "prep_error_classes": {
-      "BadRequestError": 3
+      "UnprocessableEntityError": 45
     },
     "prep_failure_classes": {
-      "api_internal_error": 3
+      "api_internal_error": 45
     },
     "prep_failure_class_rates": {
-      "api_internal_error": 0.04285714285714286
+      "api_internal_error": 0.6428571428571429
     },
     "prep_failure_stages": {
-      "api": 3
+      "api": 45
     },
     "prep_failure_stage_rates": {
-      "api": 0.04285714285714286
+      "api": 0.6428571428571429
     },
     "prep_response_statuses": {
-      "ok": 67,
-      "error": 3
+      "ok": 25,
+      "error": 45
     },
     "prep_response_status_rates": {
-      "ok": 0.9571428571428572,
-      "error": 0.04285714285714286
+      "ok": 0.35714285714285715,
+      "error": 0.6428571428571429
     },
-    "prep_coverage": 0.9571428571428572,
+    "prep_coverage": 0.35714285714285715,
     "prep_empty_response_rate": 0.0,
-    "infra_failure_rate": 0.04285714285714286,
+    "infra_failure_rate": 0.6428571428571429,
     "run_validity": "INVALID",
     "run_policy": "official",
     "latency_budget_report": {
-      "count": 67,
+      "count": 25,
       "elapsed_ms": {
-        "p50": 68154.0,
-        "p90": 105577.2,
-        "p95": 113369.09999999999,
-        "max": 126126.0,
-        "mean": 69551.70149253731
+        "p50": 11782.0,
+        "p90": 148370.60000000003,
+        "p95": 166366.19999999998,
+        "max": 175619.0,
+        "mean": 36420.68
       },
       "budget_utilization": {
-        "p50": 0.3786333333333333,
-        "p90": 0.58654,
-        "max": 0.7007
+        "p50": 0.06545555555555556,
+        "p90": 0.8242811111111115,
+        "max": 0.9756611111111111
       }
     },
-    "prepared_source": "existing",
-    "prepared_validation_skipped": false
+    "persisted_prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0b2_ticket_chunking/tickets_cs600_ov80/run_01/prepared_input.json",
+    "prepared_source": "generated"
   },
   "tune_concurrency": true,
   "trace_evaluator_llm": false,
-  "mlflow_parent_run_id": "5ba1ae14df8748688bacbd4e7008b414",
+  "mlflow_parent_run_id": "a9daa55096db4335a1d764a3227f4125",
   "config_file": "/app/.polaris_experiment_stage0b2_ticket_chunking__tickets_cs600_ov80.yaml",
   "artifacts": {
     "scores_csv": "/app/artifacts/experiments/protocol_final_3runs/stage0b2_ticket_chunking/tickets_cs600_ov80/run_01/scores.csv",
@@ -481,7 +478,7 @@
       "dataset_path": "/app/data/test/ragas_one_hop_eval_dataset_final.dev.jsonl",
       "annotations_path": "/app/data/test/benchmark_annotations_final.csv",
       "prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0b2_ticket_chunking/tickets_cs600_ov80/run_01/prepared_input.json",
-      "reuse_prepared": true,
+      "reuse_prepared": false,
       "allow_stale_prepared": false,
       "query_field": "query",
       "reference_field": "expected_answer",
@@ -502,7 +499,7 @@
       },
       "max_infra_failure_rate": 0.01,
       "generation_retries": {
-        "max_attempts": 1,
+        "max_attempts": 3,
         "initial_backoff_seconds": 1.0,
         "max_backoff_seconds": 8.0,
         "jitter_seconds": 0.25,
@@ -511,23 +508,20 @@
       "generator_profile": {
         "mode": "pipeline",
         "generator_llm": {
-          "type": "openai_like",
-          "model_name": "mistralai/Mistral-Large-Instruct-2407",
-          "api_base": "http://mistral:8080/v1",
+          "type": "openai_chat",
+          "model_name": "meta-llama/Llama-3.3-70B-Instruct:novita",
+          "api_base": "https://router.huggingface.co/v1",
           "request_timeout": 90,
           "max_retries": 1,
           "model_kwargs": {
             "temperature": 0,
             "top_p": 1.0,
-            "stop_list": [
-              "\nUser:",
-              "\n\nUser:"
-            ]
+            "stop_list": []
           }
         },
         "llm_generate": {}
       },
-      "generator_fingerprint": "933650173b8202eb4e65ceda3941a9a4370151c3c33b373840e30d503261a3fa",
+      "generator_fingerprint": "d8497e587288b92270cc9f5eccb7437a78427b9be742d8c8d0b70a4576ef16c9",
       "retriever_profile": {
         "type": "multi_collection",
         "final_top_k": 8,
@@ -687,63 +681,63 @@
       "condition_fingerprint": "04f2e6f6893435acf0d8026eec32c4ac5d7f0b3b85b545d43a3b641b47e1b513",
       "annotation_rows": 70,
       "prep_total_rows": 70,
-      "prep_success_rows": 67,
-      "prep_failed_rows": 3,
-      "prep_elapsed_seconds": 0.0,
-      "prep_rate_rows_per_second": 0.0,
+      "prep_success_rows": 25,
+      "prep_failed_rows": 45,
+      "prep_elapsed_seconds": 328.0011841339874,
+      "prep_rate_rows_per_second": 0.21341386368716653,
       "prep_error_classes": {
-        "BadRequestError": 3
+        "UnprocessableEntityError": 45
       },
       "prep_failure_classes": {
-        "api_internal_error": 3
+        "api_internal_error": 45
       },
       "prep_failure_class_rates": {
-        "api_internal_error": 0.04285714285714286
+        "api_internal_error": 0.6428571428571429
       },
       "prep_failure_stages": {
-        "api": 3
+        "api": 45
       },
       "prep_failure_stage_rates": {
-        "api": 0.04285714285714286
+        "api": 0.6428571428571429
       },
       "prep_response_statuses": {
-        "ok": 67,
-        "error": 3
+        "ok": 25,
+        "error": 45
       },
       "prep_response_status_rates": {
-        "ok": 0.9571428571428572,
-        "error": 0.04285714285714286
+        "ok": 0.35714285714285715,
+        "error": 0.6428571428571429
       },
-      "prep_coverage": 0.9571428571428572,
+      "prep_coverage": 0.35714285714285715,
       "prep_empty_response_rate": 0.0,
-      "infra_failure_rate": 0.04285714285714286,
+      "infra_failure_rate": 0.6428571428571429,
       "run_validity": "INVALID",
       "run_policy": "official",
       "latency_budget_report": {
-        "count": 67,
+        "count": 25,
         "elapsed_ms": {
-          "p50": 68154.0,
-          "p90": 105577.2,
-          "p95": 113369.09999999999,
-          "max": 126126.0,
-          "mean": 69551.70149253731
+          "p50": 11782.0,
+          "p90": 148370.60000000003,
+          "p95": 166366.19999999998,
+          "max": 175619.0,
+          "mean": 36420.68
         },
         "budget_utilization": {
-          "p50": 0.3786333333333333,
-          "p90": 0.58654,
-          "max": 0.7007
+          "p50": 0.06545555555555556,
+          "p90": 0.8242811111111115,
+          "max": 0.9756611111111111
         }
       },
-      "prepared_source": "existing",
-      "prepared_validation_skipped": false
+      "persisted_prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0b2_ticket_chunking/tickets_cs600_ov80/run_01/prepared_input.json",
+      "prepared_source": "generated"
     },
     "evaluation_preprocessing": {
       "enabled": true,
       "processed_rows": 70,
-      "truncated_rows": 59,
-      "truncated_contexts": 131,
-      "original_total_context_characters": 1658954,
-      "processed_total_context_characters": 848880,
+      "truncated_rows": 19,
+      "truncated_contexts": 39,
+      "original_total_context_characters": 544320,
+      "processed_total_context_characters": 304807,
       "retrieved_contexts": {
         "max_characters": 4000,
         "max_total_characters": 20000,
@@ -752,6 +746,6 @@
     },
     "tune_concurrency": true,
     "trace_evaluator_llm": false,
-    "mlflow_parent_run_id": "5ba1ae14df8748688bacbd4e7008b414"
+    "mlflow_parent_run_id": "a9daa55096db4335a1d764a3227f4125"
   }
 }

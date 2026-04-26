@@ -40,15 +40,12 @@
       "model_kwargs": {
         "temperature": 0,
         "top_p": 1.0,
-        "stop_list": [
-          "\nUser:",
-          "\n\nUser:"
-        ]
+        "stop_list": []
       }
     },
     "llm_generate": {}
   },
-  "generator_fingerprint": "c60bdf82dde7e46f1eb6c7bb842d1819b6fc9330734d2d11d07a369e77a4d042",
+  "generator_fingerprint": "d8497e587288b92270cc9f5eccb7437a78427b9be742d8c8d0b70a4576ef16c9",
   "retriever_profile": {
     "type": "multi_collection",
     "final_top_k": 8,
@@ -301,8 +298,8 @@
   "prep_total_rows": 70,
   "prep_success_rows": 70,
   "prep_failed_rows": 0,
-  "prep_elapsed_seconds": 186.1751984169823,
-  "prep_rate_rows_per_second": 0.3759899309639453,
+  "prep_elapsed_seconds": 190.27865879202727,
+  "prep_rate_rows_per_second": 0.367881508333046,
   "prep_error_classes": {},
   "prep_failure_classes": {},
   "prep_failure_class_rates": {},
@@ -322,16 +319,16 @@
   "latency_budget_report": {
     "count": 70,
     "elapsed_ms": {
-      "p50": 25822.5,
-      "p90": 38882.7,
-      "p95": 40476.45,
-      "max": 56956.0,
-      "mean": 26785.0
+      "p50": 26690.0,
+      "p90": 42058.0,
+      "p95": 43331.6,
+      "max": 59324.0,
+      "mean": 28828.928571428572
     },
     "budget_utilization": {
-      "p50": 0.14345833333333333,
-      "p90": 0.216015,
-      "max": 0.3164222222222222
+      "p50": 0.14827777777777779,
+      "p90": 0.23365555555555556,
+      "max": 0.3295777777777778
     }
   },
   "persisted_prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/llama33_naive_combined/run_01/prepared_input.json",

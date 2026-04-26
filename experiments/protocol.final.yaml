@@ -27,7 +27,7 @@ generator_candidates:
         max_tokens: 1024
         temperature: 0
         top_p: 1.0
-        # stop_list: ["\nUser:", "\n\nUser:"]
+        stop_list: []
   qwen25_32b: &qwen25_32b_generator
     generator_llm:
       type: "openai_like"
@@ -665,16 +665,16 @@ stages:
     conditions:
       - name: "tickets_cs600_ov0"
         preset: "tickets_only"
-        ingest:
-          kind: "jira"
-          source: "tickets"
-          qdrant_collection_name: "exp_tickets_cs600_ov0"
-          persist_dir: "../data/storage/exp_tickets_cs600_ov0"
-          start_date: "2017-11-01"
-          chunking_strategy: "jira_turns_token"
-          chunk_size_tokens: 600
-          chunk_overlap_tokens: 0
-          fetch_batch_size: 200
+        # ingest:
+        #   kind: "jira"
+        #   source: "tickets"
+        #   qdrant_collection_name: "exp_tickets_cs600_ov0"
+        #   persist_dir: "../data/storage/exp_tickets_cs600_ov0"
+        #   start_date: "2017-11-01"
+        #   chunking_strategy: "jira_turns_token"
+        #   chunk_size_tokens: 600
+        #   chunk_overlap_tokens: 0
+        #   fetch_batch_size: 200
         config_overrides:
           embedder:
             api_base: "http://embed:80/v1"
@@ -690,16 +690,16 @@ stages:
                   overlap_tokens: 0
       - name: "tickets_cs600_ov80"
         preset: "tickets_only"
-        ingest:
-          kind: "jira"
-          source: "tickets"
-          qdrant_collection_name: "exp_tickets_cs600_ov80"
-          persist_dir: "../data/storage/exp_tickets_cs600_ov80"
-          start_date: "2017-11-01"
-          chunking_strategy: "jira_turns_token"
-          chunk_size_tokens: 600
-          chunk_overlap_tokens: 80
-          fetch_batch_size: 200
+        # ingest:
+        #   kind: "jira"
+        #   source: "tickets"
+        #   qdrant_collection_name: "exp_tickets_cs600_ov80"
+        #   persist_dir: "../data/storage/exp_tickets_cs600_ov80"
+        #   start_date: "2017-11-01"
+        #   chunking_strategy: "jira_turns_token"
+        #   chunk_size_tokens: 600
+        #   chunk_overlap_tokens: 80
+        #   fetch_batch_size: 200
         config_overrides:
           embedder:
             api_base: "http://embed:80/v1"
@@ -715,16 +715,16 @@ stages:
                   overlap_tokens: 80
       - name: "tickets_cs800_ov0"
         preset: "tickets_only"
-        ingest:
-          kind: "jira"
-          source: "tickets"
-          qdrant_collection_name: "exp_tickets_cs800_ov0"
-          persist_dir: "../data/storage/exp_tickets_cs800_ov0"
-          start_date: "2017-11-01"
-          chunking_strategy: "jira_turns_token"
-          chunk_size_tokens: 800
-          chunk_overlap_tokens: 0
-          fetch_batch_size: 200
+        # ingest:
+        #   kind: "jira"
+        #   source: "tickets"
+        #   qdrant_collection_name: "exp_tickets_cs800_ov0"
+        #   persist_dir: "../data/storage/exp_tickets_cs800_ov0"
+        #   start_date: "2017-11-01"
+        #   chunking_strategy: "jira_turns_token"
+        #   chunk_size_tokens: 800
+        #   chunk_overlap_tokens: 0
+        #   fetch_batch_size: 200
         config_overrides:
           embedder:
             api_base: "http://embed:80/v1"
@@ -740,16 +740,16 @@ stages:
                   overlap_tokens: 0
       - name: "tickets_cs800_ov80"
         preset: "tickets_only"
-        ingest:
-          kind: "jira"
-          source: "tickets"
-          qdrant_collection_name: "exp_tickets_cs800_ov80"
-          persist_dir: "../data/storage/exp_tickets_cs800_ov80"
-          start_date: "2017-11-01"
-          chunking_strategy: "jira_turns_token"
-          chunk_size_tokens: 800
-          chunk_overlap_tokens: 80
-          fetch_batch_size: 200
+        # ingest:
+        #   kind: "jira"
+        #   source: "tickets"
+        #   qdrant_collection_name: "exp_tickets_cs800_ov80"
+        #   persist_dir: "../data/storage/exp_tickets_cs800_ov80"
+        #   start_date: "2017-11-01"
+        #   chunking_strategy: "jira_turns_token"
+        #   chunk_size_tokens: 800
+        #   chunk_overlap_tokens: 80
+        #   fetch_batch_size: 200
         config_overrides:
           embedder:
             api_base: "http://embed:80/v1"
@@ -765,16 +765,16 @@ stages:
                   overlap_tokens: 80
       - name: "tickets_cs1000_ov0"
         preset: "tickets_only"
-        ingest:
-          kind: "jira"
-          source: "tickets"
-          qdrant_collection_name: "exp_tickets_cs1000_ov0"
-          persist_dir: "../data/storage/exp_tickets_cs1000_ov0"
-          start_date: "2017-11-01"
-          chunking_strategy: "jira_turns_token"
-          chunk_size_tokens: 1000
-          chunk_overlap_tokens: 0
-          fetch_batch_size: 200
+        # ingest:
+        #   kind: "jira"
+        #   source: "tickets"
+        #   qdrant_collection_name: "exp_tickets_cs1000_ov0"
+        #   persist_dir: "../data/storage/exp_tickets_cs1000_ov0"
+        #   start_date: "2017-11-01"
+        #   chunking_strategy: "jira_turns_token"
+        #   chunk_size_tokens: 1000
+        #   chunk_overlap_tokens: 0
+        #   fetch_batch_size: 200
         config_overrides:
           embedder:
             api_base: "http://embed:80/v1"
@@ -790,16 +790,16 @@ stages:
                   overlap_tokens: 0
       - name: "tickets_cs1000_ov80"
         preset: "tickets_only"
-        ingest:
-          kind: "jira"
-          source: "tickets"
-          qdrant_collection_name: "exp_tickets_cs1000_ov80"
-          persist_dir: "../data/storage/exp_tickets_cs1000_ov80"
-          start_date: "2017-11-01"
-          chunking_strategy: "jira_turns_token"
-          chunk_size_tokens: 1000
-          chunk_overlap_tokens: 80
-          fetch_batch_size: 200
+        # ingest:
+        #   kind: "jira"
+        #   source: "tickets"
+        #   qdrant_collection_name: "exp_tickets_cs1000_ov80"
+        #   persist_dir: "../data/storage/exp_tickets_cs1000_ov80"
+        #   start_date: "2017-11-01"
+        #   chunking_strategy: "jira_turns_token"
+        #   chunk_size_tokens: 1000
+        #   chunk_overlap_tokens: 80
+        #   fetch_batch_size: 200
         config_overrides:
           embedder:
             api_base: "http://embed:80/v1"

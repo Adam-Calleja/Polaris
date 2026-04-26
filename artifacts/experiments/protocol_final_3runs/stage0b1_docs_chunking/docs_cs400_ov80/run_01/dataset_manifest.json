@@ -2,7 +2,7 @@
   "dataset_path": "/app/data/test/ragas_one_hop_eval_dataset_final.dev.jsonl",
   "annotations_path": "/app/data/test/benchmark_annotations_final.csv",
   "prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0b1_docs_chunking/docs_cs400_ov80/run_01/prepared_input.json",
-  "reuse_prepared": true,
+  "reuse_prepared": false,
   "allow_stale_prepared": false,
   "query_field": "query",
   "reference_field": "expected_answer",
@@ -23,7 +23,7 @@
   },
   "max_infra_failure_rate": 0.01,
   "generation_retries": {
-    "max_attempts": 1,
+    "max_attempts": 3,
     "initial_backoff_seconds": 1.0,
     "max_backoff_seconds": 8.0,
     "jitter_seconds": 0.25,
@@ -32,23 +32,20 @@
   "generator_profile": {
     "mode": "pipeline",
     "generator_llm": {
-      "type": "openai_like",
-      "model_name": "mistralai/Mistral-Large-Instruct-2407",
-      "api_base": "http://mistral:8080/v1",
+      "type": "openai_chat",
+      "model_name": "meta-llama/Llama-3.3-70B-Instruct:novita",
+      "api_base": "https://router.huggingface.co/v1",
       "request_timeout": 90,
       "max_retries": 1,
       "model_kwargs": {
         "temperature": 0,
         "top_p": 1.0,
-        "stop_list": [
-          "\nUser:",
-          "\n\nUser:"
-        ]
+        "stop_list": []
       }
     },
     "llm_generate": {}
   },
-  "generator_fingerprint": "933650173b8202eb4e65ceda3941a9a4370151c3c33b373840e30d503261a3fa",
+  "generator_fingerprint": "d8497e587288b92270cc9f5eccb7437a78427b9be742d8c8d0b70a4576ef16c9",
   "retriever_profile": {
     "type": "multi_collection",
     "final_top_k": 8,
@@ -210,8 +207,8 @@
   "prep_total_rows": 70,
   "prep_success_rows": 70,
   "prep_failed_rows": 0,
-  "prep_elapsed_seconds": 0.0,
-  "prep_rate_rows_per_second": 0.0,
+  "prep_elapsed_seconds": 96.23690212599467,
+  "prep_rate_rows_per_second": 0.72737170932991,
   "prep_error_classes": {},
   "prep_failure_classes": {},
   "prep_failure_class_rates": {},
@@ -231,18 +228,18 @@
   "latency_budget_report": {
     "count": 70,
     "elapsed_ms": {
-      "p50": 42510.5,
-      "p90": 53018.700000000004,
-      "p95": 58025.1,
-      "max": 69021.0,
-      "mean": 42995.7
+      "p50": 15566.0,
+      "p90": 19066.1,
+      "p95": 19957.25,
+      "max": 21182.0,
+      "mean": 15879.771428571428
     },
     "budget_utilization": {
-      "p50": 0.23616944444444443,
-      "p90": 0.2945483333333333,
-      "max": 0.38345
+      "p50": 0.08647777777777776,
+      "p90": 0.10592277777777777,
+      "max": 0.11767777777777778
     }
   },
-  "prepared_source": "existing",
-  "prepared_validation_skipped": false
+  "persisted_prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0b1_docs_chunking/docs_cs400_ov80/run_01/prepared_input.json",
+  "prepared_source": "generated"
 }
