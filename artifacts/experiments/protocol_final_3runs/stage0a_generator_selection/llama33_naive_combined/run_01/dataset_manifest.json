@@ -23,7 +23,7 @@
   },
   "max_infra_failure_rate": 0.01,
   "generation_retries": {
-    "max_attempts": 1,
+    "max_attempts": 3,
     "initial_backoff_seconds": 1.0,
     "max_backoff_seconds": 8.0,
     "jitter_seconds": 0.25,
@@ -299,52 +299,39 @@
   "condition_fingerprint": "55e96655000984864840fe54a4149f6d1b2f48bbc34ded179d3c8d8f7872a9c6",
   "annotation_rows": 70,
   "prep_total_rows": 70,
-  "prep_success_rows": 59,
-  "prep_failed_rows": 11,
-  "prep_elapsed_seconds": 149.12339427002007,
-  "prep_rate_rows_per_second": 0.46940991614803174,
-  "prep_error_classes": {
-    "UnexpectedResponse": 3,
-    "UnprocessableEntityError": 8
-  },
-  "prep_failure_classes": {
-    "api_internal_error": 11
-  },
-  "prep_failure_class_rates": {
-    "api_internal_error": 0.15714285714285714
-  },
-  "prep_failure_stages": {
-    "api": 11
-  },
-  "prep_failure_stage_rates": {
-    "api": 0.15714285714285714
-  },
+  "prep_success_rows": 70,
+  "prep_failed_rows": 0,
+  "prep_elapsed_seconds": 186.1751984169823,
+  "prep_rate_rows_per_second": 0.3759899309639453,
+  "prep_error_classes": {},
+  "prep_failure_classes": {},
+  "prep_failure_class_rates": {},
+  "prep_failure_stages": {},
+  "prep_failure_stage_rates": {},
   "prep_response_statuses": {
-    "error": 11,
-    "ok": 59
+    "ok": 70
   },
   "prep_response_status_rates": {
-    "error": 0.15714285714285714,
-    "ok": 0.8428571428571429
+    "ok": 1.0
   },
-  "prep_coverage": 0.8428571428571429,
+  "prep_coverage": 1.0,
   "prep_empty_response_rate": 0.0,
-  "infra_failure_rate": 0.15714285714285714,
-  "run_validity": "INVALID",
+  "infra_failure_rate": 0.0,
+  "run_validity": "VALID",
   "run_policy": "official",
   "latency_budget_report": {
-    "count": 59,
+    "count": 70,
     "elapsed_ms": {
-      "p50": 21565.0,
-      "p90": 27637.20000000001,
-      "p95": 36960.799999999996,
-      "max": 40292.0,
-      "mean": 22062.745762711864
+      "p50": 25822.5,
+      "p90": 38882.7,
+      "p95": 40476.45,
+      "max": 56956.0,
+      "mean": 26785.0
     },
     "budget_utilization": {
-      "p50": 0.11980555555555555,
-      "p90": 0.15354000000000007,
-      "max": 0.22384444444444446
+      "p50": 0.14345833333333333,
+      "p90": 0.216015,
+      "max": 0.3164222222222222
     }
   },
   "persisted_prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0a_generator_selection/llama33_naive_combined/run_01/prepared_input.json",

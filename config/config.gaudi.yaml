@@ -61,3 +61,10 @@ evaluation:
     timeout: 300
     max_retries: 0
     max_workers: 16
+  generation:
+    retries:
+      max_attempts: 3
+      initial_backoff_seconds: 1.0
+      max_backoff_seconds: 8.0
+      jitter_seconds: 0.25
+      retry_on_empty_response: true

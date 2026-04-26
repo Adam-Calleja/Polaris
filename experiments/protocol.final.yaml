@@ -27,7 +27,7 @@ generator_candidates:
         max_tokens: 1024
         temperature: 0
         top_p: 1.0
-        stop_list: ["\nUser:", "\n\nUser:"]
+        # stop_list: ["\nUser:", "\n\nUser:"]
   qwen25_32b: &qwen25_32b_generator
     generator_llm:
       type: "openai_like"
@@ -356,7 +356,7 @@ ingest_specs:
 
 defaults:
   config_overrides:
-    <<: [*mistral_large_2407_generator, *ticket_prompt_config]
+    <<: [*llama33_generator, *ticket_prompt_config]
     vector_stores: *selected_vector_store_collections
     storage_context:
       persist_dir: "/app/data/storage/exp_protocol_selected"
@@ -418,7 +418,7 @@ stages:
     type: "evaluation_grid"
     dataset_path: "../data/test/ragas_one_hop_eval_dataset_final.dev.jsonl"
     annotations_file: "../data/test/benchmark_annotations_final.csv"
-    repeats: 3
+    repeats: 1
     config_overrides:
       # vector_stores:
       #   docs:
