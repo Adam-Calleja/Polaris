@@ -21,6 +21,7 @@ COPY src/ ./src/
 
 # Copy runtime config (prompts, configs)
 COPY config/ /app/config/
+COPY prompts/ /app/prompts/
 
 # Copy any scripts if needed
 COPY scripts/ /app/scripts/
