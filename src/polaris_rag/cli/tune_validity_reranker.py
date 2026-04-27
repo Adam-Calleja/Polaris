@@ -22,6 +22,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from itertools import product
 import json
+import logging
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
@@ -32,8 +33,11 @@ from polaris_rag.config import GlobalConfig
 from polaris_rag.evaluation.evaluation_dataset import (
     build_prepared_rows,
     load_raw_examples,
+    preprocess_rows_for_evaluation,
     to_evaluation_dataset,
 )
+
+logger = logging.getLogger(__name__)
 
 
 OBJECTIVE_METRICS: tuple[str, ...] = (
@@ -379,6 +383,40 @@ def _trial_cfg(cfg: GlobalConfig, *, weights: Mapping[str, float]) -> GlobalConf
     return GlobalConfig(raw=raw, config_path=getattr(cfg, "config_path", None))
 
 
+def _row_source_error(row: Mapping[str, Any]) -> str | None:
+    metadata = _as_mapping(row.get("metadata", {}))
+    value = metadata.get("source_error")
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
+def _trial_rows_for_evaluation(
+    cfg: GlobalConfig,
+    rows: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], int]:
+    usable_rows: list[dict[str, Any]] = []
+    dropped_rows = 0
+
+    for row in rows:
+        if _row_source_error(row):
+            dropped_rows += 1
+            continue
+        if not str(row.get("response", "") or "").strip():
+            dropped_rows += 1
+            continue
+        usable_rows.append(row)
+
+    eval_cfg = _as_mapping(_as_mapping(getattr(cfg, "raw", {})).get("evaluation", {}))
+    preprocessing_cfg = _as_mapping(eval_cfg.get("preprocessing", {}))
+    processed_rows, _summary = preprocess_rows_for_evaluation(
+        usable_rows,
+        preprocessing=preprocessing_cfg,
+    )
+    return processed_rows, dropped_rows
+
+
 def _run_trial(
     *,
     cfg: GlobalConfig,
@@ -428,7 +466,23 @@ def _run_trial(
         reranker_profile=reranker_profile,
         reranker_fingerprint=reranker_fingerprint,
     )
-    dataset = to_evaluation_dataset(rows)
+    evaluation_rows, dropped_rows = _trial_rows_for_evaluation(trial_cfg, rows)
+    if dropped_rows:
+        logger.warning(
+            "Dropping %s/%s failed prepared rows before stage2 scoring.",
+            dropped_rows,
+            len(rows),
+        )
+    if not evaluation_rows:
+        return TrialResult(
+            weights={key: float(value) for key, value in weights.items()},
+            objective=float("-inf"),
+            metric_means={},
+            reranker_fingerprint=reranker_fingerprint,
+            prepared_rows=0,
+        )
+
+    dataset = to_evaluation_dataset(evaluation_rows)
     from polaris_rag.evaluation.evaluator import Evaluator
 
     evaluator = Evaluator.from_global_config(
@@ -438,7 +492,7 @@ def _run_trial(
     )
     result = evaluator.evaluate(
         dataset=dataset,
-        source_rows=rows,
+        source_rows=evaluation_rows,
         tune_concurrency=False,
         show_progress=False,
     )
@@ -449,7 +503,7 @@ def _run_trial(
         objective=_trial_objective(metric_means),
         metric_means=metric_means,
         reranker_fingerprint=reranker_fingerprint,
-        prepared_rows=len(rows),
+        prepared_rows=len(evaluation_rows),
     )
 
 

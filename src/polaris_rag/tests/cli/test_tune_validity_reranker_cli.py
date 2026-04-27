@@ -10,7 +10,7 @@ from polaris_rag.cli import tune_validity_reranker
 def test_weight_trials_build_expected_default_grid_size() -> None:
     trials = tune_validity_reranker._weight_trials()
 
-    assert len(trials) == 1458
+    assert len(trials) == 54
     assert trials[0]["authority"] == 0.0
     assert trials[0]["software"] == 0.0
     assert trials[0]["scope_family"] == 0.0
@@ -140,3 +140,83 @@ def test_main_writes_weights_and_manifest(monkeypatch, tmp_path: Path) -> None:
     assert "authority: 0.08" in output_path.read_text(encoding="utf-8")
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     assert manifest["selected_trial"]["reranker_fingerprint"] == "fp-best"
+
+
+def test_trial_rows_for_evaluation_drops_failed_rows() -> None:
+    cfg = SimpleNamespace(raw={"evaluation": {"preprocessing": {}}})
+    rows = [
+        {
+            "id": "ok",
+            "user_input": "Q1",
+            "reference": "A1",
+            "response": "R1",
+            "retrieved_contexts": ["ctx-1"],
+            "retrieved_context_ids": ["doc-1"],
+            "metadata": {},
+        },
+        {
+            "id": "failed",
+            "user_input": "Q2",
+            "reference": "A2",
+            "response": "",
+            "retrieved_contexts": [],
+            "retrieved_context_ids": [],
+            "metadata": {"source_error": "response is empty after 3 attempt(s)"},
+        },
+        {
+            "id": "blank",
+            "user_input": "Q3",
+            "reference": "A3",
+            "response": "   ",
+            "retrieved_contexts": ["ctx-3"],
+            "retrieved_context_ids": ["doc-3"],
+            "metadata": {},
+        },
+    ]
+
+    processed_rows, dropped_rows = tune_validity_reranker._trial_rows_for_evaluation(cfg, rows)
+
+    assert dropped_rows == 2
+    assert len(processed_rows) == 1
+    assert processed_rows[0]["id"] == "ok"
+
+
+def test_run_trial_returns_negative_infinity_when_no_rows_are_usable(monkeypatch) -> None:
+    monkeypatch.setattr(
+        tune_validity_reranker,
+        "build_container",
+        lambda cfg: SimpleNamespace(pipeline=object()),
+    )
+    monkeypatch.setattr(
+        tune_validity_reranker,
+        "build_prepared_rows",
+        lambda **kwargs: [
+            {
+                "id": "failed",
+                "user_input": "Q1",
+                "reference": "A1",
+                "response": "",
+                "retrieved_contexts": [],
+                "retrieved_context_ids": [],
+                "metadata": {"source_error": "response is empty after 3 attempt(s)"},
+            }
+        ],
+    )
+
+    result = tune_validity_reranker._run_trial(
+        cfg=SimpleNamespace(raw={}),
+        raw_examples=[{"id": "failed", "query": "Q1", "expected_answer": "A1"}],
+        weights={
+            "authority": 0.0,
+            "scope": 0.0,
+            "software": 0.0,
+            "scope_family": 0.0,
+            "version": 0.0,
+            "status": 0.0,
+            "freshness": 0.0,
+        },
+        generation_workers=1,
+    )
+
+    assert result.objective == float("-inf")
+    assert result.prepared_rows == 0
