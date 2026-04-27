@@ -17,8 +17,8 @@
       "log_tenacity": true,
       "seed": 42
     },
-    "duration_seconds": 381.69788796204375,
-    "failure_rate": 0.6,
+    "duration_seconds": 743.5464901080122,
+    "failure_rate": 0.18571428571428572,
     "tuning_trials": []
   },
   "preset_name": "tickets_only",
@@ -320,51 +320,51 @@
     "condition_fingerprint": "3ddc67de608b7715fe1419baf2f98d287c27db5266dc2558761f32626d3aab54",
     "annotation_rows": 70,
     "prep_total_rows": 70,
-    "prep_success_rows": 29,
-    "prep_failed_rows": 41,
-    "prep_elapsed_seconds": 202.1053709179978,
-    "prep_rate_rows_per_second": 0.34635398199487627,
+    "prep_success_rows": 60,
+    "prep_failed_rows": 10,
+    "prep_elapsed_seconds": 133.33279282297008,
+    "prep_rate_rows_per_second": 0.5250021282681829,
     "prep_error_classes": {
-      "UnprocessableEntityError": 41
+      "UnprocessableEntityError": 10
     },
     "prep_failure_classes": {
-      "api_internal_error": 41
+      "api_internal_error": 10
     },
     "prep_failure_class_rates": {
-      "api_internal_error": 0.5857142857142857
+      "api_internal_error": 0.14285714285714285
     },
     "prep_failure_stages": {
-      "api": 41
+      "api": 10
     },
     "prep_failure_stage_rates": {
-      "api": 0.5857142857142857
+      "api": 0.14285714285714285
     },
     "prep_response_statuses": {
-      "ok": 29,
-      "error": 41
+      "ok": 60,
+      "error": 10
     },
     "prep_response_status_rates": {
-      "ok": 0.4142857142857143,
-      "error": 0.5857142857142857
+      "ok": 0.8571428571428571,
+      "error": 0.14285714285714285
     },
-    "prep_coverage": 0.4142857142857143,
+    "prep_coverage": 0.8571428571428571,
     "prep_empty_response_rate": 0.0,
-    "infra_failure_rate": 0.5857142857142857,
+    "infra_failure_rate": 0.14285714285714285,
     "run_validity": "INVALID",
     "run_policy": "official",
     "latency_budget_report": {
-      "count": 29,
+      "count": 60,
       "elapsed_ms": {
-        "p50": 14485.0,
-        "p90": 71573.2,
-        "p95": 74290.2,
-        "max": 102915.0,
-        "mean": 26251.41379310345
+        "p50": 14872.5,
+        "p90": 19437.300000000003,
+        "p95": 25637.599999999984,
+        "max": 33892.0,
+        "mean": 15267.633333333333
       },
       "budget_utilization": {
-        "p50": 0.08047222222222222,
-        "p90": 0.39762888888888887,
-        "max": 0.57175
+        "p50": 0.082625,
+        "p90": 0.10798500000000003,
+        "max": 0.1882888888888889
       }
     },
     "persisted_prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0b2_ticket_chunking/tickets_cs600_ov0/run_02/prepared_input.json",
@@ -372,7 +372,7 @@
   },
   "tune_concurrency": true,
   "trace_evaluator_llm": false,
-  "mlflow_parent_run_id": "be5388820a7b4063a3f40c82ec1e1da0",
+  "mlflow_parent_run_id": "319a61e62ba94c838ae6d9f0fe9f9d95",
   "config_file": "/app/.polaris_experiment_stage0b2_ticket_chunking__tickets_cs600_ov0.yaml",
   "artifacts": {
     "scores_csv": "/app/artifacts/experiments/protocol_final_3runs/stage0b2_ticket_chunking/tickets_cs600_ov0/run_02/scores.csv",
@@ -681,51 +681,51 @@
       "condition_fingerprint": "3ddc67de608b7715fe1419baf2f98d287c27db5266dc2558761f32626d3aab54",
       "annotation_rows": 70,
       "prep_total_rows": 70,
-      "prep_success_rows": 29,
-      "prep_failed_rows": 41,
-      "prep_elapsed_seconds": 202.1053709179978,
-      "prep_rate_rows_per_second": 0.34635398199487627,
+      "prep_success_rows": 60,
+      "prep_failed_rows": 10,
+      "prep_elapsed_seconds": 133.33279282297008,
+      "prep_rate_rows_per_second": 0.5250021282681829,
       "prep_error_classes": {
-        "UnprocessableEntityError": 41
+        "UnprocessableEntityError": 10
       },
       "prep_failure_classes": {
-        "api_internal_error": 41
+        "api_internal_error": 10
       },
       "prep_failure_class_rates": {
-        "api_internal_error": 0.5857142857142857
+        "api_internal_error": 0.14285714285714285
       },
       "prep_failure_stages": {
-        "api": 41
+        "api": 10
       },
       "prep_failure_stage_rates": {
-        "api": 0.5857142857142857
+        "api": 0.14285714285714285
       },
       "prep_response_statuses": {
-        "ok": 29,
-        "error": 41
+        "ok": 60,
+        "error": 10
       },
       "prep_response_status_rates": {
-        "ok": 0.4142857142857143,
-        "error": 0.5857142857142857
+        "ok": 0.8571428571428571,
+        "error": 0.14285714285714285
       },
-      "prep_coverage": 0.4142857142857143,
+      "prep_coverage": 0.8571428571428571,
       "prep_empty_response_rate": 0.0,
-      "infra_failure_rate": 0.5857142857142857,
+      "infra_failure_rate": 0.14285714285714285,
       "run_validity": "INVALID",
       "run_policy": "official",
       "latency_budget_report": {
-        "count": 29,
+        "count": 60,
         "elapsed_ms": {
-          "p50": 14485.0,
-          "p90": 71573.2,
-          "p95": 74290.2,
-          "max": 102915.0,
-          "mean": 26251.41379310345
+          "p50": 14872.5,
+          "p90": 19437.300000000003,
+          "p95": 25637.599999999984,
+          "max": 33892.0,
+          "mean": 15267.633333333333
         },
         "budget_utilization": {
-          "p50": 0.08047222222222222,
-          "p90": 0.39762888888888887,
-          "max": 0.57175
+          "p50": 0.082625,
+          "p90": 0.10798500000000003,
+          "max": 0.1882888888888889
         }
       },
       "persisted_prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0b2_ticket_chunking/tickets_cs600_ov0/run_02/prepared_input.json",
@@ -734,10 +734,10 @@
     "evaluation_preprocessing": {
       "enabled": true,
       "processed_rows": 70,
-      "truncated_rows": 25,
-      "truncated_contexts": 53,
-      "original_total_context_characters": 704279,
-      "processed_total_context_characters": 362602,
+      "truncated_rows": 51,
+      "truncated_contexts": 115,
+      "original_total_context_characters": 1502054,
+      "processed_total_context_characters": 766852,
       "retrieved_contexts": {
         "max_characters": 4000,
         "max_total_characters": 20000,
@@ -746,6 +746,6 @@
     },
     "tune_concurrency": true,
     "trace_evaluator_llm": false,
-    "mlflow_parent_run_id": "be5388820a7b4063a3f40c82ec1e1da0"
+    "mlflow_parent_run_id": "319a61e62ba94c838ae6d9f0fe9f9d95"
   }
 }
