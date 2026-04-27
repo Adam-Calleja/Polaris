@@ -1,0 +1,56 @@
+\chapter{Authority Metadata Fields}
+\label{app:authority-metadata-fields}
+
+Table~\ref{tab:authority-metadata-fields} summarises the main metadata fields attached during ingestion. These fields are derived from the authority registry and associated preprocessing steps, and are later used to support retrieval, reranking, provenance tracking, and reviewability.
+
+\begin{longtable}{@{}p{0.24\textwidth} p{0.30\textwidth} p{0.38\textwidth}@{}}
+\caption[Authority metadata fields attached during ingestion.]{Authority metadata fields attached during ingestion in Polaris.}
+\label{tab:authority-metadata-fields} \\
+\toprule
+Field & Description & Role in the system \\
+\midrule
+\endfirsthead
+
+\toprule
+Field & Description & Role in the system \\
+\midrule
+\endhead
+
+\bottomrule
+\endfoot
+
+\texttt{source\_authority} & Encodes the authority class of the source, such as local official documentation, external official documentation, or ticket memory. & Supports source-aware retrieval and allows later stages to distinguish evidence by reliability class. \\
+
+\texttt{authority\_tier} & Numeric authority level derived from the source authority class. & Provides a compact ranking signal for reranking and diagnostic analysis. \\
+
+\texttt{system\_names} & Normalised system entities matched to the record. & Identifies which cluster or platform the evidence refers to. \\
+
+\texttt{partition\_names} & Normalised partition entities matched to the record. & Supports queries involving scheduler partitions or node classes. \\
+
+\texttt{service\_names} & Normalised service entities matched to the record. & Helps capture operational services such as portals or interfaces. \\
+
+\texttt{scope\_family\_names} & Higher-level scope groupings inferred from matched entities or text patterns. & Allows broader retrieval and reranking decisions beyond exact entity matches. \\
+
+\texttt{software\_names} & Normalised software entities matched to the record. & Identifies the main software packages discussed in the evidence. \\
+
+\texttt{software\_versions} & Version mentions associated with matched software entities. & Supports version-sensitive retrieval and reranking. \\
+
+\texttt{module\_names} & Matched module identifiers extracted from the content. & Helps interpret module-based software references in tickets and documentation. \\
+
+\texttt{toolchain\_names} & Normalised toolchain entities matched to the record. & Distinguishes compiler or build-stack context where relevant. \\
+
+\texttt{toolchain\_versions} & Version mentions associated with matched toolchain entities. & Supports toolchain-specific matching and version alignment. \\
+
+\texttt{official\_doc\_matches} & Structured record of registry entity matches back to official documentation. & Preserves documentary support for matched entities and enables later auditability. \\
+
+\texttt{validity\_status} & Aggregated lifecycle status inferred from matched registry entities, such as current, maintenance, legacy, or end-of-life. & Supplies a direct validity signal for reranking and review. \\
+
+\texttt{validity\_hint} & Structured diagnostic summary of matched status evidence. & Preserves a richer explanation of validity beyond a single label. \\
+
+\texttt{freshness\_hint} & Timestamp-like recency cue derived from available metadata fields. & Supports recency-sensitive ranking and later analysis of stale evidence. \\
+
+\texttt{privacy\_flags} & Flags indicating the presence of potentially sensitive patterns such as email addresses, IP addresses, or filesystem paths. & Supports governance and safer handling of retrieved ticket evidence. \\
+
+\texttt{provenance} & Structured provenance record including enrichment version, registry artifact path, extraction version, and matched entity identifiers. & Makes enrichment outputs reproducible, traceable, and reviewable. \\
+
+\end{longtable}

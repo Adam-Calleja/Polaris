@@ -1044,9 +1044,9 @@ stages:
   stage2_validity_tuning:
     type: "tune_validity_reranker"
     dataset_path: "../data/test/ragas_one_hop_eval_dataset_final.dev.jsonl"
-    output_path: "../config/weights/validity_reranker.protocol.yaml"
+    output_path: "../artifacts/experiments/protocol_final_3runs/stage2_validity_tuning/validity_reranker.protocol.yaml"
     manifest_path: "../artifacts/experiments/protocol_final_3runs/stage2_validity_tuning/validity_reranker.protocol.manifest.json"
-    generation_workers: 1
+    generation_workers: 4
 
   stage3_benchmark_characterisation:
     type: "benchmark_analysis"

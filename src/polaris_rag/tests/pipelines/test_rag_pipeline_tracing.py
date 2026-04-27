@@ -325,3 +325,49 @@ def test_pipeline_keeps_empty_reference_key_when_no_citations_are_used() -> None
         "There is not enough retrieved evidence to confirm the path safely.\n\n"
         "REFERENCE KEY"
     )
+
+
+def test_pipeline_suppresses_trace_content_when_demo_anonymization_is_enabled(monkeypatch) -> None:
+    span_outputs: dict[str, object] = {}
+    span_inputs: dict[str, object] = {}
+
+    @contextmanager
+    def _fake_start_span(name: str, **kwargs):  # noqa: ANN001
+        span_inputs[name] = kwargs.get("inputs")
+        yield _Span(name)
+
+    def _fake_set_span_outputs(span: _Span, outputs):  # noqa: ANN001
+        span_outputs[span.name] = outputs
+
+    monkeypatch.setattr("polaris_rag.pipelines.rag_pipeline.start_span", _fake_start_span)
+    monkeypatch.setattr("polaris_rag.pipelines.rag_pipeline.set_span_outputs", _fake_set_span_outputs)
+
+    retriever = _FakeRetriever()
+    prompt_builder = _FakeChatPromptBuilder()
+    llm = _FakeChatLLM()
+
+    pipeline = RAGPipeline(
+        retriever=retriever,
+        prompt_builder=prompt_builder,
+        prompt_name="hpc_prompt",
+        llm=llm,
+    )
+
+    pipeline.run("How do I submit a job?", anonymize_output=True)
+
+    prompt_span_outputs = span_outputs["rag.pipeline.prompt_render"]
+    generation_span_outputs = span_outputs["rag.pipeline.generate"]
+    pipeline_span_outputs = span_outputs["rag.pipeline.run"]
+
+    assert prompt_span_outputs["prompt"] == "<suppressed for demo anonymization>"
+    assert prompt_span_outputs["prompt_messages"] == "<suppressed for demo anonymization>"
+    assert "text" not in prompt_span_outputs["resolved_contexts"][0]
+    assert "doc_id" not in prompt_span_outputs["resolved_contexts"][0]
+
+    assert span_inputs["rag.pipeline.generate"]["prompt"] == "<suppressed for demo anonymization>"
+    assert span_inputs["rag.pipeline.generate"]["prompt_messages"] == "<suppressed for demo anonymization>"
+    assert generation_span_outputs["raw_response"] == "<suppressed for demo anonymization>"
+    assert generation_span_outputs["response"] == "<suppressed for demo anonymization>"
+
+    assert pipeline_span_outputs["prompt"] == "<suppressed for demo anonymization>"
+    assert "doc_id" not in pipeline_span_outputs["retrieved_contexts"][0]

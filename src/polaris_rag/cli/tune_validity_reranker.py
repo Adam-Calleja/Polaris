@@ -44,9 +44,9 @@ OBJECTIVE_METRICS: tuple[str, ...] = (
 DEFAULT_WEIGHT_GRID: dict[str, tuple[float, ...]] = {
     "authority": (0.00, 0.04, 0.08),
     "scope": (0.00, 0.04, 0.08),
-    "software": (0.00, 0.04, 0.08),
-    "scope_family": (0.00, 0.02, 0.04),
-    "version": (0.00, 0.04, 0.08),
+    "software": (0.00,),
+    "scope_family": (0.00,),
+    "version": (0.00,),
     "status": (0.00, 0.04, 0.08),
     "freshness": (0.00, 0.01),
 }

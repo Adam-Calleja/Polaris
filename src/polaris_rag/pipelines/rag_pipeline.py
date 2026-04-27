@@ -178,6 +178,7 @@ class RAGPipeline:
         if request_budget is not None and not isinstance(request_budget, RequestBudget):
             raise TypeError(f"request_budget must be a RequestBudget or None, got {type(request_budget)!r}")
 
+        anonymize_output = bool(kwargs.pop("anonymize_output", False))
         call_overrides = kwargs.pop("llm_generate", None) or {}
         retriever_kwargs = dict(kwargs)
         query_constraints = self._resolve_query_constraints(
@@ -209,6 +210,7 @@ class RAGPipeline:
             ) as retrieval_span:
                 if request_budget is not None:
                     set_span_attributes(retrieval_span, request_budget.to_attributes())
+                set_span_attributes(retrieval_span, {"anonymize_output": anonymize_output})
                 retrieval_started_at = time.perf_counter()
                 retrieval_timeout_seconds = None
                 if request_budget is not None:
@@ -280,7 +282,10 @@ class RAGPipeline:
                     retrieval_span,
                     {
                         "retrieved_count": len(retrieved_chunks),
-                        "retrieved_contexts": self._serialize_nodes(retrieved_chunks),
+                        "retrieved_contexts": self._trace_nodes(
+                            retrieved_chunks,
+                            anonymize_output=anonymize_output,
+                        ),
                         "retrieval_elapsed_ms": retrieval_elapsed_ms,
                         "query_constraints": serialized_query_constraints,
                         "retriever_profile": self._retriever_profile(),
@@ -293,7 +298,13 @@ class RAGPipeline:
             resolved_contexts = self._resolve_contexts(retrieved_chunks)
             with start_span(
                 "rag.pipeline.prompt_render",
-                inputs={"query": query, "retrieved_contexts": self._serialize_nodes(resolved_contexts)},
+                inputs={
+                    "query": query,
+                    "retrieved_contexts": self._trace_nodes(
+                        resolved_contexts,
+                        anonymize_output=anonymize_output,
+                    ),
+                },
             ) as prompt_span:
                 prompt = self.prompt_builder.build(
                     name=self.prompt_name,
@@ -307,26 +318,40 @@ class RAGPipeline:
                         question=query,
                         docs=resolved_contexts,
                     )
+                set_span_attributes(prompt_span, {"anonymize_output": anonymize_output})
                 set_span_outputs(
                     prompt_span,
                     {
-                        "prompt": prompt,
-                        "prompt_messages": prompt_messages,
-                        "resolved_contexts": self._serialize_nodes(resolved_contexts),
+                        "prompt": self._trace_text_value(prompt, anonymize_output=anonymize_output),
+                        "prompt_messages": self._trace_messages(
+                            prompt_messages,
+                            anonymize_output=anonymize_output,
+                        ),
+                        "resolved_contexts": self._trace_nodes(
+                            resolved_contexts,
+                            anonymize_output=anonymize_output,
+                        ),
                     },
                 )
 
             gen_kwargs = {**self.llm_generate_defaults, **call_overrides}
             generation_input = prompt_messages if prompt_messages is not None else prompt
-            generation_inputs = {"prompt": prompt, "llm_generate": gen_kwargs}
+            generation_inputs = {
+                "prompt": self._trace_text_value(prompt, anonymize_output=anonymize_output),
+                "llm_generate": gen_kwargs,
+            }
             if prompt_messages is not None:
-                generation_inputs["prompt_messages"] = prompt_messages
+                generation_inputs["prompt_messages"] = self._trace_messages(
+                    prompt_messages,
+                    anonymize_output=anonymize_output,
+                )
             with start_span(
                 "rag.pipeline.generate",
                 inputs=generation_inputs,
             ) as generation_span:
                 if request_budget is not None:
                     set_span_attributes(generation_span, request_budget.to_attributes())
+                set_span_attributes(generation_span, {"anonymize_output": anonymize_output})
                 generation_started_at = time.perf_counter()
                 generation_timeout_seconds = None
                 if request_budget is not None:
@@ -402,8 +427,14 @@ class RAGPipeline:
                 set_span_outputs(
                     generation_span,
                     {
-                        "raw_response": raw_output,
-                        "response": response,
+                        "raw_response": self._trace_text_value(
+                            raw_output,
+                            anonymize_output=anonymize_output,
+                        ),
+                        "response": self._trace_text_value(
+                            response,
+                            anonymize_output=anonymize_output,
+                        ),
                         "generation_elapsed_ms": generation_elapsed_ms,
                     },
                 )
@@ -411,18 +442,36 @@ class RAGPipeline:
             set_span_outputs(
                 pipeline_span,
                 {
-                    "prompt": prompt,
-                    "prompt_messages": prompt_messages,
-                    "raw_response": raw_output,
-                    "response": response,
-                    "retrieved_contexts": self._serialize_nodes(resolved_contexts),
-                    "raw_retrieved_contexts": self._serialize_nodes(retrieved_chunks),
+                    "prompt": self._trace_text_value(prompt, anonymize_output=anonymize_output),
+                    "prompt_messages": self._trace_messages(
+                        prompt_messages,
+                        anonymize_output=anonymize_output,
+                    ),
+                    "raw_response": self._trace_text_value(
+                        raw_output,
+                        anonymize_output=anonymize_output,
+                    ),
+                    "response": self._trace_text_value(
+                        response,
+                        anonymize_output=anonymize_output,
+                    ),
+                    "retrieved_contexts": self._trace_nodes(
+                        resolved_contexts,
+                        anonymize_output=anonymize_output,
+                    ),
+                    "raw_retrieved_contexts": self._trace_nodes(
+                        retrieved_chunks,
+                        anonymize_output=anonymize_output,
+                    ),
                     "query_constraints": serialized_query_constraints,
                     "retriever_profile": self._retriever_profile(),
                     "retriever_fingerprint": self._retriever_fingerprint(),
                     "reranker_profile": self._reranker_profile(),
                     "reranker_fingerprint": self._reranker_fingerprint(),
-                    "retrieval_trace": self._serialize_nodes(retrieved_chunks),
+                    "retrieval_trace": self._trace_nodes(
+                        retrieved_chunks,
+                        anonymize_output=anonymize_output,
+                    ),
                     "timings": {
                         "retrieval_elapsed_ms": retrieval_elapsed_ms,
                         "generation_elapsed_ms": generation_elapsed_ms,
@@ -436,6 +485,7 @@ class RAGPipeline:
                     "generation_elapsed_ms": generation_elapsed_ms,
                     "response_status": response_status,
                     "budget_remaining_ms": request_budget.remaining_ms() if request_budget is not None else None,
+                    "anonymize_output": anonymize_output,
                 },
             )
 
@@ -587,7 +637,7 @@ class RAGPipeline:
         return None
 
     @staticmethod
-    def _serialize_nodes(source_nodes: list[Any]) -> list[dict[str, Any]]:
+    def _serialize_nodes(source_nodes: list[Any], *, include_text: bool = True) -> list[dict[str, Any]]:
         """Serialize nodes.
         
         Parameters
@@ -600,6 +650,50 @@ class RAGPipeline:
         list[dict[str, Any]]
             Collected results from the operation.
         """
-        return serialize_source_nodes(source_nodes, include_text=True)
+        return serialize_source_nodes(source_nodes, include_text=include_text)
+
+    @staticmethod
+    def _trace_nodes(source_nodes: list[Any], *, anonymize_output: bool) -> list[dict[str, Any]]:
+        """Serialize nodes for tracing, suppressing raw content in demo mode."""
+        if not anonymize_output:
+            return RAGPipeline._serialize_nodes(source_nodes, include_text=True)
+
+        records: list[dict[str, Any]] = []
+        for idx, source in enumerate(source_nodes, start=1):
+            node = getattr(source, "node", source)
+            score_raw = getattr(source, "score", None)
+            score = float(score_raw) if isinstance(score_raw, (int, float)) else None
+            metadata = getattr(node, "metadata", {}) or {}
+            source_name = None
+            if isinstance(metadata, Mapping):
+                source_raw = metadata.get("retrieval_source")
+                if isinstance(source_raw, str) and source_raw:
+                    source_name = source_raw
+            records.append(
+                {
+                    "rank": idx,
+                    "score": score,
+                    "source": source_name,
+                }
+            )
+        return records
+
+    @staticmethod
+    def _trace_text_value(value: Any, *, anonymize_output: bool) -> Any:
+        """Return a trace-safe text payload."""
+        if not anonymize_output:
+            return value
+        if value is None:
+            return None
+        return "<suppressed for demo anonymization>"
+
+    @staticmethod
+    def _trace_messages(messages: Any, *, anonymize_output: bool) -> Any:
+        """Return trace-safe chat messages when prompt content is suppressed."""
+        if not anonymize_output:
+            return messages
+        if messages is None:
+            return None
+        return "<suppressed for demo anonymization>"
 
 __all__ = ['RAGPipeline']

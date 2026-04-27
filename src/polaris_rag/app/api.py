@@ -64,6 +64,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from polaris_rag.config import GlobalConfig
 from polaris_rag.app.container import build_container
+from polaris_rag.app.demo_anonymizer import anonymize_query_payload
 from polaris_rag.app.readiness import build_readiness_report
 import logging
 import traceback
@@ -218,10 +219,13 @@ class QueryRequest(BaseModel):
         Optional structured retrieval constraints.
     include_evaluation_metadata : bool
         Whether to include evaluation metadata in the response.
+    anonymize_output : bool
+        Whether to redact the returned answer and evidence for demo use.
     """
     query: str
     query_constraints: QueryConstraintsPayload | None = None
     include_evaluation_metadata: bool = False
+    anonymize_output: bool = False
 
 
 class QueryResponse(BaseModel):
@@ -611,6 +615,50 @@ def _include_eval_metadata(request: Request) -> bool:
     return normalized in {"1", "true", "yes", "y", "on"}
 
 
+def _env_flag_enabled(name: str) -> bool:
+    """Return True when the selected environment variable is truthy."""
+    raw = os.getenv(name)
+    if raw is None:
+        return False
+    return str(raw).strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def _should_anonymize_output(req: QueryRequest) -> bool:
+    """Resolve whether demo-mode response anonymization should be enabled."""
+    return bool(req.anonymize_output) or _env_flag_enabled("POLARIS_DEMO_ANONYMIZE")
+
+
+def _resolve_anonymizer_timeout_seconds(request_budget: RequestBudget | None) -> float | None:
+    """Return a modest timeout budget for the post-generation anonymizer."""
+    if request_budget is None:
+        return 8.0
+    remaining_ms = request_budget.remaining_ms()
+    if remaining_ms <= 1500:
+        return None
+    bounded_seconds = min(8.0, max(1.0, (remaining_ms - 1000) / 1000.0))
+    return bounded_seconds
+
+
+def _anonymize_response_payload(
+    *,
+    answer: str,
+    context: list[RetrievedContextChunk],
+    request_budget: RequestBudget | None,
+) -> tuple[str, list[RetrievedContextChunk]]:
+    """Redact the answer and evidence payload for demo-safe frontend display."""
+    context_payload = [
+        item.model_dump() if hasattr(item, "model_dump") else item.dict()
+        for item in context
+    ]
+    redacted = anonymize_query_payload(
+        answer=answer,
+        context=context_payload,
+        llm=getattr(app.state.container, "generator_llm", None),
+        timeout_seconds=_resolve_anonymizer_timeout_seconds(request_budget),
+    )
+    return redacted.answer, [RetrievedContextChunk(**item) for item in redacted.context]
+
+
 def _resolve_request_budget(request: Request) -> RequestBudget | None:
     """Resolve request Budget.
     
@@ -793,9 +841,11 @@ def query(req: QueryRequest, request: Request):
     if stage_name:
         trace_tags["polaris.stage"] = str(stage_name)
     request_budget = _resolve_request_budget(request)
-    include_eval_metadata = _include_eval_metadata(request) or bool(req.include_evaluation_metadata)
+    anonymize_output = _should_anonymize_output(req)
+    include_eval_metadata = False if anonymize_output else (_include_eval_metadata(request) or bool(req.include_evaluation_metadata))
     policy = request_budget.policy if request_budget is not None else normalize_evaluation_policy(None, default=EVAL_POLICY_INTERACTIVE)
     trace_tags["polaris.eval_policy"] = policy
+    trace_tags["polaris.anonymize_output"] = "true" if anonymize_output else "false"
     trace_span = None
     request_started_at = time.perf_counter()
 
@@ -817,9 +867,16 @@ def query(req: QueryRequest, request: Request):
                 req.query,
                 request_budget=request_budget,
                 query_constraints=provided_query_constraints,
+                anonymize_output=anonymize_output,
             )
             answer = str(result.get("response", ""))
             context = _serialize_context(result.get("source_nodes", []))
+            if anonymize_output:
+                answer, context = _anonymize_response_payload(
+                    answer=answer,
+                    context=context,
+                    request_budget=request_budget,
+                )
             query_constraints = _coerce_query_constraints(result.get("query_constraints"))
             answer_status = _derive_answer_status(context)
             evaluation_metadata = None

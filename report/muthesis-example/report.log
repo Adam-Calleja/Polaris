@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.3.18)  25 APR 2026 23:30
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.3.18)  27 APR 2026 18:27
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -188,27 +188,46 @@ Package: makecell 2009/08/03 V0.1e Managing of Tab Column Heads and Cells
 \rotheadsize=\dimen158
 \c@nlinenum=\count302
 \TeXr@lab=\toks22
+) (/usr/local/texlive/2026/texmf-dist/tex/latex/booktabs/booktabs.sty
+Package: booktabs 2020/01/12 v1.61803398 Publication quality tables
+\heavyrulewidth=\dimen159
+\lightrulewidth=\dimen160
+\cmidrulewidth=\dimen161
+\belowrulesep=\dimen162
+\belowbottomsep=\dimen163
+\aboverulesep=\dimen164
+\abovetopsep=\dimen165
+\cmidrulesep=\dimen166
+\cmidrulekern=\dimen167
+\defaultaddspace=\dimen168
+\@cmidla=\count303
+\@cmidlb=\count304
+\@aboverulesep=\dimen169
+\@belowrulesep=\dimen170
+\@thisruleclass=\count305
+\@lastruleclass=\count306
+\@thisrulewidth=\dimen171
 )
-Package hyperref Info: Option `colorlinks' set `true' on input line 18.
+Package hyperref Info: Option `colorlinks' set `true' on input line 19.
  (/usr/local/texlive/2026/texmf-dist/tex/latex/listings/listings.sty
-\lst@mode=\count303
+\lst@mode=\count307
 \lst@gtempboxa=\box60
 \lst@token=\toks23
-\lst@length=\count304
-\lst@currlwidth=\dimen159
-\lst@column=\count305
-\lst@pos=\count306
-\lst@lostspace=\dimen160
-\lst@width=\dimen161
-\lst@newlines=\count307
-\lst@lineno=\count308
-\lst@maxwidth=\dimen162
+\lst@length=\count308
+\lst@currlwidth=\dimen172
+\lst@column=\count309
+\lst@pos=\count310
+\lst@lostspace=\dimen173
+\lst@width=\dimen174
+\lst@newlines=\count311
+\lst@lineno=\count312
+\lst@maxwidth=\dimen175
  (/usr/local/texlive/2026/texmf-dist/tex/latex/listings/lstpatch.sty
 File: lstpatch.sty 2025/11/14 1.11b (Carsten Heinz)
 ) (/usr/local/texlive/2026/texmf-dist/tex/latex/listings/lstmisc.sty
 File: lstmisc.sty 2025/11/14 1.11b (Carsten Heinz)
-\c@lstnumber=\count309
-\lst@skipnumbers=\count310
+\c@lstnumber=\count313
+\lst@skipnumbers=\count314
 \lst@framebox=\box61
 ) (/usr/local/texlive/2026/texmf-dist/tex/latex/listings/listings.cfg
 File: listings.cfg 2025/11/14 1.11b listings configuration
@@ -261,15 +280,15 @@ Package: acronym 2025/01/17 v1.50 Support for acronyms (Tobias Oetiker)
  (/usr/local/texlive/2026/texmf-dist/tex/latex/bigfoot/suffix.sty
 Package: suffix 2006/07/15 1.5a Variant command support
 ) (/usr/local/texlive/2026/texmf-dist/tex/generic/xstring/xstring.sty (/usr/local/texlive/2026/texmf-dist/tex/generic/xstring/xstring.tex
-\xs_counta=\count311
-\xs_countb=\count312
+\xs_counta=\count315
+\xs_countb=\count316
 )
 Package: xstring 2023/08/22 v1.86 String manipulations (CT)
 )
 \AC@clearlist=\toks24
 ) (/usr/local/texlive/2026/texmf-dist/tex/latex/l3backend/l3backend-pdftex.def
 File: l3backend-pdftex.def 2025-10-09 L3 backend support: PDF output (pdfTeX)
-\l__color_backend_stack_int=\count313
+\l__color_backend_stack_int=\count317
 ) (./report.aux (./chapter1.aux) (./chapter2.aux) (./chapter3.aux) (./chapter4.aux) (./chapter5.aux) (./chapter6.aux
 
 LaTeX Warning: Label `sec:source-ablation' multiply defined.
@@ -283,43 +302,43 @@ LaTeX Warning: Label `sec:external-document-scope-ablation' multiply defined.
 
 LaTeX Warning: Label `sec:tuned-finalist-comparison' multiply defined.
 
-) (./chapter7.aux) (./chapter8.aux) (./appendix1.aux) (./appendix2.aux))
+) (./chapter7.aux) (./chapter8.aux) (./appendix1.aux) (./appendix2.aux) (./appendix3.aux))
 \openout1 = `report.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 41.
-LaTeX Font Info:    ... okay on input line 41.
-LaTeX Font Info:    Checking defaults for OMS/pzccm/m/n on input line 41.
-LaTeX Font Info:    Trying to load font information for OMS+pzccm on input line 41.
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 42.
+LaTeX Font Info:    ... okay on input line 42.
+LaTeX Font Info:    Checking defaults for OMS/pzccm/m/n on input line 42.
+LaTeX Font Info:    Trying to load font information for OMS+pzccm on input line 42.
  (/usr/local/texlive/2026/texmf-dist/tex/latex/psnfss/omspzccm.fd
 File: omspzccm.fd 2000/01/03 Fontinst v1.801 font definitions for OMS/pzccm.
 )
-LaTeX Font Info:    ... okay on input line 41.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 41.
-LaTeX Font Info:    ... okay on input line 41.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 41.
-LaTeX Font Info:    ... okay on input line 41.
-LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 41.
-LaTeX Font Info:    ... okay on input line 41.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 41.
-LaTeX Font Info:    ... okay on input line 41.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 41.
-LaTeX Font Info:    ... okay on input line 41.
-LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 41.
-LaTeX Font Info:    ... okay on input line 41.
-LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 41.
-LaTeX Font Info:    ... okay on input line 41.
+LaTeX Font Info:    ... okay on input line 42.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 42.
+LaTeX Font Info:    ... okay on input line 42.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 42.
+LaTeX Font Info:    ... okay on input line 42.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 42.
+LaTeX Font Info:    ... okay on input line 42.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 42.
+LaTeX Font Info:    ... okay on input line 42.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 42.
+LaTeX Font Info:    ... okay on input line 42.
+LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 42.
+LaTeX Font Info:    ... okay on input line 42.
+LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 42.
+LaTeX Font Info:    ... okay on input line 42.
  (/usr/local/texlive/2026/texmf-dist/tex/context/base/mkii/supp-pdf.mkii
 [Loading MPS to PDF converter (version 2006.09.02).]
-\scratchcounter=\count314
-\scratchdimen=\dimen163
+\scratchcounter=\count318
+\scratchdimen=\dimen176
 \scratchbox=\box62
-\nofMPsegments=\count315
-\nofMParguments=\count316
+\nofMPsegments=\count319
+\nofMParguments=\count320
 \everyMPshowfont=\toks25
-\MPscratchCnt=\count317
-\MPscratchDim=\dimen164
-\MPnumerator=\count318
-\makeMPintoPDFobject=\count319
+\MPscratchCnt=\count321
+\MPscratchDim=\dimen177
+\MPnumerator=\count322
+\makeMPintoPDFobject=\count323
 \everyMPtoPDFconversion=\toks26
 ) (/usr/local/texlive/2026/texmf-dist/tex/latex/epstopdf-pkg/epstopdf-base.sty
 Package: epstopdf-base 2020-01-24 v2.11 Base part for package epstopdf
@@ -339,12 +358,12 @@ File: color.cfg 2016/01/02 v1.6 sample color configuration
 )
 Package color Info: Driver file: pdftex.def on input line 149.
  (/usr/local/texlive/2026/texmf-dist/tex/latex/graphics/mathcolor.ltx))
-Package hyperref Info: Link coloring ON on input line 41.
+Package hyperref Info: Link coloring ON on input line 42.
  (./report.out) (./report.out)
 \@outlinefile=\write3
 \openout3 = `report.out'.
 
-\c@lstlisting=\count320
+\c@lstlisting=\count324
  [1
 
 {/usr/local/texlive/2026/texmf-var/fonts/map/pdftex/updmap/pdftex.map}{/usr/local/texlive/2026/texmf-dist/fonts/enc/dvips/base/8r.enc}] (./report.toc
@@ -373,15 +392,15 @@ LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <7> not available
 \openout4 = `report.toc'.
 
  (./word.count)
-Underfull \hbox (badness 10000) in paragraph at lines 54--54
+Underfull \hbox (badness 10000) in paragraph at lines 55--55
 
  []
 
-[4] (./report.lot
+[4] [5] (./report.lot
 Package acronym Info: Label `acro:CSD3' newly defined as it shall be overridden
 although it is yet undefined on input line 4.
 
-Overfull \hbox (5.14026pt too wide) in paragraph at lines 15--15
+Overfull \hbox (5.14026pt too wide) in paragraph at lines 16--16
  [][] [][][]\OT1/ptm/m/n/12 Approved ex-ter-nal doc-u-men-ta-tion source fam-i-lies in-cluded in the frozen 
  []
 
@@ -389,7 +408,7 @@ Overfull \hbox (5.14026pt too wide) in paragraph at lines 15--15
 \tf@lot=\write5
 \openout5 = `report.lot'.
 
- [5
+ [6
 
 ] (./report.lof
 Package acronym Info: Label `acro:RCS' newly defined as it shall be overridden
@@ -398,32 +417,32 @@ although it is yet undefined on input line 2.
 \tf@lof=\write6
 \openout6 = `report.lof'.
 
- [6
+ [7
 
-] (./abbreviations.tex) [7
+] (./abbreviations.tex) [8
 
 ] (./abstract.tex
 Underfull \hbox (badness 10000) in paragraph at lines 1--4
 
  []
 
-) [8
+) [9
 
-] [9
+] [10
 
 ]
-Overfull \hbox (1.14229pt too wide) in paragraph at lines 62--62
+Overfull \hbox (1.14229pt too wide) in paragraph at lines 63--63
 \OT1/ptm/m/n/12 right works in the the-sis, for ex-am-ple graphs and ta-bles (``Re-pro-duc-tions''), which
  []
 
 
-Overfull \hbox (22.88693pt too wide) in paragraph at lines 62--62
+Overfull \hbox (22.88693pt too wide) in paragraph at lines 63--63
 \OT1/ptm/m/n/12 Uni-ver-sity Li-brary, The Uni-ver-sity Li-brary's reg-u-la-tions (see [][]$\OT1/pcr/m/n/12 http : / / www . library .
  []
 
-[10
+[11
 
-] [11
+] [12
 
 ]
 \openout2 = `chapter1.aux'.
@@ -435,7 +454,7 @@ although it is yet undefined on input line 7.
 Package acronym Info: Label `acro:HPC' newly defined as it shall be overridden
 although it is yet undefined on input line 7.
 Package acronym Info: Label `acro:RCS' overridden on input line 7.
-<graphs/ticket_counts.pdf, id=575, 431.17964pt x 254.86092pt>
+<graphs/ticket_counts.pdf, id=590, 431.17964pt x 254.86092pt>
 File: graphs/ticket_counts.pdf Graphic file (type pdf)
 <use graphs/ticket_counts.pdf>
 Package pdftex.def Info: graphs/ticket_counts.pdf  used on input line 13.
@@ -451,13 +470,13 @@ Package acronym Info: Label `acro:RAG' newly defined as it shall be overridden
 although it is yet undefined on input line 18.
 Package acronym Info: Label `acro:QA' newly defined as it shall be overridden
 although it is yet undefined on input line 18.
-[12
+[13
 
 
 ]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
- [13 <./graphs/ticket_counts.pdf>]
+ [14 <./graphs/ticket_counts.pdf>]
 Overfull \hbox (0.26749pt too wide) in paragraph at lines 38--39
 \OT1/ptm/m/n/12 To in-ves-ti-gate the prob-lems in-tro-duced by the het-ero-ge-neous ev-i-dence base, this project
  []
@@ -465,15 +484,15 @@ Overfull \hbox (0.26749pt too wide) in paragraph at lines 38--39
 LaTeX Font Info:    Trying to load font information for TS1+ptm on input line 41.
 (/usr/local/texlive/2026/texmf-dist/tex/latex/psnfss/ts1ptm.fd
 File: ts1ptm.fd 2001/06/04 font definitions for TS1/ptm.
-) [14] [15]
+) [15] [16]
 Overfull \hbox (10.56215pt too wide) in paragraph at lines 65--66
 []\OT1/ptm/b/n/12 O5: \OT1/ptm/m/n/12 To eval-u-ate whether heterogeneous-source re-trieval and validity-aware rerank-
  []
 
-[16]
+[17]
 Package acronym Info: Label `acro:RAGAs' newly defined as it shall be overridden
 although it is yet undefined on input line 106.
- [17]) [18]
+ [18]) [19]
 \openout2 = `chapter2.aux'.
 
  (./chapter2.tex
@@ -485,7 +504,7 @@ Overfull \hbox (8.44052pt too wide) in paragraph at lines 6--6
 
 Package acronym Info: Label `acro:IR' newly defined as it shall be overridden
 although it is yet undefined on input line 11.
-[19
+[20
 
 
 
@@ -496,12 +515,17 @@ although it is yet undefined on input line 22.
 
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
- [20]
+
+Overfull \hbox (113.40976pt too wide) has occurred while \output is active
+\OT1/ptm/m/sl/12 2.1.  HPC SUPPORT AS AN INFORMATION RETRIEVAL AND QUESTION ANSWERING PROBLEM \OT1/ptm/m/n/12 21
+ []
+
+[21]
 Overfull \hbox (26.4148pt too wide) in paragraph at lines 26--27
 \OT1/ptm/m/n/12 intensive gen-er-a-tion, and fact ver-i-fi-ca-tion bench-marks. Their mod-els out-per-form parametric-
  []
 
-[21]
+[22]
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <10.95> not available
 (Font)              Font shape `OT1/ptm/b/n' tried instead on input line 36.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <8> not available
@@ -578,7 +602,7 @@ Underfull \hbox (badness 4569) in paragraph at lines 50--50
 \OT1/ptm/m/n/10.95 sources in multi-
  []
 
-[22]
+[23]
 Underfull \hbox (badness 10000) in paragraph at lines 75--75
 []|\OT1/ptm/m/n/10.95 Local doc-u-
  []
@@ -778,12 +802,7 @@ Overfull \hbox (5.02779pt too wide) in paragraph at lines 96--97
 []\OT1/ptm/m/n/12 For facility-specific sup-port, lo-cal doc-u-men-ta-tion is the pri-mary doc-u-men-tary source
  []
 
-
-Overfull \hbox (27.58992pt too wide) has occurred while \output is active
-\OT1/ptm/m/sl/12 2.3.  HETEROGENEOUS SUPPORT CORPORA: DOCUMENTATION AND TICKETS \OT1/ptm/m/n/12 23
- []
-
-[23]
+[24]
 Overfull \hbox (3.75801pt too wide) in paragraph at lines 98--99
 \OT1/ptm/m/n/12 source [][], how-ever, such ma-te-rial still raises source-reliability and local-applicability
  []
@@ -791,13 +810,18 @@ Overfull \hbox (3.75801pt too wide) in paragraph at lines 98--99
 
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
- [24] [25]
+
+Overfull \hbox (27.58992pt too wide) has occurred while \output is active
+\OT1/ptm/m/sl/12 2.3.  HETEROGENEOUS SUPPORT CORPORA: DOCUMENTATION AND TICKETS \OT1/ptm/m/n/12 25
+ []
+
+[25] [26]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
- [26]
+ [27]
 Package acronym Info: Label `acro:RGB' newly defined as it shall be overridden
 although it is yet undefined on input line 126.
- [27] [28]) [29]
+ [28] [29]) [30]
 \openout2 = `chapter3.aux'.
 
  (./chapter3.tex
@@ -812,7 +836,7 @@ Overfull \hbox (2.67947pt too wide) in paragraph at lines 7--8
 \OT1/ptm/m/n/12 answering task within a su-per-vised in-ter-nal sup-port work-flow. Given a natural-language
  []
 
-[30
+[31
 
 
 
@@ -1072,13 +1096,13 @@ Underfull \hbox (badness 10000) in paragraph at lines 29--30
 \OT1/ptm/m/n/10.95 privacy-sensitive,
  []
 
-[31]
+[32]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
- [32] [33]
+ [33] [34]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
- [34]
+ [35]
 Underfull \hbox (badness 5847) in paragraph at lines 89--90
 []|\OT1/ptm/m/n/10 In this set-ting, rel-e-vant ev-i-
  []
@@ -1154,12 +1178,17 @@ Underfull \hbox (badness 6725) in paragraph at lines 111--112
  []
 
 
-ignored: Infinite glue shrinkage found in box being split [35]
+ignored: Infinite glue shrinkage found in box being split [36]
 Overfull \hbox (25.80722pt too wide) in paragraph at lines 118--118
 []\OT1/ptm/b/n/17.28 Success Cri-te-ria and Requirement-to-Evaluation Map-
  []
 
-[36]
+
+Overfull \hbox (2.73805pt too wide) has occurred while \output is active
+\OT1/ptm/m/sl/12 3.5.  SUCCESS CRITERIA AND REQUIREMENT-TO-EVALUATION MAPPING \OT1/ptm/m/n/12 37
+ []
+
+[37]
 Overfull \hbox (57.07135pt too wide) in alignment at lines 128--135
  [] [] [] [] [] 
  []
@@ -1365,29 +1394,24 @@ Overfull \hbox (57.07135pt too wide) in alignment at lines 148--192
  []
 
 
-ignored: Infinite glue shrinkage found in box being split
-Overfull \hbox (2.73805pt too wide) has occurred while \output is active
-\OT1/ptm/m/sl/12 3.5.  SUCCESS CRITERIA AND REQUIREMENT-TO-EVALUATION MAPPING \OT1/ptm/m/n/12 37
- []
-
-[37]) [38] [39]
+ignored: Infinite glue shrinkage found in box being split [38]) [39] [40]
 \openout2 = `chapter4.aux'.
 
  (./chapter4.tex
 Chapter 4.
-<graphs/polaris_architecture.pdf, id=1150, 522.33847pt x 375.71468pt>
+<graphs/polaris_architecture.pdf, id=1165, 522.33847pt x 375.71468pt>
 File: graphs/polaris_architecture.pdf Graphic file (type pdf)
 <use graphs/polaris_architecture.pdf>
 Package pdftex.def Info: graphs/polaris_architecture.pdf  used on input line 11.
 (pdftex.def)             Requested size: 412.56496pt x 296.76547pt.
-<graphs/polaris_query_flow.pdf, id=1153, 510.96394pt x 283.3245pt>
+<graphs/polaris_query_flow.pdf, id=1168, 510.96394pt x 283.3245pt>
 File: graphs/polaris_query_flow.pdf Graphic file (type pdf)
 <use graphs/polaris_query_flow.pdf>
 Package pdftex.def Info: graphs/polaris_query_flow.pdf  used on input line 20.
 (pdftex.def)             Requested size: 412.56496pt x 228.77393pt.
 Package acronym Info: Label `acro:RRF' newly defined as it shall be overridden
 although it is yet undefined on input line 25.
-[40
+[41
 
 
 
@@ -1395,7 +1419,36 @@ although it is yet undefined on input line 25.
 ]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
- [41 <./graphs/polaris_architecture.pdf>] [42 <./graphs/polaris_query_flow.pdf>]) [43]
+ [42 <./graphs/polaris_architecture.pdf>] [43 <./graphs/polaris_query_flow.pdf>] [44]
+Underfull \hbox (badness 2050) in paragraph at lines 76--76
+\OT1/ptm/m/n/12 vices, soft-ware, mod-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 80--80
+\OT1/ptm/m/n/12 and ver-sion
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 82--82
+[]|\OT1/ptm/m/n/12 Provenance
+ []
+
+
+Underfull \hbox (badness 1242) in paragraph at lines 84--84
+[]|\OT1/ptm/m/n/12 extraction method, re-
+ []
+
+[45] [46]
+<graphs/polaris_reranking.pdf, id=1240, 620.50018pt x 245.52026pt>
+File: graphs/polaris_reranking.pdf Graphic file (type pdf)
+<use graphs/polaris_reranking.pdf>
+Package pdftex.def Info: graphs/polaris_reranking.pdf  used on input line 103.
+(pdftex.def)             Requested size: 412.56496pt x 163.25018pt.
+ [47])
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [48 <./graphs/polaris_reranking.pdf>] [49]
 \openout2 = `chapter5.aux'.
 
  (./chapter5.tex
@@ -1403,7 +1456,7 @@ Chapter 5.
 )
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
- [44
+ [50
 
 
 
@@ -1411,12 +1464,12 @@ Underfull \vbox (badness 10000) has occurred while \output is active []
 ]
 Overfull \vbox (233.79532pt too high) has occurred while \output is active []
 
- [45]
+ [51]
 \openout2 = `chapter6.aux'.
 
  (./chapter6.tex
 Chapter 6.
-) [46
+) [52
 
 
 
@@ -1426,7 +1479,7 @@ Chapter 6.
 
  (./chapter7.tex
 Chapter 7.
-) [47
+) [53
 
 
 
@@ -1436,12 +1489,12 @@ Chapter 7.
 
  (./chapter8.tex
 Chapter 8.
-) [48
+) [54
 
 
 
 
-] (./report.bbl [49
+] (./report.bbl [55
 
 
 
@@ -1455,7 +1508,7 @@ Underfull \hbox (badness 10000) in paragraph at lines 45--46
 []\OT1/ptm/m/n/12 ``CSD3 Up-grade Oc-to-ber 2021 --- CSD3 1.0 doc-u-men-ta-tion,''
  []
 
-[50] [51]
+[56] [57]
 LaTeX Font Info:    Font shape `OMS/ptm/m/n' in size <12> not available
 (Font)              Font shape `OMS/pzccm/m/n' tried instead on input line 87.
 
@@ -1473,7 +1526,7 @@ Underfull \hbox (badness 10000) in paragraph at lines 93--94
 []\OT1/ptm/m/n/12 ``Collections - Qdrant,'' https://qdrant.tech/documentation/manage-
  []
 
-) [52]
+) [58]
 \openout2 = `appendix1.aux'.
 
  (./appendix1.tex
@@ -1678,10 +1731,10 @@ Underfull \hbox (badness 10000) in paragraph at lines 82--82
  []
 
 
-ignored: Infinite glue shrinkage found in box being split [53
+ignored: Infinite glue shrinkage found in box being split [59
 
 
-]) [54]
+]) [60]
 \openout2 = `appendix2.aux'.
 
  (./appendix2.tex
@@ -1712,12 +1765,244 @@ Overfull \hbox (26.30994pt too wide) in alignment at lines 37--74
  []
 
 
-ignored: Infinite glue shrinkage found in box being split [55
+ignored: Infinite glue shrinkage found in box being split [61
 
 
 
 
-]) [56] (./report.aux (./chapter1.aux) (./chapter2.aux) (./chapter3.aux) (./chapter4.aux) (./chapter5.aux) (./chapter6.aux) (./chapter7.aux) (./chapter8.aux) (./appendix1.aux) (./appendix2.aux))
+]) [62]
+\openout2 = `appendix3.aux'.
+
+ (./appendix3.tex
+Appendix C.
+
+Underfull \hbox (badness 10000) in paragraph at lines 22--22
+[]|\OT1/ptm/m/n/12 Encodes the au-thor-ity
+ []
+
+
+Underfull \hbox (badness 5345) in paragraph at lines 22--22
+\OT1/ptm/m/n/12 ta-tion, ex-ter-nal of-fi-cial
+ []
+
+
+Underfull \hbox (badness 1895) in paragraph at lines 24--24
+[]|\OT1/ptm/m/n/12 Numeric au-thor-ity level
+ []
+
+
+Underfull \hbox (badness 4832) in paragraph at lines 26--26
+[]|\OT1/ptm/m/n/12 Normalised sys-tem en-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 26--26
+\OT1/ptm/m/n/12 ti-ties matched to the
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 28--28
+[]|\OT1/ptm/m/n/12 Normalised par-ti-tion
+ []
+
+
+Underfull \hbox (badness 2334) in paragraph at lines 28--28
+\OT1/ptm/m/n/12 en-ti-ties matched to the
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 28--29
+[]|\OT1/ptm/m/n/12 Supports queries in-volv-ing
+ []
+
+
+Underfull \hbox (badness 7851) in paragraph at lines 28--29
+\OT1/ptm/m/n/12 sched-uler par-ti-tions or node
+ []
+
+
+Underfull \hbox (badness 4144) in paragraph at lines 30--30
+[]|\OT1/ptm/m/n/12 Normalised ser-vice en-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 30--30
+\OT1/ptm/m/n/12 ti-ties matched to the
+ []
+
+
+Underfull \hbox (badness 1308) in paragraph at lines 30--31
+[]|\OT1/ptm/m/n/12 Helps cap-ture op-er-a-tional ser-
+ []
+
+
+Overfull \hbox (7.54184pt too wide) in paragraph at lines 32--32
+[]|\OT1/pcr/m/n/12 scope[]family[]names| 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 32--32
+[]|\OT1/ptm/m/n/12 Higher-level scope
+ []
+
+
+Underfull \hbox (badness 1297) in paragraph at lines 32--32
+\OT1/ptm/m/n/12 group-ings in-ferred from
+ []
+
+
+Underfull \hbox (badness 5105) in paragraph at lines 32--33
+[]|\OT1/ptm/m/n/12 Allows broader re-trieval and
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 34--34
+[]|\OT1/ptm/m/n/12 Normalised soft-ware
+ []
+
+
+Underfull \hbox (badness 2334) in paragraph at lines 34--34
+\OT1/ptm/m/n/12 en-ti-ties matched to the
+ []
+
+
+Underfull \hbox (badness 7963) in paragraph at lines 34--35
+[]|\OT1/ptm/m/n/12 Identifies the main soft-ware
+ []
+
+
+Overfull \hbox (3.22183pt too wide) in paragraph at lines 36--36
+[]|\OT1/pcr/m/n/12 software[]versions| 
+ []
+
+
+Underfull \hbox (badness 6032) in paragraph at lines 36--37
+[]|\OT1/ptm/m/n/12 Supports version-sensitive re-
+ []
+
+
+Underfull \hbox (badness 1292) in paragraph at lines 38--38
+[]|\OT1/ptm/m/n/12 Matched mod-ule iden-ti-
+ []
+
+
+Underfull \hbox (badness 1184) in paragraph at lines 38--38
+\OT1/ptm/m/n/12 fiers ex-tracted from the
+ []
+
+
+Underfull \hbox (badness 6944) in paragraph at lines 38--39
+[]|\OT1/ptm/m/n/12 Helps in-ter-pret module-based
+ []
+
+
+Underfull \hbox (badness 2970) in paragraph at lines 38--39
+\OT1/ptm/m/n/12 soft-ware ref-er-ences in tick-ets
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 40--40
+[]|\OT1/ptm/m/n/12 Normalised toolchain
+ []
+
+
+Underfull \hbox (badness 2334) in paragraph at lines 40--40
+\OT1/ptm/m/n/12 en-ti-ties matched to the
+ []
+
+
+Overfull \hbox (9.34181pt too wide) in paragraph at lines 42--42
+[]|\OT1/pcr/m/n/12 toolchain[]versions| 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 42--42
+[]|\OT1/ptm/m/n/12 Version men-tions as-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 42--42
+\OT1/ptm/m/n/12 so-ci-ated with matched
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 42--43
+[]|\OT1/ptm/m/n/12 Supports toolchain-specific
+ []
+
+
+Overfull \hbox (19.7818pt too wide) in paragraph at lines 44--44
+[]|\OT1/pcr/m/n/12 official[]doc[]matches| 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 46--46
+\OT1/ptm/m/n/12 cur-rent, main-te-nance,
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 48--48
+[]|\OT1/ptm/m/n/12 Structured di-ag-nos-tic
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 48--48
+\OT1/ptm/m/n/12 sum-mary of matched
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 50--50
+[]|\OT1/ptm/m/n/12 Timestamp-like re-
+ []
+
+
+Underfull \hbox (badness 1147) in paragraph at lines 52--52
+\OT1/ptm/m/n/12 ad-dresses, IP ad-dresses,
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 54--54
+[]|\OT1/ptm/m/n/12 Structured prove-nance
+ []
+
+
+Underfull \hbox (badness 1014) in paragraph at lines 54--54
+\OT1/ptm/m/n/12 record in-clud-ing en-rich-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 54--54
+\OT1/ptm/m/n/12 ment ver-sion, reg-istry
+ []
+
+
+Underfull \hbox (badness 2884) in paragraph at lines 54--54
+\OT1/ptm/m/n/12 ar-ti-fact path, ex-trac-tion
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 54--54
+\OT1/ptm/m/n/12 ver-sion, and matched
+ []
+
+
+Underfull \hbox (badness 1478) in paragraph at lines 54--55
+[]|\OT1/ptm/m/n/12 Makes en-rich-ment out-puts re-
+ []
+
+
+Underfull \hbox (badness 1789) in paragraph at lines 54--55
+\OT1/ptm/m/n/12 pro-ducible, trace-able, and re-
+ []
+
+
+ignored: Infinite glue shrinkage found in box being split [63
+
+
+
+
+]
+ignored: Infinite glue shrinkage found in box being split [64]) [65] (./report.aux (./chapter1.aux) (./chapter2.aux) (./chapter3.aux) (./chapter4.aux) (./chapter5.aux) (./chapter6.aux) (./chapter7.aux) (./chapter8.aux) (./appendix1.aux) (./appendix2.aux) (./appendix3.aux))
  ***********
 LaTeX2e <2025-11-01>
 L3 programming layer <2026-01-19>
@@ -1727,21 +2012,21 @@ L3 programming layer <2026-01-19>
 LaTeX Warning: There were multiply-defined labels.
 
 Package rerunfilecheck Info: File `report.out' has not changed.
-(rerunfilecheck)             Checksum: F3FB4EF29872BF3EFF9ECE717AC3C61A;16736.
+(rerunfilecheck)             Checksum: 84352057E3E7EC202F03BDCF6CB47877;16836.
  ) 
 Here is how much of TeX's memory you used:
- 12511 strings out of 467525
- 194635 string characters out of 5418982
- 624361 words of memory out of 5000000
- 40962 multiletter control sequences out of 15000+600000
+ 12639 strings out of 467525
+ 197202 string characters out of 5418982
+ 628133 words of memory out of 5000000
+ 41064 multiletter control sequences out of 15000+600000
  676807 words of font info for 129 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  75i,11n,79p,2002b,695s stack positions out of 10000i,1000n,20000p,200000b,200000s
-</usr/local/texlive/2026/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/helvetic/uhvb8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/helvetic/uhvr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
-Output written on report.pdf (56 pages, 259453 bytes).
+</usr/local/texlive/2026/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi8.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/helvetic/uhvb8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/helvetic/uhvr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
+Output written on report.pdf (65 pages, 290970 bytes).
 PDF statistics:
- 1375 PDF objects out of 1440 (max. 8388607)
- 1241 compressed objects within 13 object streams
- 202 named destinations out of 1000 (max. 500000)
- 680 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 1467 PDF objects out of 1728 (max. 8388607)
+ 1318 compressed objects within 14 object streams
+ 217 named destinations out of 1000 (max. 500000)
+ 693 words of extra memory for PDF output out of 10000 (max. 10000000)
 

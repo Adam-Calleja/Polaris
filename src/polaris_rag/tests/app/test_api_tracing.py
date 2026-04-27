@@ -110,6 +110,24 @@ class _FakeContainer:
         self.pipeline = _FakePipeline()
 
 
+class _FakeDetectorLLM:
+    def generate(self, prompt: str, **kwargs):  # noqa: ANN001
+        return """
+        {
+          "names": [["Jane Smith"]],
+          "email_addresses": ["jane.smith@example.com"],
+          "phone_numbers": [],
+          "usernames": ["abc123"],
+          "project_codes": [],
+          "account_numbers": [],
+          "institutions": ["University of Cambridge"],
+          "locations": [],
+          "other_identifiable_info": [],
+          "special_category_info": []
+        }
+        """
+
+
 
 def test_query_adds_trace_tag_from_mlflow_header(monkeypatch) -> None:
     captured = {"tags": None, "outputs": None}
@@ -145,6 +163,7 @@ def test_query_adds_trace_tag_from_mlflow_header(monkeypatch) -> None:
         "polaris.source": "api",
         "polaris.eval_request": "true",
         "polaris.eval_policy": "interactive",
+        "polaris.anonymize_output": "false",
         "mlflow.parent_run_id": "run-123",
         "polaris.parent_run_id": "run-123",
     }
@@ -183,6 +202,7 @@ def test_query_adds_child_run_and_stage_tags(monkeypatch) -> None:
         "polaris.source": "api",
         "polaris.eval_request": "true",
         "polaris.eval_policy": "interactive",
+        "polaris.anonymize_output": "false",
         "mlflow.parent_run_id": "run-parent",
         "polaris.parent_run_id": "run-parent",
         "polaris.child_run_id": "run-child",
@@ -327,6 +347,35 @@ def test_query_includes_evaluation_metadata_when_requested_in_body() -> None:
 
     assert response.evaluation_metadata is not None
     assert response.evaluation_metadata["reranker_profile"] == {"type": "validity_aware"}
+
+
+def test_query_anonymizes_answer_and_context_when_requested() -> None:
+    api.app.state.container = _FakeContainer()
+    api.app.state.container.pipeline = _ContextPipeline()
+    api.app.state.container.generator_llm = _FakeDetectorLLM()
+
+    request = Request(
+        {
+            "type": "http",
+            "method": "POST",
+            "path": "/v1/query",
+            "headers": [],
+        }
+    )
+
+    response = api.query(
+        api.QueryRequest(
+            query="hello",
+            anonymize_output=True,
+            include_evaluation_metadata=True,
+        ),
+        request,
+    )
+
+    assert response.answer == "resp::hello"
+    assert response.context[0].doc_id == "TICKET_001"
+    assert response.context[0].text == "FULL-TICKET"
+    assert response.evaluation_metadata is None
 
 
 def test_query_returns_answer_status_and_timings() -> None:

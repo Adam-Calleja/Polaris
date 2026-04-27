@@ -38,13 +38,76 @@ A single baseline system is implemented with respect to \hyperref[rq:2-validity]
 \section{Corpus Ingestion and Representation}
 \label{sec:corpus-ingestion-representation}
 
-This section describes how the evidence sources are ingested, 
+This section describes how the raw evidence sources are ingested into retrieval-ready evidence units. In this project, local \ac{CSD3} documentation, external documentation, and resolved support tickets are ingested through separate pipelines, but preserved source boundaries so that later source-aware retrieval and reranking remains explicit. 
+
+In this dissertation, chunking refers to splitting a longer source document into smaller bounded text units that can be independently embedded, indexed, and retrieved. This choice matters because whole-document retrieval is too coarse, while overly small chunks may lose important context \citep{wangDocumentSegmentationMatters2025}. 
+
+For the documentation sources, the ingestion pipeline first preprocesses the HTML pages, then converts them into a markdown-normalised representation before token-based chunking. Markdown conversion is used because the source material originates from heterogeneous HTML structures, whereas markdown preserves useful structure such as headings, lists, code blocks, and links in a consistent text format while removing much of the presentation-specific noise of raw HTML. A token-based chunking strategy is then applied because documentation pages are primarily informational rather than conversational. As a result, a fixed token budget provides stable retrieval units while retaining enough local context for procedural and configuration-oriented queries. 
+
+For historical support tickets, the ingestion pipeline first queries the Atlassian Jira API for resolved tickets, converts the JSON content into a structured transcript format, and then applies a dialogue-based chunking strategy. Each ticket is represented using its key, summary, status, available timestamps, initial description, and subsequent conversational exchange. Speaker roles are derived from Jira user fields and preserved at the message level. Furthermore, ticket-level status and timing information are retained as metadata rather than embedded directly into every chunk. A dialogue-based chunking strategy is used because important support evidence often spans a short sequence of messages rather than a single isolated passage. In the final system, chunks are bounded by a fixed token budget and a maximum turn count [OVERLAP???]. Retrieved ticket chunks are then used to identify relevant tickets, after which the corresponding full ticket transcript is resolved for generation so that retrieval remained fine-grained while answer generation included the broader problem-resolution context.  
+
+The final chunking settings, including both chunk size and overlap, are selected empirically. These results are discussed further in Section~\ref{sec:chunking-tuning}.
+
+TODO: add final settings here.
 
 \section{Authority Registry and Metadata Extraction}
 \label{sec:authority-registry-metadata-extraction}
 
-\section{Validity-Aware Retrieval and Reranking Design}
-\label{sec:validity-aware-retrieval-design}
+Once the source documents have been converted into retrieval-ready representations, the system requires a structured authority layer to identify the technical entities they mention and to attach the metadata needed for later retrieval decisions. This is implemented as an offline authority registry that normalises systems, partitions, services, software packages, modules, and toolchains together with their associated scope, version, and lifecycle information. During ingestion, this registry is used to enrich source records before their metadata is propagated to the retrieval chunks. 
+
+To ensure deterministic and auditable metadata enrichment, the authority registry is built offline, prior to runtime query handling. Local \ac{CSD3} documentation, and where configured, registered external documentation sources are first converted into separate markdown-normalised corpora. These corpora are scanned for candidate entities, which are then merged into normalised registry entries so that repeated mentions across pages map to a single stable definition. Ambiguous aliases or conflicting lifecycle statuses are not resolved silently. Instead, they are added to a review queue for manual inspection. The resulting artefacts are persisted as stable JSON along with build metadata such as source scope and extraction version, supporting traceability and reproducibility. Table~\ref{tab:authority-registry-summary} summarises the entity categories captured by the registry and the main classes of information stored for each entry. 
+
+\begin{longtable}{@{}p{0.20\textwidth} p{0.28\textwidth} p{0.44\textwidth}@{}}
+\caption[Summary of the authority registry.]{Summary of the entity categories and metadata stored in the Polaris authority registry.}
+\label{tab:authority-registry-summary} \\
+\toprule
+Registry aspect & Contents & Why it is stored \\
+\midrule
+\endfirsthead
+
+\toprule
+Registry aspect & Contents & Why it is stored \\
+\midrule
+\endhead
+
+\bottomrule
+\endfoot
+
+Entity categories & systems, partitions, services, software, modules, toolchains & Normalises the main technical entity types that Polaris must reason about across documentation and tickets. \\
+
+Identity fields & canonical name, aliases & Links different surface forms to the same underlying entity during matching and query interpretation. \\
+
+Scope, lifecycle, and version fields & source scope, lifecycle status, known versions & Supports source-aware retrieval and version-sensitive reasoning. \\
+
+Provenance fields & source document, heading path, evidence span & Makes extracted metadata traceable to the originating source and section. \\
+
+Audit fields & extraction method, review state & Supports reproducibility and manual review of ambiguous or conflicting cases. \\
+
+\end{longtable}
+
+For the documentation sources, metadata extraction is mainly done by matching the document's source identity against registry entries so that each chunk inherits the entity information associated with its originating document. On the other hand, for the ticket sources, metadata extraction is text-driven: ticket content is scanned using alias matching, \texttt{module load} parsing, and version mention extraction. The resulting matches are then resolved against the same authority registry. This process attaches authority, entity, scope, validity, freshness, provenance, and governance signals to each retrieval unit, with the complete field-level schema summarised in Appendix~\ref{app:authority-metadata-fields}. Using the same registry for both documentation and ticket metadata extraction ensures that they are both interpreted through one consistent set of entity definitions, rather than source-specific rules. 
+
+This metadata is not stored solely for description, but also to support later runtime decisions. Since each retrieval unit carries explicit authority, scope, version, validity, and provenance signals, the same registry-backed representation can be used for query constraint parsing, source-aware retrieval, and validity-aware reranking. The authority layer therefore acts as a bridge between offline corpus preparation and online answer generation. Furthermore, the authority layer also improves auditability, since retrieved evidence can be traced back to its original source, matched entities, and extraction context, making errors easier to inspect during evaluation and debugging. 
+
+\section{Validity-Aware Reranking Design}
+\label{sec:validity-aware-reranking-design}
+
+As discussed in Chapter~\ref{cha:background}, semantically relevant evidence may still be unsuitable if it is less authoritative, outdated, or locally inapplicable \citep{liYouKnowWhat2024,hwangRetrievalAugmentedGenerationEstimation2025}. To address this, this project does not treat retrieval as a purely relevance-based problem over a flattened homogeneous corpus. Instead, initial relevance-based semantic retrieval is followed by a validity-aware reranking stage that uses the attached authority and validity metadata to promote more suitable evidence. This design allows the system to still leverage relevance signals while also accounting for the heterogeneous nature of the evidence base.
+
+After query constraints have been derived, the system retrieves an initial set of candidates from source-distinct retrievers, and merges them within a multi-collection retrieval stage. The initial merged ordering is formed using \ac{RRF}, which provides a stable rank-based fusion mechanism across the heterogeneous sources \citep{cormackReciprocalRankFusion2009}. Validity-aware reranking is applied on top of the initial semantic ordering, rather than replacing semantic retrieval altogether. The semantic relevance-only fused ranking corresponds to the \texttt{naive\_combined} baseline introduced in Section~\ref{sec:baseline-systems}, and serves as the direct implementation comparator for the proposed reranking design. 
+
+As illustrated in Figure~\ref{fig:polaris-reranking}, the validity-aware reranker begins with the normalised semantic base score derived from the \ac{RRF} ordering. The final reranking score is formed by taking this normalised semantic base and adding weighted contributions from the structured metadata attached during ingestion. These contributions reflect source authority, exact scope match, software match, scope-family match, version match, lifecycle status, and relative freshness. This allows the reranking stage to prefer evidence that is not only topically relevant, but also more authoritative, current, and locally applicable to the active support query. The exact weights and value mappings are configuration-driven rather than hard-coded, so that the scoring policy remains explicit, tunable, and reproducible. The exact weights used by the system were tuned empirically, with the final tuned configuration described further in Section~\ref{sec:validity-reranker-tuning}.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=\textwidth]{graphs/polaris_reranking.pdf}
+    \caption[Validity-aware reranking in Polaris.]{Validity-aware reranking in Polaris. Source-distinct candidates are merged and fused into an RRF semantic base, then adjusted using query-aware validity features derived from registry-backed constraints, enriched metadata, and the configured reranker profile before final evidence selection.}
+    \label{fig:polaris-reranking}
+\end{figure}
+
+These validity signals are not applied blindly to every query. Instead, the reranker uses the derived query constraints to control how individual metadata features should behave. This is particularly important for software-constrained queries, where a broad scope-family match could otherwise promote evidence that refers to the correct platform family but not the relevant software package. In such cases, the scope-family boosts are gated unless the candidate also satisfies the required software match, and specialised family variants are prevented from receiving an inappropriate generic boost when the exact variant is not actually requested. On the other hand, for non-software operational queries scope-family similarity can provide a useful positive signal. These safeguards are intended to reduce false promotion of evidence that is broadly related but operationally inappropriate for the active query. 
+
+The reranking design was also implemented to support controlled evaluation. The active reranker configuration is therefore persisted as a structured profile and fingerprint, and these are logged alongside retrieval traces and final outputs so that ranking behaviour can be reconstructed across runs. This makes it possible to compare reranker variants under a controlled evaluation protocol. The tuning procedure is described in Section~\ref{sec:validity-reranker-tuning}, and the contribution of individual validity signals is evaluated in Section~\ref{sec:validity-signal-ablation}.
 
 \section{Prompt and Generation Design}
 \label{sec:prompt-generation-design}

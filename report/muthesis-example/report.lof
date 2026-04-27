@@ -1,10 +1,12 @@
 \addvspace {10\p@ }
-\contentsline {figure}{\numberline {1.1}{\ignorespaces Annual number of resolved \acs {CSD3} helpdesk tickets from 2017 to 2025. Data sourced from \acs {RCS} support ticket records.}}{13}{figure.1.1}%
+\contentsline {figure}{\numberline {1.1}{\ignorespaces Annual number of resolved \acs {CSD3} helpdesk tickets from 2017 to 2025. Data sourced from \acs {RCS} support ticket records.}}{14}{figure.1.1}%
 \addvspace {10\p@ }
 \addvspace {10\p@ }
 \addvspace {10\p@ }
-\contentsline {figure}{\numberline {4.1}{\ignorespaces High-level architecture of Polaris.}}{41}{figure.4.1}%
-\contentsline {figure}{\numberline {4.2}{\ignorespaces Runtime query flow in Polaris.}}{42}{figure.4.2}%
+\contentsline {figure}{\numberline {4.1}{\ignorespaces High-level architecture of Polaris.}}{42}{figure.4.1}%
+\contentsline {figure}{\numberline {4.2}{\ignorespaces Runtime query flow in Polaris.}}{43}{figure.4.2}%
+\contentsline {figure}{\numberline {4.3}{\ignorespaces Validity-aware reranking in Polaris.}}{48}{figure.4.3}%
+\addvspace {10\p@ }
 \addvspace {10\p@ }
 \addvspace {10\p@ }
 \addvspace {10\p@ }
