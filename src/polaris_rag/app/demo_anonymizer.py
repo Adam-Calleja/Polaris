@@ -104,18 +104,29 @@ def anonymize_query_payload(
     llm: Any | None = None,
     timeout_seconds: float | None = None,
 ) -> AnonymizedQueryPayload:
-    """Apply demo-mode anonymization to an answer and evidence payload."""
+    """Apply demo-mode anonymization to ticket-derived evidence only."""
     normalized_context = [_normalize_context_row(item, index=index) for index, item in enumerate(context, start=1)]
-    combined_text = _build_detection_text(answer=answer, context=normalized_context)
+    ticket_context = [row for row in normalized_context if _is_ticket_context_row(row)]
+    if not ticket_context:
+        return AnonymizedQueryPayload(
+            answer=str(answer or ""),
+            context=[dict(row) for row in normalized_context],
+            aliases={},
+        )
+
+    combined_text = _build_detection_text(context=ticket_context)
     detected_entities = _merge_entities(
         _detect_entities_with_rules(combined_text),
         _detect_entities_with_llm(combined_text, llm=llm, timeout_seconds=timeout_seconds),
     )
-    aliases = _build_alias_map(answer=answer, context=normalized_context, detected_entities=detected_entities)
+    aliases = _build_alias_map(context=ticket_context, detected_entities=detected_entities)
 
     redacted_answer = _apply_aliases(str(answer or ""), aliases)
     redacted_context: list[dict[str, Any]] = []
     for row in normalized_context:
+        if not _is_ticket_context_row(row):
+            redacted_context.append(dict(row))
+            continue
         doc_id = str(row.get("doc_id", "") or "")
         redacted_context.append(
             {
@@ -161,17 +172,17 @@ def _normalize_context_row(item: Mapping[str, Any] | Any, *, index: int) -> dict
     }
 
 
-def _build_detection_text(*, answer: str, context: Sequence[Mapping[str, Any]]) -> str:
-    """Build a compact combined text block for identifier detection."""
-    parts = ["ANSWER", str(answer or "").strip()]
+def _build_detection_text(*, context: Sequence[Mapping[str, Any]]) -> str:
+    """Build a compact combined text block for ticket-entity detection."""
+    parts: list[str] = []
     for row in context:
         parts.extend(
             [
-                "",
                 f"CONTEXT ITEM {row['rank']}",
                 f"DOC_ID: {row.get('doc_id', '')}",
                 f"SOURCE: {row.get('source') or ''}",
                 str(row.get("text", "") or "").strip(),
+                "",
             ]
         )
     return "\n".join(parts).strip()
@@ -236,21 +247,19 @@ def _merge_entities(*entity_groups: Mapping[str, Sequence[str]]) -> dict[str, li
 
 def _build_alias_map(
     *,
-    answer: str,
     context: Sequence[Mapping[str, Any]],
     detected_entities: Mapping[str, Sequence[str]],
 ) -> dict[str, str]:
-    """Create a stable placeholder map applied across the response payload."""
+    """Create a stable placeholder map for ticket-derived content only."""
     aliases: dict[str, str] = {}
     counters: defaultdict[str, int] = defaultdict(int)
-    combined_text = _build_detection_text(answer=answer, context=context)
+    combined_text = _build_detection_text(context=context)
 
     for row in context:
         doc_id = str(row.get("doc_id", "") or "").strip()
         if not doc_id or doc_id in aliases:
             continue
-        prefix = "TICKET" if _is_ticket_doc_id(doc_id, source=row.get("source")) else "DOC"
-        aliases[doc_id] = _next_alias(prefix, counters)
+        aliases[doc_id] = _next_alias("TICKET", counters)
 
     for key in _ENTITY_KEYS:
         ordered_values = _sort_by_first_occurrence(
@@ -270,6 +279,14 @@ def _is_ticket_doc_id(doc_id: str, *, source: Any) -> bool:
     if isinstance(source, str) and source.strip().lower() == "tickets":
         return True
     return bool(_TICKET_KEY_PATTERN.fullmatch(doc_id.strip()))
+
+
+def _is_ticket_context_row(row: Mapping[str, Any]) -> bool:
+    """Return True when the context row originates from the ticket source."""
+    return _is_ticket_doc_id(
+        str(row.get("doc_id", "") or ""),
+        source=row.get("source"),
+    )
 
 
 def _next_alias(prefix: str, counters: defaultdict[str, int]) -> str:
