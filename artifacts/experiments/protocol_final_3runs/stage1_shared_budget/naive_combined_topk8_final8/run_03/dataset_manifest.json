@@ -1,0 +1,348 @@
+{
+  "dataset_path": "/app/data/test/ragas_one_hop_eval_dataset_final.dev.jsonl",
+  "annotations_path": "/app/data/test/benchmark_annotations_final.csv",
+  "prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage1_shared_budget/naive_combined_topk8_final8/run_03/prepared_input.json",
+  "reuse_prepared": false,
+  "allow_stale_prepared": false,
+  "query_field": "query",
+  "reference_field": "expected_answer",
+  "id_field": "id",
+  "generation_workers": 8,
+  "generation_mode": "pipeline",
+  "evaluation_policy": "official",
+  "generation_deadlines": {
+    "policy": "official",
+    "client_total_seconds": 200.0,
+    "server_total_seconds": 180.0,
+    "retrieval_cap_seconds": 30.0,
+    "cleanup_reserve_seconds": 5.0,
+    "client_total_ms": 200000,
+    "server_total_ms": 180000,
+    "retrieval_cap_ms": 30000,
+    "cleanup_reserve_ms": 5000
+  },
+  "max_infra_failure_rate": 0.01,
+  "generation_retries": {
+    "max_attempts": 3,
+    "initial_backoff_seconds": 1.0,
+    "max_backoff_seconds": 8.0,
+    "jitter_seconds": 0.25,
+    "retry_on_empty_response": true
+  },
+  "generator_profile": {
+    "mode": "pipeline",
+    "generator_llm": {
+      "type": "openai_chat",
+      "model_name": "meta-llama/Llama-3.3-70B-Instruct:novita",
+      "api_base": "https://router.huggingface.co/v1",
+      "request_timeout": 90,
+      "max_retries": 1,
+      "model_kwargs": {
+        "temperature": 0,
+        "top_p": 1.0,
+        "stop_list": []
+      }
+    },
+    "llm_generate": {}
+  },
+  "generator_fingerprint": "d8497e587288b92270cc9f5eccb7437a78427b9be742d8c8d0b70a4576ef16c9",
+  "retriever_profile": {
+    "type": "multi_collection",
+    "final_top_k": 8,
+    "sources": {
+      "docs": {
+        "settings": {
+          "filters": {},
+          "retrieval_profile": {
+            "bm25_top_k": 8,
+            "dense_top_k": 8,
+            "fusion": {
+              "rrf_k": 60,
+              "signal_weights": {
+                "bm25": 1.0,
+                "dense": 1.0
+              },
+              "type": "rrf"
+            },
+            "top_k": 8
+          },
+          "top_k": 8,
+          "weight": 1.0
+        },
+        "retriever_profile": {
+          "filters": {
+            "filters": []
+          },
+          "retrieval_profile": {
+            "bm25_top_k": 8,
+            "dense_top_k": 8,
+            "fusion": {
+              "rrf_k": 60,
+              "signal_weights": {
+                "bm25": 1.0,
+                "dense": 1.0
+              },
+              "type": "rrf"
+            },
+            "top_k": 8
+          },
+          "top_k": 8,
+          "type": "vector",
+          "vector_store": {
+            "backend": "qdrant",
+            "collection_name": "exp_docs_cs400_ov0",
+            "dense_model": "Qwen/Qwen3-Embedding-8B",
+            "dense_vector_name": "dense",
+            "sparse_model": null,
+            "sparse_vector_name": "sparse"
+          }
+        },
+        "retriever_fingerprint": "de67c059a62e27b2398f5c00ca29530ea9e2f18ce77982e80b8c14b015657b9f"
+      },
+      "tickets": {
+        "settings": {
+          "filters": {},
+          "retrieval_profile": {
+            "bm25_top_k": 8,
+            "dense_top_k": 8,
+            "fusion": {
+              "rrf_k": 60,
+              "signal_weights": {
+                "bm25": 1.0,
+                "dense": 1.0
+              },
+              "type": "rrf"
+            },
+            "top_k": 8
+          },
+          "top_k": 8,
+          "weight": 1.0
+        },
+        "retriever_profile": {
+          "filters": {
+            "filters": []
+          },
+          "retrieval_profile": {
+            "bm25_top_k": 8,
+            "dense_top_k": 8,
+            "fusion": {
+              "rrf_k": 60,
+              "signal_weights": {
+                "bm25": 1.0,
+                "dense": 1.0
+              },
+              "type": "rrf"
+            },
+            "top_k": 8
+          },
+          "top_k": 8,
+          "type": "vector",
+          "vector_store": {
+            "backend": "qdrant",
+            "collection_name": "exp_tickets_cs1000_ov80",
+            "dense_model": "Qwen/Qwen3-Embedding-8B",
+            "dense_vector_name": "dense",
+            "sparse_model": null,
+            "sparse_vector_name": "sparse"
+          }
+        },
+        "retriever_fingerprint": "984151dc51f695b674048d18d6e7f89e514f63bd9aae70c67cf7494326ee120d"
+      }
+    }
+  },
+  "retriever_fingerprint": "753882e478e529aecdb88b97bd05fd91c57c32a4ec0fe6214750752f1a114d8d",
+  "reranker_profile": {
+    "type": "rrf",
+    "rrf_k": 60,
+    "source_weights": {
+      "docs": 1.0,
+      "tickets": 1.0
+    },
+    "trace_enabled": true
+  },
+  "reranker_fingerprint": "919c0e51c02532aa66423a7292c247df070dea8c40b92335a6a692165fefb030",
+  "preset_name": "naive_combined",
+  "preset_description": "Naive docs+tickets baseline with RRF reranking.",
+  "condition_summary": {
+    "retriever_type": "multi_collection",
+    "source_type": "vector",
+    "final_top_k": 8,
+    "hybrid_profile": {
+      "dense_top_k": 8,
+      "bm25_top_k": 8,
+      "top_k": 8,
+      "fusion": {
+        "type": "rrf",
+        "rrf_k": 60,
+        "signal_weights": {
+          "dense": 1.0,
+          "bm25": 1.0
+        }
+      }
+    },
+    "sources": [
+      {
+        "top_k": 8,
+        "filters": {},
+        "weight": 1.0,
+        "retrieval_profile": {
+          "dense_top_k": 8,
+          "bm25_top_k": 8,
+          "top_k": 8,
+          "fusion": {
+            "type": "rrf",
+            "rrf_k": 60,
+            "signal_weights": {
+              "dense": 1.0,
+              "bm25": 1.0
+            }
+          }
+        },
+        "name": "docs",
+        "collection_name": "exp_docs_cs400_ov0"
+      },
+      {
+        "top_k": 8,
+        "filters": {},
+        "weight": 1.0,
+        "retrieval_profile": {
+          "dense_top_k": 8,
+          "bm25_top_k": 8,
+          "top_k": 8,
+          "fusion": {
+            "type": "rrf",
+            "rrf_k": 60,
+            "signal_weights": {
+              "dense": 1.0,
+              "bm25": 1.0
+            }
+          }
+        },
+        "name": "tickets",
+        "collection_name": "exp_tickets_cs1000_ov80"
+      }
+    ],
+    "retriever_profile": {
+      "type": "multi_collection",
+      "source_type": "vector",
+      "final_top_k": 8,
+      "hybrid_profile": {
+        "dense_top_k": 8,
+        "bm25_top_k": 8,
+        "top_k": 8,
+        "fusion": {
+          "type": "rrf",
+          "rrf_k": 60,
+          "signal_weights": {
+            "dense": 1.0,
+            "bm25": 1.0
+          }
+        }
+      },
+      "sources": [
+        {
+          "top_k": 8,
+          "filters": {},
+          "weight": 1.0,
+          "retrieval_profile": {
+            "dense_top_k": 8,
+            "bm25_top_k": 8,
+            "top_k": 8,
+            "fusion": {
+              "type": "rrf",
+              "rrf_k": 60,
+              "signal_weights": {
+                "dense": 1.0,
+                "bm25": 1.0
+              }
+            }
+          },
+          "name": "docs",
+          "collection_name": "exp_docs_cs400_ov0"
+        },
+        {
+          "top_k": 8,
+          "filters": {},
+          "weight": 1.0,
+          "retrieval_profile": {
+            "dense_top_k": 8,
+            "bm25_top_k": 8,
+            "top_k": 8,
+            "fusion": {
+              "type": "rrf",
+              "rrf_k": 60,
+              "signal_weights": {
+                "dense": 1.0,
+                "bm25": 1.0
+              }
+            }
+          },
+          "name": "tickets",
+          "collection_name": "exp_tickets_cs1000_ov80"
+        }
+      ]
+    },
+    "retriever_fingerprint": "57a811408d38f0e9524be1726864c140b4bdb47fa7733d6ddd77dac80b1cf4fd",
+    "reranker_profile": {
+      "type": "rrf",
+      "rrf_k": 60,
+      "source_weights": {
+        "docs": 1.0,
+        "tickets": 1.0
+      },
+      "trace_enabled": true
+    }
+  },
+  "condition_fingerprint": "bda73dd8e7fc88e45a3bc5dc009519d5407276adbad7ea895864ad7a31a8e4b6",
+  "annotation_rows": 70,
+  "prep_total_rows": 70,
+  "prep_success_rows": 58,
+  "prep_failed_rows": 12,
+  "prep_elapsed_seconds": 246.55664736102335,
+  "prep_rate_rows_per_second": 0.2839104147027994,
+  "prep_error_classes": {
+    "UnprocessableEntityError": 12
+  },
+  "prep_failure_classes": {
+    "api_internal_error": 12
+  },
+  "prep_failure_class_rates": {
+    "api_internal_error": 0.17142857142857143
+  },
+  "prep_failure_stages": {
+    "api": 12
+  },
+  "prep_failure_stage_rates": {
+    "api": 0.17142857142857143
+  },
+  "prep_response_statuses": {
+    "ok": 58,
+    "error": 12
+  },
+  "prep_response_status_rates": {
+    "ok": 0.8285714285714286,
+    "error": 0.17142857142857143
+  },
+  "prep_coverage": 0.8285714285714286,
+  "prep_empty_response_rate": 0.0,
+  "infra_failure_rate": 0.17142857142857143,
+  "run_validity": "INVALID",
+  "run_policy": "official",
+  "latency_budget_report": {
+    "count": 58,
+    "elapsed_ms": {
+      "p50": 20328.5,
+      "p90": 27003.9,
+      "p95": 30079.49999999999,
+      "max": 45840.0,
+      "mean": 20855.827586206895
+    },
+    "budget_utilization": {
+      "p50": 0.11293611111111111,
+      "p90": 0.15002166666666666,
+      "max": 0.25466666666666665
+    }
+  },
+  "persisted_prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage1_shared_budget/naive_combined_topk8_final8/run_03/prepared_input.json",
+  "prepared_source": "generated"
+}

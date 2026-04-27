@@ -398,7 +398,7 @@ defaults:
       - "semantic_similarity"
       - "noise_sensitivity"
     generation_mode: "pipeline"
-    generation_workers: 16
+    generation_workers: 8
     evaluation_policy: "official"
     no_progress: false
 
@@ -923,6 +923,7 @@ stages:
       metrics:
         - "factual_correctness"
         - "context_precision_without_reference"
+        - "faithfulness"
     config_overrides:
       evaluation:
         metrics:
@@ -1003,22 +1004,22 @@ stages:
       #   preset: "tickets_only"
       #   config_overrides:
       #     retriever: *budget_12_8
-      - name: "naive_combined_topk5_final4"
-        preset: "naive_combined"
-        config_overrides:
-          retriever: *budget_5_4
-      - name: "naive_combined_topk5_final6"
-        preset: "naive_combined"
-        config_overrides:
-          retriever: *budget_5_6
-      - name: "naive_combined_topk5_final8"
-        preset: "naive_combined"
-        config_overrides:
-          retriever: *budget_5_8
-      - name: "naive_combined_topk8_final4"
-        preset: "naive_combined"
-        config_overrides:
-          retriever: *budget_8_4
+      # - name: "naive_combined_topk5_final4"
+      #   preset: "naive_combined"
+      #   config_overrides:
+      #     retriever: *budget_5_4
+      # - name: "naive_combined_topk5_final6"
+      #   preset: "naive_combined"
+      #   config_overrides:
+      #     retriever: *budget_5_6
+      # - name: "naive_combined_topk5_final8"
+      #   preset: "naive_combined"
+      #   config_overrides:
+      #     retriever: *budget_5_8
+      # - name: "naive_combined_topk8_final4"
+      #   preset: "naive_combined"
+      #   config_overrides:
+      #     retriever: *budget_8_4
       - name: "naive_combined_topk8_final6"
         preset: "naive_combined"
         config_overrides:
@@ -1027,10 +1028,10 @@ stages:
         preset: "naive_combined"
         config_overrides:
           retriever: *budget_8_8
-      - name: "naive_combined_topk12_final4"
-        preset: "naive_combined"
-        config_overrides:
-          retriever: *budget_12_4
+      # - name: "naive_combined_topk12_final4"
+      #   preset: "naive_combined"
+      #   config_overrides:
+      #     retriever: *budget_12_4
       - name: "naive_combined_topk12_final6"
         preset: "naive_combined"
         config_overrides:
