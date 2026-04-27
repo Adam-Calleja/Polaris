@@ -104,7 +104,7 @@ prompt_configs:
 
 selected_collections: &selected_vector_store_collections
   docs:
-    collection_name: "exp_docs_cs1200_ov80"
+    collection_name: "exp_docs_cs400_ov0"
   tickets:
     collection_name: "exp_tickets_cs1000_ov80"
   external_docs:
@@ -113,12 +113,12 @@ selected_collections: &selected_vector_store_collections
 selected_chunking_sources: &selected_chunking_sources
   docs:
     strategy: "markdown_token"
-    chunk_size_tokens: 1200
-    overlap_tokens: 80
+    chunk_size_tokens: 400
+    overlap_tokens: 0
   tickets:
     strategy: "jira_turns_token"
     chunk_size_tokens: 1000
-    overlap_tokens: 0
+    overlap_tokens: 80
   external_docs:
     strategy: "markdown_token"
     chunk_size_tokens: 800
@@ -359,7 +359,7 @@ defaults:
     <<: [*llama33_generator, *ticket_prompt_config]
     vector_stores: *selected_vector_store_collections
     storage_context:
-      persist_dir: "/app/data/storage/exp_protocol_selected"
+      persist_dir: "/app/data/storage/exp_protocol_selected_docs400_ov0_tickets1000_ov80"
     ingestion:
       chunking:
         sources: *selected_chunking_sources

@@ -8,43 +8,36 @@ mlflow:
   prompt_registry:
     enabled: false
 generator_llm:
-  type: openai_like
-  model_name: mistralai/Mistral-Large-Instruct-2407
-  api_base: http://vllm:8080/v1
-  api_key: ${POLARIS_LLM_API_KEY}
+  type: openai_chat
+  model_name: meta-llama/Llama-3.3-70B-Instruct:novita
+  api_base: https://router.huggingface.co/v1
+  api_key: ${HF_TOKEN_TEST}
   request_timeout: 90
   max_retries: 1
   model_kwargs:
     max_tokens: 1024
     temperature: 0
     top_p: 1.0
-    stop_list:
-    - '
-
-      User:'
-    - '
-
-
-      User:'
+    stop_list: []
 vector_stores:
   docs:
-    collection_name: exp_docs_cs1200_ov0
+    collection_name: exp_docs_cs400_ov0
   tickets:
-    collection_name: exp_tickets_cs800_ov80
+    collection_name: exp_tickets_cs1000_ov80
   external_docs:
     collection_name: exp_external_docs_selected
 storage_context:
-  persist_dir: /app/data/storage/exp_protocol_selected
+  persist_dir: /app/data/storage/exp_protocol_selected_docs400_ov0_tickets1000_ov80
 ingestion:
   chunking:
     sources:
       docs:
         strategy: markdown_token
-        chunk_size_tokens: 800
-        overlap_tokens: 80
+        chunk_size_tokens: 400
+        overlap_tokens: 0
       tickets:
         strategy: jira_turns_token
-        chunk_size_tokens: 800
+        chunk_size_tokens: 1000
         overlap_tokens: 80
       external_docs:
         strategy: markdown_token
@@ -82,10 +75,17 @@ sparse_encoder:
 evaluation:
   generation:
     mode: pipeline
-    workers: 4
+    workers: 16
   run:
-    max_workers: 4
+    max_workers: 28
   adaptive_concurrency:
     enabled: false
   dataset:
     reuse_prepared: false
+  metrics:
+    config:
+      factual_correctness:
+        atomicity: high
+        coverage: high
+embedder:
+  api_base: http://embed:80/v1
