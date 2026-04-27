@@ -1,0 +1,113 @@
+{
+  "stage_name": "stage0b3_combined_sanity",
+  "stage_type": "evaluation_grid",
+  "execution_phase": "both",
+  "dry_run": false,
+  "dataset_path": "/app/data/test/ragas_one_hop_eval_dataset_final.dev.jsonl",
+  "annotations_file": "/app/data/test/benchmark_annotations_final.csv",
+  "repeats": 3,
+  "conditions": [
+    {
+      "name": "combined_selected_chunking",
+      "slug": "combined_selected_chunking",
+      "config_path": "/app/.polaris_experiment_stage0b3_combined_sanity__combined_selected_chunking.yaml",
+      "preset": "naive_combined",
+      "execution_phase": "both",
+      "ingestion_commands": [],
+      "runs": [
+        {
+          "repeat_index": 1,
+          "execution_phase": "both",
+          "output_dir": "/app/artifacts/experiments/protocol_final_3runs/stage0b3_combined_sanity/combined_selected_chunking/run_01",
+          "prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0b3_combined_sanity/combined_selected_chunking/run_01/prepared_input.json",
+          "command": [
+            "/usr/local/bin/python",
+            "/app/scripts/evaluate_rag.py",
+            "-c",
+            "/app/.polaris_experiment_stage0b3_combined_sanity__combined_selected_chunking.yaml",
+            "--dataset-path",
+            "/app/data/test/ragas_one_hop_eval_dataset_final.dev.jsonl",
+            "--prepared-path",
+            "/app/artifacts/experiments/protocol_final_3runs/stage0b3_combined_sanity/combined_selected_chunking/run_01/prepared_input.json",
+            "--output-dir",
+            "/app/artifacts/experiments/protocol_final_3runs/stage0b3_combined_sanity/combined_selected_chunking/run_01",
+            "--annotations-file",
+            "/app/data/test/benchmark_annotations_final.csv",
+            "--preset",
+            "naive_combined",
+            "--metrics",
+            "faithfulness,context_recall,factual_correctness",
+            "--generation-mode",
+            "pipeline",
+            "--generation-workers",
+            "16",
+            "--evaluation-policy",
+            "official"
+          ]
+        },
+        {
+          "repeat_index": 2,
+          "execution_phase": "both",
+          "output_dir": "/app/artifacts/experiments/protocol_final_3runs/stage0b3_combined_sanity/combined_selected_chunking/run_02",
+          "prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0b3_combined_sanity/combined_selected_chunking/run_02/prepared_input.json",
+          "command": [
+            "/usr/local/bin/python",
+            "/app/scripts/evaluate_rag.py",
+            "-c",
+            "/app/.polaris_experiment_stage0b3_combined_sanity__combined_selected_chunking.yaml",
+            "--dataset-path",
+            "/app/data/test/ragas_one_hop_eval_dataset_final.dev.jsonl",
+            "--prepared-path",
+            "/app/artifacts/experiments/protocol_final_3runs/stage0b3_combined_sanity/combined_selected_chunking/run_02/prepared_input.json",
+            "--output-dir",
+            "/app/artifacts/experiments/protocol_final_3runs/stage0b3_combined_sanity/combined_selected_chunking/run_02",
+            "--annotations-file",
+            "/app/data/test/benchmark_annotations_final.csv",
+            "--preset",
+            "naive_combined",
+            "--metrics",
+            "faithfulness,context_recall,factual_correctness",
+            "--generation-mode",
+            "pipeline",
+            "--generation-workers",
+            "16",
+            "--evaluation-policy",
+            "official"
+          ]
+        },
+        {
+          "repeat_index": 3,
+          "execution_phase": "both",
+          "output_dir": "/app/artifacts/experiments/protocol_final_3runs/stage0b3_combined_sanity/combined_selected_chunking/run_03",
+          "prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0b3_combined_sanity/combined_selected_chunking/run_03/prepared_input.json",
+          "command": [
+            "/usr/local/bin/python",
+            "/app/scripts/evaluate_rag.py",
+            "-c",
+            "/app/.polaris_experiment_stage0b3_combined_sanity__combined_selected_chunking.yaml",
+            "--dataset-path",
+            "/app/data/test/ragas_one_hop_eval_dataset_final.dev.jsonl",
+            "--prepared-path",
+            "/app/artifacts/experiments/protocol_final_3runs/stage0b3_combined_sanity/combined_selected_chunking/run_03/prepared_input.json",
+            "--output-dir",
+            "/app/artifacts/experiments/protocol_final_3runs/stage0b3_combined_sanity/combined_selected_chunking/run_03",
+            "--annotations-file",
+            "/app/data/test/benchmark_annotations_final.csv",
+            "--preset",
+            "naive_combined",
+            "--metrics",
+            "faithfulness,context_recall,factual_correctness",
+            "--generation-mode",
+            "pipeline",
+            "--generation-workers",
+            "16",
+            "--evaluation-policy",
+            "official"
+          ]
+        }
+      ],
+      "ingestion_skipped": false
+    }
+  ],
+  "executed_at": "2026-04-27T09:38:48.968452+00:00"
+}

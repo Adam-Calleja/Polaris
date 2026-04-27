@@ -106,7 +106,7 @@ selected_collections: &selected_vector_store_collections
   docs:
     collection_name: "exp_docs_cs1200_ov80"
   tickets:
-    collection_name: "exp_tickets_cs1000_ov0"
+    collection_name: "exp_tickets_cs1000_ov80"
   external_docs:
     collection_name: "exp_external_docs_selected"
 
