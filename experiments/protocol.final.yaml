@@ -367,7 +367,7 @@ defaults:
         start_date: "2017-11-01"
     retriever:
       source_type: "vector"
-      <<: *budget_5_8
+      <<: *budget_8_8
       rerank:
         weights_path: "config/weights/validity_reranker.protocol.yaml"
     sparse_encoder:
