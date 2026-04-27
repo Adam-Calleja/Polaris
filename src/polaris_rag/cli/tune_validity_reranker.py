@@ -24,6 +24,8 @@ from itertools import product
 import json
 import logging
 from pathlib import Path
+import sys
+import time
 from typing import Any, Iterable, Mapping
 
 import yaml
@@ -31,6 +33,7 @@ import yaml
 from polaris_rag.app.container import build_container
 from polaris_rag.config import GlobalConfig
 from polaris_rag.evaluation.evaluation_dataset import (
+    PrepProgressEvent,
     build_prepared_rows,
     load_raw_examples,
     preprocess_rows_for_evaluation,
@@ -108,6 +111,169 @@ class TrialResult:
             -float(total_weight),
             ordered_weights,
         )
+
+
+def _compact_error_text(text: str | None, *, limit: int = 96) -> str | None:
+    if not text:
+        return None
+    normalized = " ".join(str(text).split())
+    if len(normalized) <= limit:
+        return normalized
+    return normalized[: max(0, limit - 3)] + "..."
+
+
+def _format_objective(value: float | None) -> str:
+    if value is None:
+        return "n/a"
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return "n/a"
+    if number != number or number == float("-inf"):
+        return "n/a"
+    return f"{number:.3f}"
+
+
+class _TrialProgressRenderer:
+    """Render overall stage2 progress with trial counts and percentages."""
+
+    def __init__(
+        self,
+        *,
+        width: int = 24,
+        interactive: bool = True,
+        log_interval_seconds: float = 30.0,
+    ) -> None:
+        self.width = max(8, int(width))
+        self.interactive = bool(interactive)
+        self.log_interval_seconds = max(1.0, float(log_interval_seconds))
+        self._started_at = time.perf_counter()
+        self._last_logged_elapsed = -1.0
+        self._active = False
+
+    def _render_line(
+        self,
+        *,
+        trial_index: int,
+        total_trials: int,
+        phase: str,
+        fraction: float,
+        best_objective: float | None,
+        detail: str,
+        last_error: str | None = None,
+    ) -> str:
+        safe_total = max(1, int(total_trials))
+        bounded_fraction = min(1.0, max(0.0, float(fraction)))
+        pct = int(round(bounded_fraction * 100.0))
+        filled = int(self.width * bounded_fraction)
+        bar = "#" * filled + "-" * (self.width - filled)
+        total_elapsed = max(0.0, time.perf_counter() - self._started_at)
+        line = (
+            f"[stage2] [{bar}] {pct:3d}% "
+            f"trial={trial_index}/{safe_total} phase={phase} "
+            f"{detail} total_elapsed={total_elapsed:6.1f}s best={_format_objective(best_objective)}"
+        )
+        compact_error = _compact_error_text(last_error)
+        if compact_error:
+            line += f" last_error={compact_error}"
+        return line
+
+    def _emit(self, line: str, *, force: bool = False) -> None:
+        elapsed = max(0.0, time.perf_counter() - self._started_at)
+        if self.interactive:
+            self._active = True
+            print(f"\r{line}", end="", file=sys.stderr, flush=True)
+            return
+
+        should_log = force or self._last_logged_elapsed < 0 or (elapsed - self._last_logged_elapsed) >= self.log_interval_seconds
+        if should_log:
+            self._last_logged_elapsed = elapsed
+            print(line, file=sys.stderr, flush=True)
+
+    def start_trial(self, *, trial_index: int, total_trials: int, best_objective: float | None) -> None:
+        safe_total = max(1, int(total_trials))
+        base_fraction = float(max(0, trial_index - 1)) / safe_total
+        line = self._render_line(
+            trial_index=trial_index,
+            total_trials=safe_total,
+            phase="starting",
+            fraction=base_fraction,
+            best_objective=best_objective,
+            detail="waiting",
+        )
+        self._emit(line, force=True)
+
+    def update_prep(
+        self,
+        *,
+        trial_index: int,
+        total_trials: int,
+        event: PrepProgressEvent,
+        best_objective: float | None,
+    ) -> None:
+        safe_total = max(1, int(total_trials))
+        row_total = event.total if event.total > 0 else 1
+        row_fraction = event.completed / row_total
+        overall_fraction = (max(0, trial_index - 1) + row_fraction * 0.8) / safe_total
+        rate = (event.completed / event.elapsed_seconds) if event.elapsed_seconds > 0 else 0.0
+        line = self._render_line(
+            trial_index=trial_index,
+            total_trials=safe_total,
+            phase="prep",
+            fraction=overall_fraction,
+            best_objective=best_objective,
+            detail=(
+                f"rows={event.completed}/{event.total} errors={event.failures} "
+                f"trial_elapsed={event.elapsed_seconds:5.1f}s rate={rate:5.2f}/s"
+            ),
+            last_error=event.last_error,
+        )
+        self._emit(line)
+
+    def start_eval(
+        self,
+        *,
+        trial_index: int,
+        total_trials: int,
+        prepared_rows: int,
+        best_objective: float | None,
+    ) -> None:
+        safe_total = max(1, int(total_trials))
+        overall_fraction = (max(0, trial_index - 1) + 0.85) / safe_total
+        line = self._render_line(
+            trial_index=trial_index,
+            total_trials=safe_total,
+            phase="eval",
+            fraction=overall_fraction,
+            best_objective=best_objective,
+            detail=f"usable_rows={prepared_rows}",
+        )
+        self._emit(line, force=True)
+
+    def finish_trial(
+        self,
+        *,
+        trial_index: int,
+        total_trials: int,
+        result: TrialResult,
+        best_objective: float | None,
+    ) -> None:
+        safe_total = max(1, int(total_trials))
+        overall_fraction = float(trial_index) / safe_total
+        line = self._render_line(
+            trial_index=trial_index,
+            total_trials=safe_total,
+            phase="done",
+            fraction=overall_fraction,
+            best_objective=best_objective,
+            detail=f"objective={_format_objective(result.objective)} usable_rows={result.prepared_rows}",
+        )
+        self._emit(line, force=True)
+
+    def finish(self) -> None:
+        if self.interactive and self._active:
+            print(file=sys.stderr, flush=True)
+            self._active = False
 
 
 def _parse_args() -> argparse.Namespace:
@@ -423,6 +589,8 @@ def _run_trial(
     raw_examples: list[dict[str, Any]],
     weights: Mapping[str, float],
     generation_workers: int | None,
+    progress_callback: Any | None = None,
+    phase_callback: Any | None = None,
 ) -> TrialResult:
     """Run Trial.
     
@@ -463,6 +631,7 @@ def _run_trial(
         pipeline=pipeline,
         generation_workers=max(1, workers),
         llm_generate_overrides=_as_mapping(generation_cfg.get("llm_generate", {})),
+        progress_callback=progress_callback,
         reranker_profile=reranker_profile,
         reranker_fingerprint=reranker_fingerprint,
     )
@@ -481,6 +650,8 @@ def _run_trial(
             reranker_fingerprint=reranker_fingerprint,
             prepared_rows=0,
         )
+    if callable(phase_callback):
+        phase_callback("eval", len(evaluation_rows))
 
     dataset = to_evaluation_dataset(evaluation_rows)
     from polaris_rag.evaluation.evaluator import Evaluator
@@ -635,16 +806,48 @@ def main() -> None:
     raw_examples = load_raw_examples(dataset_path)
     trials = _weight_trials()
     generated_at = datetime.now(timezone.utc).isoformat()
+    progress = _TrialProgressRenderer(interactive=sys.stderr.isatty())
 
-    trial_results = [
-        _run_trial(
-            cfg=cfg,
-            raw_examples=raw_examples,
-            weights=weights,
-            generation_workers=args.generation_workers,
-        )
-        for weights in trials
-    ]
+    trial_results: list[TrialResult] = []
+    best_so_far: TrialResult | None = None
+    total_trials = len(trials)
+
+    try:
+        for trial_index, weights in enumerate(trials, start=1):
+            progress.start_trial(
+                trial_index=trial_index,
+                total_trials=total_trials,
+                best_objective=best_so_far.objective if best_so_far is not None else None,
+            )
+            result = _run_trial(
+                cfg=cfg,
+                raw_examples=raw_examples,
+                weights=weights,
+                generation_workers=args.generation_workers,
+                progress_callback=lambda event, *, _idx=trial_index: progress.update_prep(
+                    trial_index=_idx,
+                    total_trials=total_trials,
+                    event=event,
+                    best_objective=best_so_far.objective if best_so_far is not None else None,
+                ),
+                phase_callback=lambda phase, prepared_rows, *, _idx=trial_index: progress.start_eval(
+                    trial_index=_idx,
+                    total_trials=total_trials,
+                    prepared_rows=prepared_rows,
+                    best_objective=best_so_far.objective if best_so_far is not None else None,
+                ) if phase == "eval" else None,
+            )
+            trial_results.append(result)
+            best_so_far = _select_best_trial(trial_results)
+            progress.finish_trial(
+                trial_index=trial_index,
+                total_trials=total_trials,
+                result=result,
+                best_objective=best_so_far.objective if best_so_far is not None else None,
+            )
+    finally:
+        progress.finish()
+
     best = _select_best_trial(trial_results)
 
     output_path = Path(args.output_path).expanduser().resolve()

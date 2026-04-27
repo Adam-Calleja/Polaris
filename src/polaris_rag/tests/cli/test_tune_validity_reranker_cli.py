@@ -116,8 +116,8 @@ def test_main_writes_weights_and_manifest(monkeypatch, tmp_path: Path) -> None:
         ],
     )
 
-    def _fake_run_trial(*, cfg, raw_examples, weights, generation_workers):  # noqa: ANN001
-        _ = cfg, raw_examples, generation_workers
+    def _fake_run_trial(*, cfg, raw_examples, weights, generation_workers, progress_callback=None, phase_callback=None):  # noqa: ANN001
+        _ = cfg, raw_examples, generation_workers, progress_callback, phase_callback
         objective = 0.5 if weights["authority"] == 0.0 else 0.8
         return tune_validity_reranker.TrialResult(
             weights=dict(weights),
