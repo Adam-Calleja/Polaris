@@ -1,0 +1,991 @@
+{
+  "summary": {
+    "rows": 70,
+    "selected_metrics": [
+      "factual_correctness",
+      "faithfulness",
+      "context_recall"
+    ],
+    "skipped_metrics": [],
+    "selected_max_workers": 28,
+    "batch_size": 210,
+    "run_config": {
+      "timeout": 300,
+      "max_retries": 0,
+      "max_wait": 30,
+      "max_workers": 28,
+      "log_tenacity": true,
+      "seed": 42
+    },
+    "duration_seconds": 795.4132839589729,
+    "failure_rate": 0.023809523809523808,
+    "tuning_trials": []
+  },
+  "preset_name": "naive_combined",
+  "preset_description": "Naive docs+tickets baseline with RRF reranking.",
+  "condition_fingerprint": "d5625d379e6403e1b90b7e417a167423e5cbc82c8db1e587f2264696f697fe8b",
+  "condition_summary": {
+    "retriever_type": "multi_collection",
+    "source_type": "vector",
+    "final_top_k": 8,
+    "hybrid_profile": {
+      "dense_top_k": 5,
+      "bm25_top_k": 5,
+      "top_k": 5,
+      "fusion": {
+        "type": "rrf",
+        "rrf_k": 60,
+        "signal_weights": {
+          "dense": 1.0,
+          "bm25": 1.0
+        }
+      }
+    },
+    "sources": [
+      {
+        "top_k": 5,
+        "filters": {},
+        "weight": 1.0,
+        "retrieval_profile": {
+          "dense_top_k": 5,
+          "bm25_top_k": 5,
+          "top_k": 5,
+          "fusion": {
+            "type": "rrf",
+            "rrf_k": 60,
+            "signal_weights": {
+              "dense": 1.0,
+              "bm25": 1.0
+            }
+          }
+        },
+        "name": "docs",
+        "collection_name": "exp_docs_cs800_ov80"
+      },
+      {
+        "top_k": 5,
+        "filters": {},
+        "weight": 1.0,
+        "retrieval_profile": {
+          "dense_top_k": 5,
+          "bm25_top_k": 5,
+          "top_k": 5,
+          "fusion": {
+            "type": "rrf",
+            "rrf_k": 60,
+            "signal_weights": {
+              "dense": 1.0,
+              "bm25": 1.0
+            }
+          }
+        },
+        "name": "tickets",
+        "collection_name": "exp_tickets_cs1000_ov80"
+      }
+    ],
+    "retriever_profile": {
+      "type": "multi_collection",
+      "source_type": "vector",
+      "final_top_k": 8,
+      "hybrid_profile": {
+        "dense_top_k": 5,
+        "bm25_top_k": 5,
+        "top_k": 5,
+        "fusion": {
+          "type": "rrf",
+          "rrf_k": 60,
+          "signal_weights": {
+            "dense": 1.0,
+            "bm25": 1.0
+          }
+        }
+      },
+      "sources": [
+        {
+          "top_k": 5,
+          "filters": {},
+          "weight": 1.0,
+          "retrieval_profile": {
+            "dense_top_k": 5,
+            "bm25_top_k": 5,
+            "top_k": 5,
+            "fusion": {
+              "type": "rrf",
+              "rrf_k": 60,
+              "signal_weights": {
+                "dense": 1.0,
+                "bm25": 1.0
+              }
+            }
+          },
+          "name": "docs",
+          "collection_name": "exp_docs_cs800_ov80"
+        },
+        {
+          "top_k": 5,
+          "filters": {},
+          "weight": 1.0,
+          "retrieval_profile": {
+            "dense_top_k": 5,
+            "bm25_top_k": 5,
+            "top_k": 5,
+            "fusion": {
+              "type": "rrf",
+              "rrf_k": 60,
+              "signal_weights": {
+                "dense": 1.0,
+                "bm25": 1.0
+              }
+            }
+          },
+          "name": "tickets",
+          "collection_name": "exp_tickets_cs1000_ov80"
+        }
+      ]
+    },
+    "retriever_fingerprint": "c1b2c75d174d2fa2d3493c7ca1a58316b8b31fd0b7937e54a4180f2b1a747450",
+    "reranker_profile": {
+      "type": "rrf",
+      "rrf_k": 60,
+      "source_weights": {
+        "docs": 1.0,
+        "tickets": 1.0
+      },
+      "trace_enabled": true
+    }
+  },
+  "dataset": {
+    "dataset_path": "/app/data/test/ragas_one_hop_eval_dataset_final.dev.jsonl",
+    "annotations_path": "/app/data/test/benchmark_annotations_final.csv",
+    "prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0b4_combined_chunking_followup/docs_cs800_ov80_tickets_cs1000_ov80/run_03/prepared_input.json",
+    "reuse_prepared": false,
+    "allow_stale_prepared": false,
+    "query_field": "query",
+    "reference_field": "expected_answer",
+    "id_field": "id",
+    "generation_workers": 16,
+    "generation_mode": "pipeline",
+    "evaluation_policy": "official",
+    "generation_deadlines": {
+      "policy": "official",
+      "client_total_seconds": 200.0,
+      "server_total_seconds": 180.0,
+      "retrieval_cap_seconds": 30.0,
+      "cleanup_reserve_seconds": 5.0,
+      "client_total_ms": 200000,
+      "server_total_ms": 180000,
+      "retrieval_cap_ms": 30000,
+      "cleanup_reserve_ms": 5000
+    },
+    "max_infra_failure_rate": 0.01,
+    "generation_retries": {
+      "max_attempts": 3,
+      "initial_backoff_seconds": 1.0,
+      "max_backoff_seconds": 8.0,
+      "jitter_seconds": 0.25,
+      "retry_on_empty_response": true
+    },
+    "generator_profile": {
+      "mode": "pipeline",
+      "generator_llm": {
+        "type": "openai_chat",
+        "model_name": "meta-llama/Llama-3.3-70B-Instruct:novita",
+        "api_base": "https://router.huggingface.co/v1",
+        "request_timeout": 90,
+        "max_retries": 1,
+        "model_kwargs": {
+          "temperature": 0,
+          "top_p": 1.0,
+          "stop_list": []
+        }
+      },
+      "llm_generate": {}
+    },
+    "generator_fingerprint": "d8497e587288b92270cc9f5eccb7437a78427b9be742d8c8d0b70a4576ef16c9",
+    "retriever_profile": {
+      "type": "multi_collection",
+      "final_top_k": 8,
+      "sources": {
+        "docs": {
+          "settings": {
+            "filters": {},
+            "retrieval_profile": {
+              "bm25_top_k": 5,
+              "dense_top_k": 5,
+              "fusion": {
+                "rrf_k": 60,
+                "signal_weights": {
+                  "bm25": 1.0,
+                  "dense": 1.0
+                },
+                "type": "rrf"
+              },
+              "top_k": 5
+            },
+            "top_k": 5,
+            "weight": 1.0
+          },
+          "retriever_profile": {
+            "filters": {
+              "filters": []
+            },
+            "retrieval_profile": {
+              "bm25_top_k": 5,
+              "dense_top_k": 5,
+              "fusion": {
+                "rrf_k": 60,
+                "signal_weights": {
+                  "bm25": 1.0,
+                  "dense": 1.0
+                },
+                "type": "rrf"
+              },
+              "top_k": 5
+            },
+            "top_k": 5,
+            "type": "vector",
+            "vector_store": {
+              "backend": "qdrant",
+              "collection_name": "exp_docs_cs800_ov80",
+              "dense_model": "Qwen/Qwen3-Embedding-8B",
+              "dense_vector_name": "dense",
+              "sparse_model": null,
+              "sparse_vector_name": "sparse"
+            }
+          },
+          "retriever_fingerprint": "61def53a677224f8531b1faf7d8990ca298dbd9678f91c3202906bba107892d1"
+        },
+        "tickets": {
+          "settings": {
+            "filters": {},
+            "retrieval_profile": {
+              "bm25_top_k": 5,
+              "dense_top_k": 5,
+              "fusion": {
+                "rrf_k": 60,
+                "signal_weights": {
+                  "bm25": 1.0,
+                  "dense": 1.0
+                },
+                "type": "rrf"
+              },
+              "top_k": 5
+            },
+            "top_k": 5,
+            "weight": 1.0
+          },
+          "retriever_profile": {
+            "filters": {
+              "filters": []
+            },
+            "retrieval_profile": {
+              "bm25_top_k": 5,
+              "dense_top_k": 5,
+              "fusion": {
+                "rrf_k": 60,
+                "signal_weights": {
+                  "bm25": 1.0,
+                  "dense": 1.0
+                },
+                "type": "rrf"
+              },
+              "top_k": 5
+            },
+            "top_k": 5,
+            "type": "vector",
+            "vector_store": {
+              "backend": "qdrant",
+              "collection_name": "exp_tickets_cs1000_ov80",
+              "dense_model": "Qwen/Qwen3-Embedding-8B",
+              "dense_vector_name": "dense",
+              "sparse_model": null,
+              "sparse_vector_name": "sparse"
+            }
+          },
+          "retriever_fingerprint": "9d77faafa95791e2d2c6f57fed0852ee76460178d7e542152ebc0089b5926794"
+        }
+      }
+    },
+    "retriever_fingerprint": "85d4d6c81b80c81e5494e33e5b5721830d675d9a6a4cb84aa0ad3f38a81c4365",
+    "reranker_profile": {
+      "type": "rrf",
+      "rrf_k": 60,
+      "source_weights": {
+        "docs": 1.0,
+        "tickets": 1.0
+      },
+      "trace_enabled": true
+    },
+    "reranker_fingerprint": "919c0e51c02532aa66423a7292c247df070dea8c40b92335a6a692165fefb030",
+    "preset_name": "naive_combined",
+    "preset_description": "Naive docs+tickets baseline with RRF reranking.",
+    "condition_summary": {
+      "retriever_type": "multi_collection",
+      "source_type": "vector",
+      "final_top_k": 8,
+      "hybrid_profile": {
+        "dense_top_k": 5,
+        "bm25_top_k": 5,
+        "top_k": 5,
+        "fusion": {
+          "type": "rrf",
+          "rrf_k": 60,
+          "signal_weights": {
+            "dense": 1.0,
+            "bm25": 1.0
+          }
+        }
+      },
+      "sources": [
+        {
+          "top_k": 5,
+          "filters": {},
+          "weight": 1.0,
+          "retrieval_profile": {
+            "dense_top_k": 5,
+            "bm25_top_k": 5,
+            "top_k": 5,
+            "fusion": {
+              "type": "rrf",
+              "rrf_k": 60,
+              "signal_weights": {
+                "dense": 1.0,
+                "bm25": 1.0
+              }
+            }
+          },
+          "name": "docs",
+          "collection_name": "exp_docs_cs800_ov80"
+        },
+        {
+          "top_k": 5,
+          "filters": {},
+          "weight": 1.0,
+          "retrieval_profile": {
+            "dense_top_k": 5,
+            "bm25_top_k": 5,
+            "top_k": 5,
+            "fusion": {
+              "type": "rrf",
+              "rrf_k": 60,
+              "signal_weights": {
+                "dense": 1.0,
+                "bm25": 1.0
+              }
+            }
+          },
+          "name": "tickets",
+          "collection_name": "exp_tickets_cs1000_ov80"
+        }
+      ],
+      "retriever_profile": {
+        "type": "multi_collection",
+        "source_type": "vector",
+        "final_top_k": 8,
+        "hybrid_profile": {
+          "dense_top_k": 5,
+          "bm25_top_k": 5,
+          "top_k": 5,
+          "fusion": {
+            "type": "rrf",
+            "rrf_k": 60,
+            "signal_weights": {
+              "dense": 1.0,
+              "bm25": 1.0
+            }
+          }
+        },
+        "sources": [
+          {
+            "top_k": 5,
+            "filters": {},
+            "weight": 1.0,
+            "retrieval_profile": {
+              "dense_top_k": 5,
+              "bm25_top_k": 5,
+              "top_k": 5,
+              "fusion": {
+                "type": "rrf",
+                "rrf_k": 60,
+                "signal_weights": {
+                  "dense": 1.0,
+                  "bm25": 1.0
+                }
+              }
+            },
+            "name": "docs",
+            "collection_name": "exp_docs_cs800_ov80"
+          },
+          {
+            "top_k": 5,
+            "filters": {},
+            "weight": 1.0,
+            "retrieval_profile": {
+              "dense_top_k": 5,
+              "bm25_top_k": 5,
+              "top_k": 5,
+              "fusion": {
+                "type": "rrf",
+                "rrf_k": 60,
+                "signal_weights": {
+                  "dense": 1.0,
+                  "bm25": 1.0
+                }
+              }
+            },
+            "name": "tickets",
+            "collection_name": "exp_tickets_cs1000_ov80"
+          }
+        ]
+      },
+      "retriever_fingerprint": "c1b2c75d174d2fa2d3493c7ca1a58316b8b31fd0b7937e54a4180f2b1a747450",
+      "reranker_profile": {
+        "type": "rrf",
+        "rrf_k": 60,
+        "source_weights": {
+          "docs": 1.0,
+          "tickets": 1.0
+        },
+        "trace_enabled": true
+      }
+    },
+    "condition_fingerprint": "d5625d379e6403e1b90b7e417a167423e5cbc82c8db1e587f2264696f697fe8b",
+    "annotation_rows": 70,
+    "prep_total_rows": 70,
+    "prep_success_rows": 70,
+    "prep_failed_rows": 0,
+    "prep_elapsed_seconds": 184.97510521899676,
+    "prep_rate_rows_per_second": 0.37842930224110544,
+    "prep_error_classes": {},
+    "prep_failure_classes": {},
+    "prep_failure_class_rates": {},
+    "prep_failure_stages": {},
+    "prep_failure_stage_rates": {},
+    "prep_response_statuses": {
+      "ok": 70
+    },
+    "prep_response_status_rates": {
+      "ok": 1.0
+    },
+    "prep_coverage": 1.0,
+    "prep_empty_response_rate": 0.0,
+    "infra_failure_rate": 0.0,
+    "run_validity": "VALID",
+    "run_policy": "official",
+    "latency_budget_report": {
+      "count": 70,
+      "elapsed_ms": {
+        "p50": 25291.0,
+        "p90": 43920.4,
+        "p95": 46740.299999999996,
+        "max": 58280.0,
+        "mean": 28161.185714285715
+      },
+      "budget_utilization": {
+        "p50": 0.14050555555555555,
+        "p90": 0.24400222222222223,
+        "max": 0.3237777777777778
+      }
+    },
+    "persisted_prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0b4_combined_chunking_followup/docs_cs800_ov80_tickets_cs1000_ov80/run_03/prepared_input.json",
+    "prepared_source": "generated"
+  },
+  "tune_concurrency": true,
+  "trace_evaluator_llm": false,
+  "mlflow_parent_run_id": "eab3cd0d32ff481780eda396177bf4ec",
+  "config_file": "/app/.polaris_experiment_stage0b4_combined_chunking_followup__docs_cs800_ov80_tickets_cs1000_ov80.yaml",
+  "artifacts": {
+    "scores_csv": "/app/artifacts/experiments/protocol_final_3runs/stage0b4_combined_chunking_followup/docs_cs800_ov80_tickets_cs1000_ov80/run_03/scores.csv",
+    "scores_parquet": null,
+    "summary_json": "/app/artifacts/experiments/protocol_final_3runs/stage0b4_combined_chunking_followup/docs_cs800_ov80_tickets_cs1000_ov80/run_03/summary.json",
+    "analysis_rows_jsonl": "/app/artifacts/experiments/protocol_final_3runs/stage0b4_combined_chunking_followup/docs_cs800_ov80_tickets_cs1000_ov80/run_03/analysis_rows.jsonl"
+  },
+  "extra": {
+    "config_file": "/app/.polaris_experiment_stage0b4_combined_chunking_followup__docs_cs800_ov80_tickets_cs1000_ov80.yaml",
+    "preset_name": "naive_combined",
+    "preset_description": "Naive docs+tickets baseline with RRF reranking.",
+    "condition_summary": {
+      "retriever_type": "multi_collection",
+      "source_type": "vector",
+      "final_top_k": 8,
+      "hybrid_profile": {
+        "dense_top_k": 5,
+        "bm25_top_k": 5,
+        "top_k": 5,
+        "fusion": {
+          "type": "rrf",
+          "rrf_k": 60,
+          "signal_weights": {
+            "dense": 1.0,
+            "bm25": 1.0
+          }
+        }
+      },
+      "sources": [
+        {
+          "top_k": 5,
+          "filters": {},
+          "weight": 1.0,
+          "retrieval_profile": {
+            "dense_top_k": 5,
+            "bm25_top_k": 5,
+            "top_k": 5,
+            "fusion": {
+              "type": "rrf",
+              "rrf_k": 60,
+              "signal_weights": {
+                "dense": 1.0,
+                "bm25": 1.0
+              }
+            }
+          },
+          "name": "docs",
+          "collection_name": "exp_docs_cs800_ov80"
+        },
+        {
+          "top_k": 5,
+          "filters": {},
+          "weight": 1.0,
+          "retrieval_profile": {
+            "dense_top_k": 5,
+            "bm25_top_k": 5,
+            "top_k": 5,
+            "fusion": {
+              "type": "rrf",
+              "rrf_k": 60,
+              "signal_weights": {
+                "dense": 1.0,
+                "bm25": 1.0
+              }
+            }
+          },
+          "name": "tickets",
+          "collection_name": "exp_tickets_cs1000_ov80"
+        }
+      ],
+      "retriever_profile": {
+        "type": "multi_collection",
+        "source_type": "vector",
+        "final_top_k": 8,
+        "hybrid_profile": {
+          "dense_top_k": 5,
+          "bm25_top_k": 5,
+          "top_k": 5,
+          "fusion": {
+            "type": "rrf",
+            "rrf_k": 60,
+            "signal_weights": {
+              "dense": 1.0,
+              "bm25": 1.0
+            }
+          }
+        },
+        "sources": [
+          {
+            "top_k": 5,
+            "filters": {},
+            "weight": 1.0,
+            "retrieval_profile": {
+              "dense_top_k": 5,
+              "bm25_top_k": 5,
+              "top_k": 5,
+              "fusion": {
+                "type": "rrf",
+                "rrf_k": 60,
+                "signal_weights": {
+                  "dense": 1.0,
+                  "bm25": 1.0
+                }
+              }
+            },
+            "name": "docs",
+            "collection_name": "exp_docs_cs800_ov80"
+          },
+          {
+            "top_k": 5,
+            "filters": {},
+            "weight": 1.0,
+            "retrieval_profile": {
+              "dense_top_k": 5,
+              "bm25_top_k": 5,
+              "top_k": 5,
+              "fusion": {
+                "type": "rrf",
+                "rrf_k": 60,
+                "signal_weights": {
+                  "dense": 1.0,
+                  "bm25": 1.0
+                }
+              }
+            },
+            "name": "tickets",
+            "collection_name": "exp_tickets_cs1000_ov80"
+          }
+        ]
+      },
+      "retriever_fingerprint": "c1b2c75d174d2fa2d3493c7ca1a58316b8b31fd0b7937e54a4180f2b1a747450",
+      "reranker_profile": {
+        "type": "rrf",
+        "rrf_k": 60,
+        "source_weights": {
+          "docs": 1.0,
+          "tickets": 1.0
+        },
+        "trace_enabled": true
+      }
+    },
+    "condition_fingerprint": "d5625d379e6403e1b90b7e417a167423e5cbc82c8db1e587f2264696f697fe8b",
+    "dataset": {
+      "dataset_path": "/app/data/test/ragas_one_hop_eval_dataset_final.dev.jsonl",
+      "annotations_path": "/app/data/test/benchmark_annotations_final.csv",
+      "prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0b4_combined_chunking_followup/docs_cs800_ov80_tickets_cs1000_ov80/run_03/prepared_input.json",
+      "reuse_prepared": false,
+      "allow_stale_prepared": false,
+      "query_field": "query",
+      "reference_field": "expected_answer",
+      "id_field": "id",
+      "generation_workers": 16,
+      "generation_mode": "pipeline",
+      "evaluation_policy": "official",
+      "generation_deadlines": {
+        "policy": "official",
+        "client_total_seconds": 200.0,
+        "server_total_seconds": 180.0,
+        "retrieval_cap_seconds": 30.0,
+        "cleanup_reserve_seconds": 5.0,
+        "client_total_ms": 200000,
+        "server_total_ms": 180000,
+        "retrieval_cap_ms": 30000,
+        "cleanup_reserve_ms": 5000
+      },
+      "max_infra_failure_rate": 0.01,
+      "generation_retries": {
+        "max_attempts": 3,
+        "initial_backoff_seconds": 1.0,
+        "max_backoff_seconds": 8.0,
+        "jitter_seconds": 0.25,
+        "retry_on_empty_response": true
+      },
+      "generator_profile": {
+        "mode": "pipeline",
+        "generator_llm": {
+          "type": "openai_chat",
+          "model_name": "meta-llama/Llama-3.3-70B-Instruct:novita",
+          "api_base": "https://router.huggingface.co/v1",
+          "request_timeout": 90,
+          "max_retries": 1,
+          "model_kwargs": {
+            "temperature": 0,
+            "top_p": 1.0,
+            "stop_list": []
+          }
+        },
+        "llm_generate": {}
+      },
+      "generator_fingerprint": "d8497e587288b92270cc9f5eccb7437a78427b9be742d8c8d0b70a4576ef16c9",
+      "retriever_profile": {
+        "type": "multi_collection",
+        "final_top_k": 8,
+        "sources": {
+          "docs": {
+            "settings": {
+              "filters": {},
+              "retrieval_profile": {
+                "bm25_top_k": 5,
+                "dense_top_k": 5,
+                "fusion": {
+                  "rrf_k": 60,
+                  "signal_weights": {
+                    "bm25": 1.0,
+                    "dense": 1.0
+                  },
+                  "type": "rrf"
+                },
+                "top_k": 5
+              },
+              "top_k": 5,
+              "weight": 1.0
+            },
+            "retriever_profile": {
+              "filters": {
+                "filters": []
+              },
+              "retrieval_profile": {
+                "bm25_top_k": 5,
+                "dense_top_k": 5,
+                "fusion": {
+                  "rrf_k": 60,
+                  "signal_weights": {
+                    "bm25": 1.0,
+                    "dense": 1.0
+                  },
+                  "type": "rrf"
+                },
+                "top_k": 5
+              },
+              "top_k": 5,
+              "type": "vector",
+              "vector_store": {
+                "backend": "qdrant",
+                "collection_name": "exp_docs_cs800_ov80",
+                "dense_model": "Qwen/Qwen3-Embedding-8B",
+                "dense_vector_name": "dense",
+                "sparse_model": null,
+                "sparse_vector_name": "sparse"
+              }
+            },
+            "retriever_fingerprint": "61def53a677224f8531b1faf7d8990ca298dbd9678f91c3202906bba107892d1"
+          },
+          "tickets": {
+            "settings": {
+              "filters": {},
+              "retrieval_profile": {
+                "bm25_top_k": 5,
+                "dense_top_k": 5,
+                "fusion": {
+                  "rrf_k": 60,
+                  "signal_weights": {
+                    "bm25": 1.0,
+                    "dense": 1.0
+                  },
+                  "type": "rrf"
+                },
+                "top_k": 5
+              },
+              "top_k": 5,
+              "weight": 1.0
+            },
+            "retriever_profile": {
+              "filters": {
+                "filters": []
+              },
+              "retrieval_profile": {
+                "bm25_top_k": 5,
+                "dense_top_k": 5,
+                "fusion": {
+                  "rrf_k": 60,
+                  "signal_weights": {
+                    "bm25": 1.0,
+                    "dense": 1.0
+                  },
+                  "type": "rrf"
+                },
+                "top_k": 5
+              },
+              "top_k": 5,
+              "type": "vector",
+              "vector_store": {
+                "backend": "qdrant",
+                "collection_name": "exp_tickets_cs1000_ov80",
+                "dense_model": "Qwen/Qwen3-Embedding-8B",
+                "dense_vector_name": "dense",
+                "sparse_model": null,
+                "sparse_vector_name": "sparse"
+              }
+            },
+            "retriever_fingerprint": "9d77faafa95791e2d2c6f57fed0852ee76460178d7e542152ebc0089b5926794"
+          }
+        }
+      },
+      "retriever_fingerprint": "85d4d6c81b80c81e5494e33e5b5721830d675d9a6a4cb84aa0ad3f38a81c4365",
+      "reranker_profile": {
+        "type": "rrf",
+        "rrf_k": 60,
+        "source_weights": {
+          "docs": 1.0,
+          "tickets": 1.0
+        },
+        "trace_enabled": true
+      },
+      "reranker_fingerprint": "919c0e51c02532aa66423a7292c247df070dea8c40b92335a6a692165fefb030",
+      "preset_name": "naive_combined",
+      "preset_description": "Naive docs+tickets baseline with RRF reranking.",
+      "condition_summary": {
+        "retriever_type": "multi_collection",
+        "source_type": "vector",
+        "final_top_k": 8,
+        "hybrid_profile": {
+          "dense_top_k": 5,
+          "bm25_top_k": 5,
+          "top_k": 5,
+          "fusion": {
+            "type": "rrf",
+            "rrf_k": 60,
+            "signal_weights": {
+              "dense": 1.0,
+              "bm25": 1.0
+            }
+          }
+        },
+        "sources": [
+          {
+            "top_k": 5,
+            "filters": {},
+            "weight": 1.0,
+            "retrieval_profile": {
+              "dense_top_k": 5,
+              "bm25_top_k": 5,
+              "top_k": 5,
+              "fusion": {
+                "type": "rrf",
+                "rrf_k": 60,
+                "signal_weights": {
+                  "dense": 1.0,
+                  "bm25": 1.0
+                }
+              }
+            },
+            "name": "docs",
+            "collection_name": "exp_docs_cs800_ov80"
+          },
+          {
+            "top_k": 5,
+            "filters": {},
+            "weight": 1.0,
+            "retrieval_profile": {
+              "dense_top_k": 5,
+              "bm25_top_k": 5,
+              "top_k": 5,
+              "fusion": {
+                "type": "rrf",
+                "rrf_k": 60,
+                "signal_weights": {
+                  "dense": 1.0,
+                  "bm25": 1.0
+                }
+              }
+            },
+            "name": "tickets",
+            "collection_name": "exp_tickets_cs1000_ov80"
+          }
+        ],
+        "retriever_profile": {
+          "type": "multi_collection",
+          "source_type": "vector",
+          "final_top_k": 8,
+          "hybrid_profile": {
+            "dense_top_k": 5,
+            "bm25_top_k": 5,
+            "top_k": 5,
+            "fusion": {
+              "type": "rrf",
+              "rrf_k": 60,
+              "signal_weights": {
+                "dense": 1.0,
+                "bm25": 1.0
+              }
+            }
+          },
+          "sources": [
+            {
+              "top_k": 5,
+              "filters": {},
+              "weight": 1.0,
+              "retrieval_profile": {
+                "dense_top_k": 5,
+                "bm25_top_k": 5,
+                "top_k": 5,
+                "fusion": {
+                  "type": "rrf",
+                  "rrf_k": 60,
+                  "signal_weights": {
+                    "dense": 1.0,
+                    "bm25": 1.0
+                  }
+                }
+              },
+              "name": "docs",
+              "collection_name": "exp_docs_cs800_ov80"
+            },
+            {
+              "top_k": 5,
+              "filters": {},
+              "weight": 1.0,
+              "retrieval_profile": {
+                "dense_top_k": 5,
+                "bm25_top_k": 5,
+                "top_k": 5,
+                "fusion": {
+                  "type": "rrf",
+                  "rrf_k": 60,
+                  "signal_weights": {
+                    "dense": 1.0,
+                    "bm25": 1.0
+                  }
+                }
+              },
+              "name": "tickets",
+              "collection_name": "exp_tickets_cs1000_ov80"
+            }
+          ]
+        },
+        "retriever_fingerprint": "c1b2c75d174d2fa2d3493c7ca1a58316b8b31fd0b7937e54a4180f2b1a747450",
+        "reranker_profile": {
+          "type": "rrf",
+          "rrf_k": 60,
+          "source_weights": {
+            "docs": 1.0,
+            "tickets": 1.0
+          },
+          "trace_enabled": true
+        }
+      },
+      "condition_fingerprint": "d5625d379e6403e1b90b7e417a167423e5cbc82c8db1e587f2264696f697fe8b",
+      "annotation_rows": 70,
+      "prep_total_rows": 70,
+      "prep_success_rows": 70,
+      "prep_failed_rows": 0,
+      "prep_elapsed_seconds": 184.97510521899676,
+      "prep_rate_rows_per_second": 0.37842930224110544,
+      "prep_error_classes": {},
+      "prep_failure_classes": {},
+      "prep_failure_class_rates": {},
+      "prep_failure_stages": {},
+      "prep_failure_stage_rates": {},
+      "prep_response_statuses": {
+        "ok": 70
+      },
+      "prep_response_status_rates": {
+        "ok": 1.0
+      },
+      "prep_coverage": 1.0,
+      "prep_empty_response_rate": 0.0,
+      "infra_failure_rate": 0.0,
+      "run_validity": "VALID",
+      "run_policy": "official",
+      "latency_budget_report": {
+        "count": 70,
+        "elapsed_ms": {
+          "p50": 25291.0,
+          "p90": 43920.4,
+          "p95": 46740.299999999996,
+          "max": 58280.0,
+          "mean": 28161.185714285715
+        },
+        "budget_utilization": {
+          "p50": 0.14050555555555555,
+          "p90": 0.24400222222222223,
+          "max": 0.3237777777777778
+        }
+      },
+      "persisted_prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage0b4_combined_chunking_followup/docs_cs800_ov80_tickets_cs1000_ov80/run_03/prepared_input.json",
+      "prepared_source": "generated"
+    },
+    "evaluation_preprocessing": {
+      "enabled": true,
+      "processed_rows": 70,
+      "truncated_rows": 63,
+      "truncated_contexts": 187,
+      "original_total_context_characters": 2351561,
+      "processed_total_context_characters": 1361656,
+      "retrieved_contexts": {
+        "max_characters": 4000,
+        "max_total_characters": 20000,
+        "truncation_marker": "\n...[truncated for evaluator]"
+      }
+    },
+    "tune_concurrency": true,
+    "trace_evaluator_llm": false,
+    "mlflow_parent_run_id": "eab3cd0d32ff481780eda396177bf4ec"
+  }
+}
