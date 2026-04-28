@@ -5,6 +5,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from polaris_rag.cli import tune_validity_reranker
+from polaris_rag.evaluation.evaluation_dataset import PrepProgressEvent
 
 
 def test_weight_trials_build_expected_default_grid_size() -> None:
@@ -86,6 +87,33 @@ def test_select_best_trial_uses_objective_then_tie_breaks() -> None:
     )
 
     assert best.reranker_fingerprint == "b"
+
+
+def test_trial_progress_renderer_surfaces_retry_notice(capsys) -> None:
+    renderer = tune_validity_reranker._TrialProgressRenderer(
+        interactive=False,
+        log_interval_seconds=1.0,
+    )
+
+    renderer.update_prep(
+        trial_index=1,
+        total_trials=49,
+        event=PrepProgressEvent(
+            completed=0,
+            total=70,
+            successes=0,
+            failures=0,
+            elapsed_seconds=12.0,
+            mode="pipeline",
+            last_retry="id=ex-1 retry=2/3 reason=RuntimeError: transient",
+            retrying=True,
+        ),
+        best_objective=None,
+    )
+
+    captured = capsys.readouterr()
+
+    assert "retry=id=ex-1 retry=2/3 reason=RuntimeError: transient" in captured.err
 
 
 def test_select_best_trial_for_core_profile_prefers_covered_trial() -> None:

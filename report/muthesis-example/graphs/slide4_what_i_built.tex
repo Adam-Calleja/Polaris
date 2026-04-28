@@ -1,0 +1,111 @@
+\documentclass[tikz,border=8pt]{standalone}
+
+\usepackage[T1]{fontenc}
+\usepackage{helvet}
+\renewcommand{\familydefault}{\sfdefault}
+\usetikzlibrary{arrows.meta,positioning}
+
+\definecolor{ink}{HTML}{232323}
+\definecolor{accent}{HTML}{6F2C91}
+\definecolor{panel}{HTML}{E6E6E8}
+\definecolor{supportfill}{HTML}{F1ECF6}
+
+\begin{document}
+\hyphenpenalty=10000
+\exhyphenpenalty=10000
+\begin{tikzpicture}[
+  font=\small,
+  text=ink,
+  arrow/.style={-Latex, very thick, draw=accent},
+  title/.style={
+    fill=accent,
+    text=white,
+    font=\bfseries\footnotesize,
+    inner xsep=4pt,
+    inner ysep=3pt,
+    align=center
+  },
+  panelbox/.style={
+    draw=accent,
+    line width=1.0pt,
+    fill=panel,
+    inner sep=6pt,
+    minimum height=3.15cm,
+    text width=3.1cm,
+    align=left
+  },
+  outputbox/.style={
+    draw=accent,
+    line width=1.0pt,
+    fill=supportfill,
+    inner sep=6pt,
+    minimum height=2.0cm,
+    text width=2.6cm,
+    align=center
+  },
+  strip/.style={
+    draw=accent,
+    line width=1.0pt,
+    fill=supportfill,
+    inner sep=6pt,
+    minimum height=1.05cm,
+    text width=13.55cm,
+    align=center
+  },
+  note/.style={font=\scriptsize, text=ink, align=center}
+]
+
+% white background so raster previews do not render transparent as black
+\fill[white] (-0.8,-4.00) rectangle (14.7,2.8);
+
+\node[panelbox] (ingest) at (1.0,0.35) {%
+\textbf{Inputs and indexing}\\[0.35em]
+Local CSD3 documentation\\[0.35em]
+External official manuals\\[0.35em]
+Resolved Jira tickets\\[0.35em]
+\textit{Cleanup, chunking, and indexing}
+};
+\node[title, text width=3.18cm, anchor=south west]
+  at ([yshift=0.06cm]ingest.north west) {1. Source-specific\\ingestion};
+
+\node[panelbox] (metadata) at (5.2,0.35) {%
+\textbf{Authority layer}\\[0.35em]
+Source role\\[0.35em]
+Scope and software\\[0.35em]
+Version and status\\[0.35em]
+Freshness metadata
+};
+\node[title, text width=3.18cm, anchor=south west]
+  at ([yshift=0.06cm]metadata.north west) {2. Authority and\\metadata};
+
+\node[panelbox] (runtime) at (9.4,0.35) {%
+\textbf{Runtime pipeline}\\[0.35em]
+Query constraints\\[0.35em]
+Multi-collection retrieval\\[0.35em]
+Reranking\\[0.35em]
+Grounded answer generation
+};
+\node[title, text width=3.18cm, anchor=south west]
+  at ([yshift=0.06cm]runtime.north west) {3. Retrieval and\\generation};
+
+\node[outputbox] (answer) at (13.45,0.35) {%
+\textbf{Reviewable output}\\[0.35em]
+Evidence-grounded\\
+first response
+};
+
+\draw[arrow] (ingest.east) -- (metadata.west);
+\draw[arrow] (metadata.east) -- (runtime.west);
+\draw[arrow] (runtime.east) -- (answer.west);
+
+\node[strip] (infra) at (7.15,-3.00) {%
+\textbf{FastAPI API} \quad $\bullet$ \quad
+\textbf{React UI} \quad $\bullet$ \quad
+\textbf{MLflow traces} \quad $\bullet$ \quad
+\textbf{benchmark and experiment tooling} \quad $\bullet$ \quad
+\textbf{automated tests}};
+\node[title, text width=4.3cm, anchor=south west]
+  at ([yshift=0.06cm]infra.north west) {4. Supporting infrastructure};
+
+\end{tikzpicture}
+\end{document}

@@ -806,6 +806,7 @@ def test_build_prepared_rows_from_api_fail_soft_counts_failures() -> None:
 def test_build_prepared_rows_retries_fail_soft_then_succeeds() -> None:
     raw_examples = [{"id": "ex-1", "query": "Q1", "expected_answer": "A1"}]
     calls = {"count": 0}
+    events: list[PrepProgressEvent] = []
 
     class _RetryingPipeline:
         def run(self, query: str, **kwargs):  # noqa: ANN001
@@ -822,6 +823,7 @@ def test_build_prepared_rows_retries_fail_soft_then_succeeds() -> None:
         pipeline=_RetryingPipeline(),
         generation_workers=1,
         raise_exceptions=False,
+        progress_callback=events.append,
         retry_policy={
             "max_attempts": 3,
             "initial_backoff_seconds": 0.0,
@@ -834,6 +836,14 @@ def test_build_prepared_rows_retries_fail_soft_then_succeeds() -> None:
     assert calls["count"] == 3
     assert rows[0]["response"] == "final-response"
     assert "source_error" not in rows[0]["metadata"]
+    retry_events = [event for event in events if event.retrying]
+    assert len(retry_events) == 2
+    assert retry_events[0].last_retry is not None
+    assert retry_events[0].last_retry.startswith("id=ex-1 retry=2/3 reason=RuntimeError: transient")
+    assert retry_events[1].last_retry is not None
+    assert retry_events[1].last_retry.startswith("id=ex-1 retry=3/3 reason=RuntimeError: transient")
+    assert events[-1].completed == 1
+    assert events[-1].retrying is False
 
 
 def test_build_prepared_rows_from_api_retries_fail_soft_then_succeeds() -> None:

@@ -99,6 +99,10 @@ class PrepProgressEvent:
         elapsed Seconds expressed in seconds.
     mode : str
         Value for mode.
+    last_retry : str or None
+        Latest retry notice reported while processing rows.
+    retrying : bool
+        Whether the event represents a retry notice rather than a completed row.
     last_error : str or None
         Latest error string reported while processing rows.
     """
@@ -109,6 +113,8 @@ class PrepProgressEvent:
     failures: int
     elapsed_seconds: float
     mode: str
+    last_retry: str | None = None
+    retrying: bool = False
     last_error: str | None = None
 
 
@@ -2820,6 +2826,19 @@ def _sleep_before_retry(policy: PrepRetryPolicy, attempt_number: int) -> None:
         time.sleep(delay_seconds)
 
 
+def _format_retry_notice(
+    *,
+    sample_id: str,
+    attempt_number: int,
+    max_attempts: int,
+    reason: str,
+) -> str:
+    """Return a compact retry notice suitable for progress rendering."""
+    next_attempt = max(1, int(attempt_number) + 1)
+    normalized_reason = " ".join(str(reason).split())
+    return f"id={sample_id} retry={next_attempt}/{max(1, int(max_attempts))} reason={normalized_reason}"
+
+
 def _fail_soft_empty_response_row(
     *,
     row: dict[str, Any],
@@ -2890,7 +2909,7 @@ def _prepare_one_with_retries(
     default_retriever_fingerprint: str | None = None,
     default_reranker_profile: Mapping[str, Any] | None = None,
     default_reranker_fingerprint: str | None = None,
-) -> tuple[int, dict[str, Any]]:
+) -> tuple[int, dict[str, Any], tuple[str, ...]]:
     """Prepare One With Retries.
     
     Parameters
@@ -2930,7 +2949,7 @@ def _prepare_one_with_retries(
     
     Returns
     -------
-    tuple[int, dict[str, Any]]
+    tuple[int, dict[str, Any], tuple[str, ...]]
         Collected results from the operation.
     
     Raises
@@ -2943,6 +2962,7 @@ def _prepare_one_with_retries(
     policy = PrepRetryPolicy.from_value(retry_policy)
     sample_id = str(example.get(id_field, f"row-{index}"))
     query = str(example.get(query_field, "") or "").strip()
+    retry_notices: list[str] = []
 
     for attempt in range(1, policy.max_attempts + 1):
         with _open_attempt_trace(
@@ -2994,6 +3014,14 @@ def _prepare_one_with_retries(
                 # Missing query is deterministic and should never be retried.
                 if _is_missing_query_exception(exc):
                     raise
+                retry_notices.append(
+                    _format_retry_notice(
+                        sample_id=sample_id,
+                        attempt_number=attempt,
+                        max_attempts=policy.max_attempts,
+                        reason=_error_text_from_exception(exc),
+                    )
+                )
                 _sleep_before_retry(policy, attempt_number=attempt)
                 continue
 
@@ -3009,7 +3037,15 @@ def _prepare_one_with_retries(
                     }
                 )
                 if _is_missing_query_source_error(source_error) or attempt >= policy.max_attempts:
-                    return row_index, row
+                    return row_index, row, tuple(retry_notices)
+                retry_notices.append(
+                    _format_retry_notice(
+                        sample_id=sample_id,
+                        attempt_number=attempt,
+                        max_attempts=policy.max_attempts,
+                        reason=source_error,
+                    )
+                )
                 _sleep_before_retry(policy, attempt_number=attempt)
                 continue
 
@@ -3023,18 +3059,30 @@ def _prepare_one_with_retries(
                 if not should_retry_empty:
                     if raise_exceptions:
                         raise EmptyResponseError(error_message)
-                    return row_index, _fail_soft_empty_response_row(
-                        row=row,
-                        message=error_message,
-                        original_metadata=example.get("metadata", {}),
-                        policy=evaluation_policy,
-                        budget_ms=budget_ms,
+                    return (
+                        row_index,
+                        _fail_soft_empty_response_row(
+                            row=row,
+                            message=error_message,
+                            original_metadata=example.get("metadata", {}),
+                            policy=evaluation_policy,
+                            budget_ms=budget_ms,
+                        ),
+                        tuple(retry_notices),
                     )
+                retry_notices.append(
+                    _format_retry_notice(
+                        sample_id=sample_id,
+                        attempt_number=attempt,
+                        max_attempts=policy.max_attempts,
+                        reason="empty response",
+                    )
+                )
                 _sleep_before_retry(policy, attempt_number=attempt)
                 continue
 
             trace_recorder.set_attributes({"status": "success"})
-            return row_index, row
+            return row_index, row, tuple(retry_notices)
 
     # Defensive fallback; loop always returns/raises.
     raise RuntimeError("unreachable retry state in _prepare_one_with_retries")
@@ -3062,7 +3110,7 @@ def _prepare_one_via_api_with_retries(
     default_retriever_fingerprint: str | None = None,
     default_reranker_profile: Mapping[str, Any] | None = None,
     default_reranker_fingerprint: str | None = None,
-) -> tuple[int, dict[str, Any]]:
+) -> tuple[int, dict[str, Any], tuple[str, ...]]:
     """Prepare One Via API With Retries.
     
     Parameters
@@ -3106,7 +3154,7 @@ def _prepare_one_via_api_with_retries(
     
     Returns
     -------
-    tuple[int, dict[str, Any]]
+    tuple[int, dict[str, Any], tuple[str, ...]]
         Collected results from the operation.
     
     Raises
@@ -3119,6 +3167,7 @@ def _prepare_one_via_api_with_retries(
     policy = PrepRetryPolicy.from_value(retry_policy)
     sample_id = str(example.get(id_field, f"row-{index}"))
     query = str(example.get(query_field, "") or "").strip()
+    retry_notices: list[str] = []
 
     for attempt in range(1, policy.max_attempts + 1):
         with _open_attempt_trace(
@@ -3172,6 +3221,14 @@ def _prepare_one_via_api_with_retries(
                 )
                 if _is_missing_query_exception(exc) or attempt >= policy.max_attempts:
                     raise
+                retry_notices.append(
+                    _format_retry_notice(
+                        sample_id=sample_id,
+                        attempt_number=attempt,
+                        max_attempts=policy.max_attempts,
+                        reason=_error_text_from_exception(exc),
+                    )
+                )
                 _sleep_before_retry(policy, attempt_number=attempt)
                 continue
 
@@ -3187,7 +3244,15 @@ def _prepare_one_via_api_with_retries(
                     }
                 )
                 if _is_missing_query_source_error(source_error) or attempt >= policy.max_attempts:
-                    return row_index, row
+                    return row_index, row, tuple(retry_notices)
+                retry_notices.append(
+                    _format_retry_notice(
+                        sample_id=sample_id,
+                        attempt_number=attempt,
+                        max_attempts=policy.max_attempts,
+                        reason=source_error,
+                    )
+                )
                 _sleep_before_retry(policy, attempt_number=attempt)
                 continue
 
@@ -3201,18 +3266,30 @@ def _prepare_one_via_api_with_retries(
                 if not should_retry_empty:
                     if raise_exceptions:
                         raise EmptyResponseError(error_message)
-                    return row_index, _fail_soft_empty_response_row(
-                        row=row,
-                        message=error_message,
-                        original_metadata=example.get("metadata", {}),
-                        policy=evaluation_policy,
-                        budget_ms=budget_ms,
+                    return (
+                        row_index,
+                        _fail_soft_empty_response_row(
+                            row=row,
+                            message=error_message,
+                            original_metadata=example.get("metadata", {}),
+                            policy=evaluation_policy,
+                            budget_ms=budget_ms,
+                        ),
+                        tuple(retry_notices),
                     )
+                retry_notices.append(
+                    _format_retry_notice(
+                        sample_id=sample_id,
+                        attempt_number=attempt,
+                        max_attempts=policy.max_attempts,
+                        reason="empty response",
+                    )
+                )
                 _sleep_before_retry(policy, attempt_number=attempt)
                 continue
 
             trace_recorder.set_attributes({"status": "success"})
-            return row_index, row
+            return row_index, row, tuple(retry_notices)
 
     # Defensive fallback; loop always returns/raises.
     raise RuntimeError("unreachable retry state in _prepare_one_via_api_with_retries")
@@ -3227,6 +3304,8 @@ def _emit_progress(
     successes: int,
     failures: int,
     started_at: float,
+    last_retry: str | None = None,
+    retrying: bool = False,
     last_error: str | None = None,
 ) -> None:
     """Emit Progress.
@@ -3247,6 +3326,10 @@ def _emit_progress(
         Value for failures.
     started_at : float
         Value for started At.
+    last_retry : str or None, optional
+        Value for last Retry.
+    retrying : bool, optional
+        Whether this progress event represents a retry notice.
     last_error : str or None, optional
         Value for last Error.
     """
@@ -3261,6 +3344,8 @@ def _emit_progress(
             failures=failures,
             elapsed_seconds=max(0.0, time.perf_counter() - started_at),
             mode=mode,
+            last_retry=last_retry,
+            retrying=bool(retrying),
             last_error=last_error,
         )
     )
@@ -3336,6 +3421,20 @@ def build_prepared_rows(
             last_error=last_error,
         )
 
+    def _record_retry(*, retry_notice: str) -> None:
+        """Emit a retry notice without advancing completed-row counters."""
+        _emit_progress(
+            callback=progress_callback,
+            mode="pipeline",
+            completed=completed,
+            total=total,
+            successes=successes,
+            failures=failures,
+            started_at=started_at,
+            last_retry=retry_notice,
+            retrying=True,
+        )
+
     if total == 0:
         _emit_progress(
             callback=progress_callback,
@@ -3374,7 +3473,9 @@ def build_prepared_rows(
             except Exception as exc:
                 _record_progress({}, last_error=_error_text_from_exception(exc))
                 raise
-            indexed_rows.append(row)
+            for retry_notice in row[2]:
+                _record_retry(retry_notice=retry_notice)
+            indexed_rows.append((row[0], row[1]))
             _record_progress(row[1], last_error=_source_error_text(row[1]))
     else:
         with ThreadPoolExecutor(max_workers=workers) as pool:
@@ -3408,7 +3509,9 @@ def build_prepared_rows(
                 except Exception as exc:
                     _record_progress({}, last_error=_error_text_from_exception(exc))
                     raise
-                indexed_rows.append(row)
+                for retry_notice in row[2]:
+                    _record_retry(retry_notice=retry_notice)
+                indexed_rows.append((row[0], row[1]))
                 _record_progress(row[1], last_error=_source_error_text(row[1]))
 
     indexed_rows.sort(key=lambda x: x[0])
@@ -3521,6 +3624,20 @@ def build_prepared_rows_from_api(
             last_error=last_error,
         )
 
+    def _record_retry(*, retry_notice: str) -> None:
+        """Emit a retry notice without advancing completed-row counters."""
+        _emit_progress(
+            callback=progress_callback,
+            mode="api",
+            completed=completed,
+            total=total,
+            successes=successes,
+            failures=failures,
+            started_at=started_at,
+            last_retry=retry_notice,
+            retrying=True,
+        )
+
     if total == 0:
         _emit_progress(
             callback=progress_callback,
@@ -3561,7 +3678,9 @@ def build_prepared_rows_from_api(
             except Exception as exc:
                 _record_progress({}, last_error=_error_text_from_exception(exc))
                 raise
-            indexed_rows.append(row)
+            for retry_notice in row[2]:
+                _record_retry(retry_notice=retry_notice)
+            indexed_rows.append((row[0], row[1]))
             _record_progress(row[1], last_error=_source_error_text(row[1]))
     else:
         with ThreadPoolExecutor(max_workers=workers) as pool:
@@ -3597,7 +3716,9 @@ def build_prepared_rows_from_api(
                 except Exception as exc:
                     _record_progress({}, last_error=_error_text_from_exception(exc))
                     raise
-                indexed_rows.append(row)
+                for retry_notice in row[2]:
+                    _record_retry(retry_notice=retry_notice)
+                indexed_rows.append((row[0], row[1]))
                 _record_progress(row[1], last_error=_source_error_text(row[1]))
 
     indexed_rows.sort(key=lambda x: x[0])

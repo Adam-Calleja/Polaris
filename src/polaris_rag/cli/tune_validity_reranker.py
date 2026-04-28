@@ -203,9 +203,13 @@ class _TrialProgressRenderer:
             line += f" last_error={compact_error}"
         return line
 
-    def _emit(self, line: str, *, force: bool = False) -> None:
+    def _emit(self, line: str, *, force: bool = False, preserve: bool = False) -> None:
         elapsed = max(0.0, time.perf_counter() - self._started_at)
         if self.interactive:
+            if preserve:
+                print(f"\r{line}", file=sys.stderr, flush=True)
+                self._active = False
+                return
             self._active = True
             print(f"\r{line}", end="", file=sys.stderr, flush=True)
             return
@@ -253,7 +257,10 @@ class _TrialProgressRenderer:
             ),
             last_error=event.last_error,
         )
-        self._emit(line)
+        compact_retry = _compact_error_text(event.last_retry)
+        if compact_retry:
+            line += f" retry={compact_retry}"
+        self._emit(line, force=bool(event.retrying), preserve=bool(event.retrying))
 
     def start_eval(
         self,

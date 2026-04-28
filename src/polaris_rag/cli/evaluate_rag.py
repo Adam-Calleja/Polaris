@@ -1076,15 +1076,24 @@ class _PrepProgressRenderer:
             f"{event.completed}/{event.total} errors={event.failures} "
             f"elapsed={event.elapsed_seconds:5.1f}s rate={rate:5.2f}/s"
         )
+        compact_retry = _compact_error_text(event.last_retry)
+        if compact_retry:
+            line += f" retry={compact_retry}"
         compact_error = _compact_error_text(event.last_error)
         if compact_error:
             line += f" last_error={compact_error}"
         if self.interactive:
+            if event.retrying:
+                print(f"\r{line}", file=sys.stderr, flush=True)
+                self._active = False
+                return
             self._active = True
             print(f"\r{line}", end="", file=sys.stderr, flush=True)
             return
 
         should_log = (
+            event.retrying
+            or
             event.completed >= event.total
             or self._last_logged_elapsed < 0
             or (event.elapsed_seconds - self._last_logged_elapsed) >= self.log_interval_seconds
