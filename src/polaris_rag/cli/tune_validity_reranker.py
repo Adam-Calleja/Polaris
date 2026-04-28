@@ -49,6 +49,13 @@ OBJECTIVE_METRICS: tuple[str, ...] = (
     "faithfulness",
     "context_precision_without_reference",
 )
+CORE_SELECTION_METRICS: tuple[str, ...] = (
+    "factual_correctness",
+    "faithfulness",
+)
+GRID_PROFILE_FULL = "full"
+GRID_PROFILE_CORE = "core"
+GRID_PROFILE_TWO_PHASE = "two_phase"
 DEFAULT_WEIGHT_GRID: dict[str, tuple[float, ...]] = {
     "authority": (0.00, 0.04, 0.08),
     "scope": (0.00, 0.04, 0.08),
@@ -57,6 +64,21 @@ DEFAULT_WEIGHT_GRID: dict[str, tuple[float, ...]] = {
     "version": (0.00,),
     "status": (0.00, 0.04, 0.08),
     "freshness": (0.00, 0.01),
+}
+CORE_WEIGHT_GRID: dict[str, tuple[float, ...]] = {
+    "authority": (0.04, 0.08),
+    "scope": (0.00, 0.04, 0.08),
+    "software": (0.00,),
+    "scope_family": (0.00,),
+    "version": (0.00,),
+    "status": (0.04, 0.08),
+    "freshness": (0.00, 0.01),
+}
+TWO_PHASE_EXPANSION_GRID: dict[str, tuple[float, ...]] = {
+    "freshness": (0.00, 0.005, 0.01),
+    "software": (0.00, 0.04),
+    "scope_family": (0.00, 0.02),
+    "version": (0.00, 0.04),
 }
 DEFAULT_AUTHORITY_VALUES: dict[str, float] = {
     "local_official": 1.0,
@@ -71,6 +93,8 @@ DEFAULT_STATUS_VALUES: dict[str, float] = {
     "eol": -1.0,
     "unknown": 0.0,
 }
+DEFAULT_SELECTION_MIN_PREPARED_ROWS = 60
+DEFAULT_EXPLORATION_ANCHOR_COUNT = 2
 
 
 @dataclass(frozen=True)
@@ -313,6 +337,31 @@ def _parse_args() -> argparse.Namespace:
         default=None,
         help="Override dataset-preparation worker count for tuning.",
     )
+    parser.add_argument(
+        "--grid-profile",
+        choices=[GRID_PROFILE_FULL, GRID_PROFILE_CORE, GRID_PROFILE_TWO_PHASE],
+        default=GRID_PROFILE_FULL,
+        help=(
+            "Trial-search profile: 'full' reproduces the original 54-trial grid, "
+            "'core' runs a 25-trial confirmatory subset, and 'two_phase' runs the "
+            "core search followed by targeted expansion around the best covered anchors."
+        ),
+    )
+    parser.add_argument(
+        "--selection-min-prepared-rows",
+        type=int,
+        default=DEFAULT_SELECTION_MIN_PREPARED_ROWS,
+        help=(
+            "Coverage floor used by the coverage-guarded selection path for "
+            "core/two_phase profiles."
+        ),
+    )
+    parser.add_argument(
+        "--exploration-anchor-count",
+        type=int,
+        default=DEFAULT_EXPLORATION_ANCHOR_COUNT,
+        help="Number of covered Phase 1 anchors to expand during the two_phase profile.",
+    )
     return parser.parse_args()
 
 
@@ -390,6 +439,189 @@ def _weight_trials(grid: Mapping[str, Iterable[float]] | None = None) -> list[di
     return trials
 
 
+def _default_zero_weights() -> dict[str, float]:
+    return {
+        "authority": 0.0,
+        "freshness": 0.0,
+        "scope": 0.0,
+        "scope_family": 0.0,
+        "software": 0.0,
+        "status": 0.0,
+        "version": 0.0,
+    }
+
+
+def _weights_signature(weights: Mapping[str, float]) -> tuple[tuple[str, float], ...]:
+    return tuple(sorted((str(key), float(value)) for key, value in weights.items()))
+
+
+def _dedupe_weight_trials(trials: Iterable[Mapping[str, float]]) -> list[dict[str, float]]:
+    seen: set[tuple[tuple[str, float], ...]] = set()
+    ordered: list[dict[str, float]] = []
+    for trial in trials:
+        normalized = {str(key): float(value) for key, value in trial.items()}
+        signature = _weights_signature(normalized)
+        if signature in seen:
+            continue
+        seen.add(signature)
+        ordered.append(normalized)
+    return ordered
+
+
+def _core_weight_trials() -> list[dict[str, float]]:
+    return _dedupe_weight_trials([
+        _default_zero_weights(),
+        *_weight_trials(CORE_WEIGHT_GRID),
+    ])
+
+
+def _core_anchor_signature(weights: Mapping[str, float]) -> tuple[float, float, float]:
+    return (
+        float(weights.get("authority", 0.0)),
+        float(weights.get("scope", 0.0)),
+        float(weights.get("status", 0.0)),
+    )
+
+
+def _phase_two_trials_for_anchor(weights: Mapping[str, float]) -> list[dict[str, float]]:
+    anchor = _default_zero_weights()
+    anchor["authority"] = float(weights.get("authority", 0.0))
+    anchor["scope"] = float(weights.get("scope", 0.0))
+    anchor["status"] = float(weights.get("status", 0.0))
+
+    trials: list[dict[str, float]] = []
+    for freshness, software, scope_family, version in product(
+        TWO_PHASE_EXPANSION_GRID["freshness"],
+        TWO_PHASE_EXPANSION_GRID["software"],
+        TWO_PHASE_EXPANSION_GRID["scope_family"],
+        TWO_PHASE_EXPANSION_GRID["version"],
+    ):
+        trial = dict(anchor)
+        trial["freshness"] = float(freshness)
+        trial["software"] = float(software)
+        trial["scope_family"] = float(scope_family)
+        trial["version"] = float(version)
+        trials.append(trial)
+    return trials
+
+
+def _metric_value_or_neg_inf(metric_means: Mapping[str, float], name: str) -> float:
+    value = metric_means.get(name, float("-inf"))
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return float("-inf")
+    if number != number:
+        return float("-inf")
+    return number
+
+
+def _selection_metric_mean(
+    trial: TrialResult,
+    metric_names: Iterable[str] = CORE_SELECTION_METRICS,
+) -> float:
+    values = [
+        _metric_value_or_neg_inf(trial.metric_means, name)
+        for name in metric_names
+    ]
+    usable = [value for value in values if value != float("-inf")]
+    if not usable:
+        return float("-inf")
+    return sum(usable) / len(usable)
+
+
+def _coverage_guarded_sort_key(
+    trial: TrialResult,
+    *,
+    min_prepared_rows: int,
+) -> tuple[int, float, float, float, tuple[float, float, float, tuple[tuple[str, float], ...]]]:
+    return (
+        int(int(trial.prepared_rows) >= max(0, int(min_prepared_rows))),
+        _selection_metric_mean(trial),
+        _metric_value_or_neg_inf(trial.metric_means, "context_precision_without_reference"),
+        float(trial.objective),
+        trial.tie_break_key(),
+    )
+
+
+def _select_best_trial_coverage_guarded(
+    trials: Iterable[TrialResult],
+    *,
+    min_prepared_rows: int,
+) -> TrialResult:
+    ordered = list(trials)
+    if not ordered:
+        raise ValueError("No tuning trials were produced.")
+    return max(
+        ordered,
+        key=lambda trial: _coverage_guarded_sort_key(trial, min_prepared_rows=min_prepared_rows),
+    )
+
+
+def _select_anchor_trials(
+    trials: Iterable[TrialResult],
+    *,
+    anchor_count: int,
+    min_prepared_rows: int,
+) -> list[TrialResult]:
+    ordered = list(trials)
+    if not ordered:
+        return []
+
+    anchor_limit = max(1, int(anchor_count))
+    covered = [
+        trial
+        for trial in ordered
+        if int(trial.prepared_rows) >= max(0, int(min_prepared_rows))
+    ]
+    candidate_pool = covered or ordered
+    ranked = sorted(
+        candidate_pool,
+        key=lambda trial: _coverage_guarded_sort_key(trial, min_prepared_rows=min_prepared_rows),
+        reverse=True,
+    )
+
+    anchors: list[TrialResult] = []
+    seen_signatures: set[tuple[float, float, float]] = set()
+    for trial in ranked:
+        signature = _core_anchor_signature(trial.weights)
+        if signature in seen_signatures:
+            continue
+        seen_signatures.add(signature)
+        anchors.append(trial)
+        if len(anchors) >= anchor_limit:
+            break
+    return anchors
+
+
+def _resolve_initial_trials(grid_profile: str) -> list[dict[str, float]]:
+    normalized = str(grid_profile or GRID_PROFILE_FULL).strip().lower() or GRID_PROFILE_FULL
+    if normalized == GRID_PROFILE_FULL:
+        return _weight_trials()
+    if normalized in {GRID_PROFILE_CORE, GRID_PROFILE_TWO_PHASE}:
+        return _core_weight_trials()
+    raise ValueError(f"Unsupported grid profile {grid_profile!r}.")
+
+
+def _resolve_phase_two_trials(
+    trials: Iterable[TrialResult],
+    *,
+    anchor_count: int,
+    min_prepared_rows: int,
+) -> tuple[list[TrialResult], list[dict[str, float]]]:
+    anchors = _select_anchor_trials(
+        trials,
+        anchor_count=anchor_count,
+        min_prepared_rows=min_prepared_rows,
+    )
+    expanded = _dedupe_weight_trials(
+        trial
+        for anchor in anchors
+        for trial in _phase_two_trials_for_anchor(anchor.weights)
+    )
+    return anchors, expanded
+
+
 def _trial_sort_key(trial: TrialResult) -> tuple[float, tuple[float, float, float, tuple[tuple[str, float], ...]]]:
     """Trial Sort Key.
     
@@ -428,6 +660,21 @@ def _select_best_trial(trials: Iterable[TrialResult]) -> TrialResult:
     if not ordered:
         raise ValueError("No tuning trials were produced.")
     return max(ordered, key=_trial_sort_key)
+
+
+def _select_best_trial_for_profile(
+    trials: Iterable[TrialResult],
+    *,
+    grid_profile: str,
+    min_prepared_rows: int,
+) -> TrialResult:
+    normalized = str(grid_profile or GRID_PROFILE_FULL).strip().lower() or GRID_PROFILE_FULL
+    if normalized == GRID_PROFILE_FULL:
+        return _select_best_trial(trials)
+    return _select_best_trial_coverage_guarded(
+        trials,
+        min_prepared_rows=min_prepared_rows,
+    )
 
 
 def _coerce_metric_mean(values: Iterable[Any]) -> float:
@@ -707,6 +954,7 @@ def _write_weight_file(
     best: TrialResult,
     generated_at: str,
     dataset_path: Path,
+    search_metadata: Mapping[str, Any] | None = None,
 ) -> None:
     """Write weight File.
     
@@ -731,6 +979,7 @@ def _write_weight_file(
         "authority_values": dict(DEFAULT_AUTHORITY_VALUES),
         "status_values": dict(DEFAULT_STATUS_VALUES),
         "freshness": {"mode": "relative_recency"},
+        "search": dict(search_metadata or {}),
         "selection": {
             "objective": float(best.objective),
             "metric_means": dict(best.metric_means),
@@ -749,6 +998,7 @@ def _write_manifest(
     trials: list[TrialResult],
     best: TrialResult,
     generated_at: str,
+    search_metadata: Mapping[str, Any] | None = None,
 ) -> None:
     """Write manifest.
     
@@ -773,6 +1023,7 @@ def _write_manifest(
         "config_file": str(getattr(cfg, "config_path", "")),
         "dataset_path": str(dataset_path),
         "objective_metrics": list(OBJECTIVE_METRICS),
+        "search": dict(search_metadata or {}),
         "trial_count": len(trials),
         "selected_trial": {
             "weights": dict(best.weights),
@@ -807,13 +1058,26 @@ def main() -> None:
     cfg = GlobalConfig.load(args.config_file)
     dataset_path = _resolve_dataset_path(cfg, args.dataset_path)
     raw_examples = load_raw_examples(dataset_path)
-    trials = _weight_trials()
+    grid_profile = str(args.grid_profile).strip().lower() or GRID_PROFILE_FULL
+    selection_min_prepared_rows = max(0, int(args.selection_min_prepared_rows))
+    exploration_anchor_count = max(1, int(args.exploration_anchor_count))
+    trials = _resolve_initial_trials(grid_profile)
     generated_at = datetime.now(timezone.utc).isoformat()
     progress = _TrialProgressRenderer(interactive=sys.stderr.isatty())
 
     trial_results: list[TrialResult] = []
     best_so_far: TrialResult | None = None
-    total_trials = len(trials)
+    projected_total_trials = len(trials)
+    if grid_profile == GRID_PROFILE_TWO_PHASE:
+        projected_total_trials += (
+            len(TWO_PHASE_EXPANSION_GRID["freshness"])
+            * len(TWO_PHASE_EXPANSION_GRID["software"])
+            * len(TWO_PHASE_EXPANSION_GRID["scope_family"])
+            * len(TWO_PHASE_EXPANSION_GRID["version"])
+            * exploration_anchor_count
+        )
+    total_trials = projected_total_trials
+    phase_two_anchors: list[TrialResult] = []
 
     try:
         for trial_index, weights in enumerate(trials, start=1):
@@ -841,17 +1105,102 @@ def main() -> None:
                 ) if phase == "eval" else None,
             )
             trial_results.append(result)
-            best_so_far = _select_best_trial(trial_results)
+            best_so_far = _select_best_trial_for_profile(
+                trial_results,
+                grid_profile=grid_profile,
+                min_prepared_rows=selection_min_prepared_rows,
+            )
             progress.finish_trial(
                 trial_index=trial_index,
                 total_trials=total_trials,
                 result=result,
                 best_objective=best_so_far.objective if best_so_far is not None else None,
             )
+
+        if grid_profile == GRID_PROFILE_TWO_PHASE:
+            phase_two_anchors, phase_two_trials = _resolve_phase_two_trials(
+                trial_results,
+                anchor_count=exploration_anchor_count,
+                min_prepared_rows=selection_min_prepared_rows,
+            )
+            seen_signatures = {
+                _weights_signature(result.weights)
+                for result in trial_results
+            }
+            phase_two_trials = [
+                weights
+                for weights in phase_two_trials
+                if _weights_signature(weights) not in seen_signatures
+            ]
+            total_trials = len(trial_results) + len(phase_two_trials)
+            start_index = len(trial_results)
+            for offset, weights in enumerate(phase_two_trials, start=1):
+                trial_index = start_index + offset
+                progress.start_trial(
+                    trial_index=trial_index,
+                    total_trials=total_trials,
+                    best_objective=best_so_far.objective if best_so_far is not None else None,
+                )
+                result = _run_trial(
+                    cfg=cfg,
+                    raw_examples=raw_examples,
+                    weights=weights,
+                    generation_workers=args.generation_workers,
+                    progress_callback=lambda event, *, _idx=trial_index: progress.update_prep(
+                        trial_index=_idx,
+                        total_trials=total_trials,
+                        event=event,
+                        best_objective=best_so_far.objective if best_so_far is not None else None,
+                    ),
+                    phase_callback=lambda phase, prepared_rows, *, _idx=trial_index: progress.start_eval(
+                        trial_index=_idx,
+                        total_trials=total_trials,
+                        prepared_rows=prepared_rows,
+                        best_objective=best_so_far.objective if best_so_far is not None else None,
+                    ) if phase == "eval" else None,
+                )
+                trial_results.append(result)
+                best_so_far = _select_best_trial_for_profile(
+                    trial_results,
+                    grid_profile=grid_profile,
+                    min_prepared_rows=selection_min_prepared_rows,
+                )
+                progress.finish_trial(
+                    trial_index=trial_index,
+                    total_trials=total_trials,
+                    result=result,
+                    best_objective=best_so_far.objective if best_so_far is not None else None,
+                )
     finally:
         progress.finish()
 
-    best = _select_best_trial(trial_results)
+    best = _select_best_trial_for_profile(
+        trial_results,
+        grid_profile=grid_profile,
+        min_prepared_rows=selection_min_prepared_rows,
+    )
+    search_metadata = {
+        "grid_profile": grid_profile,
+        "selection_strategy": (
+            "objective_mean_all_metrics"
+            if grid_profile == GRID_PROFILE_FULL
+            else "coverage_guarded_factual_plus_faithfulness"
+        ),
+        "selection_min_prepared_rows": selection_min_prepared_rows,
+        "exploration_anchor_count": exploration_anchor_count,
+        "phase1_trial_count": len(_resolve_initial_trials(grid_profile)),
+        "phase2_anchor_signatures": [
+            {
+                "authority": float(anchor.weights.get("authority", 0.0)),
+                "scope": float(anchor.weights.get("scope", 0.0)),
+                "status": float(anchor.weights.get("status", 0.0)),
+                "prepared_rows": int(anchor.prepared_rows),
+                "objective": float(anchor.objective),
+                "metric_means": dict(anchor.metric_means),
+            }
+            for anchor in phase_two_anchors
+        ],
+    }
 
     output_path = Path(args.output_path).expanduser().resolve()
     manifest_path = _output_manifest_path(output_path, args.manifest_path)
@@ -860,6 +1209,7 @@ def main() -> None:
         best=best,
         generated_at=generated_at,
         dataset_path=dataset_path,
+        search_metadata=search_metadata,
     )
     _write_manifest(
         path=manifest_path,
@@ -868,6 +1218,7 @@ def main() -> None:
         trials=trial_results,
         best=best,
         generated_at=generated_at,
+        search_metadata=search_metadata,
     )
 
     print(f"Wrote weights: {output_path}")

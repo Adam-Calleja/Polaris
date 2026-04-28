@@ -513,6 +513,9 @@ def _run_tune_validity_stage(
         str(manifest_output_path),
     ]
     command.extend(_append_cli_option("--generation-workers", stage_spec.get("generation_workers")))
+    command.extend(_append_cli_option("--grid-profile", stage_spec.get("grid_profile")))
+    command.extend(_append_cli_option("--selection-min-prepared-rows", stage_spec.get("selection_min_prepared_rows")))
+    command.extend(_append_cli_option("--exploration-anchor-count", stage_spec.get("exploration_anchor_count")))
     _run_command(command, dry_run=dry_run)
     return {
         "stage_name": stage_name,

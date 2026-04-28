@@ -226,6 +226,63 @@ def test_run_experiment_stage_prepare_phase_builds_prepare_only_commands(
     assert record["conditions"][0]["runs"][0]["execution_phase"] == "prepare"
 
 
+def test_run_experiment_stage_tune_validity_passes_search_profile_options(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    (repo_root / "scripts").mkdir()
+    base_config = tmp_path / "config.yaml"
+    base_config.write_text("prompt_name: test\n", encoding="utf-8")
+    dataset_path = tmp_path / "dev.jsonl"
+    dataset_path.write_text('{"id":"1","query":"Q1","expected_answer":"A1"}\n', encoding="utf-8")
+
+    manifest_path = _write_manifest(
+        tmp_path,
+        {
+            "artifacts_root": "artifacts/experiments",
+            "base_config": "config.yaml",
+            "stages": {
+                "stage2_validity_tuning": {
+                    "type": "tune_validity_reranker",
+                    "dataset_path": "dev.jsonl",
+                    "output_path": "artifacts/weights.yaml",
+                    "manifest_path": "artifacts/weights.manifest.json",
+                    "generation_workers": 4,
+                    "grid_profile": "two_phase",
+                    "selection_min_prepared_rows": 60,
+                    "exploration_anchor_count": 2,
+                }
+            },
+        },
+    )
+
+    calls: list[list[str]] = []
+
+    def _fake_run(command, check, cwd):
+        calls.append(list(command))
+        assert check is True
+        assert Path(cwd) == repo_root
+        return None
+
+    monkeypatch.setattr(automation, "REPO_ROOT", repo_root)
+    monkeypatch.setattr(automation.subprocess, "run", _fake_run)
+
+    record = automation.run_experiment_stage(
+        manifest_path=manifest_path,
+        stage_name="stage2_validity_tuning",
+        dry_run=False,
+    )
+
+    assert record["stage_type"] == "tune_validity_reranker"
+    assert len(calls) == 1
+    assert "tune_validity_reranker.py" in calls[0][1]
+    assert calls[0][calls[0].index("--grid-profile") + 1] == "two_phase"
+    assert calls[0][calls[0].index("--selection-min-prepared-rows") + 1] == "60"
+    assert calls[0][calls[0].index("--exploration-anchor-count") + 1] == "2"
+
+
 def test_run_experiment_stage_index_phase_builds_ingest_commands_for_non_shared_stage(
     tmp_path: Path,
     monkeypatch,

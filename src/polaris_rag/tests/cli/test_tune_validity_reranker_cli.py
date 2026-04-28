@@ -17,6 +17,30 @@ def test_weight_trials_build_expected_default_grid_size() -> None:
     assert trials[-1]["freshness"] == 0.01
 
 
+def test_resolve_initial_trials_core_profile_builds_expected_grid_size() -> None:
+    trials = tune_validity_reranker._resolve_initial_trials(
+        tune_validity_reranker.GRID_PROFILE_CORE
+    )
+
+    assert len(trials) == 25
+    assert trials[0] == {
+        "authority": 0.0,
+        "freshness": 0.0,
+        "scope": 0.0,
+        "scope_family": 0.0,
+        "software": 0.0,
+        "status": 0.0,
+        "version": 0.0,
+    }
+    assert any(
+        trial["authority"] == 0.08
+        and trial["scope"] == 0.08
+        and trial["status"] == 0.08
+        and trial["freshness"] == 0.01
+        for trial in trials
+    )
+
+
 def test_select_best_trial_uses_objective_then_tie_breaks() -> None:
     best = tune_validity_reranker._select_best_trial(
         [
@@ -64,6 +88,137 @@ def test_select_best_trial_uses_objective_then_tie_breaks() -> None:
     assert best.reranker_fingerprint == "b"
 
 
+def test_select_best_trial_for_core_profile_prefers_covered_trial() -> None:
+    low_coverage = tune_validity_reranker.TrialResult(
+        weights={
+            "authority": 0.08,
+            "scope": 0.08,
+            "software": 0.0,
+            "scope_family": 0.0,
+            "version": 0.0,
+            "status": 0.08,
+            "freshness": 0.0,
+        },
+        objective=0.62,
+        metric_means={
+            "factual_correctness": 0.31,
+            "faithfulness": 0.69,
+            "context_precision_without_reference": 0.86,
+        },
+        reranker_fingerprint="low",
+        prepared_rows=25,
+    )
+    covered = tune_validity_reranker.TrialResult(
+        weights={
+            "authority": 0.04,
+            "scope": 0.04,
+            "software": 0.0,
+            "scope_family": 0.0,
+            "version": 0.0,
+            "status": 0.08,
+            "freshness": 0.0,
+        },
+        objective=0.58,
+        metric_means={
+            "factual_correctness": 0.35,
+            "faithfulness": 0.61,
+            "context_precision_without_reference": 0.79,
+        },
+        reranker_fingerprint="covered",
+        prepared_rows=63,
+    )
+
+    best = tune_validity_reranker._select_best_trial_for_profile(
+        [low_coverage, covered],
+        grid_profile=tune_validity_reranker.GRID_PROFILE_CORE,
+        min_prepared_rows=60,
+    )
+
+    assert best.reranker_fingerprint == "covered"
+
+
+def test_resolve_phase_two_trials_uses_distinct_covered_core_anchors() -> None:
+    phase_one_trials = [
+        tune_validity_reranker.TrialResult(
+            weights={
+                "authority": 0.04,
+                "scope": 0.04,
+                "software": 0.0,
+                "scope_family": 0.0,
+                "version": 0.0,
+                "status": 0.08,
+                "freshness": 0.0,
+            },
+            objective=0.57,
+            metric_means={
+                "factual_correctness": 0.34,
+                "faithfulness": 0.60,
+                "context_precision_without_reference": 0.79,
+            },
+            reranker_fingerprint="anchor-1a",
+            prepared_rows=64,
+        ),
+        tune_validity_reranker.TrialResult(
+            weights={
+                "authority": 0.04,
+                "scope": 0.04,
+                "software": 0.0,
+                "scope_family": 0.0,
+                "version": 0.0,
+                "status": 0.08,
+                "freshness": 0.01,
+            },
+            objective=0.575,
+            metric_means={
+                "factual_correctness": 0.341,
+                "faithfulness": 0.601,
+                "context_precision_without_reference": 0.791,
+            },
+            reranker_fingerprint="anchor-1b",
+            prepared_rows=65,
+        ),
+        tune_validity_reranker.TrialResult(
+            weights={
+                "authority": 0.08,
+                "scope": 0.04,
+                "software": 0.0,
+                "scope_family": 0.0,
+                "version": 0.0,
+                "status": 0.04,
+                "freshness": 0.0,
+            },
+            objective=0.56,
+            metric_means={
+                "factual_correctness": 0.33,
+                "faithfulness": 0.59,
+                "context_precision_without_reference": 0.80,
+            },
+            reranker_fingerprint="anchor-2",
+            prepared_rows=62,
+        ),
+    ]
+
+    anchors, phase_two_trials = tune_validity_reranker._resolve_phase_two_trials(
+        phase_one_trials,
+        anchor_count=2,
+        min_prepared_rows=60,
+    )
+
+    assert len(anchors) == 2
+    assert len(phase_two_trials) == 48
+    assert {
+        (
+            anchor.weights["authority"],
+            anchor.weights["scope"],
+            anchor.weights["status"],
+        )
+        for anchor in anchors
+    } == {
+        (0.04, 0.04, 0.08),
+        (0.08, 0.04, 0.04),
+    }
+
+
 def test_main_writes_weights_and_manifest(monkeypatch, tmp_path: Path) -> None:
     output_path = tmp_path / "validity_reranker.dev_v3.yaml"
     manifest_path = tmp_path / "validity_reranker.dev_v3.manifest.json"
@@ -79,6 +234,9 @@ def test_main_writes_weights_and_manifest(monkeypatch, tmp_path: Path) -> None:
             output_path=str(output_path),
             manifest_path=str(manifest_path),
             generation_workers=None,
+            grid_profile=tune_validity_reranker.GRID_PROFILE_FULL,
+            selection_min_prepared_rows=60,
+            exploration_anchor_count=2,
         ),
     )
     monkeypatch.setattr(
