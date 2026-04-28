@@ -34,6 +34,7 @@ from polaris_rag.app.container import build_container
 from polaris_rag.config import GlobalConfig
 from polaris_rag.evaluation.evaluation_dataset import (
     PrepProgressEvent,
+    PrepRetryPolicy,
     build_prepared_rows,
     load_raw_examples,
     preprocess_rows_for_evaluation,
@@ -615,6 +616,7 @@ def _run_trial(
     eval_cfg = _as_mapping(_as_mapping(getattr(trial_cfg, "raw", {})).get("evaluation", {}))
     generation_cfg = _as_mapping(eval_cfg.get("generation", {}))
     workers = int(generation_workers or generation_cfg.get("workers") or 1)
+    retry_policy = PrepRetryPolicy.from_value(_as_mapping(generation_cfg.get("retries", {})))
 
     pipeline = container.pipeline
     reranker_profile = None
@@ -631,6 +633,7 @@ def _run_trial(
         pipeline=pipeline,
         generation_workers=max(1, workers),
         llm_generate_overrides=_as_mapping(generation_cfg.get("llm_generate", {})),
+        retry_policy=retry_policy,
         progress_callback=progress_callback,
         reranker_profile=reranker_profile,
         reranker_fingerprint=reranker_fingerprint,

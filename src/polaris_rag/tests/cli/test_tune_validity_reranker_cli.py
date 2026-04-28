@@ -220,3 +220,117 @@ def test_run_trial_returns_negative_infinity_when_no_rows_are_usable(monkeypatch
 
     assert result.objective == float("-inf")
     assert result.prepared_rows == 0
+
+
+def test_run_trial_passes_generation_retry_policy_from_config(monkeypatch) -> None:
+    seen_retry_policy = None
+
+    monkeypatch.setattr(
+        tune_validity_reranker,
+        "build_container",
+        lambda cfg: SimpleNamespace(pipeline=object()),
+    )
+
+    def _capture_build_prepared_rows(**kwargs):  # noqa: ANN003
+        nonlocal seen_retry_policy
+        seen_retry_policy = kwargs.get("retry_policy")
+        return [
+            {
+                "id": "ok",
+                "user_input": "Q1",
+                "reference": "A1",
+                "response": "R1",
+                "retrieved_contexts": ["ctx-1"],
+                "retrieved_context_ids": ["doc-1"],
+                "metadata": {},
+            }
+        ]
+
+    monkeypatch.setattr(
+        tune_validity_reranker,
+        "build_prepared_rows",
+        _capture_build_prepared_rows,
+    )
+    monkeypatch.setattr(
+        tune_validity_reranker,
+        "to_evaluation_dataset",
+        lambda rows: rows,
+    )
+
+    class _FakeSeries:
+        def __init__(self, values):
+            self._values = list(values)
+
+        def tolist(self):
+            return list(self._values)
+
+    class _FakeScores:
+        columns = [
+            "factual_correctness",
+            "faithfulness",
+            "context_precision_without_reference",
+        ]
+
+        def __getitem__(self, key):
+            values = {
+                "factual_correctness": [0.5],
+                "faithfulness": [0.6],
+                "context_precision_without_reference": [0.7],
+            }
+            return _FakeSeries(values[key])
+
+    class _EvaluatorFactory:
+        @staticmethod
+        def from_global_config(*args, **kwargs):  # noqa: ANN003
+            _ = args, kwargs
+
+            class _Instance:
+                def evaluate(self, **eval_kwargs):  # noqa: ANN003
+                    _ = eval_kwargs
+                    return SimpleNamespace(scores_df=_FakeScores())
+
+            return _Instance()
+
+    import sys
+    import types
+
+    monkeypatch.setitem(
+        sys.modules,
+        "polaris_rag.evaluation.evaluator",
+        types.SimpleNamespace(Evaluator=_EvaluatorFactory),
+    )
+
+    result = tune_validity_reranker._run_trial(
+        cfg=SimpleNamespace(
+            raw={
+                "evaluation": {
+                    "generation": {
+                        "workers": 2,
+                        "retries": {
+                            "max_attempts": 3,
+                            "initial_backoff_seconds": 0.0,
+                            "max_backoff_seconds": 0.0,
+                            "jitter_seconds": 0.0,
+                            "retry_on_empty_response": False,
+                        },
+                    }
+                }
+            }
+        ),
+        raw_examples=[{"id": "ok", "query": "Q1", "expected_answer": "A1"}],
+        weights={
+            "authority": 0.0,
+            "scope": 0.0,
+            "software": 0.0,
+            "scope_family": 0.0,
+            "version": 0.0,
+            "status": 0.0,
+            "freshness": 0.0,
+        },
+        generation_workers=None,
+    )
+
+    assert result.prepared_rows == 1
+    assert seen_retry_policy is not None
+    assert seen_retry_policy.max_attempts == 3
+    assert seen_retry_policy.retry_on_empty_response is False
