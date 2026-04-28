@@ -18,6 +18,8 @@ services:
       POLARIS_LLM_API_KEY: ${POLARIS_LLM_API_KEY}
       GEMINI_API_KEY: ${GEMINI_API_KEY}
       JIRA_API_TOKEN: ${JIRA_API_TOKEN}
+      POLARIS_DEMO_ANONYMIZE: "1"
+      HF_TOKEN_TEST: ${HF_TOKEN_TEST}
       EMBED_API_BASE: http://embed:80/v1
       MLFLOW_TRACKING_URI: http://mlflow:5000
       POLARIS_FEEDBACK_LOG_PATH: /app/data/ui_feedback/feedback.jsonl

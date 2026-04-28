@@ -1,12 +1,12 @@
 extends: "config.base.yaml"
 
 generator_llm:
-  type: "openai_like"
+  type: "openai_chat"
   # model_name: "llama-cam"
   # api_base: "https://llm.hpc.cam.ac.uk/v1"
-  model_name: "mistralai/Mistral-Large-Instruct-2407"
-  api_base: "http://mistral:8080/v1"
-  api_key: "${POLARIS_LLM_API_KEY}"
+  model_name: "meta-llama/Llama-3.3-70B-Instruct:novita"
+  api_base: "https://router.huggingface.co/v1"
+  api_key: "${HF_TOKEN_TEST}"
   request_timeout: 90
   max_retries: 1
   model_kwargs:
@@ -39,9 +39,9 @@ embedder:
 
 vector_stores:
   docs:
-    collection_name: "exp_docs_cs1200_ov0"
+    collection_name: "exp_docs_cs400_ov0"
   tickets:
-    collection_name: "exp_tickets_cs800_ov80"
+    collection_name: "exp_tickets_cs1000_ov80"
 
 storage_context:
   persist_dir: "/app/persist/turn_based_chunking"

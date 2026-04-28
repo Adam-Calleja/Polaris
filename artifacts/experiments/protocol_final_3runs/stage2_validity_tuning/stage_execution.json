@@ -1,0 +1,23 @@
+{
+  "stage_name": "stage2_validity_tuning",
+  "stage_type": "tune_validity_reranker",
+  "dry_run": false,
+  "config_path": "/app/.polaris_experiment_stage2_validity_tuning__stage.yaml",
+  "command": [
+    "/usr/local/bin/python",
+    "/app/scripts/tune_validity_reranker.py",
+    "-c",
+    "/app/.polaris_experiment_stage2_validity_tuning__stage.yaml",
+    "--dataset-path",
+    "/app/data/test/ragas_one_hop_eval_dataset_final.dev.jsonl",
+    "--output-path",
+    "/app/artifacts/experiments/protocol_final_3runs/stage2_validity_tuning/validity_reranker.protocol.yaml",
+    "--manifest-path",
+    "/app/artifacts/experiments/protocol_final_3runs/stage2_validity_tuning/validity_reranker.protocol.manifest.json",
+    "--generation-workers",
+    "4"
+  ],
+  "output_path": "/app/artifacts/experiments/protocol_final_3runs/stage2_validity_tuning/validity_reranker.protocol.yaml",
+  "manifest_path": "/app/artifacts/experiments/protocol_final_3runs/stage2_validity_tuning/validity_reranker.protocol.manifest.json",
+  "executed_at": "2026-04-28T10:46:19.489691+00:00"
+}
