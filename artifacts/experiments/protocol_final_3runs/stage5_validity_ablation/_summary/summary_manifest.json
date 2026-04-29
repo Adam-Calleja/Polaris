@@ -1,0 +1,17 @@
+{
+  "stage_name": "stage5_validity_ablation",
+  "rows": 12,
+  "conditions": [
+    "freshness_only",
+    "naive_combined",
+    "source_aware",
+    "validity_aware"
+  ],
+  "metrics": [
+    "factual_correctness",
+    "faithfulness",
+    "context_recall",
+    "context_precision_without_reference"
+  ],
+  "comparison_repeat": "latest"
+}

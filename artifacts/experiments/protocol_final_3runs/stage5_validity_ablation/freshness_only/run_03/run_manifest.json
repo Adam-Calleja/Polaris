@@ -1,0 +1,1190 @@
+{
+  "summary": {
+    "rows": 30,
+    "selected_metrics": [
+      "factual_correctness",
+      "faithfulness",
+      "context_recall",
+      "context_precision_without_reference"
+    ],
+    "skipped_metrics": [],
+    "selected_max_workers": 28,
+    "batch_size": 210,
+    "run_config": {
+      "timeout": 300,
+      "max_retries": 0,
+      "max_wait": 30,
+      "max_workers": 28,
+      "log_tenacity": true,
+      "seed": 42
+    },
+    "duration_seconds": 626.3045768269949,
+    "failure_rate": 0.025,
+    "tuning_trials": []
+  },
+  "preset_name": "freshness_only",
+  "preset_description": "Freshness-only validity-aware reranker over docs+tickets.",
+  "condition_fingerprint": "d217c406714c8a3271a3dee30aaa85e45a4645616e78ba644705641ed49a1aa5",
+  "condition_summary": {
+    "retriever_type": "multi_collection",
+    "source_type": "vector",
+    "final_top_k": 8,
+    "hybrid_profile": {
+      "dense_top_k": 8,
+      "bm25_top_k": 8,
+      "top_k": 8,
+      "fusion": {
+        "type": "rrf",
+        "rrf_k": 60,
+        "signal_weights": {
+          "dense": 1.0,
+          "bm25": 1.0
+        }
+      }
+    },
+    "sources": [
+      {
+        "top_k": 8,
+        "filters": {},
+        "weight": 1.0,
+        "retrieval_profile": {
+          "dense_top_k": 8,
+          "bm25_top_k": 8,
+          "top_k": 8,
+          "fusion": {
+            "type": "rrf",
+            "rrf_k": 60,
+            "signal_weights": {
+              "dense": 1.0,
+              "bm25": 1.0
+            }
+          }
+        },
+        "name": "docs",
+        "collection_name": "exp_docs_cs400_ov0"
+      },
+      {
+        "top_k": 8,
+        "filters": {},
+        "weight": 1.0,
+        "retrieval_profile": {
+          "dense_top_k": 8,
+          "bm25_top_k": 8,
+          "top_k": 8,
+          "fusion": {
+            "type": "rrf",
+            "rrf_k": 60,
+            "signal_weights": {
+              "dense": 1.0,
+              "bm25": 1.0
+            }
+          }
+        },
+        "name": "tickets",
+        "collection_name": "exp_tickets_cs1000_ov80"
+      }
+    ],
+    "retriever_profile": {
+      "type": "multi_collection",
+      "source_type": "vector",
+      "final_top_k": 8,
+      "hybrid_profile": {
+        "dense_top_k": 8,
+        "bm25_top_k": 8,
+        "top_k": 8,
+        "fusion": {
+          "type": "rrf",
+          "rrf_k": 60,
+          "signal_weights": {
+            "dense": 1.0,
+            "bm25": 1.0
+          }
+        }
+      },
+      "sources": [
+        {
+          "top_k": 8,
+          "filters": {},
+          "weight": 1.0,
+          "retrieval_profile": {
+            "dense_top_k": 8,
+            "bm25_top_k": 8,
+            "top_k": 8,
+            "fusion": {
+              "type": "rrf",
+              "rrf_k": 60,
+              "signal_weights": {
+                "dense": 1.0,
+                "bm25": 1.0
+              }
+            }
+          },
+          "name": "docs",
+          "collection_name": "exp_docs_cs400_ov0"
+        },
+        {
+          "top_k": 8,
+          "filters": {},
+          "weight": 1.0,
+          "retrieval_profile": {
+            "dense_top_k": 8,
+            "bm25_top_k": 8,
+            "top_k": 8,
+            "fusion": {
+              "type": "rrf",
+              "rrf_k": 60,
+              "signal_weights": {
+                "dense": 1.0,
+                "bm25": 1.0
+              }
+            }
+          },
+          "name": "tickets",
+          "collection_name": "exp_tickets_cs1000_ov80"
+        }
+      ]
+    },
+    "retriever_fingerprint": "57a811408d38f0e9524be1726864c140b4bdb47fa7733d6ddd77dac80b1cf4fd",
+    "reranker_profile": {
+      "type": "validity_aware",
+      "trace_enabled": true,
+      "semantic_base": {
+        "type": "rrf",
+        "rrf_k": 60,
+        "source_weights": {
+          "docs": 1.0,
+          "tickets": 1.0
+        }
+      },
+      "weights": {
+        "authority": 0.0,
+        "scope": 0.0,
+        "software": 0.0,
+        "scope_family": 0.0,
+        "version": 0.0,
+        "status": 0.0,
+        "freshness": 0.01
+      },
+      "authority_values": {
+        "local_official": 1.0,
+        "external_official": 0.5,
+        "ticket_memory": 0.0,
+        "unknown": 0.0
+      },
+      "status_values": {
+        "current": 1.0,
+        "maintenance": 0.25,
+        "legacy": -0.5,
+        "eol": -1.0,
+        "unknown": 0.0
+      },
+      "freshness": {
+        "mode": "relative_recency"
+      },
+      "weights_source": {
+        "type": "file",
+        "path": "/app/config/weights/validity_reranker.protocol.yaml",
+        "sha256": "160118594fee5243c93489dcab8d79b13555a9a9ba85d673389b80918029d14d"
+      }
+    }
+  },
+  "dataset": {
+    "dataset_path": "/app/data/test/ragas_one_hop_eval_dataset_final.test.jsonl",
+    "annotations_path": "/app/data/test/benchmark_annotations_final.csv",
+    "prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage5_validity_ablation/freshness_only/run_03/prepared_input.json",
+    "reuse_prepared": false,
+    "allow_stale_prepared": false,
+    "query_field": "query",
+    "reference_field": "expected_answer",
+    "id_field": "id",
+    "generation_workers": 8,
+    "generation_mode": "pipeline",
+    "evaluation_policy": "official",
+    "generation_deadlines": {
+      "policy": "official",
+      "client_total_seconds": 200.0,
+      "server_total_seconds": 180.0,
+      "retrieval_cap_seconds": 30.0,
+      "cleanup_reserve_seconds": 5.0,
+      "client_total_ms": 200000,
+      "server_total_ms": 180000,
+      "retrieval_cap_ms": 30000,
+      "cleanup_reserve_ms": 5000
+    },
+    "max_infra_failure_rate": 0.01,
+    "generation_retries": {
+      "max_attempts": 3,
+      "initial_backoff_seconds": 1.0,
+      "max_backoff_seconds": 8.0,
+      "jitter_seconds": 0.25,
+      "retry_on_empty_response": true
+    },
+    "generator_profile": {
+      "mode": "pipeline",
+      "generator_llm": {
+        "type": "openai_chat",
+        "model_name": "meta-llama/Llama-3.3-70B-Instruct:preferred",
+        "api_base": "https://router.huggingface.co/v1",
+        "request_timeout": 90,
+        "max_retries": 3,
+        "model_kwargs": {
+          "temperature": 0,
+          "top_p": 1.0,
+          "stop_list": []
+        }
+      },
+      "llm_generate": {}
+    },
+    "generator_fingerprint": "e9f410708d76f6b2ad7eda0db4363ad6574b894875879a3a4ad65b6e194134a8",
+    "retriever_profile": {
+      "type": "multi_collection",
+      "final_top_k": 8,
+      "sources": {
+        "docs": {
+          "settings": {
+            "filters": {},
+            "retrieval_profile": {
+              "bm25_top_k": 8,
+              "dense_top_k": 8,
+              "fusion": {
+                "rrf_k": 60,
+                "signal_weights": {
+                  "bm25": 1.0,
+                  "dense": 1.0
+                },
+                "type": "rrf"
+              },
+              "top_k": 8
+            },
+            "top_k": 8,
+            "weight": 1.0
+          },
+          "retriever_profile": {
+            "filters": {
+              "filters": []
+            },
+            "retrieval_profile": {
+              "bm25_top_k": 8,
+              "dense_top_k": 8,
+              "fusion": {
+                "rrf_k": 60,
+                "signal_weights": {
+                  "bm25": 1.0,
+                  "dense": 1.0
+                },
+                "type": "rrf"
+              },
+              "top_k": 8
+            },
+            "top_k": 8,
+            "type": "vector",
+            "vector_store": {
+              "backend": "qdrant",
+              "collection_name": "exp_docs_cs400_ov0",
+              "dense_model": "Qwen/Qwen3-Embedding-8B",
+              "dense_vector_name": "dense",
+              "sparse_model": null,
+              "sparse_vector_name": "sparse"
+            }
+          },
+          "retriever_fingerprint": "de67c059a62e27b2398f5c00ca29530ea9e2f18ce77982e80b8c14b015657b9f"
+        },
+        "tickets": {
+          "settings": {
+            "filters": {},
+            "retrieval_profile": {
+              "bm25_top_k": 8,
+              "dense_top_k": 8,
+              "fusion": {
+                "rrf_k": 60,
+                "signal_weights": {
+                  "bm25": 1.0,
+                  "dense": 1.0
+                },
+                "type": "rrf"
+              },
+              "top_k": 8
+            },
+            "top_k": 8,
+            "weight": 1.0
+          },
+          "retriever_profile": {
+            "filters": {
+              "filters": []
+            },
+            "retrieval_profile": {
+              "bm25_top_k": 8,
+              "dense_top_k": 8,
+              "fusion": {
+                "rrf_k": 60,
+                "signal_weights": {
+                  "bm25": 1.0,
+                  "dense": 1.0
+                },
+                "type": "rrf"
+              },
+              "top_k": 8
+            },
+            "top_k": 8,
+            "type": "vector",
+            "vector_store": {
+              "backend": "qdrant",
+              "collection_name": "exp_tickets_cs1000_ov80",
+              "dense_model": "Qwen/Qwen3-Embedding-8B",
+              "dense_vector_name": "dense",
+              "sparse_model": null,
+              "sparse_vector_name": "sparse"
+            }
+          },
+          "retriever_fingerprint": "984151dc51f695b674048d18d6e7f89e514f63bd9aae70c67cf7494326ee120d"
+        }
+      }
+    },
+    "retriever_fingerprint": "753882e478e529aecdb88b97bd05fd91c57c32a4ec0fe6214750752f1a114d8d",
+    "reranker_profile": {
+      "type": "validity_aware",
+      "trace_enabled": true,
+      "semantic_base": {
+        "type": "rrf",
+        "rrf_k": 60,
+        "source_weights": {
+          "docs": 1.0,
+          "tickets": 1.0
+        }
+      },
+      "weights": {
+        "authority": 0.0,
+        "scope": 0.0,
+        "software": 0.0,
+        "scope_family": 0.0,
+        "version": 0.0,
+        "status": 0.0,
+        "freshness": 0.01
+      },
+      "authority_values": {
+        "local_official": 1.0,
+        "external_official": 0.5,
+        "ticket_memory": 0.0,
+        "unknown": 0.0
+      },
+      "status_values": {
+        "current": 1.0,
+        "maintenance": 0.25,
+        "legacy": -0.5,
+        "eol": -1.0,
+        "unknown": 0.0
+      },
+      "freshness": {
+        "mode": "relative_recency"
+      },
+      "weights_source": {
+        "type": "file",
+        "path": "/app/config/weights/validity_reranker.protocol.yaml",
+        "sha256": "160118594fee5243c93489dcab8d79b13555a9a9ba85d673389b80918029d14d"
+      }
+    },
+    "reranker_fingerprint": "e001a3f19c0b4e28196f482fb7dad362a0863955cf4e2f8170af17bf6e3f2670",
+    "preset_name": "freshness_only",
+    "preset_description": "Freshness-only validity-aware reranker over docs+tickets.",
+    "condition_summary": {
+      "retriever_type": "multi_collection",
+      "source_type": "vector",
+      "final_top_k": 8,
+      "hybrid_profile": {
+        "dense_top_k": 8,
+        "bm25_top_k": 8,
+        "top_k": 8,
+        "fusion": {
+          "type": "rrf",
+          "rrf_k": 60,
+          "signal_weights": {
+            "dense": 1.0,
+            "bm25": 1.0
+          }
+        }
+      },
+      "sources": [
+        {
+          "top_k": 8,
+          "filters": {},
+          "weight": 1.0,
+          "retrieval_profile": {
+            "dense_top_k": 8,
+            "bm25_top_k": 8,
+            "top_k": 8,
+            "fusion": {
+              "type": "rrf",
+              "rrf_k": 60,
+              "signal_weights": {
+                "dense": 1.0,
+                "bm25": 1.0
+              }
+            }
+          },
+          "name": "docs",
+          "collection_name": "exp_docs_cs400_ov0"
+        },
+        {
+          "top_k": 8,
+          "filters": {},
+          "weight": 1.0,
+          "retrieval_profile": {
+            "dense_top_k": 8,
+            "bm25_top_k": 8,
+            "top_k": 8,
+            "fusion": {
+              "type": "rrf",
+              "rrf_k": 60,
+              "signal_weights": {
+                "dense": 1.0,
+                "bm25": 1.0
+              }
+            }
+          },
+          "name": "tickets",
+          "collection_name": "exp_tickets_cs1000_ov80"
+        }
+      ],
+      "retriever_profile": {
+        "type": "multi_collection",
+        "source_type": "vector",
+        "final_top_k": 8,
+        "hybrid_profile": {
+          "dense_top_k": 8,
+          "bm25_top_k": 8,
+          "top_k": 8,
+          "fusion": {
+            "type": "rrf",
+            "rrf_k": 60,
+            "signal_weights": {
+              "dense": 1.0,
+              "bm25": 1.0
+            }
+          }
+        },
+        "sources": [
+          {
+            "top_k": 8,
+            "filters": {},
+            "weight": 1.0,
+            "retrieval_profile": {
+              "dense_top_k": 8,
+              "bm25_top_k": 8,
+              "top_k": 8,
+              "fusion": {
+                "type": "rrf",
+                "rrf_k": 60,
+                "signal_weights": {
+                  "dense": 1.0,
+                  "bm25": 1.0
+                }
+              }
+            },
+            "name": "docs",
+            "collection_name": "exp_docs_cs400_ov0"
+          },
+          {
+            "top_k": 8,
+            "filters": {},
+            "weight": 1.0,
+            "retrieval_profile": {
+              "dense_top_k": 8,
+              "bm25_top_k": 8,
+              "top_k": 8,
+              "fusion": {
+                "type": "rrf",
+                "rrf_k": 60,
+                "signal_weights": {
+                  "dense": 1.0,
+                  "bm25": 1.0
+                }
+              }
+            },
+            "name": "tickets",
+            "collection_name": "exp_tickets_cs1000_ov80"
+          }
+        ]
+      },
+      "retriever_fingerprint": "57a811408d38f0e9524be1726864c140b4bdb47fa7733d6ddd77dac80b1cf4fd",
+      "reranker_profile": {
+        "type": "validity_aware",
+        "trace_enabled": true,
+        "semantic_base": {
+          "type": "rrf",
+          "rrf_k": 60,
+          "source_weights": {
+            "docs": 1.0,
+            "tickets": 1.0
+          }
+        },
+        "weights": {
+          "authority": 0.0,
+          "scope": 0.0,
+          "software": 0.0,
+          "scope_family": 0.0,
+          "version": 0.0,
+          "status": 0.0,
+          "freshness": 0.01
+        },
+        "authority_values": {
+          "local_official": 1.0,
+          "external_official": 0.5,
+          "ticket_memory": 0.0,
+          "unknown": 0.0
+        },
+        "status_values": {
+          "current": 1.0,
+          "maintenance": 0.25,
+          "legacy": -0.5,
+          "eol": -1.0,
+          "unknown": 0.0
+        },
+        "freshness": {
+          "mode": "relative_recency"
+        },
+        "weights_source": {
+          "type": "file",
+          "path": "/app/config/weights/validity_reranker.protocol.yaml",
+          "sha256": "160118594fee5243c93489dcab8d79b13555a9a9ba85d673389b80918029d14d"
+        }
+      }
+    },
+    "condition_fingerprint": "d217c406714c8a3271a3dee30aaa85e45a4645616e78ba644705641ed49a1aa5",
+    "annotation_rows": 30,
+    "prep_total_rows": 30,
+    "prep_success_rows": 30,
+    "prep_failed_rows": 0,
+    "prep_elapsed_seconds": 104.38675703700574,
+    "prep_rate_rows_per_second": 0.2873927771255967,
+    "prep_error_classes": {},
+    "prep_failure_classes": {},
+    "prep_failure_class_rates": {},
+    "prep_failure_stages": {},
+    "prep_failure_stage_rates": {},
+    "prep_response_statuses": {
+      "ok": 30
+    },
+    "prep_response_status_rates": {
+      "ok": 1.0
+    },
+    "prep_coverage": 1.0,
+    "prep_empty_response_rate": 0.0,
+    "infra_failure_rate": 0.0,
+    "run_validity": "VALID",
+    "run_policy": "official",
+    "latency_budget_report": {
+      "count": 30,
+      "elapsed_ms": {
+        "p50": 10985.5,
+        "p90": 17520.800000000003,
+        "p95": 24906.249999999967,
+        "max": 29975.0,
+        "mean": 11932.866666666667
+      },
+      "budget_utilization": {
+        "p50": 0.06103055555555556,
+        "p90": 0.09733777777777779,
+        "max": 0.16652777777777777
+      }
+    },
+    "persisted_prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage5_validity_ablation/freshness_only/run_03/prepared_input.json",
+    "prepared_source": "generated"
+  },
+  "tune_concurrency": true,
+  "trace_evaluator_llm": false,
+  "mlflow_parent_run_id": "7bc34e5216574dfb843b89402855b9b4",
+  "config_file": "/app/.polaris_experiment_stage5_validity_ablation__freshness_only.yaml",
+  "artifacts": {
+    "scores_csv": "/app/artifacts/experiments/protocol_final_3runs/stage5_validity_ablation/freshness_only/run_03/scores.csv",
+    "scores_parquet": null,
+    "summary_json": "/app/artifacts/experiments/protocol_final_3runs/stage5_validity_ablation/freshness_only/run_03/summary.json",
+    "analysis_rows_jsonl": "/app/artifacts/experiments/protocol_final_3runs/stage5_validity_ablation/freshness_only/run_03/analysis_rows.jsonl"
+  },
+  "extra": {
+    "config_file": "/app/.polaris_experiment_stage5_validity_ablation__freshness_only.yaml",
+    "preset_name": "freshness_only",
+    "preset_description": "Freshness-only validity-aware reranker over docs+tickets.",
+    "condition_summary": {
+      "retriever_type": "multi_collection",
+      "source_type": "vector",
+      "final_top_k": 8,
+      "hybrid_profile": {
+        "dense_top_k": 8,
+        "bm25_top_k": 8,
+        "top_k": 8,
+        "fusion": {
+          "type": "rrf",
+          "rrf_k": 60,
+          "signal_weights": {
+            "dense": 1.0,
+            "bm25": 1.0
+          }
+        }
+      },
+      "sources": [
+        {
+          "top_k": 8,
+          "filters": {},
+          "weight": 1.0,
+          "retrieval_profile": {
+            "dense_top_k": 8,
+            "bm25_top_k": 8,
+            "top_k": 8,
+            "fusion": {
+              "type": "rrf",
+              "rrf_k": 60,
+              "signal_weights": {
+                "dense": 1.0,
+                "bm25": 1.0
+              }
+            }
+          },
+          "name": "docs",
+          "collection_name": "exp_docs_cs400_ov0"
+        },
+        {
+          "top_k": 8,
+          "filters": {},
+          "weight": 1.0,
+          "retrieval_profile": {
+            "dense_top_k": 8,
+            "bm25_top_k": 8,
+            "top_k": 8,
+            "fusion": {
+              "type": "rrf",
+              "rrf_k": 60,
+              "signal_weights": {
+                "dense": 1.0,
+                "bm25": 1.0
+              }
+            }
+          },
+          "name": "tickets",
+          "collection_name": "exp_tickets_cs1000_ov80"
+        }
+      ],
+      "retriever_profile": {
+        "type": "multi_collection",
+        "source_type": "vector",
+        "final_top_k": 8,
+        "hybrid_profile": {
+          "dense_top_k": 8,
+          "bm25_top_k": 8,
+          "top_k": 8,
+          "fusion": {
+            "type": "rrf",
+            "rrf_k": 60,
+            "signal_weights": {
+              "dense": 1.0,
+              "bm25": 1.0
+            }
+          }
+        },
+        "sources": [
+          {
+            "top_k": 8,
+            "filters": {},
+            "weight": 1.0,
+            "retrieval_profile": {
+              "dense_top_k": 8,
+              "bm25_top_k": 8,
+              "top_k": 8,
+              "fusion": {
+                "type": "rrf",
+                "rrf_k": 60,
+                "signal_weights": {
+                  "dense": 1.0,
+                  "bm25": 1.0
+                }
+              }
+            },
+            "name": "docs",
+            "collection_name": "exp_docs_cs400_ov0"
+          },
+          {
+            "top_k": 8,
+            "filters": {},
+            "weight": 1.0,
+            "retrieval_profile": {
+              "dense_top_k": 8,
+              "bm25_top_k": 8,
+              "top_k": 8,
+              "fusion": {
+                "type": "rrf",
+                "rrf_k": 60,
+                "signal_weights": {
+                  "dense": 1.0,
+                  "bm25": 1.0
+                }
+              }
+            },
+            "name": "tickets",
+            "collection_name": "exp_tickets_cs1000_ov80"
+          }
+        ]
+      },
+      "retriever_fingerprint": "57a811408d38f0e9524be1726864c140b4bdb47fa7733d6ddd77dac80b1cf4fd",
+      "reranker_profile": {
+        "type": "validity_aware",
+        "trace_enabled": true,
+        "semantic_base": {
+          "type": "rrf",
+          "rrf_k": 60,
+          "source_weights": {
+            "docs": 1.0,
+            "tickets": 1.0
+          }
+        },
+        "weights": {
+          "authority": 0.0,
+          "scope": 0.0,
+          "software": 0.0,
+          "scope_family": 0.0,
+          "version": 0.0,
+          "status": 0.0,
+          "freshness": 0.01
+        },
+        "authority_values": {
+          "local_official": 1.0,
+          "external_official": 0.5,
+          "ticket_memory": 0.0,
+          "unknown": 0.0
+        },
+        "status_values": {
+          "current": 1.0,
+          "maintenance": 0.25,
+          "legacy": -0.5,
+          "eol": -1.0,
+          "unknown": 0.0
+        },
+        "freshness": {
+          "mode": "relative_recency"
+        },
+        "weights_source": {
+          "type": "file",
+          "path": "/app/config/weights/validity_reranker.protocol.yaml",
+          "sha256": "160118594fee5243c93489dcab8d79b13555a9a9ba85d673389b80918029d14d"
+        }
+      }
+    },
+    "condition_fingerprint": "d217c406714c8a3271a3dee30aaa85e45a4645616e78ba644705641ed49a1aa5",
+    "dataset": {
+      "dataset_path": "/app/data/test/ragas_one_hop_eval_dataset_final.test.jsonl",
+      "annotations_path": "/app/data/test/benchmark_annotations_final.csv",
+      "prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage5_validity_ablation/freshness_only/run_03/prepared_input.json",
+      "reuse_prepared": false,
+      "allow_stale_prepared": false,
+      "query_field": "query",
+      "reference_field": "expected_answer",
+      "id_field": "id",
+      "generation_workers": 8,
+      "generation_mode": "pipeline",
+      "evaluation_policy": "official",
+      "generation_deadlines": {
+        "policy": "official",
+        "client_total_seconds": 200.0,
+        "server_total_seconds": 180.0,
+        "retrieval_cap_seconds": 30.0,
+        "cleanup_reserve_seconds": 5.0,
+        "client_total_ms": 200000,
+        "server_total_ms": 180000,
+        "retrieval_cap_ms": 30000,
+        "cleanup_reserve_ms": 5000
+      },
+      "max_infra_failure_rate": 0.01,
+      "generation_retries": {
+        "max_attempts": 3,
+        "initial_backoff_seconds": 1.0,
+        "max_backoff_seconds": 8.0,
+        "jitter_seconds": 0.25,
+        "retry_on_empty_response": true
+      },
+      "generator_profile": {
+        "mode": "pipeline",
+        "generator_llm": {
+          "type": "openai_chat",
+          "model_name": "meta-llama/Llama-3.3-70B-Instruct:preferred",
+          "api_base": "https://router.huggingface.co/v1",
+          "request_timeout": 90,
+          "max_retries": 3,
+          "model_kwargs": {
+            "temperature": 0,
+            "top_p": 1.0,
+            "stop_list": []
+          }
+        },
+        "llm_generate": {}
+      },
+      "generator_fingerprint": "e9f410708d76f6b2ad7eda0db4363ad6574b894875879a3a4ad65b6e194134a8",
+      "retriever_profile": {
+        "type": "multi_collection",
+        "final_top_k": 8,
+        "sources": {
+          "docs": {
+            "settings": {
+              "filters": {},
+              "retrieval_profile": {
+                "bm25_top_k": 8,
+                "dense_top_k": 8,
+                "fusion": {
+                  "rrf_k": 60,
+                  "signal_weights": {
+                    "bm25": 1.0,
+                    "dense": 1.0
+                  },
+                  "type": "rrf"
+                },
+                "top_k": 8
+              },
+              "top_k": 8,
+              "weight": 1.0
+            },
+            "retriever_profile": {
+              "filters": {
+                "filters": []
+              },
+              "retrieval_profile": {
+                "bm25_top_k": 8,
+                "dense_top_k": 8,
+                "fusion": {
+                  "rrf_k": 60,
+                  "signal_weights": {
+                    "bm25": 1.0,
+                    "dense": 1.0
+                  },
+                  "type": "rrf"
+                },
+                "top_k": 8
+              },
+              "top_k": 8,
+              "type": "vector",
+              "vector_store": {
+                "backend": "qdrant",
+                "collection_name": "exp_docs_cs400_ov0",
+                "dense_model": "Qwen/Qwen3-Embedding-8B",
+                "dense_vector_name": "dense",
+                "sparse_model": null,
+                "sparse_vector_name": "sparse"
+              }
+            },
+            "retriever_fingerprint": "de67c059a62e27b2398f5c00ca29530ea9e2f18ce77982e80b8c14b015657b9f"
+          },
+          "tickets": {
+            "settings": {
+              "filters": {},
+              "retrieval_profile": {
+                "bm25_top_k": 8,
+                "dense_top_k": 8,
+                "fusion": {
+                  "rrf_k": 60,
+                  "signal_weights": {
+                    "bm25": 1.0,
+                    "dense": 1.0
+                  },
+                  "type": "rrf"
+                },
+                "top_k": 8
+              },
+              "top_k": 8,
+              "weight": 1.0
+            },
+            "retriever_profile": {
+              "filters": {
+                "filters": []
+              },
+              "retrieval_profile": {
+                "bm25_top_k": 8,
+                "dense_top_k": 8,
+                "fusion": {
+                  "rrf_k": 60,
+                  "signal_weights": {
+                    "bm25": 1.0,
+                    "dense": 1.0
+                  },
+                  "type": "rrf"
+                },
+                "top_k": 8
+              },
+              "top_k": 8,
+              "type": "vector",
+              "vector_store": {
+                "backend": "qdrant",
+                "collection_name": "exp_tickets_cs1000_ov80",
+                "dense_model": "Qwen/Qwen3-Embedding-8B",
+                "dense_vector_name": "dense",
+                "sparse_model": null,
+                "sparse_vector_name": "sparse"
+              }
+            },
+            "retriever_fingerprint": "984151dc51f695b674048d18d6e7f89e514f63bd9aae70c67cf7494326ee120d"
+          }
+        }
+      },
+      "retriever_fingerprint": "753882e478e529aecdb88b97bd05fd91c57c32a4ec0fe6214750752f1a114d8d",
+      "reranker_profile": {
+        "type": "validity_aware",
+        "trace_enabled": true,
+        "semantic_base": {
+          "type": "rrf",
+          "rrf_k": 60,
+          "source_weights": {
+            "docs": 1.0,
+            "tickets": 1.0
+          }
+        },
+        "weights": {
+          "authority": 0.0,
+          "scope": 0.0,
+          "software": 0.0,
+          "scope_family": 0.0,
+          "version": 0.0,
+          "status": 0.0,
+          "freshness": 0.01
+        },
+        "authority_values": {
+          "local_official": 1.0,
+          "external_official": 0.5,
+          "ticket_memory": 0.0,
+          "unknown": 0.0
+        },
+        "status_values": {
+          "current": 1.0,
+          "maintenance": 0.25,
+          "legacy": -0.5,
+          "eol": -1.0,
+          "unknown": 0.0
+        },
+        "freshness": {
+          "mode": "relative_recency"
+        },
+        "weights_source": {
+          "type": "file",
+          "path": "/app/config/weights/validity_reranker.protocol.yaml",
+          "sha256": "160118594fee5243c93489dcab8d79b13555a9a9ba85d673389b80918029d14d"
+        }
+      },
+      "reranker_fingerprint": "e001a3f19c0b4e28196f482fb7dad362a0863955cf4e2f8170af17bf6e3f2670",
+      "preset_name": "freshness_only",
+      "preset_description": "Freshness-only validity-aware reranker over docs+tickets.",
+      "condition_summary": {
+        "retriever_type": "multi_collection",
+        "source_type": "vector",
+        "final_top_k": 8,
+        "hybrid_profile": {
+          "dense_top_k": 8,
+          "bm25_top_k": 8,
+          "top_k": 8,
+          "fusion": {
+            "type": "rrf",
+            "rrf_k": 60,
+            "signal_weights": {
+              "dense": 1.0,
+              "bm25": 1.0
+            }
+          }
+        },
+        "sources": [
+          {
+            "top_k": 8,
+            "filters": {},
+            "weight": 1.0,
+            "retrieval_profile": {
+              "dense_top_k": 8,
+              "bm25_top_k": 8,
+              "top_k": 8,
+              "fusion": {
+                "type": "rrf",
+                "rrf_k": 60,
+                "signal_weights": {
+                  "dense": 1.0,
+                  "bm25": 1.0
+                }
+              }
+            },
+            "name": "docs",
+            "collection_name": "exp_docs_cs400_ov0"
+          },
+          {
+            "top_k": 8,
+            "filters": {},
+            "weight": 1.0,
+            "retrieval_profile": {
+              "dense_top_k": 8,
+              "bm25_top_k": 8,
+              "top_k": 8,
+              "fusion": {
+                "type": "rrf",
+                "rrf_k": 60,
+                "signal_weights": {
+                  "dense": 1.0,
+                  "bm25": 1.0
+                }
+              }
+            },
+            "name": "tickets",
+            "collection_name": "exp_tickets_cs1000_ov80"
+          }
+        ],
+        "retriever_profile": {
+          "type": "multi_collection",
+          "source_type": "vector",
+          "final_top_k": 8,
+          "hybrid_profile": {
+            "dense_top_k": 8,
+            "bm25_top_k": 8,
+            "top_k": 8,
+            "fusion": {
+              "type": "rrf",
+              "rrf_k": 60,
+              "signal_weights": {
+                "dense": 1.0,
+                "bm25": 1.0
+              }
+            }
+          },
+          "sources": [
+            {
+              "top_k": 8,
+              "filters": {},
+              "weight": 1.0,
+              "retrieval_profile": {
+                "dense_top_k": 8,
+                "bm25_top_k": 8,
+                "top_k": 8,
+                "fusion": {
+                  "type": "rrf",
+                  "rrf_k": 60,
+                  "signal_weights": {
+                    "dense": 1.0,
+                    "bm25": 1.0
+                  }
+                }
+              },
+              "name": "docs",
+              "collection_name": "exp_docs_cs400_ov0"
+            },
+            {
+              "top_k": 8,
+              "filters": {},
+              "weight": 1.0,
+              "retrieval_profile": {
+                "dense_top_k": 8,
+                "bm25_top_k": 8,
+                "top_k": 8,
+                "fusion": {
+                  "type": "rrf",
+                  "rrf_k": 60,
+                  "signal_weights": {
+                    "dense": 1.0,
+                    "bm25": 1.0
+                  }
+                }
+              },
+              "name": "tickets",
+              "collection_name": "exp_tickets_cs1000_ov80"
+            }
+          ]
+        },
+        "retriever_fingerprint": "57a811408d38f0e9524be1726864c140b4bdb47fa7733d6ddd77dac80b1cf4fd",
+        "reranker_profile": {
+          "type": "validity_aware",
+          "trace_enabled": true,
+          "semantic_base": {
+            "type": "rrf",
+            "rrf_k": 60,
+            "source_weights": {
+              "docs": 1.0,
+              "tickets": 1.0
+            }
+          },
+          "weights": {
+            "authority": 0.0,
+            "scope": 0.0,
+            "software": 0.0,
+            "scope_family": 0.0,
+            "version": 0.0,
+            "status": 0.0,
+            "freshness": 0.01
+          },
+          "authority_values": {
+            "local_official": 1.0,
+            "external_official": 0.5,
+            "ticket_memory": 0.0,
+            "unknown": 0.0
+          },
+          "status_values": {
+            "current": 1.0,
+            "maintenance": 0.25,
+            "legacy": -0.5,
+            "eol": -1.0,
+            "unknown": 0.0
+          },
+          "freshness": {
+            "mode": "relative_recency"
+          },
+          "weights_source": {
+            "type": "file",
+            "path": "/app/config/weights/validity_reranker.protocol.yaml",
+            "sha256": "160118594fee5243c93489dcab8d79b13555a9a9ba85d673389b80918029d14d"
+          }
+        }
+      },
+      "condition_fingerprint": "d217c406714c8a3271a3dee30aaa85e45a4645616e78ba644705641ed49a1aa5",
+      "annotation_rows": 30,
+      "prep_total_rows": 30,
+      "prep_success_rows": 30,
+      "prep_failed_rows": 0,
+      "prep_elapsed_seconds": 104.38675703700574,
+      "prep_rate_rows_per_second": 0.2873927771255967,
+      "prep_error_classes": {},
+      "prep_failure_classes": {},
+      "prep_failure_class_rates": {},
+      "prep_failure_stages": {},
+      "prep_failure_stage_rates": {},
+      "prep_response_statuses": {
+        "ok": 30
+      },
+      "prep_response_status_rates": {
+        "ok": 1.0
+      },
+      "prep_coverage": 1.0,
+      "prep_empty_response_rate": 0.0,
+      "infra_failure_rate": 0.0,
+      "run_validity": "VALID",
+      "run_policy": "official",
+      "latency_budget_report": {
+        "count": 30,
+        "elapsed_ms": {
+          "p50": 10985.5,
+          "p90": 17520.800000000003,
+          "p95": 24906.249999999967,
+          "max": 29975.0,
+          "mean": 11932.866666666667
+        },
+        "budget_utilization": {
+          "p50": 0.06103055555555556,
+          "p90": 0.09733777777777779,
+          "max": 0.16652777777777777
+        }
+      },
+      "persisted_prepared_path": "/app/artifacts/experiments/protocol_final_3runs/stage5_validity_ablation/freshness_only/run_03/prepared_input.json",
+      "prepared_source": "generated"
+    },
+    "evaluation_preprocessing": {
+      "enabled": true,
+      "processed_rows": 30,
+      "truncated_rows": 26,
+      "truncated_contexts": 53,
+      "original_total_context_characters": 875279,
+      "processed_total_context_characters": 488339,
+      "retrieved_contexts": {
+        "max_characters": 4000,
+        "max_total_characters": 20000,
+        "truncation_marker": "\n...[truncated for evaluator]"
+      }
+    },
+    "tune_concurrency": true,
+    "trace_evaluator_llm": false,
+    "mlflow_parent_run_id": "7bc34e5216574dfb843b89402855b9b4"
+  }
+}
