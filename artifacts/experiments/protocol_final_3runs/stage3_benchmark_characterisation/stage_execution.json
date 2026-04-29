@@ -1,0 +1,21 @@
+{
+  "stage_name": "stage3_benchmark_characterisation",
+  "stage_type": "benchmark_analysis",
+  "dry_run": false,
+  "command": [
+    "/usr/local/bin/python",
+    "/app/scripts/benchmark_analysis.py",
+    "--dataset-file",
+    "/app/data/test/ragas_one_hop_eval_dataset_final.jsonl",
+    "--dev-dataset-file",
+    "/app/data/test/ragas_one_hop_eval_dataset_final.dev.jsonl",
+    "--test-dataset-file",
+    "/app/data/test/ragas_one_hop_eval_dataset_final.test.jsonl",
+    "--annotations-file",
+    "/app/data/test/benchmark_annotations_final.csv",
+    "--output-dir",
+    "/app/data/test/benchmark_analysis_protocol_final"
+  ],
+  "output_dir": "/app/data/test/benchmark_analysis_protocol_final",
+  "executed_at": "2026-04-29T07:49:29.058458+00:00"
+}

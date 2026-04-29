@@ -1,0 +1,22 @@
+{
+  "stage_name": "stage6_external_docs_ablation",
+  "stage_type": "evaluation_grid",
+  "execution_phase": "index",
+  "dry_run": false,
+  "dataset_path": "/app/data/test/ragas_one_hop_eval_dataset_final.test.jsonl",
+  "annotations_file": "/app/data/test/benchmark_annotations_final.csv",
+  "repeats": 3,
+  "conditions": [
+    {
+      "name": "all_docs_validity_aware",
+      "slug": "all_docs_validity_aware",
+      "config_path": "/app/.polaris_experiment_stage6_external_docs_ablation__all_docs_validity_aware.yaml",
+      "preset": "all_docs_validity_aware",
+      "execution_phase": "index",
+      "ingestion_commands": [],
+      "runs": [],
+      "ingestion_skipped": false
+    }
+  ],
+  "executed_at": "2026-04-29T07:46:00.921220+00:00"
+}
