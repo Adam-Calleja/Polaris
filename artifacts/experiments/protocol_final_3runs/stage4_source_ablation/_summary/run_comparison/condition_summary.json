@@ -1,0 +1,47 @@
+[
+  {
+    "condition_name": "docs_only",
+    "preset_name": "docs_only",
+    "condition_fingerprint": "4dea0c5a145c9cd9678ee0ce087ed3fef4b9432ef6c367c9d98a31835dbad5e6",
+    "rows": 30,
+    "success_rows": 30,
+    "failed_rows": 0,
+    "mean_context_precision_without_reference": NaN,
+    "mean_context_recall": 0.5749867724867724,
+    "mean_factual_correctness": NaN,
+    "mean_faithfulness": NaN,
+    "mean_reference": null,
+    "mean_response": null,
+    "mean_user_input": null
+  },
+  {
+    "condition_name": "naive_combined",
+    "preset_name": "naive_combined",
+    "condition_fingerprint": "bda73dd8e7fc88e45a3bc5dc009519d5407276adbad7ea895864ad7a31a8e4b6",
+    "rows": 30,
+    "success_rows": 30,
+    "failed_rows": 0,
+    "mean_context_precision_without_reference": NaN,
+    "mean_context_recall": 0.6444179894179894,
+    "mean_factual_correctness": NaN,
+    "mean_faithfulness": NaN,
+    "mean_reference": null,
+    "mean_response": null,
+    "mean_user_input": null
+  },
+  {
+    "condition_name": "tickets_only",
+    "preset_name": "tickets_only",
+    "condition_fingerprint": "8e79a46a242b937a3b52d3bce79e83a5c7e6de1ed49f74343c48bcaa3e2d3f15",
+    "rows": 30,
+    "success_rows": 30,
+    "failed_rows": 0,
+    "mean_context_precision_without_reference": NaN,
+    "mean_context_recall": 0.7386904761904761,
+    "mean_factual_correctness": NaN,
+    "mean_faithfulness": 0.55,
+    "mean_reference": null,
+    "mean_response": null,
+    "mean_user_input": null
+  }
+]

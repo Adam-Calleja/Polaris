@@ -1,0 +1,28 @@
+{
+  "seed": 42,
+  "labels": [
+    "system_A",
+    "system_B",
+    "system_C"
+  ],
+  "conditions": [
+    "docs_only",
+    "naive_combined",
+    "tickets_only"
+  ],
+  "query_count": 30,
+  "runs": [
+    {
+      "condition_name": "docs_only",
+      "run_dir": "/Users/adam/Documents/University/Third Year Project/rag_project/artifacts/experiments/protocol_final_3runs/stage4_source_ablation/docs_only/run_03"
+    },
+    {
+      "condition_name": "naive_combined",
+      "run_dir": "/Users/adam/Documents/University/Third Year Project/rag_project/artifacts/experiments/protocol_final_3runs/stage4_source_ablation/naive_combined/run_03"
+    },
+    {
+      "condition_name": "tickets_only",
+      "run_dir": "/Users/adam/Documents/University/Third Year Project/rag_project/artifacts/experiments/protocol_final_3runs/stage4_source_ablation/tickets_only/run_03"
+    }
+  ]
+}
