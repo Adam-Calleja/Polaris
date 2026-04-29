@@ -7,34 +7,6 @@ import type {
   QueryConstraintsPayload,
 } from "./types";
 
-export const EXAMPLE_QUERIES = [
-  "We need to renew RDS and transfer ownership. How should this be handled?",
-  "Can you confirm the exact new path for my project data?",
-  "What is the latest GROMACS version available on CCLake?",
-  "How do I check why my Slurm job is stuck in the queue?",
-];
-
-const QUICK_PROMPT_CARDS = [
-  {
-    title: "Storage renewal",
-    description: "Handle renewals, ownership transfers, and project storage changes with policy-backed guidance.",
-    icon: "✦",
-    prompt: EXAMPLE_QUERIES[0],
-  },
-  {
-    title: "Software update",
-    description: "Check software availability, exact versions, and the right module path for your target system.",
-    icon: "◌",
-    prompt: EXAMPLE_QUERIES[2],
-  },
-  {
-    title: "Queue debugging",
-    description: "Understand why a Slurm job is pending and what to inspect next before escalating.",
-    icon: "⌘",
-    prompt: EXAMPLE_QUERIES[3],
-  },
-] as const;
-
 export const SECTION_LABELS: Record<string, string> = {
   CLASSIFICATION: "Classification",
   "QUICK ASSESSMENT": "Quick Assessment",
@@ -45,10 +17,6 @@ export const SECTION_LABELS: Record<string, string> = {
   "SAFETY / POLICY NOTES": "Safety / Policy Notes",
   "REFERENCE KEY": "Reference Key",
 };
-
-export function quickPromptCards() {
-  return QUICK_PROMPT_CARDS;
-}
 
 export function parseAnswerSections(answer: string): AnswerSection[] {
   const text = String(answer ?? "").trim();

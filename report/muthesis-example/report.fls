@@ -2,7 +2,7 @@ PWD /Users/adam/Documents/University/Third Year Project/rag_project/report/muthe
 INPUT /usr/local/texlive/2026/texmf.cnf
 INPUT /usr/local/texlive/2026/texmf-dist/web2c/texmf.cnf
 INPUT /usr/local/texlive/2026/texmf-var/web2c/pdftex/pdflatex.fmt
-INPUT /Users/adam/Documents/University/Third Year Project/rag_project/report/muthesis-example/report.tex
+INPUT report.tex
 OUTPUT report.log
 INPUT ./muthesis.cls
 INPUT muthesis.cls

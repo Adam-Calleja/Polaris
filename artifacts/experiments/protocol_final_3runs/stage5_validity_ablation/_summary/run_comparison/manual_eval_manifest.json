@@ -1,0 +1,34 @@
+{
+  "seed": 42,
+  "labels": [
+    "system_A",
+    "system_B",
+    "system_C",
+    "system_D"
+  ],
+  "conditions": [
+    "freshness_only",
+    "naive_combined",
+    "source_aware",
+    "validity_aware"
+  ],
+  "query_count": 30,
+  "runs": [
+    {
+      "condition_name": "freshness_only",
+      "run_dir": "/Users/adam/Documents/University/Third Year Project/rag_project/artifacts/experiments/protocol_final_3runs/stage5_validity_ablation/freshness_only/run_03"
+    },
+    {
+      "condition_name": "naive_combined",
+      "run_dir": "/Users/adam/Documents/University/Third Year Project/rag_project/artifacts/experiments/protocol_final_3runs/stage5_validity_ablation/naive_combined/run_03"
+    },
+    {
+      "condition_name": "source_aware",
+      "run_dir": "/Users/adam/Documents/University/Third Year Project/rag_project/artifacts/experiments/protocol_final_3runs/stage5_validity_ablation/source_aware/run_03"
+    },
+    {
+      "condition_name": "validity_aware",
+      "run_dir": "/Users/adam/Documents/University/Third Year Project/rag_project/artifacts/experiments/protocol_final_3runs/stage5_validity_ablation/validity_aware/run_03"
+    }
+  ]
+}

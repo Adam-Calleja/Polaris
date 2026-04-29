@@ -191,6 +191,9 @@ export function EvaluationPage() {
   const [loadingSummary, setLoadingSummary] = useState(true);
   const [summaryError, setSummaryError] = useState<string | null>(null);
   const [runningScenarioId, setRunningScenarioId] = useState<string | null>(null);
+  const scenarioLabelById = new Map(
+    demoScenarios.map((scenario) => [scenario.scenarioId, `${scenario.scenarioId} — ${scenario.title}`]),
+  );
 
   async function loadSummary() {
     setLoadingSummary(true);
@@ -273,7 +276,7 @@ export function EvaluationPage() {
               <h3 className="summary-table__title">By Scenario</h3>
               {summary.by_scenario.map((row) => (
                 <div className="summary-table__row" key={row.scenario_id}>
-                  <span>{row.scenario_id}</span>
+                  <span>{scenarioLabelById.get(row.scenario_id ?? "") ?? row.scenario_id}</span>
                   <span>{row.count}</span>
                 </div>
               ))}
@@ -300,6 +303,7 @@ export function EvaluationPage() {
               <section className="surface-card scenario-card" key={scenario.scenarioId}>
                 <div className="scenario-card__header">
                   <div>
+                    <div className="scenario-card__eyebrow">{scenario.scenarioId}</div>
                     <h2 className="scenario-card__title">{scenario.title}</h2>
                     <p className="scenario-card__description">{scenario.description}</p>
                   </div>

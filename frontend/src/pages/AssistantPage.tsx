@@ -8,8 +8,8 @@ import {
   createMessageId,
   latestExchange,
   nowIso,
-  quickPromptCards,
 } from "../app/utils";
+import { assistantPromptCards } from "../app/scenarios";
 import { AnswerCard } from "../components/AnswerCard";
 import { DiagnosticsPanel } from "../components/DiagnosticsPanel";
 import { ErrorCard } from "../components/ErrorCard";
@@ -122,10 +122,10 @@ export function AssistantPage() {
           </div>
 
           <div className="quick-prompt-grid quick-prompt-grid--hero">
-            {quickPromptCards().map((prompt) => (
+            {assistantPromptCards.map((prompt) => (
               <button
                 className="quick-prompt-card quick-prompt-card--hero"
-                key={prompt.title}
+                key={prompt.scenarioId}
                 onClick={() => {
                   void submitPrompt(prompt.prompt);
                 }}
@@ -134,6 +134,7 @@ export function AssistantPage() {
                 <span className="quick-prompt-card__icon" aria-hidden="true">
                   {prompt.icon}
                 </span>
+                <span className="quick-prompt-card__eyebrow">{prompt.scenarioId}</span>
                 <span className="quick-prompt-card__title">{prompt.title}</span>
                 <span className="quick-prompt-card__body">{prompt.description}</span>
               </button>

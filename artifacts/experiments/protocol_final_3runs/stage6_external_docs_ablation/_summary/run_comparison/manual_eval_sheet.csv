@@ -1,0 +1,2223 @@
+id,query,summary,system_A_answer,system_A_source_summary,system_A_correctness,system_A_actionability,system_A_safety_policy,system_A_source_appropriateness,system_B_answer,system_B_source_summary,system_B_correctness,system_B_actionability,system_B_safety_policy,system_B_source_appropriateness
+HPCSSUP-98608,"Dear Henry,
+I hope this email finds you well!
+I would like to load lammps gpu in my account, but I got the error of ""sbatch: error: Batch job submission failed: Invalid account or account/partition combination specified"". My slurm script is attached. Could you please let me know the correct format of the slurm script?
+Many thanks!
+Best Regards,
+Ruitian
+-------------------------------------------------
+Dr. Ruitian He
+Postdoctoral Research Assistant
+Oxford Thermofluids Institute
+Department of Engineering Science
+University of Oxford
+Oxford, OX2 0ES",Enquiry about my account name,"CLASSIFICATION
+Category: Job Submission / SLURM [1]
+Technical Action Required: Yes [1]
+Urgency: Medium [1]
+
+QUICK ASSESSMENT
+The user is experiencing an error when submitting a job using the sbatch command, with the error message ""Invalid account or account/partition combination specified"" [2]. This suggests that there may be an issue with the account or partition specified in the SLURM script [1].
+
+ACTION STEPS (HELPDESK)
+To resolve this issue, we recommend checking the account and partition specified in the SLURM script [1]. The user should verify that the account name is correct and that the partition is valid for the specified account [2]. Additionally, the user can check the available accounts and partitions using the mybalance command [1].
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Can you please provide the exact SLURM script you are using?
+- What is the output of the mybalance command for your account?
+- Have you tried submitting the job with a different account or partition?
+
+EXAMPLE CUSTOMER REPLY
+Hello,
+To resolve the issue with your job submission, please check the account and partition specified in your SLURM script. You can verify the account name and partition using the mybalance command. If you are still experiencing issues, please provide the exact SLURM script you are using and the output of the mybalance command.
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Always verify the account and partition specified in the SLURM script before submitting a job [1].
+- Use the mybalance command to check available accounts and partitions [1].
+
+REFERENCE KEY
+[1] : https://docs.hpc.cam.ac.uk/hpc/user-guide/batch.html::chunk::0003
+[2] : HPCSSUP-57238",r1:docs/local_official/unknown:https://docs.hpc.cam.ac.uk/hpc/user-guide/batch.html::chunk::0003 | r2:unknown/ticket_memory/current:HPCSSUP-57238 | r3:docs/local_official/legacy:https://docs.hpc.cam.ac.uk/hpc/user-guide/quickstart.html::chunk::0008,,,,,"CLASSIFICATION
+Category: Job Submission / Slurm Script
+Technical Action Required: Yes
+Escalation Required: Possibly
+Urgency: Medium
+
+QUICK ASSESSMENT
+The user is experiencing an error when submitting a job using the sbatch command, with the error message indicating an invalid account or account/partition combination [2]. This suggests that there may be an issue with the Slurm script, specifically with the #SBATCH directives [1].
+
+ACTION STEPS (HELPDESK)
+To resolve this issue, the user should review their Slurm script and ensure that the #SBATCH directives are correctly specified, including the account and partition [1]. The user should also check that they have a valid project and account on the CSD3 system [2]. If the issue persists, the user may need to modify their script to request the correct resources, such as GPUs [4].
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Can you provide the exact Slurm script you are using?
+- What is the output of the `mybalance` command, which shows your available accounts and resources [2]?
+- Have you tried submitting the job to a different partition, such as icelake or icelake-himem [4]?
+
+EXAMPLE CUSTOMER REPLY
+Hello,
+To resolve the issue with your job submission, please review your Slurm script and ensure that the #SBATCH directives are correctly specified, including the account and partition [1]. You can check your available accounts and resources using the `mybalance` command [2]. If you are still experiencing issues, please try submitting the job to a different partition, such as icelake or icelake-himem [4].
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Always ensure that Slurm scripts are correctly formatted and specify the required resources [1].
+- Users should only submit jobs to partitions and accounts that they have been authorized to use [2].
+
+REFERENCE KEY
+[1] : https://docs.hpc.cam.ac.uk/hpc/user-guide/batch.html::chunk::0003
+[2] : HPCSSUP-57238
+[4] : https://docs.hpc.cam.ac.uk/hpc/user-guide/quickstart.html::chunk::0008",r1:docs/local_official/unknown:https://docs.hpc.cam.ac.uk/hpc/user-guide/batch.html::chunk::0003 | r2:unknown/ticket_memory/current:HPCSSUP-57238 | r3:external_docs/external_official/unknown:https://slurm.schedmd.com/quickstart.html::chunk::0000,,,,
+HPCSSUP-98575,"Dear HPC Group,
+I am Wenhao Xu, a PhD student in the Department of Clinical Neurosciences, working in Prof. Peter Smielewski’s group. I am writing to ask about extending our SL3 CPU allocation, as my current usage on account wx266 has reached the limit.
+According to mybalance records, I have used 380,694 CPU hours under Account SMIELEWSKI-SL3-CPU over the last year, and I would be grateful if you could advise:
+1.
+Whether it is possible to request additional CPU hours for continued work this year; and
+1.
+Whether SL3 free usage reset annually, and if so, when the reset could occur.
+If you need any additional details, please let me know.
+Many thanks for your help.
+Best,
+–
+Wenhao Xu
+PhD candidate, Department of Clinical Neurosciences
+Clare Hall, University of Cambridge",Query on extending SL3 CPU usage and annual reset,"CLASSIFICATION
+Category: HPC Account Management / Service Level 3
+Technical Action Required: Yes
+Portal Action Required: No
+
+QUICK ASSESSMENT
+The user is requesting to extend their SL3 CPU allocation as their current usage has reached the limit [1]. According to the policies, each PI may receive 200,000 CPU core hours and 3000 GPU hours per quarter for free usage in SL3 [1]. The user's current usage is 380,694 CPU hours under Account SMIELEWSKI-SL3-CPU over the last year.
+
+ACTION STEPS (HELPDESK)
+To address the user's request, we need to determine if additional CPU hours can be allocated to their account. Since the user has already exceeded the quarterly limit, we will need to explore options for purchasing additional hours or upgrading their service level.
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Can you please confirm your current project requirements and expected usage for the next quarter?
+- Are you interested in purchasing additional CPU hours or exploring other service level options?
+
+EXAMPLE CUSTOMER REPLY
+Hello,
+Thank you for your request to extend your SL3 CPU allocation. We will review your account usage and explore options for allocating additional hours. Please let us know your expected usage for the next quarter and if you are interested in purchasing additional hours or upgrading your service level.
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- SL3 free usage is capped at 200,000 CPU core hours and 3000 GPU hours per quarter [1].
+- Additional CPU hours can be purchased or allocated through an upgrade to a higher service level [1][4].
+
+REFERENCE KEY
+[1] : https://docs.hpc.cam.ac.uk/hpc/user-guide/policies.html::chunk::0004
+[4] : https://docs.hpc.cam.ac.uk/hpc/user-guide/policies.html::chunk::0002",r1:docs/local_official/unknown:https://docs.hpc.cam.ac.uk/hpc/user-guide/policies.html::chunk::0004 | r2:external_docs/external_official/unknown:https://slurm.schedmd.com/rest_api.html::chunk::0154 | r3:unknown/ticket_memory/unknown:HPCSSUP-100211,,,,,"CLASSIFICATION
+Category: HPC Account Management [1]
+Technical Action Required: Yes [1]
+Urgency: Medium [1]
+
+QUICK ASSESSMENT
+The user, Wenhao Xu, is requesting to extend their SL3 CPU allocation as their current usage has reached the limit [1]. According to the policies, each PI may receive 200,000 CPU core hours per quarter under the SL3 service level [1]. The allocation is shared among all members of the group [6].
+
+ACTION STEPS (HELPDESK)
+To address the user's request, we need to:
+1. Verify the user's current usage and allocation [1].
+2. Check if the user's PI has already used up their quarterly allocation [1].
+3. If the allocation has been exhausted, advise the user to purchase additional CPU hours to refresh the project [8] or submit jobs under the SL4 service level [1].
+4. Provide guidance on how to submit jobs under the SL4 service level, if applicable [1].
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Can you provide more information about your current project and usage?
+- Have you consulted with your PI about purchasing additional CPU hours?
+
+EXAMPLE CUSTOMER REPLY
+Dear Wenhao,
+Thank you for your request to extend your SL3 CPU allocation. We have verified your current usage and allocation. Unfortunately, your PI's quarterly allocation has been exhausted. You may consider purchasing additional CPU hours to refresh the project or submitting jobs under the SL4 service level. Please consult with your PI and let us know if you need further assistance.
+
+SAFETY / POLICY NOTES
+- The SL3 service level has a quarterly allocation of 200,000 CPU core hours per PI [1].
+- The allocation is shared among all members of the group [6].
+- Users can purchase additional CPU hours to refresh the project [8].
+
+REFERENCE KEY
+[1] : https://docs.hpc.cam.ac.uk/hpc/user-guide/policies.html::chunk::0004
+[6] : HPCSSUP-39690
+[8] : HPCSSUP-20098",r1:docs/local_official/unknown:https://docs.hpc.cam.ac.uk/hpc/user-guide/policies.html::chunk::0004 | r2:unknown/ticket_memory/unknown:HPCSSUP-100211 | r3:docs/local_official/unknown:https://docs.hpc.cam.ac.uk/hpc/user-guide/policies.html::chunk::0002,,,,
+HPCSSUP-98537,"Hi Team,
+I am having an issue with my interactive OnDemand notebooks. They seem to reach the point of Starting and then crash before they can actually begin. Here is an output.log:
+```
+/var/spool/slurm/slurmd/job21509569/slurm_script: line 3: module: command not found
+Script starting...
+Waiting for Jupyter Notebook server to open port 61834...
+TIMING - Starting main script at: Fri Jan 30 15:00:10 GMT 2026
+TIMING - Starting wait at: Fri Jan 30 15:00:10 GMT 2026
+/home/tsl30/ondemand/data/sys/dashboard/batch_connect/sys/jupyter/csd3/output/cad586e3-86c7-48bb-b093-8249dc27ee3f/script.sh: line 14: module: command not found
+/home/tsl30/ondemand/data/sys/dashboard/batch_connect/sys/jupyter/csd3/output/cad586e3-86c7-48bb-b093-8249dc27ee3f/script.sh: line 17: module: command not found
+/home/tsl30/ondemand/data/sys/dashboard/batch_connect/sys/jupyter/csd3/output/cad586e3-86c7-48bb-b093-8249dc27ee3f/script.sh: line 20: module: command not found
+TIMING - Starting jupyter at: Fri Jan 30 15:00:10 GMT 2026
++ jupyter notebook --config=/home/tsl30/ondemand/data/sys/dashboard/batch_connect/sys/jupyter/csd3/output/cad586e3-86c7-48bb-b093-8249dc27ee3f/config.py
+/home/tsl30/ondemand/data/sys/dashboard/batch_connect/sys/jupyter/csd3/output/cad586e3-86c7-48bb-b093-8249dc27ee3f/script.sh: line 27: jupyter: command not found
+Timed out waiting for Jupyter Notebook server to open port 61834!
+TIMING - Wait ended at: Fri Jan 30 15:01:11 GMT 2026
+Cleaning up...
+```
+I do not understand what this means! Help!!
+Best wishes,
+Tim
+Sent from Outlook for Mac",Interactive Jupyter Notebooks crashing before loading,"CLASSIFICATION
+Category: Jupyter / OnDemand [1][4]
+Technical Action Required: Yes [1]
+Portal Action Required: No [1]
+Urgency: Medium [1]
+
+QUICK ASSESSMENT
+The error log indicates that the Jupyter Notebook server is unable to start due to the ""module: command not found"" and ""jupyter: command not found"" errors [1]. This suggests that the necessary modules and packages are not loaded or installed in the environment [3].
+
+ACTION STEPS (HELPDESK)
+To resolve this issue, we need to ensure that the necessary modules and packages are loaded and installed in the environment. We recommend checking the module availability and loading the required modules, such as Python and Jupyter, before starting the Jupyter Notebook server [3]. Additionally, we suggest verifying the project account, partition, and module settings in the OnDemand interface [5].
+
+QUESTIONS TO ASSESS (ONLY IF NEEDED)
+- Can you please provide more details about your project account, partition, and module settings in the OnDemand interface?
+- Have you tried loading the necessary modules and packages in the environment before starting the Jupyter Notebook server?
+
+EXAMPLE CUSTOMER REPLY
+Hello,
+Thank you for reporting the issue with your Jupyter Notebook. We recommend checking the module availability and loading the required modules, such as Python and Jupyter, before starting the Jupyter Notebook server. Please verify your project account, partition, and module settings in the OnDemand interface. If you need further assistance, please provide more details about your settings.
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Ensure that the necessary modules and packages are loaded and installed in the environment before starting the Jupyter Notebook server [3].
+- Verify the project account, partition, and module settings in the OnDemand interface to avoid any errors or conflicts [5].
+
+REFERENCE KEY
+[1] : https://docs.hpc.cam.ac.uk/hpc/software-packages/jupyter.html::chunk::0001
+[3] : https://docs.hpc.cam.ac.uk/hpc/software-packages/jupyter.html::chunk::0000
+[4] : HPCSSUP-99376
+[5] : https://docs.hpc.cam.ac.uk/hpc/user-guide/pvc-jobs-IDEs.html::chunk::0000",r1:docs/local_official/current:https://docs.hpc.cam.ac.uk/hpc/software-packages/jupyter.html::chunk::0001 | r2:unknown/ticket_memory/current:HPCSSUP-65771 | r3:docs/local_official/current:https://docs.hpc.cam.ac.uk/hpc/software-packages/jupyter.html::chunk::0000,,,,,"CLASSIFICATION
+Category: Jupyter / OnDemand [1]
+Technical Action Required: Yes [5]
+Portal Action Required: Yes (Login-Web) [7]
+Urgency: Medium [5]
+
+QUICK ASSESSMENT
+The user is experiencing issues with their Jupyter OnDemand notebooks crashing before they can start, with error messages indicating that the `module` command is not found and the `jupyter` command is not recognized [5]. This suggests a potential issue with the environment or module loading.
+
+ACTION STEPS (HELPDESK)
+1. Verify that the user has correctly set up their Jupyter environment and has loaded the necessary modules, as described in the documentation [4].
+2. Check that the user has selected the correct project account, partition, and number of cores/GPUs in the OnDemand interface [7].
+3. If the issue persists, try running the Jupyter notebook in an interactive session with increased resources (e.g., more CPUs or GPUs) to see if the problem is related to resource limitations [8].
+4. If the user is still experiencing issues, consider repackaging their code as a Python script and running it as a full job on the compute nodes, as this may be more suitable for their workload [8].
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Can you provide more details about your Jupyter notebook setup and the code you are trying to run?
+- Have you tried running your code in an interactive session or as a Python script on the compute nodes?
+
+EXAMPLE CUSTOMER REPLY
+Hello,
+Thank you for your help. I will try to verify my Jupyter environment setup and module loading. If the issue persists, I will try running my code in an interactive session with increased resources.
+Best regards,
+[User]
+
+SAFETY / POLICY NOTES
+- Be cautious when running Jupyter notebooks on the login nodes, as they may be subject to resource limitations [8].
+- Consider running resource-intensive workloads as jobs on the compute nodes to avoid impacting other users [8].
+
+REFERENCE KEY
+[1] : https://docs.hpc.cam.ac.uk/hpc/software-packages/jupyter.html::chunk::0001
+[4] : https://docs.hpc.cam.ac.uk/hpc/software-packages/jupyter.html::chunk::0000
+[5] : HPCSSUP-99376
+[7] : https://docs.hpc.cam.ac.uk/hpc/user-guide/pvc-jobs-IDEs.html::chunk::0000
+[8] : HPCSSUP-86972",r1:docs/local_official/current:https://docs.hpc.cam.ac.uk/hpc/software-packages/jupyter.html::chunk::0001 | r2:unknown/ticket_memory/current:HPCSSUP-65771 | r3:external_docs/external_official/unknown:https://slurm.schedmd.com/publications.html::chunk::0008,,,,
+HPCSSUP-98311,"Dear CSD3 support,
+I am trying to compile the newest release version of LAMMPS on Ampere with the GPU package. Following the instructions on [https://docs.hpc.cam.ac.uk/hpc/software-packages/lammps.html](https://docs.hpc.cam.ac.uk/hpc/software-packages/lammps.html) leads to an error when running a benchmark:
+Cuda driver error 1 in call at file '/home/dc-bole2/git/lammps_amp/lib/gpu/geryon/nvd_kernel.h' in line 340.
+Cuda driver error 1 in call at file '/home/dc-bole2/git/lammps_amp/lib/gpu/geryon/nvd_kernel.h' in line 340.
+Cuda driver error 1 in call at file '/home/dc-bole2/git/lammps_amp/lib/gpu/geryon/nvd_kernel.h' in line 340.
+Cuda driver error 1 in call at file '/home/dc-bole2/git/lammps_amp/lib/gpu/geryon/nvd_kernel.h' in line 340.
+--------------------------------------------------------------------------
+MPI_ABORT was invoked on rank 1 in communicator MPI_COMM_WORLD
+with errorcode -1.
+NOTE: invoking MPI_ABORT causes Open MPI to kill all MPI processes.
+You may or may not see output from other processes, depending on
+exactly when Open MPI kills them.
+--------------------------------------------------------------------------
+This is working without any issues when using version stable_29Aug2024_update2 as per the instructions. By any chance, do you happen to have any information on how to compile a more recent version of LAMMPS?
+Many thanks,
+Max",Compiling LAMMPS on Ampere,"CLASSIFICATION
+Category: Software Compilation / LAMMPS
+Technical Action Required: Yes
+Portal Action Required: No
+Urgency: Medium
+
+QUICK ASSESSMENT
+The user is attempting to compile the newest release version of LAMMPS on Ampere with the GPU package, but is encountering errors [1]. The provided documentation [1] outlines the process for compiling LAMMPS on the Ampere partition, but it appears that the user is trying to compile a more recent version of LAMMPS.
+
+ACTION STEPS (HELPDESK)
+To resolve this issue, we recommend that the user try compiling LAMMPS using the default modules loaded by default, as suggested in [5]. The user should also ensure that they are using the correct compiler and MPI modules, as outlined in [1] and [5].
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Can you please provide the exact error message you are seeing when trying to compile LAMMPS?
+- Are you using the latest version of the CUDA toolkit, as recommended in [2]?
+- Have you tried compiling LAMMPS using the Intel compilers, as outlined in [4]?
+
+EXAMPLE CUSTOMER REPLY
+Hello,
+Thank you for your request. To compile the newest release version of LAMMPS on Ampere with the GPU package, please try using the default modules loaded by default, as suggested in [5]. Ensure that you are using the correct compiler and MPI modules, as outlined in [1] and [5]. If you continue to encounter errors, please provide the exact error message and we will be happy to assist further.
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- When compiling software on the HPC cluster, it is essential to use the recommended modules and compilers to ensure compatibility and optimal performance [1][5].
+- The user should be aware of the version of the CUDA toolkit they are using, as outlined in [2], to ensure compatibility with the Ampere GPUs.
+
+REFERENCE KEY
+[1] : https://docs.hpc.cam.ac.uk/hpc/software-packages/lammps.html::chunk::0002
+[2] : https://docs.nvidia.com/cuda::chunk::0001
+[4] : https://docs.hpc.cam.ac.uk/hpc/software-packages/lammps.html::chunk::0001
+[5] : HPCSSUP-60806",r1:docs/local_official/current:https://docs.hpc.cam.ac.uk/hpc/software-packages/lammps.html::chunk::0002 | r2:external_docs/external_official/unknown:https://docs.nvidia.com/cuda::chunk::0001 | r3:unknown/ticket_memory/current:HPCSSUP-59845,,,,,"CLASSIFICATION
+Category: Software Compilation [1]
+Technical Action Required: Yes [1]
+Urgency: Medium [1]
+
+QUICK ASSESSMENT
+The user is trying to compile the newest release version of LAMMPS on Ampere with the GPU package, but is encountering an error when running a benchmark [1]. The error message indicates a Cuda driver error [1]. The user has tried following the instructions on the CSD3 website for compiling LAMMPS, but is still experiencing issues [1].
+
+ACTION STEPS (HELPDESK)
+To resolve this issue, we recommend trying to compile LAMMPS with a different version or configuration. The user can try loading different modules, such as `rhel8/default-amp` and `cmake/3.21.4/gcc-9.4.0-pucmh2y`, and then compiling LAMMPS using the `cmake` command [1][2]. Additionally, the user can try setting up the build directory and compiling LAMMPS using the `cmake --build` command [1].
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Can you please provide the exact error message you are seeing when running the benchmark?
+- Have you tried compiling LAMMPS with a different version or configuration?
+- Are you using the latest version of the CUDA driver?
+
+EXAMPLE CUSTOMER REPLY
+Dear Max,
+Thank you for reaching out to us about the issue you are experiencing with compiling LAMMPS on Ampere. We recommend trying to compile LAMMPS with a different version or configuration. Please try loading the `rhel8/default-amp` and `cmake/3.21.4/gcc-9.4.0-pucmh2y` modules, and then compiling LAMMPS using the `cmake` command. If you are still experiencing issues, please provide the exact error message you are seeing and we will do our best to assist you.
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- When compiling software on CSD3, it is recommended to use the latest version of the CUDA driver and to load the necessary modules to ensure compatibility [1][2].
+- If you are experiencing issues with compiling LAMMPS, please contact HPC support for assistance [1].
+
+REFERENCE KEY
+[1] : https://docs.hpc.cam.ac.uk/hpc/software-packages/lammps.html::chunk::0002
+[2] : HPCSSUP-59845",r1:docs/local_official/current:https://docs.hpc.cam.ac.uk/hpc/software-packages/lammps.html::chunk::0002 | r2:unknown/ticket_memory/current:HPCSSUP-59845 | r3:docs/local_official/current:https://docs.hpc.cam.ac.uk/hpc/software-packages/lammps.html::chunk::0001,,,,
+HPCSSUP-98292,"Dear Support,
+Can someone please address this one from yesterday and today? Thanks.
+Regards,
+Muhammad Ahmed
+________________________________
+From: Jun Yao Chan <jun@revax.co.uk>
+Sent: 27 January 2026 12:34
+To: HPC JIRA service desk inbox <jiraservice@hpc.cam.ac.uk>
+Cc: Alex Bartlam <Alex@revax.co.uk>; Jack Mander <jack@revax.co.uk>
+Subject: DAWN Access Assistance
+Hi,
+I am looking to gain access to the DAWN Supercomputer, some of my colleagues already have access but I am not set up with an account yet. Are you able to set up login details for my account?
+Here is the all the details:
+Name: Jun Yao Chan
+Email: jun@revax.co.uk
+SSH keys: AAAAC3NzaC1lZDI1NTE5AAAAIL+klunbwQNR+EoEuzyqe0y0HGjf25GM3hIfka8DL1Ra
+Thanks.
+Regards,
+Jun",Fw: DAWN Access Assistance,"CLASSIFICATION
+Category: Access Request / DAWN Supercomputer [1]
+Technical Action Required: Yes [1]
+Urgency: Medium [1]
+
+QUICK ASSESSMENT
+The user, Jun Yao Chan, is requesting access to the DAWN Supercomputer and has provided their SSH public key [1]. The user's colleagues, Fintan and Jack, have already been invited to the project, and Jack has confirmed that he has invited Jun to the project [1]. However, the user account for Jun has not been created yet [1].
+
+ACTION STEPS (HELPDESK)
+To proceed with the access request, we need to create a user account for Jun Yao Chan and apply the provided SSH public key to the account [1]. We will also need to ensure that the user has been invited to the project and has accepted the invitation [1].
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Has the user submitted a HPC Account Application form, if required [2]?
+- Has the user set up their MFA, if required [2]?
+
+EXAMPLE CUSTOMER REPLY
+Hello,
+To proceed with your access request to the DAWN Supercomputer, we need to create a user account for you and apply the provided SSH public key to the account. We will also need to ensure that you have been invited to the project and have accepted the invitation. Please let us know if you have any questions or concerns.
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- We can only set up SSH once the user account has been created [1].
+- Users with accounts already will need to follow the instructions they received and send us their SSH public keys themselves [1].
+
+REFERENCE KEY
+[1] : HPCSSUP-98058
+[2] : https://docs.hpc.cam.ac.uk/hpc/user-guide/quickstart.html::chunk::0000",r1:unknown/ticket_memory/current:HPCSSUP-98058 | r2:docs/local_official/legacy:https://docs.hpc.cam.ac.uk/hpc/user-guide/quickstart.html::chunk::0000 | r3:external_docs/external_official/unknown:https://slurm.schedmd.com/rest_api.html::chunk::0079,,,,,"CLASSIFICATION
+Category: Access / Account Management [1]
+Technical Action Required: Yes [1]
+Portal Action Required: No [1]
+Urgency: Medium [1]
+
+QUICK ASSESSMENT
+The user, Jun Yao Chan, is requesting access to the DAWN Supercomputer and has provided their SSH public key [1]. The user has been invited to the project by the PI on Waldur, and the account creation is pending [1].
+
+ACTION STEPS (HELPDESK)
+To proceed with the account setup, we need to verify the user's identity and ensure that they have been properly invited to the project [1]. We will then create the user account and apply the provided SSH public key [1].
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Can you please confirm that you have accepted the invitation to the project on Waldur [4]?
+- Have you set up your MFA as described in the documentation [2]?
+
+EXAMPLE CUSTOMER REPLY
+Hello Jun,
+We have received your request for access to the DAWN Supercomputer. To proceed, please confirm that you have accepted the invitation to the project on Waldur [4]. Additionally, please ensure that you have set up your MFA as described in the documentation [2]. We will then create your user account and apply the provided SSH public key [1].
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- We must verify the user's identity and ensure that they have been properly invited to the project before creating the account [1].
+- The user must set up their MFA as described in the documentation [2] to access the system.
+
+REFERENCE KEY
+[1] : HPCSSUP-98058
+[2] : https://docs.hpc.cam.ac.uk/hpc/user-guide/quickstart.html::chunk::0000
+[4] : https://docs.hpc.cam.ac.uk/hpc/user-guide/waldur-user.html::chunk::0005",r1:unknown/ticket_memory/current:HPCSSUP-98058 | r2:docs/local_official/legacy:https://docs.hpc.cam.ac.uk/hpc/user-guide/quickstart.html::chunk::0000 | r3:unknown/ticket_memory/current:HPCSSUP-67508,,,,
+HPCSSUP-98278,"Dear HPC support team,
+I have received the email that the HPC login issue has been resolved. But since yesterday evening till now, I still cannot login via the web portal [https://login-web.hpc.cam.ac.uk/](https://login-web.hpc.cam.ac.uk/). I wonder if this issue has been resolved or not.
+Best,
+Yiran",Cannot login to the HPC web portal,"CLASSIFICATION
+Category: Login / Web Portal Access
+Technical Action Required: Possibly
+Urgency: Medium
+
+QUICK ASSESSMENT
+The user is experiencing issues logging in to the web portal [https://login-web.hpc.cam.ac.uk/](https://login-web.hpc.cam.ac.uk/) despite receiving an email stating that the HPC login issue has been resolved [1]. The retrieved documents suggest that login issues can be resolved by ensuring the use of the correct username and password, and waiting 20 minutes after 3 failed attempts to avoid IP blocking [1].
+
+ACTION
+Direct the user to try logging in again, ensuring they use their full Cambridge email address and Raven password [1][5]. If issues persist, request they contact support@hpc.cam.ac.uk for further assistance [2][4].
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Can you confirm your CRSid and password are correct?
+- Have you tried waiting 20 minutes after 3 failed attempts to log in?
+- Are you using the correct login option (University Login or Other Login) corresponding to your email address [2][4]?
+
+EXAMPLE CUSTOMER REPLY
+Hello,
+We are aware that you are experiencing issues logging in to the web portal. Please try logging in again, ensuring you use your full Cambridge email address and Raven password. If you continue to experience issues, please contact support@hpc.cam.ac.uk for further assistance.
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Ensure users are using the correct login credentials and following the recommended troubleshooting steps before escalating the issue [1][5].
+- Direct users to contact support@hpc.cam.ac.uk for further assistance if issues persist [2][4].
+
+REFERENCE KEY
+[1] : HPCSSUP-86199
+[2] : https://docs.hpc.cam.ac.uk/hpc/user-guide/waldur-pi.html::chunk::0000
+[4] : https://docs.hpc.cam.ac.uk/hpc/user-guide/waldur-user.html::chunk::0000
+[5] : https://docs.hpc.cam.ac.uk/hpc/user-guide/login-web.html::chunk::0000",r1:unknown/ticket_memory/current:HPCSSUP-86199 | r2:docs/local_official/unknown:https://docs.hpc.cam.ac.uk/hpc/user-guide/waldur-pi.html::chunk::0000 | r3:external_docs/external_official/unknown:https://www.tensorflow.org/guide/extension_type::chunk::0017,,,,,"CLASSIFICATION
+Category: Login Issue [4]
+Technical Action Required: Possibly [6]
+Escalation Required: Possibly [6]
+Urgency: Medium [6]
+
+QUICK ASSESSMENT
+The user is experiencing issues logging in to the HPC web portal [4], despite receiving an email stating that the login issue has been resolved [1]. The retrieved documents suggest that login issues can be caused by various factors, including incorrect credentials [1], IP blocking after multiple failed attempts [1], and system requirements [4].
+
+ACTION STEPS (HELPDESK)
+1. Request the user to confirm their credentials, including their CRSid and password [4].
+2. Ask the user to check if they have been IP blocked due to multiple failed attempts [1].
+3. Verify that the user is using a supported browser and version [4].
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Can you please provide a screenshot of the error message you are receiving when trying to log in?
+- Have you tried logging in using a different browser or device?
+- Have you recently changed your password or 2FA settings?
+
+EXAMPLE CUSTOMER REPLY
+Hello,
+Thank you for reporting the issue with logging in to the HPC web portal. We are investigating this matter and will get back to you soon. In the meantime, could you please confirm your credentials and check if you have been IP blocked? If you have any further questions or concerns, please do not hesitate to contact us.
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- When troubleshooting login issues, it is essential to follow the official documentation and guidelines [7].
+- Users should be aware of the system requirements and browser compatibility for the HPC web portal [4].
+
+REFERENCE KEY
+[1] : HPCSSUP-86199
+[4] : https://docs.hpc.cam.ac.uk/hpc/user-guide/login-web.html::chunk::0000
+[6] : HPCSSUP-86335
+[7] : https://docs.hpc.cam.ac.uk/hpc/user-guide/getting_support.html::chunk::0002",r1:unknown/ticket_memory/current:HPCSSUP-86199 | r2:docs/local_official/unknown:https://docs.hpc.cam.ac.uk/hpc/user-guide/waldur-pi.html::chunk::0000 | r3:docs/local_official/unknown:https://docs.hpc.cam.ac.uk/hpc/user-guide/waldur-user.html::chunk::0000,,,,
+HPCSSUP-98277,"Good morning,
+I have a question regarding the cluster’s behavior during reduced power consumption periods. I’ve noticed that jobs submitted during these windows are accepted and scheduled, but they execute at a significantly lower speed. This has led to several jobs timing out before completion, resulting in a loss of compute hours and requiring expensive reruns (even when requesting the same amount of resources as previously successful jobs).
+Is there a way to prevent jobs from starting if the cluster is in a low-power state? Specifically, I’m looking for a requirement or constraint I can add to my job scripts (e.g., a specific #SLURM flag) to ensure they only run when full performance resources are available.
+Thank you for your help!
+Best regards,
+Clara",Scheduling jobs during maintenance,"CLASSIFICATION
+Category: Job Submission / Scheduling
+Technical Action Required: Yes
+Portal Action Required: No
+Urgency: Medium
+
+QUICK ASSESSMENT
+The user is experiencing issues with job submissions during reduced power consumption periods, resulting in slower execution and job timeouts [1]. The user is looking for a way to prevent jobs from starting when the cluster is in a low-power state.
+
+ACTION STEPS (HELPDESK)
+To address the user's concern, we need to investigate the current cluster configuration and job scheduling policies [2]. We can start by checking the Slurm configuration and job submission scripts to see if there are any specific settings or directives that can be used to prevent jobs from running during low-power periods [3].
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Can you provide more information about the job submission scripts and the specific directives used?
+- Are there any specific error messages or job status codes that are being reported during the low-power periods?
+- Have you tried using different Quality of Service (QOS) levels or partitions to see if that affects the job scheduling [4]?
+
+EXAMPLE CUSTOMER REPLY
+Hello,
+Thank you for reaching out to us about your job submission concerns. We are currently investigating the cluster configuration and job scheduling policies to see if there are any settings or directives that can be used to prevent jobs from running during low-power periods. In the meantime, please let us know if you have any further questions or concerns.
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- It is essential to follow the documented procedures for job submission and scheduling to ensure fair and efficient use of cluster resources [1][2].
+- Users should be aware of the current cluster configuration and job scheduling policies to optimize their job submissions [3].
+
+REFERENCE KEY
+[1] : https://docs.hpc.cam.ac.uk/hpc/user-guide/long.html::chunk::0001
+[2] : HPCSSUP-73417
+[3] : https://slurm.schedmd.com/job_reason_codes.html::chunk::0000
+[4] : https://docs.hpc.cam.ac.uk/hpc/user-guide/policies.html::chunk::0005",r1:docs/local_official/current:https://docs.hpc.cam.ac.uk/hpc/user-guide/long.html::chunk::0001 | r2:unknown/ticket_memory/current:HPCSSUP-73417 | r3:external_docs/external_official/unknown:https://slurm.schedmd.com/job_reason_codes.html::chunk::0000,,,,,"CLASSIFICATION
+Category: Job Submission / Scheduling
+Technical Action Required: Yes
+Escalation Required: Possibly
+Urgency: Medium
+
+QUICK ASSESSMENT
+There is no direct evidence in the retrieved documents [1]-[8] that provides a specific SLURM flag to prevent jobs from starting when the cluster is in a low-power state. However, it is possible to control job submission and scheduling using various SLURM directives, such as specifying partitions [5], quality of service (QOS) [3], and resource requirements [7].
+
+ACTION STEPS (HELPDESK)
+To address the issue of jobs executing at a significantly lower speed during reduced power consumption periods, we can explore alternative approaches:
+- Review the job submission script to ensure that the requested resources are optimal for the job requirements [6].
+- Consider submitting jobs to partitions with lower priority, such as icelake-long or ampere-long, which may have less contention [1].
+- Investigate the use of QOS definitions, such as QOS1, QOS2, or QOS3, to control job priority and resource allocation [3].
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Can you provide more information about the job submission script and the resources requested?
+- Have you experienced any issues with job scheduling or execution in the past?
+- Are there any specific requirements or constraints for the jobs that need to be executed during full performance periods?
+
+EXAMPLE CUSTOMER REPLY
+Hello,
+To address the issue of jobs executing at a lower speed during reduced power consumption periods, we can review your job submission script and explore alternative approaches, such as submitting jobs to lower-priority partitions or using QOS definitions to control job priority and resource allocation.
+Please provide more information about your job submission script and requirements.
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Be cautious when modifying job submission scripts or requesting resources to avoid unintended consequences [6].
+- Familiarize yourself with the SLURM documentation and policies to ensure optimal job submission and scheduling [5].
+
+REFERENCE KEY
+[1] : https://docs.hpc.cam.ac.uk/hpc/user-guide/long.html::chunk::0001
+[3] : https://docs.hpc.cam.ac.uk/hpc/user-guide/policies.html::chunk::0005
+[5] : https://docs.hpc.cam.ac.uk/hpc/user-guide/quickstart.html::chunk::0008
+[6] : HPCSSUP-60781
+[7] : https://docs.hpc.cam.ac.uk/hpc/user-guide/icelake.html::chunk::0001
+[8] : HPCSSUP-29372",r1:docs/local_official/current:https://docs.hpc.cam.ac.uk/hpc/user-guide/long.html::chunk::0001 | r2:unknown/ticket_memory/current:HPCSSUP-73417 | r3:docs/local_official/unknown:https://docs.hpc.cam.ac.uk/hpc/user-guide/policies.html::chunk::0005,,,,
+HPCSSUP-98114,"Dear Support Desk,
+*
+Your name: Jiakai Chen
+*
+Your account/PI: Prof. Sebastian Schemm/ Prof. Simon Driscoll (account: schemm-sl+)
+*
+your job submission script: Job ID 21047257
+*
+the working directories or paths you are using (e.g. /rds/user/$USER/hpc-work/foo/bar/): /home/jc2405/Project/neuralgcm/neuralgcm
+*
+as much detail as possible on what you are working on, what you have tried, and error messages you receive:
+The above script requests for 20 minutes of GPU (1 node) but it has been in the queue for around 15 hours, while it usually takes just around an hour. Can I check if that's expected? Thank you.
+Best,
+Kai",Unusually long queue time,"CLASSIFICATION
+Category: Job Submission / Queue Management [2]
+Technical Action Required: No [2]
+Portal Action Required: No [2]
+Urgency: Low [2]
+
+QUICK ASSESSMENT
+The user's job has been in the queue for 15 hours, which is longer than usual [2]. The job is requesting 20 minutes of GPU time on 1 node [2]. There is no indication of any issues with the user's account or job submission script [2].
+
+ACTION
+Please be patient and do not cancel and resubmit the job, as this can be counterproductive [2]. The job will run when resources become available [2]. You can monitor the job's status in the queue using the `squeue` command [3].
+
+EXAMPLE CUSTOMER REPLY
+Hello,
+There is nothing wrong with your account or jobs, except that they are likely requesting resources that are not yet available [2]. Please bear in mind that each paying job can occupy its resources for 36 hours [2]. Please be patient and don’t be tempted to cancel and resubmit - since all jobs steadily increase in priority the longer they wait, that would be counterproductive [2]. 
+Your jobs will run when resources become available [2].
+
+SAFETY / POLICY NOTES
+- Do not cancel and resubmit jobs unnecessarily, as this can decrease their priority [2].
+- Be aware that paying jobs have higher priority and can occupy resources for up to 36 hours [2].
+
+REFERENCE KEY
+[2] : HPCSSUP-59843
+[3] : https://docs.hpc.cam.ac.uk/hpc/user-guide/quickstart.html::chunk::0008",r1:docs/local_official/current:https://docs.hpc.cam.ac.uk/hpc/user-guide/long.html::chunk::0001 | r2:unknown/ticket_memory/current:HPCSSUP-59843 | r3:docs/local_official/legacy:https://docs.hpc.cam.ac.uk/hpc/user-guide/quickstart.html::chunk::0008,,,,,"CLASSIFICATION
+Category: Job Submission / Queue Management [2]
+Technical Action Required: No [2]
+Portal Action Required: No [2]
+Urgency: Low [2]
+
+QUICK ASSESSMENT
+The user's job has been in the queue for an unusually long time (15 hours) while typically taking around an hour [2]. This could be due to various factors such as resource availability, priority, or job submission parameters [3].
+
+ACTION
+Please be patient and do not cancel and resubmit the job, as this would be counterproductive [2]. The job will run when resources become available.
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Are there any specific resource constraints or priority settings that may be affecting the job's queue time [3]?
+- Have there been any recent changes to the job submission script or parameters [2]?
+
+EXAMPLE CUSTOMER REPLY
+Hello,
+Thank you for reaching out to us about your job's queue time. We understand that it can be frustrating when jobs take longer than expected to start. Please be assured that our system is designed to prioritize jobs based on various factors, including resource availability and priority [2]. We recommend waiting patiently and not canceling and resubmitting the job, as this can actually increase the queue time [2]. If you have any further questions or concerns, please don't hesitate to reach out.
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not cancel and resubmit jobs unnecessarily, as this can affect priority and queue time [2].
+- Be aware of resource availability and priority settings when submitting jobs [3].
+
+REFERENCE KEY
+[2] : HPCSSUP-59843
+[3] : https://slurm.schedmd.com/job_reason_codes.html::chunk::0000",r1:docs/local_official/current:https://docs.hpc.cam.ac.uk/hpc/user-guide/long.html::chunk::0001 | r2:unknown/ticket_memory/current:HPCSSUP-59843 | r3:external_docs/external_official/unknown:https://slurm.schedmd.com/job_reason_codes.html::chunk::0000,,,,
+HPCSSUP-97739,"Hello,
+Please advise, I do not know the password. I do not think I ever set up my password when I first activated my account.
+faylindfield@user0252 ~ % ssh fl483@login-icelake.hpc.cam.ac.uk
+<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+<>                                                        <>
+<>                        
+[FILE ATTACHMENT]
+                       <>
+<>                                                        <>
+<>                    RCS CSD3 Facility                   <>
+<>             Unauthorised Access Prohibited             <>
+<>    Use of this system constitutes acceptance of our    <>
+<>                     policies - see                     <>
+<> [http://docs.hpc.cam.ac.uk/hpc/user-guide/policies.html](http://docs.hpc.cam.ac.uk/hpc/user-guide/policies.html) <>
+<>        All data is stored in the United Kingdom.       <>
+<>                                                        <>
+<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+(fl483@login-icelake.hpc.cam.ac.uk) Password:
+Thank you for your help,
+Best wishes,
+Fay",HPC password,"CLASSIFICATION
+Category: Account / Login Issue
+Technical Action Required: Yes
+Escalation Required: Possibly
+Urgency: Medium
+
+QUICK ASSESSMENT
+The user is having trouble logging in to their HPC account and does not remember their password [1]. The user has tried using their Raven password, but it is not working [8].
+
+ACTION STEPS (HELPDESK)
+To resolve this issue, the user should try resetting their password using the UIS password management application [6]. If the user is still having trouble, they can try using their CRSid and Raven password to log in [1]. If the issue persists, the user may need to contact the HPC support team to have their account reset [8].
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Have you tried resetting your password using the UIS password management application [6]?
+- Are you using the correct CRSid and Raven password to log in [1]?
+
+EXAMPLE CUSTOMER REPLY
+Hello,
+Thank you for your help. I have tried resetting my password using the UIS password management application, but I am still having trouble logging in. I will try using my CRSid and Raven password to log in.
+Best regards,
+Fay
+
+SAFETY / POLICY NOTES
+- Users should always use their UIS password to log in to their HPC account [1].
+- Users should never share their password with anyone [1].
+
+REFERENCE KEY
+[1] : https://docs.hpc.cam.ac.uk/hpc/user-guide/quickstart.html::chunk::0000
+[6] : HPCSSUP-68215
+[8] : HPCSSUP-43190",r1:docs/local_official/legacy:https://docs.hpc.cam.ac.uk/hpc/user-guide/quickstart.html::chunk::0000 | r2:external_docs/external_official/unknown:https://www.intel.com/content/www/us/en/docs/mpi-library/developer-guide-linux/2021-16/problem-password-required.html::chunk::0004 | r3:unknown/ticket_memory/unknown:HPCSSUP-41367,,,,,"CLASSIFICATION
+Category: Account Access [4]
+Technical Action Required: Yes [4]
+Portal Action Required: No [4]
+Urgency: Medium [4]
+
+QUICK ASSESSMENT
+The user is having trouble accessing their HPC account and does not know their password [4]. It is likely that the user needs to use their UIS password to access the account [4].
+
+ACTION
+To resolve the issue, the user should try using their UIS password to access the account [4]. If the user is still having trouble, they may need to reset their password using the UIS password management application [5].
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Have you tried using your UIS password to access the account? [4]
+- Have you reset your password recently using the UIS password management application? [5]
+
+EXAMPLE CUSTOMER REPLY
+Hello,
+To access your HPC account, please try using your UIS password. If you are still having trouble, you may need to reset your password using the UIS password management application: https://password.raven.cam.ac.uk/ [5]. 
+Please let us know if you have any further issues.
+
+SAFETY / POLICY NOTES
+- Users should always use their UIS password to access their HPC account, unless a custom password has been set [4].
+- Users should never share their password with anyone [4].
+
+REFERENCE KEY
+[4] : HPCSSUP-68215
+[5] : https://docs.hpc.cam.ac.uk/hpc/user-guide/quickstart.html::chunk::0001",r1:docs/local_official/legacy:https://docs.hpc.cam.ac.uk/hpc/user-guide/quickstart.html::chunk::0000 | r2:unknown/ticket_memory/unknown:HPCSSUP-41367 | r3:docs/local_official/unknown:https://docs.hpc.cam.ac.uk/hpc/user-guide/waldur-pi.html::chunk::0000,,,,
+HPCSSUP-97675,"Hi,
+We would like to archive some old projects on our platform. Is RFS the only storage option available, or is RCS available from within the SRCP?
+Thanks
+Tom",SRCP Epi platform - storage query,"CLASSIFICATION
+Category: Storage / Archive
+Technical Action Required: Yes
+Portal Action Required: Yes (Self Service)
+Urgency: Medium
+
+QUICK ASSESSMENT
+RCS (Research Cold Store) and RFS (Research File Share) are available storage options on CSD3 [2]. RCS is suitable for archiving old projects, providing a location for inactive, archive data for long-term storage [2]. RFS is a highly resilient group-storage with hourly backups, designed for datasets requiring durable backups [2].
+
+ACTION STEPS (HELPDESK)
+To archive old projects, we recommend using the RCS storage service [2]. You can purchase RCS storage through the self-service portal [2]. If you need help with transferring data from RFS to RCS, please contact us at support@hpc.cam.ac.uk.
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- What is the estimated size of the data to be archived?
+- Do you have an existing RFS or RCS project, or would you like to set up a new one?
+
+EXAMPLE CUSTOMER REPLY
+Hello,
+To archive your old projects, you can use the RCS storage service, which can be purchased through the self-service portal: https://selfservice.uis.cam.ac.uk/ [2]. If you need assistance with transferring data from RFS to RCS, please don't hesitate to contact us.
+
+SAFETY / POLICY NOTES
+- Data should be migrated to an alternative storage platform on CSD3 or downloaded to another location before the platform is shut down [4].
+- Please ensure you have the necessary permissions and follow the proper procedures when transferring data between storage services [2].
+
+REFERENCE KEY
+[2] : https://docs.hpc.cam.ac.uk/hpc/user-guide/wbic.html::chunk::0004
+[4] : https://docs.hpc.cam.ac.uk/hpc/user-guide/wbic.html::chunk::0003",r1:unknown/ticket_memory/current:HPCSSUP-61311 | r2:docs/local_official/eol:https://docs.hpc.cam.ac.uk/hpc/user-guide/wbic.html::chunk::0004 | r3:unknown/ticket_memory/current:HPCSSUP-66096,,,,,"CLASSIFICATION
+Category: Storage / Archive Management [2]
+Technical Action Required: Yes [2]
+Portal Action Required: Yes (Self Service) [2]
+
+QUICK ASSESSMENT
+RCS (Research Cold Store) is available as an archive storage option on CSD3, providing a location for inactive, archive data for long-term storage [2]. RFS (Research File Share) is also available for highly resilient group-storage with hourly backups [2]. 
+
+ACTION
+To archive old projects, consider purchasing an RCS store through the self-service portal [2]. Alternatively, RFS can be used for group-shared capacity, which can be purchased through the storage self-service gateway [2]. 
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- What is the estimated size of the data to be archived?
+- Are there any specific requirements for data retention or accessibility?
+
+EXAMPLE CUSTOMER REPLY
+Hello,
+To archive your old projects, you can purchase an RCS store or RFS storage through our self-service portal: https://selfservice.uis.cam.ac.uk/ [2]. Please let us know if you need assistance with estimating the required storage size or have any specific requirements.
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Ensure that you have the necessary permissions and approvals before archiving or transferring data [2].
+- Be aware of the costs associated with purchasing storage through the self-service portal [2].
+
+REFERENCE KEY
+[2] : https://docs.hpc.cam.ac.uk/hpc/user-guide/wbic.html::chunk::0004",r1:unknown/ticket_memory/current:HPCSSUP-61311 | r2:docs/local_official/eol:https://docs.hpc.cam.ac.uk/hpc/user-guide/wbic.html::chunk::0004 | r3:external_docs/external_official/unknown:https://slurm.schedmd.com/archive::chunk::0000,,,,
+HPCSSUP-97660,"Dear HPC support team, 
+Apologies for bothering you about this.
+A couple of days ago, I added Victor (CC’d; CRSid: vj292) to our lab RDS (rds-djh1002-hodson-rds) and RFS-NFS (rfs-djh1002-hodson-rfs-nfs) space. However, in the self-service portal he is still showing as “Provisioning”.
+I just wanted to check whether there is anything we can do to speed up access to the data, or whether there is something we may have missed on our end.
+Many thanks for your help.
+Best wishes, 
+Joanna",Adding new user to the lab RFS/RDS space,"CLASSIFICATION
+Category: Storage / User Provisioning [3]
+Technical Action Required: Yes [3]
+Portal Action Required: Yes [2]
+Urgency: Medium [3]
+
+QUICK ASSESSMENT
+The user has added Victor to their RDS and RFS-NFS space, but Victor's status is still showing as ""Provisioning"" [3]. This suggests that Victor may not have accepted the terms and conditions for using the RDS storage [3].
+
+ACTION STEPS (HELPDESK)
+Please ask Victor to log in to the self-service portal at https://selfservice.uis.cam.ac.uk/ [2] and accept the terms and conditions for using the RDS storage [3]. If Victor has already accepted the terms and conditions, please ask him to log out and log back in to ensure that his session has been updated [3].
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Has Victor accepted the terms and conditions for using the RDS storage [3]?
+- Has Victor logged out and logged back in to ensure that his session has been updated [3]?
+
+EXAMPLE CUSTOMER REPLY
+Hello,
+Please ask Victor to log in to the self-service portal at https://selfservice.uis.cam.ac.uk/ [2] and accept the terms and conditions for using the RDS storage [3]. If Victor has already accepted the terms and conditions, please ask him to log out and log back in to ensure that his session has been updated [3].
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Users must accept the terms and conditions for using the RDS storage before they can access it [3].
+- Users may need to log out and log back in to ensure that their session has been updated [3].
+
+REFERENCE KEY
+[2] : https://docs.hpc.cam.ac.uk/hpc/user-guide/waldur-pi.html::chunk::0004
+[3] : HPCSSUP-88461",r1:unknown/ticket_memory/current:HPCSSUP-36160 | r2:docs/local_official/unknown:https://docs.hpc.cam.ac.uk/hpc/user-guide/waldur-pi.html::chunk::0004 | r3:unknown/ticket_memory/current:HPCSSUP-88461,,,,,"CLASSIFICATION
+Category: Storage / Provisioning [4]
+Technical Action Required: Yes [4]
+Portal Action Required: Yes (Self Service) [1][2]
+Urgency: Medium [4]
+
+QUICK ASSESSMENT
+The user has added Victor to their lab RDS and RFS-NFS space, but Victor's status is still showing as ""Provisioning"" in the self-service portal [4]. This issue is similar to a previously resolved ticket where the user needed to accept the terms and conditions to gain access to the RDS storage [4].
+
+ACTION STEPS (HELPDESK)
+1. Inform Victor to check his email for an invitation to accept the terms and conditions for using the RDS storage [4].
+2. If Victor has already accepted the terms and conditions, ask him to log out and log back in to ensure the new configuration is applied [4].
+3. If the issue persists, request Victor to check if he is part of the correct group (rds-<project_name>-users) and if he has the necessary permissions to access the RDS storage [4].
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Has Victor accepted the terms and conditions for using the RDS storage?
+- Is Victor part of the correct group (rds-<project_name>-users) and does he have the necessary permissions to access the RDS storage?
+
+EXAMPLE CUSTOMER REPLY
+Hello,
+Please ask Victor to check his email for an invitation to accept the terms and conditions for using the RDS storage. If he has already accepted, please ask him to log out and log back in. If the issue persists, please let us know and we will investigate further.
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Users need to accept the terms and conditions to gain access to the RDS storage [4].
+- Group ownership and permissions are crucial for accessing RDS storage [4].
+
+REFERENCE KEY
+[1] : HPCSSUP-36160
+[2] : https://docs.hpc.cam.ac.uk/hpc/user-guide/waldur-pi.html::chunk::0004
+[4] : HPCSSUP-88461",r1:unknown/ticket_memory/current:HPCSSUP-36160 | r2:docs/local_official/unknown:https://docs.hpc.cam.ac.uk/hpc/user-guide/waldur-pi.html::chunk::0004 | r3:external_docs/external_official/unknown:https://slurm.schedmd.com/rest_api.html::chunk::0128,,,,
+HPCSSUP-97477,"Hi,
+I need read and write access to the rds project rds-bru20-ukbb with the project ID isCN5CtgAac. I don’t think it’s possible to add two data managers, but I don’t think I can upload files to that rds without write permission. How else can this permission be given? Thanks!
+Best wishes,
+Emilia",Getting write permission to rds project,"CLASSIFICATION
+Category: Storage / Permissions Management [1]
+Technical Action Required: Yes [7]
+Portal Action Required: Yes [2]
+Urgency: Medium [1]
+
+QUICK ASSESSMENT
+The user needs read and write access to the RDS project rds-bru20-ukbb with project ID isCN5CtgAac [1]. By default, users only have read access to RDS folders, and a data manager needs to create a subdirectory for users to write to [7].
+
+ACTION STEPS (HELPDESK)
+To resolve this issue, the user should contact one of the data managers of the project to request write access [7]. The data managers can create a subdirectory for the user to write to, granting them the necessary permissions [7].
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Can you please confirm the names of the data managers for the project rds-bru20-ukbb?
+- Have you tried contacting the data managers to request write access?
+
+EXAMPLE CUSTOMER REPLY
+Hello,
+To gain write access to the RDS project rds-bru20-ukbb, you will need to contact one of the data managers and request that they create a subdirectory for you to write to [7]. If you have any further issues, please don't hesitate to reach out.
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- By default, users only have read access to RDS folders, and a data manager needs to create a subdirectory for users to write to [7].
+- The Principal Investigator (PI) is responsible for managing team members and inviting users to the project [8].
+
+REFERENCE KEY
+[1] : HPCSSUP-75028
+[2] : https://docs.hpc.cam.ac.uk/hpc/user-guide/waldur-pi.html::chunk::0006
+[7] : HPCSSUP-34408
+[8] : https://docs.hpc.cam.ac.uk/hpc/user-guide/waldur-pi.html::chunk::0005",r1:unknown/ticket_memory/current:HPCSSUP-75028 | r2:docs/local_official/unknown:https://docs.hpc.cam.ac.uk/hpc/user-guide/waldur-pi.html::chunk::0006 | r3:external_docs/external_official/unknown:https://slurm.schedmd.com/rest_api.html::chunk::0128,,,,,"CLASSIFICATION
+Category: Storage / Access Management [5]
+Technical Action Required: Yes [5]
+Escalation Required: Possibly [5]
+Urgency: Medium [5]
+
+QUICK ASSESSMENT
+The user is requesting read and write access to the RDS project rds-bru20-ukbb with project ID isCN5CtgAac [1]. According to the documentation, data managers have full read/write/execute permissions [7], but it is unclear if the user has been added as a data manager or just a user [5].
+
+ACTION STEPS (HELPDESK)
+To resolve this issue, the helpdesk should check the project settings and user permissions in the Self Service Storage Portal [2]. If the user is listed as a data manager, they should have full read/write/execute permissions [7]. If not, the helpdesk should add the user as a data manager or create a subdirectory with write permissions for the user [5].
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Can you confirm if you are listed as a data manager for the project rds-bru20-ukbb [5]?
+- Have you tried logging out and back in again to see if the permissions are updated [7]?
+
+EXAMPLE CUSTOMER REPLY
+Hello,
+To resolve the issue with read and write access to the RDS project rds-bru20-ukbb, I will check the project settings and user permissions in the Self Service Storage Portal [2]. If you are listed as a data manager, you should have full read/write/execute permissions [7]. If not, I will add you as a data manager or create a subdirectory with write permissions for you [5]. Please let me know if you have any further questions or concerns.
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Data managers have full read/write/execute permissions [7].
+- Users should be added as data managers or have a subdirectory created with write permissions to access project resources [5].
+
+REFERENCE KEY
+[1] : HPCSSUP-75028
+[2] : https://docs.hpc.cam.ac.uk/hpc/user-guide/waldur-pi.html::chunk::0006
+[5] : HPCSSUP-34408
+[7] : HPCSSUP-54197",r1:unknown/ticket_memory/current:HPCSSUP-75028 | r2:docs/local_official/unknown:https://docs.hpc.cam.ac.uk/hpc/user-guide/waldur-pi.html::chunk::0006 | r3:unknown/ticket_memory/current:HPCSSUP-73668,,,,
+HPCSSUP-96168,"To whom it may concern,
+I have submitted a job on the HPC, and it took almost 2 weeks to get scheduled. I was wondering if there were any issues with my setup. The job script I used is below.
+#!/bin/bash
+#SBATCH -J job_gpu_1
+#SBATCH -o /home/av670/logfiles/job_gpu_1.log
+#SBATCH -A SVOBODA-SL3-GPU
+#SBATCH -p ampere
+#SBATCH --gres=gpu:4
+#SBATCH --time=12:00:00
+echo ""This job is running on: $(hostname)""
+echo ""Present working directory: $(pwd)""
+echo ""Job ID: $SLURM_JOB_ID""
+echo ""Job start time: $(date)""
+module purge
+echo ""loading python""
+module load python/3.11.0-icl
+echo ""loading cuda""
+module load cuda/12.1
+echo ""activating venv""
+source /rds/user/av670/hpc-work/venvs/venv/bin/activate
+echo ""running file""
+python -u /home/av670/projects/part-ii-project/job.py
+Kind regards,
+Amogh Vishwakarma",HPC Job Scheduling Error,"CLASSIFICATION
+Category: HPC / Job Submission [1]
+Technical Action Required: Yes [1]
+Portal Action Required: No [1]
+Urgency: Medium [1]
+
+QUICK ASSESSMENT
+The user's job took almost 2 weeks to get scheduled on the HPC, and they are wondering if there were any issues with their setup [1]. The job script provided requests 4 GPUs per node, which is a valid configuration for the ampere partition [1][4]. However, the waiting time for GPU jobs can be long due to the high demand and limited resources [2][3][8].
+
+ACTION STEPS (HELPDESK)
+1. Review the job script and submission parameters to ensure they are correct and optimal for the ampere partition [1][4].
+2. Check the job's status and priority in the queue using `squeue` or `qstat` [6].
+3. Consider submitting the job to a different partition or adjusting the submission parameters to reduce the waiting time [6].
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Can you provide more information about the job's requirements and constraints, such as memory and CPU usage?
+- Have you tried submitting the job with a lower priority or to a different partition?
+
+EXAMPLE CUSTOMER REPLY
+Hello,
+I have reviewed your job script and submission parameters, and they appear to be correct for the ampere partition. However, the waiting time for GPU jobs can be long due to the high demand and limited resources. I recommend checking the job's status and priority in the queue using `squeue` or `qstat`. If you need to reduce the waiting time, you may consider submitting the job to a different partition or adjusting the submission parameters.
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Be aware of the job's priority and waiting time in the queue, and plan accordingly [2][3][8].
+- Follow the guidelines for submitting jobs to the ampere partition, including requesting the correct number of GPUs per node [1][4].
+
+REFERENCE KEY
+[1] : https://docs.hpc.cam.ac.uk/hpc/user-guide/a100.html::chunk::0001
+[2] : HPCSSUP-70211
+[3] : HPCSSUP-59877
+[4] : https://docs.hpc.cam.ac.uk/hpc/user-guide/batch.html::chunk::0005
+[6] : https://docs.hpc.cam.ac.uk/hpc/user-guide/quickstart.html::chunk::0008
+[8] : HPCSSUP-59843",r1:docs/local_official/current:https://docs.hpc.cam.ac.uk/hpc/user-guide/a100.html::chunk::0001 | r2:unknown/ticket_memory/current:HPCSSUP-70211 | r3:unknown/ticket_memory/current:HPCSSUP-59877,,,,,"CLASSIFICATION
+Category: HPC / Job Submission
+Technical Action Required: Yes
+Escalation Required: Possibly
+Urgency: Medium
+
+QUICK ASSESSMENT
+The user's job took almost 2 weeks to get scheduled on the HPC, and they are wondering if there were any issues with their setup [1]. The job script is provided, and it requests 4 GPUs per node on the ampere partition [1]. The retrieved documents suggest that the ampere nodes have 4 NVIDIA Ampere A100 GPUs each, and the user can request 1, 2, 3, or 4 GPUs for a single node job [6]. However, multinode jobs will need to request 4 GPUs per node [6].
+
+ACTION STEPS (HELPDESK)
+1. Review the job script and submission parameters to ensure they are correct and follow the guidelines for the ampere partition [1][6].
+2. Check the job's status in the queue using `squeue` or `qstat` to see if there are any issues or errors [8].
+3. If the job is still pending, consider canceling and resubmitting the job with adjusted parameters, such as increasing the number of GPUs requested or adjusting the walltime [4][7].
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Can you provide more information about the job's output or error files?
+- Have you tried submitting the job with a different number of GPUs or nodes?
+- Are there any specific requirements or constraints for the job that may be causing the delay?
+
+EXAMPLE CUSTOMER REPLY
+Hello,
+Thank you for reaching out to us about your job submission issue. We have reviewed your job script and submission parameters, and we recommend adjusting the number of GPUs requested or the walltime to see if that resolves the issue. Please try resubmitting the job with the adjusted parameters and let us know if you have any further issues.
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Be cautious when adjusting job submission parameters, as this can affect the job's priority and scheduling [4][7].
+- Ensure that the job script and submission parameters follow the guidelines for the ampere partition [1][6].
+
+REFERENCE KEY
+[1] : https://docs.hpc.cam.ac.uk/hpc/user-guide/a100.html::chunk::0001
+[4] : HPCSSUP-59877
+[6] : https://docs.hpc.cam.ac.uk/hpc/user-guide/batch.html::chunk::0005
+[7] : HPCSSUP-87714
+[8] : https://docs.hpc.cam.ac.uk/hpc/user-guide/quickstart.html::chunk::0008",r1:docs/local_official/current:https://docs.hpc.cam.ac.uk/hpc/user-guide/a100.html::chunk::0001 | r2:unknown/ticket_memory/current:HPCSSUP-70211 | r3:external_docs/external_official/unknown:https://slurm.schedmd.com/rest_api.html::chunk::0133,,,,
+HPCSSUP-95504,"Hello,
+I have been trying to compile the following package on GPU for a Molecular Dynamics code called LAMMPS ([https://github.com/wcwitt/symmetrix/blob/main/pair_symmetrix/README.md](https://github.com/wcwitt/symmetrix/blob/main/pair_symmetrix/README.md)). Given that some of the listed requirements aren’t directly available on CSD3, I have downloaded and compiled CUDA 12.4.1 and CMAKE 3.29. Before compilation I run module purge, then load the following modules:
+1) gcc/9   2) openmpi/gcc/9.3/4.0.4   3) gcc/11
+Gcc 11 is required to compile, therefore I have checked that it overrides the automatically loaded gcc/9 bundled with openmpi. Furthermore, I have checked nvcc –version to check CUDA is correctly included in my path, and the same for CMAKE. I then run the following cmake command:
+cmake \
+-B build-gpu \
+-D CMAKE_BUILD_TYPE=Release \
+-D CMAKE_CXX_STANDARD=20 \
+-D CMAKE_CUDA_COMPILER=$CUDA_HOME/bin/nvcc \
+-D CMAKE_CXX_COMPILER=$CUDA_HOME/bin/nvcc \
+-D CUDAToolkit_ROOT=$CUDA_HOME \
+-D CUDA_TOOLKIT_ROOT_DIR=$CUDA_HOME \
+-D CMAKE_CXX_STANDARD_REQUIRED=ON \
+-D CMAKE_CXX_COMPILER=$(pwd)/lib/kokkos/bin/nvcc_wrapper \
+-D CMAKE_CXX_FLAGS=""${CMAKE_CXX_FLAGS} -ffast-math"" \
+-D CMAKE_CUDA_COMPILER=~/rds/rds-ukaea-ap002-mOlK9qn0PlQ/ir-dick3/codes/lammps-symmetrix/cuda-12.4.1/bin/nvcc \
+-D CUDA_TOOLKIT_ROOT_DIR=~/rds/rds-ukaea-ap002-mOlK9qn0PlQ/ir-dick3/codes/lammps-symmetrix/cuda-12.4.1 \
+-D CUDA_INCLUDE_DIRS=~/rds/rds-ukaea-ap002-mOlK9qn0PlQ/ir-dick3/codes/lammps-symmetrix/cuda-12.4.1/include \
+-D CUDA_CUDART_LIBRARY=~/rds/rds-ukaea-ap002-mOlK9qn0PlQ/ir-dick3/codes/lammps-symmetrix/cuda-12.4.1/lib64 \
+-D CMAKE_CUDA_ARCHITECTURES=80 \
+-D BUILD_SHARED_LIBS=ON \
+-D BUILD_OMP=ON \
+-D BUILD_MPI=ON \
+-D PKG_KOKKOS=ON \
+-D Kokkos_ENABLE_SERIAL=ON \
+-D Kokkos_ENABLE_OPENMP=ON \
+-D Kokkos_ENABLE_AGGRESSIVE_VECTORIZATION=ON \
+-D Kokkos_ENABLE_CUDA=ON \
+-D Kokkos_ARCH_AMPERE80=ON \
+-D SYMMETRIX_KOKKOS=ON \
+-D SYMMETRIX_SPHERICART_CUDA=ON \
+cmake
+This runs without any errors (except for a CMAKE FIND_CUDA routine deprecated warning, however this shouldn’t be an issue as cmake shows it has found all the correct CUDA libraries, hence the cmake flags for different paths). After running make on this cmake config the binary compiles without any errors. When I run the binary, I get the following error:
+‘’’
+[gpu-q-49:22268] mca_base_component_repository_open: unable to open mca_btl_openib: libosmcomp.so.4: cannot open shared object file: No such file or directory (ignored) [gpu-q-49:22268] mca_base_component_repository_open: unable to open mca_btl_usnic: libfabric.so.1: cannot open shared object file: No such file or directory (ignored) [gpu-q-49:22268] mca_base_component_repository_open: unable to open mca_mtl_ofi: libfabric.so.1: cannot open shared object file: No such file or directory (ignored) -------------------------------------------------------------------------- Primary job terminated normally, but 1 process returned a non-zero exit code. Per user-direction, the job has been aborted. -------------------------------------------------------------------------- -------------------------------------------------------------------------- mpirun noticed that process rank 0 with PID 22268 on node gpu-q-49 exited on signal 4 (Illegal instruction).
+‘’’
+This is from running on a single GPU on the ukaea-amp partition. I load my CUDA 12.4.1 compilation, the same openmpi module used for compilation of lammps and gcc/11. I can’t understand why exactly there is a problem here. Any help on this issue would be hugely appreciated!
+Many thanks
+Ashley Dickson",Issues with GPU compilation of a package,"CLASSIFICATION
+Category: Software Installation / LAMMPS [1]
+Technical Action Required: Yes [1]
+Portal Action Required: No [1]
+
+QUICK ASSESSMENT
+The user is experiencing issues with compiling and running LAMMPS on the CSD3 system, specifically with the GPU-enabled version [1]. The error messages indicate problems with loading shared libraries, including libosmcomp.so.4 and libfabric.so.1 [2].
+
+ACTION STEPS (HELPDESK)
+To resolve the issue, we recommend the following steps:
+1. Ensure that the correct modules are loaded for the GPU architecture, including the rhel8/default-amp module [3].
+2. Verify that the CUDA version is compatible with the GPU architecture [4].
+3. Check the LAMMPS installation instructions for CSD3 and ensure that the correct flags are used for the GPU-enabled version [1].
+4. If issues persist, try compiling LAMMPS with a different version of CUDA or with a different compiler suite [5].
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Can you provide more details about the LAMMPS version and the CUDA version used?
+- Have you tried compiling LAMMPS with a different compiler suite or with a different version of CUDA?
+
+EXAMPLE CUSTOMER REPLY
+Hello,
+Thank you for your prompt response. I will try the suggested steps and verify that the correct modules are loaded for the GPU architecture. If issues persist, I will try compiling LAMMPS with a different version of CUDA or with a different compiler suite.
+
+SAFETY / POLICY NOTES
+- Ensure that the correct modules are loaded for the GPU architecture to avoid compatibility issues [1].
+- Verify that the CUDA version is compatible with the GPU architecture to avoid compilation errors [4].
+
+REFERENCE KEY
+[1] : https://docs.hpc.cam.ac.uk/hpc/software-packages/lammps.html::chunk::0002
+[2] : HPCSSUP-58482
+[3] : https://docs.hpc.cam.ac.uk/hpc/software-packages/lammps.html::chunk::0001
+[4] : HPCSSUP-13239
+[5] : https://docs.hpc.cam.ac.uk/hpc/software-packages/openmm.html::chunk::0000",r1:docs/local_official/current:https://docs.hpc.cam.ac.uk/hpc/software-packages/lammps.html::chunk::0002 | r2:unknown/ticket_memory/current:HPCSSUP-58482 | r3:docs/local_official/current:https://docs.hpc.cam.ac.uk/hpc/software-packages/lammps.html::chunk::0001,,,,,"CLASSIFICATION
+Category: Software Installation / Compilation [1]
+Technical Action Required: Yes [1]
+Portal Action Required: No [1]
+
+QUICK ASSESSMENT
+The user is experiencing issues with compiling and running LAMMPS on the CSD3 cluster, specifically with loading shared libraries [2]. The error messages indicate that the libraries libosmcomp.so.4, libfabric.so.1, and libnvidia-ml.so.1 cannot be found [2]. This suggests a potential issue with the OpenMPI installation or configuration [3].
+
+ACTION STEPS (HELPDESK)
+To resolve this issue, we recommend recompiling LAMMPS on a GPU node using the available modules [4]. The user should load the necessary modules, including the OpenMPI module, and then compile LAMMPS using the provided presets [1]. Additionally, the user should ensure that the compiler environment is properly set up for both interactive and non-interactive logins [5].
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Can you provide more information about the specific OpenMPI module you are using?
+- Have you tried recompiling LAMMPS on a GPU node using the available modules?
+
+EXAMPLE CUSTOMER REPLY
+Hello,
+Thank you for your request. To resolve the issue with compiling and running LAMMPS, please try recompiling on a GPU node using the available modules. Ensure that you load the necessary modules, including the OpenMPI module, and then compile LAMMPS using the provided presets. If you have any further issues, please provide more information about the specific OpenMPI module you are using.
+
+SAFETY / POLICY NOTES
+- When compiling and running applications on the CSD3 cluster, it is essential to use the available modules and follow the provided documentation to ensure compatibility and avoid potential issues [1][2].
+
+REFERENCE KEY
+[1] : https://docs.hpc.cam.ac.uk/hpc/software-packages/lammps.html::chunk::0002
+[2] : HPCSSUP-58482
+[3] : https://docs.open-mpi.org/en/main/launching-apps/troubleshooting.html::chunk::0000
+[4] : https://docs.hpc.cam.ac.uk/hpc/software-packages/lammps.html::chunk::0001
+[5] : HPCSSUP-13239",r1:docs/local_official/current:https://docs.hpc.cam.ac.uk/hpc/software-packages/lammps.html::chunk::0002 | r2:unknown/ticket_memory/current:HPCSSUP-58482 | r3:external_docs/external_official/unknown:https://docs.open-mpi.org/en/main/launching-apps/troubleshooting.html::chunk::0000,,,,
+HPCSSUP-95197,"Dear HPC team
+I hope you are well.
+I’m currently experiencing an issue when trying to start a new VNC session. The password window in the VNC viewer keeps blinking so I can not enter the password, and the connection never stabilises. I also tried to connect to the GPU node (gpu-r-4) directly to check whether a session was running, but the connection closes immediately after entering my password with the message: Connection closed by 10.43.79.4 port 22
+It seems I am unable to access gpu-r-4 to create or manage a new session. Could you please advise on how to resolve this and re-establish a working VNC connection? Since I really need to finish some of the work and it just stopped working.
+Thank you very much for your help.
+Iryna",Unable to connect to GPU node (gpu-r-4) and start new VNC session,"CLASSIFICATION
+Category: VNC Connection Issue
+Technical Action Required: Yes
+Escalation Required: Possibly
+Urgency: Medium
+
+QUICK ASSESSMENT
+The user is experiencing issues with starting a new VNC session and connecting to the GPU node (gpu-r-4) [1]. The password window in the VNC viewer keeps blinking, and the connection never stabilizes [1]. The user has also tried connecting to the GPU node directly, but the connection closes immediately after entering the password [1]. 
+
+ACTION STEPS (HELPDESK)
+Try using a different gpu-r node (change the 4) as suggested in [2]. If the issue persists, rename the ~/.vnc folder to something else and stop all VNC server instances, then restart the VNC server [6]. 
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Can you try connecting to a different gpu-r node and see if the issue persists?
+- Have you tried renaming the ~/.vnc folder and restarting the VNC server?
+- Are you using the correct VNC password, and is it different from your login password [1]?
+
+EXAMPLE CUSTOMER REPLY
+Hello Iryna,
+Please try using a different gpu-r node (change the 4) as suggested in our previous ticket [2]. If the issue persists, try renaming the ~/.vnc folder to something else and stop all VNC server instances, then restart the VNC server [6]. 
+Please get back in touch if you are still having issues connecting to the cluster.
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not guess a target path or node without verified evidence [1][2].
+- Always use the correct VNC password, and ensure it is different from your login password [1].
+
+REFERENCE KEY
+[1] : https://docs.hpc.cam.ac.uk/hpc/user-guide/turbovnc.html::chunk::0001
+[2] : HPCSSUP-100134
+[6] : HPCSSUP-73903",r1:docs/local_official/current:https://docs.hpc.cam.ac.uk/hpc/user-guide/turbovnc.html::chunk::0001 | r2:unknown/ticket_memory/current:HPCSSUP-100134 | r3:docs/local_official/current:https://docs.hpc.cam.ac.uk/hpc/user-guide/turbovnc.html::chunk::0002,,,,,"CLASSIFICATION
+Category: VNC Connection Issue
+Technical Action Required: Yes
+Escalation Required: Possibly
+Urgency: Medium
+
+QUICK ASSESSMENT
+The user is experiencing issues with starting a new VNC session and connecting to the GPU node (gpu-r-4) [1]. The password window in the VNC viewer keeps blinking, and the connection never stabilizes [1]. The user has also tried connecting to the GPU node directly, but the connection closes immediately after entering the password [1].
+
+ACTION STEPS (HELPDESK)
+To resolve the issue, the user can try the following steps:
+1. Check the SSH settings and ensure that passwordless authorization by public keys is enabled and configured [6].
+2. Try renaming the ~/.vnc folder to something else and then stop all VNC server instances [8].
+3. Create a new SSH tunnel using the instructions provided in the documentation [4].
+4. Use the TurboVNC client to connect to the VNC server, and ensure that the correct display number and hostname are used [1].
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Can you provide more details about the error message you receive when trying to connect to the GPU node?
+- Have you tried connecting to a different GPU node or a login node?
+- Are you using the correct VNC password and login credentials?
+
+EXAMPLE CUSTOMER REPLY
+Hello,
+To resolve the VNC connection issue, please try the steps outlined above. If you are still experiencing issues, please provide more details about the error message you receive, and we will be happy to assist you further.
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Ensure that the user is using the correct VNC password and login credentials [1].
+- Be cautious when creating a new SSH tunnel, and ensure that the correct display number and hostname are used [4].
+
+REFERENCE KEY
+[1] : https://docs.hpc.cam.ac.uk/hpc/user-guide/turbovnc.html::chunk::0001
+[4] : https://docs.hpc.cam.ac.uk/hpc/user-guide/turbovnc.html::chunk::0002
+[6] : https://www.intel.com/content/www/us/en/docs/mpi-library/developer-guide-linux/2021-16/problem-password-required.html::chunk::0005
+[8] : HPCSSUP-73903",r1:docs/local_official/current:https://docs.hpc.cam.ac.uk/hpc/user-guide/turbovnc.html::chunk::0001 | r2:unknown/ticket_memory/current:HPCSSUP-100134 | r3:external_docs/external_official/unknown:https://www.intel.com/content/www/us/en/docs/mpi-library/developer-guide-linux/2021-16/problem-password-required.html::chunk::0004,,,,
+HPCSSUP-95016,"Hello,
+I have accepted the PI invitation for the project:
+""Agentic AI Workflow Benchmarking and GPU Optimization for Verifiable Automation""
+(Hypereum Ltd – UKRI AIRR)
+My PI role is active and I can access the AIRR portal, however:
+- The Dawn (A100 80GB) allocation is not visible under ""UKRI Allocatable Offerings""
+- I only see Isambard-AI offerings (IAG, IAI, IARA)
+Could you please attach the Dawn allocation to my AIRR project and enable my Dawn user account provisioning?
+Thank you!
+Giovanni De Lillo
+Principal Investigator – Hypereum Ltd",Dawn A100 allocation not visible on AIRR portal,"CLASSIFICATION
+Category: Storage / Access Management [1]
+Technical Action Required: Yes [1]
+Portal Action Required: Yes (Waldur) [6]
+Urgency: Medium [1]
+
+QUICK ASSESSMENT
+The user, Giovanni De Lillo, has accepted the PI invitation for the project ""Agentic AI Workflow Benchmarking and GPU Optimization for Verifiable Automation"" but is unable to see the Dawn (A100 80GB) allocation under ""UKRI Allocatable Offerings"" [7]. The user can only see Isambard-AI offerings [7]. This suggests that the Dawn allocation may not be properly linked to the user's project or that there is an issue with the user's access permissions [1][6].
+
+ACTION STEPS (HELPDESK)
+1. Verify the user's project details and allocation in the Waldur portal [6].
+2. Check if the Dawn allocation is properly linked to the user's project [1].
+3. If necessary, manually add the Dawn allocation to the user's project [1].
+4. Ensure the user has the correct access permissions and roles in the Waldur portal [6].
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Can you please provide more details about your project and the expected allocation [5]?
+- Have you accepted the terms and conditions for using the Dawn system [6]?
+
+EXAMPLE CUSTOMER REPLY
+Hello Giovanni,
+Thank you for reaching out to us. We apologize for the issue you are experiencing with accessing the Dawn allocation. We will investigate this matter further and ensure that your project is properly linked to the Dawn allocation. Please allow us some time to resolve this issue. If you have any further questions or concerns, please do not hesitate to contact us.
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Ensure that all users have accepted the terms and conditions for using the Dawn system before providing access [6].
+- Verify user identities and project details before manually adding allocations or modifying access permissions [1][6].
+
+REFERENCE KEY
+[1] : https://docs.hpc.cam.ac.uk/hpc/user-guide/pvc.html::chunk::0001
+[5] : HPCSSUP-74386
+[6] : https://docs.hpc.cam.ac.uk/hpc/user-guide/waldur-pi.html::chunk::0004
+[7] : HPCSSUP-95045",r1:docs/local_official/current:https://docs.hpc.cam.ac.uk/hpc/user-guide/pvc.html::chunk::0001 | r2:unknown/ticket_memory/current:HPCSSUP-98329 | r3:docs/local_official/current:https://docs.hpc.cam.ac.uk/hpc/user-guide/pvc.html::chunk::0000,,,,,"CLASSIFICATION
+Category: Access / Resource Allocation [1]
+Technical Action Required: Yes [1]
+Portal Action Required: Yes [2]
+Urgency: Medium [1]
+
+QUICK ASSESSMENT
+The user has accepted the PI invitation for the project ""Agentic AI Workflow Benchmarking and GPU Optimization for Verifiable Automation"" but is unable to see the Dawn allocation under ""UKRI Allocatable Offerings"" [1]. The user needs assistance with attaching the Dawn allocation to their AIRR project and enabling their Dawn user account provisioning [2].
+
+ACTION STEPS (HELPDESK)
+1. Verify the project details and user information to ensure correct allocation [1].
+2. Check the Waldur system for any issues with the project or user account [1].
+3. Manually add the Dawn allocation to the user's project in the Waldur system if necessary [2].
+4. Provision the user's Dawn account and ensure they have access to the required resources [2].
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Can you provide more information about the project and the resources required [1]?
+- Have you tried accessing the Dawn allocation through the AIRR portal [2]?
+
+EXAMPLE CUSTOMER REPLY
+Hello,
+Thank you for reaching out to us about the issue with your Dawn allocation. We apologize for the inconvenience and are working to resolve the issue as soon as possible. Please let us know if you have any further questions or concerns.
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Ensure that all actions are taken in accordance with the university's policies and procedures for resource allocation and access [1][2].
+- Verify user identities and project information before making any changes to allocations or accounts [1].
+
+REFERENCE KEY
+[1] : https://docs.hpc.cam.ac.uk/hpc/user-guide/pvc.html::chunk::0001
+[2] : HPCSSUP-98329",r1:docs/local_official/current:https://docs.hpc.cam.ac.uk/hpc/user-guide/pvc.html::chunk::0001 | r2:unknown/ticket_memory/current:HPCSSUP-98329 | r3:docs/local_official/current:https://docs.hpc.cam.ac.uk/hpc/user-guide/pvc.html::chunk::0000,,,,
+HPCSSUP-93947,"Dear IT team
+I am Alejo Nevado-Holgado, user ""n_neva1"" of Dawn. A couple of months ago I was trying to SSH into dawn from my laptop, but in order to do that I first had to create an SSH key with the following command:
+ssh-keygen -t ed25519 -a 100 -C ""dn_neva1@dawn (AIRR-p19)""
+Then I sent the public key to this email address in a file called ""id_ed25519.pub"". A couple of days ago I reinstalled Ubuntu, and now I am not able to SSH into Dawn again. I didn't save the private side of the key that I generated before. I was wondering, how could I connect to Dawn again from my laptop? Claude says that I have to generate a new key and send to you the new ""id_ed25519.pub"" file. I attach it in case this would actually work.
+Very best and many thanks for your help
+Alejo
+Alejo Nevado-Holgado
+Associate Professor
+Department of Psychiatry & Big Data Institute | University of Oxford | Oxford | OX3 7JX
+alejo.nevado-holgado@psych.ox.ac.uk<[alejo.nevado-holgado@psych.ox.ac.uk](mailto:alejo.nevado-holgado@psych.ox.ac.uk)>
+[cid:108711ff-f78d-4b60-b2a2-bb8b3941fc7a]  [cid:af762036-bceb-4b4b-a09e-6924cd209afa]",Lost private side of the SSH key,"CLASSIFICATION
+Category: SSH Access / Key Management [1][3]
+Technical Action Required: Yes [1]
+Urgency: Medium [1]
+
+QUICK ASSESSMENT
+The user, Alejo Nevado-Holgado, is unable to SSH into Dawn after reinstalling Ubuntu and not saving the private side of the previously generated SSH key [1]. The user has generated a new key and attached the public key (""id_ed25519.pub"") for assistance [1].
+
+ACTION STEPS (HELPDESK)
+1. Verify the user's identity and ensure the new public key is correctly associated with their account [1][6].
+2. Apply the new public key to the user's account to enable SSH access [1][6].
+3. Inform the user to try connecting to Dawn via SSH using the new key and provide the correct SSH command: `ssh <username>@login-dawn.hpc.cam.ac.uk` [2].
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Can you confirm your username on the! Dawn system?
+- Have you set up Multi-Factor Authentication (MFA) for your account [7]?
+
+EXAMPLE CUSTOMER REPLY
+Hello Alejo,
+
+To regain access to Dawn, we will need to add your new public key to your account. Please find the new key attached to this email. You can then try connecting to Dawn using the command: `ssh n_neva1@login-dawn.hpc.cam.ac.uk`. If you encounter any issues, please let us know.
+
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Ensure the new public key is correctly associated with the user's account to maintain security [1][6].
+- Users must set up MFA to access Dawn [7].
+
+REFERENCE KEY
+[1] : HPCSSUP-75228
+[2] : https://docs.hpc.cam.ac.uk/hpc/user-guide/waldur-user.html::chunk::0006
+[3] : https://docs.hpc.cam.ac.uk/hpc/user-guide/waldur-user.html::chunk::0005
+[6] : HPCSSUP-88322
+[7] : https://docs.hpc.cam.ac.uk/hpc/user-guide/mfa.html::chunk::0002",r1:unknown/ticket_memory/current:HPCSSUP-75228 | r2:docs/local_official/unknown:https://docs.hpc.cam.ac.uk/hpc/user-guide/waldur-user.html::chunk::0006 | r3:docs/local_official/unknown:https://docs.hpc.cam.ac.uk/hpc/user-guide/waldur-user.html::chunk::0005,,,,,"CLASSIFICATION
+Category: SSH Access / Key Management [1]
+Technical Action Required: Yes [1]
+Portal Action Required: No [1]
+Urgency: Medium [1]
+
+QUICK ASSESSMENT
+The user is unable to SSH into Dawn after reinstalling Ubuntu and not saving the private key from the previously generated SSH key pair [1]. The user has generated a new key pair and attached the public key for assistance [1].
+
+ACTION
+To regain access to Dawn, the new public key needs to be added to the user's account [1]. The user should be instructed to send the new public key to the support team for addition to their account [1].
+
+EXAMPLE CUSTOMER REPLY
+Hello Alejo,
+To regain access to Dawn, please send us the new public key you've generated. We will add it to your account, and you should then be able to SSH into Dawn again.
+If you have any issues or concerns, please don't hesitate to reach out.
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Users must generate a new SSH key pair and provide the public key if the previous private key is lost or inaccessible [1].
+- The support team will add the new public key to the user's account to restore SSH access [1].
+
+REFERENCE KEY
+[1] : HPCSSUP-75228",r1:unknown/ticket_memory/current:HPCSSUP-75228 | r2:docs/local_official/unknown:https://docs.hpc.cam.ac.uk/hpc/user-guide/waldur-user.html::chunk::0006 | r3:external_docs/external_official/unknown:https://slurm.schedmd.com/authentication.html::chunk::0001,,,,
+HPCSSUP-92768,"To whom it may concern,
+We have a job on HPC that takes more than 36 hours to run, and we would like to try the check point method. Could you provide some examples of how to use the check point?
+Thanks,
+Qi",check point example,"CLASSIFICATION
+Category: Checkpointing / Long Jobs [1][4]
+Technical Action Required: Yes [1]
+Portal Action Required: No [1]
+Urgency: Medium [1]
+
+QUICK ASSESSMENT
+The user is looking to use checkpointing for a job that takes more than 36 hours to run [1]. Checkpointing is a method to save the state of a job at regular intervals, allowing it to be resumed from the last checkpoint in case of a failure or timeout [1][4]. However, the user is unsure of how to implement checkpointing in their job [1].
+
+ACTION STEPS (HELPDESK)
+To use checkpointing, the user can refer to the documentation for their specific software or programming language [1][6]. For example, in PyTorch, checkpointing can be implemented using the `torch.utils.checkpoint` module [6]. The user can also consider using the long queue, which allows jobs to run for up to 7 days [4][7]. To access the long queue, the user needs to email support@hpc.cam.ac.uk with a justification for why they need to use the long queue and why checkpointing is not a practical option for their application [4][7].
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- What programming language or software is the user using for their job?
+- Has the user considered using the long queue instead of checkpointing?
+- Can the user provide more information about their job and why it takes more than 36 hours to run?
+
+EXAMPLE CUSTOMER REPLY
+Hello,
+To use checkpointing for your job, you can refer to the documentation for your specific software or programming language. For example, in PyTorch, you can use the `torch.utils.checkpoint` module. Alternatively, you can consider using the long queue, which allows jobs to run for up to 7 days. Please email support@hpc.cam.ac.uk with a justification for why you need to use the long queue and why checkpointing is not a practical option for your application.
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Checkpointing should be used in conjunction with the long queue only when necessary and with proper justification [4][7].
+- The long queue is only available to paying users with suitable applications [4][7].
+
+REFERENCE KEY
+[1] : https://docs.hpc.cam.ac.uk/hpc/software-packages/gromacs.html::chunk::0003
+[4] : https://docs.hpc.cam.ac.uk/hpc/user-guide/long.html::chunk::0000
+[6] : https://docs.pytorch.org/docs/stable/checkpoint.html::chunk::0003
+[7] : https://docs.hpc.cam.ac.uk/hpc/user-guide/long.html::chunk::0001",r1:docs/local_official/current:https://docs.hpc.cam.ac.uk/hpc/software-packages/gromacs.html::chunk::0003 | r2:unknown/ticket_memory/current:HPCSSUP-99690 | r3:external_docs/external_official/unknown:https://www.tensorflow.org/guide/estimator::chunk::0014,,,,,"CLASSIFICATION
+Category: Job Submission / Checkpointing
+Technical Action Required: Yes
+Portal Action Required: No
+
+QUICK ASSESSMENT
+The user is looking to run a job that takes more than 36 hours to complete and is interested in using the checkpoint method [1]. Checkpointing is a practice that allows users to save their progress at regular intervals, enabling them to resume their job from the last checkpoint in case of interruptions or failures [2][5].
+
+ACTION STEPS (HELPDESK)
+To use checkpointing, users need to implement it within their application or job script. The DMTCP software, which was previously used for checkpointing, is no longer supported [6]. Alternatively, users can purchase SL2 hours, which allow for a maximum job run time of 36 hours [4][6]. For jobs that require longer run times, users can apply for access to the long queue (QOSL) by emailing support@hpc.cam.ac.uk and explaining why checkpointing is not a practical option for their application [3][5].
+
+QUESTIONS TO ASSESS FEASIBILITY
+- Can you provide more information about your application and why checkpointing is not feasible?
+- Have you considered using the long queue (QOSL) for your job submission?
+
+EXAMPLE CUSTOMER REPLY
+Hello,
+To use checkpointing, you will need to implement it within your application or job script. If this is not feasible, you can consider purchasing SL2 hours or applying for access to the long queue (QOSL). Please let us know if you have any further questions or concerns.
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Checkpointing should be implemented within the application or job script to ensure safe and efficient use of resources [1][2].
+- Access to the long queue (QOSL) is only granted in exceptional circumstances when checkpointing is not possible [3][5].
+
+REFERENCE KEY
+[1] : https://docs.hpc.cam.ac.uk/hpc/software-packages/gromacs.html::chunk::0003
+[2] : HPCSSUP-99690
+[3] : https://docs.hpc.cam.ac.uk/hpc/user-guide/long.html::chunk::0000
+[4] : HPCSSUP-50313
+[5] : https://docs.hpc.cam.ac.uk/hpc/user-guide/long.html::chunk::0001
+[6] : HPCSSUP-44885",r1:docs/local_official/current:https://docs.hpc.cam.ac.uk/hpc/software-packages/gromacs.html::chunk::0003 | r2:unknown/ticket_memory/current:HPCSSUP-99690 | r3:docs/local_official/current:https://docs.hpc.cam.ac.uk/hpc/user-guide/long.html::chunk::0000,,,,
+HPCSSUP-91107,"Dear Support
+I started to copy a 108GB zip file to RCS when it occurred to me that this might be a bad idea. It quickly completed anyway. Do you recommend that I don't do this or is it OK?
+Kind regards
+Simon",Copying large file to RCS,"CLASSIFICATION
+Category: Storage / Best Practice [1][6]
+Technical Action Required: No [1]
+Portal Action Required: No [1]
+Urgency: Low [1]
+
+QUICK ASSESSMENT
+The user has copied a large file (108GB zip file) to RCS, which may not be the best practice as RCS works best with larger files and is intended for ""cold"" (i.e., inactive) data [1][6]. 
+
+ACTION
+We recommend avoiding copying large numbers of small files to RCS and instead creating larger archives [6]. For existing files, it is best to compress them again into one big archive if possible [6]. 
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- What is the nature of the data in the zip file, and how often will it be accessed?
+- Are there any plans to transfer more files of similar size to RCS?
+
+EXAMPLE CUSTOMER REPLY
+Hello,
+We would advise against copying large files to RCS unless absolutely necessary, as it is designed for ""cold"" data [1]. Instead, consider creating larger archives or compressing files before transferring them [6]. If you have any further questions or concerns, please don't hesitate to reach out.
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- RCS is intended for ""cold"" (i.e., inactive) data, and large file transfers may impact performance [1][6].
+- It is recommended to compress files before transferring them to RCS if possible [6].
+
+REFERENCE KEY
+[1] : HPCSSUP-31203
+[6] : HPCSSUP-45123",r1:unknown/ticket_memory/current:HPCSSUP-31203 | r2:docs/local_official/eol:https://docs.hpc.cam.ac.uk/hpc/user-guide/wbic.html::chunk::0006 | r3:external_docs/external_official/unknown:https://www.tensorflow.org/guide/ragged_tensor::chunk::0024,,,,,"CLASSIFICATION
+Category: Storage / File Management [1]
+Technical Action Required: Yes [1]
+Portal Action Required: No [1]
+
+QUICK ASSESSMENT
+The user has copied a 108GB zip file to RCS, which may not be the best practice due to the large file size [4]. RCS works best with larger files, but it's not clear if this file is already compressed or if it's an optimal solution [4].
+
+ACTION STEPS (HELPDESK)
+Check if the file is already compressed and if it's an optimal solution for RCS storage [4]. Consider compressing the file again or splitting it into smaller files if necessary [5]. 
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Is the 108GB zip file already compressed?
+- Are there any plans to access or modify the file frequently, or is it intended for long-term archiving?
+
+EXAMPLE CUSTOMER REPLY
+Hello,
+We recommend checking if the 108GB zip file is already compressed and if it's an optimal solution for RCS storage [4]. If not, consider compressing the file again or splitting it into smaller files if necessary [5]. Please let us know if you have any further questions or concerns.
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- RCS storage has a quota limit on the number of files that can be created, which is limited to 500,000 files [8].
+- No backups are made of data in the RDS directories, so please use it accordingly [7].
+
+REFERENCE KEY
+[1] : HPCSSUP-31203
+[4] : HPCSSUP-45123
+[5] : https://docs.hpc.cam.ac.uk/hpc/user-guide/transfer.html::chunk::0001
+[7] : https://docs.hpc.cam.ac.uk/hpc/user-guide/io_management.html::chunk::0002
+[8] : HPCSSUP-58269",r1:unknown/ticket_memory/current:HPCSSUP-31203 | r2:docs/local_official/eol:https://docs.hpc.cam.ac.uk/hpc/user-guide/wbic.html::chunk::0006 | r3:docs/local_official/eol:https://docs.hpc.cam.ac.uk/hpc/user-guide/wbic.html::chunk::0007,,,,
+HPCSSUP-89914,"We are having problems creating a GPU platform on the “ska-src-science-validations” tenancy on Azimuth (with OpenHPC v3).
+I always seem to have the error:
+error creating blazar lease - Not enough hosts available
+and it doesn’t matter which flavour (standard or v2) to use for login and control nodes.
+Does this mean that I’m doing something wrong in the setup, or is there an issue with blazar on that tenancy?
+Thanks a lot,
+Ed",SKA-SRC: error creating blazar lease in ska-src-science-validations tenancy,"CLASSIFICATION
+Category: HPC / Azimuth
+Technical Action Required: Yes
+Escalation Required: Possibly
+Urgency: Medium
+
+QUICK ASSESSMENT
+The error ""error creating blazar lease - Not enough hosts available"" when creating a GPU platform on Azimuth is likely due to insufficient available hosts [5]. This issue has been previously reported and discussed in tickets [2] and [5], where it was suggested that unallocated compute resources need to be moved to the Blazar system.
+
+ACTION STEPS (HELPDESK)
+1. Investigate the current state of compute resources in the ""ska-src-science-validations"" tenancy and identify any unallocated resources that can be moved to Blazar [5].
+2. Work with the user to determine the minimum required resources for their GPU platform and attempt to create the platform with the available resources [2].
+3. If necessary, escalate the issue to the development team to request an update on the Azimuth patches and potential solutions to the ""Not enough hosts available"" error [2].
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Can you provide more details about the specific GPU platform you are trying to create, including the required resources and configuration?
+- Have you tried creating the platform with a different flavor or configuration to see if the issue persists?
+
+EXAMPLE CUSTOMER REPLY
+Hello,
+Thank you for reporting the issue with creating a GPU platform on Azimuth. We are investigating the current state of compute resources in your tenancy and will work with you to determine the minimum required resources for your platform. If necessary, we will escalate the issue to the development team to request an update on the Azimuth patches.
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- When working with Azimuth and Blazar, it is essential to ensure that compute resources are properly allocated and managed to avoid conflicts and errors [2][5].
+
+REFERENCE KEY
+[2] : HPCSSUP-82544
+[5] : HPCSSUP-84078",r1:docs/local_official/legacy:https://docs.hpc.cam.ac.uk/hpc/user-guide/quickstart.html::chunk::0008 | r2:unknown/ticket_memory/current:HPCSSUP-82544 | r3:external_docs/external_official/unknown:https://slurm.schedmd.com/rest_api.html::chunk::0032,,,,,"CLASSIFICATION
+Category: Azimuth / GPU Platform Creation
+Technical Action Required: Yes
+Escalation Required: Possibly
+Urgency: Medium
+
+QUICK ASSESSMENT
+The error message ""error creating blazar lease - Not enough hosts available"" suggests that there may be an issue with the availability of hosts in the ""ska-src-science-validations"" tenancy on Azimuth [4]. This could be due to insufficient unallocated resources or existing workload on the nodes.
+
+ACTION STEPS (HELPDESK)
+1. Investigate the current resource allocation and usage in the ""ska-src-science-validations"" tenancy to determine if there are any available hosts that can be used for the GPU platform creation [4].
+2. Check if there are any existing Slurm appliances or other resources that can be terminated or deallocated to free up hosts [2].
+3. Consider alternative options, such as creating a GPU VM outside of Azimuth, as was done in a previous case [2].
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Are there any specific requirements or constraints for the GPU platform creation that may be contributing to the error?
+- Are there any other users or projects in the tenancy that may be using up available hosts?
+
+EXAMPLE CUSTOMER REPLY
+Hello,
+Thank you for reporting the issue with creating a GPU platform on Azimuth. We are investigating the current resource allocation and usage in the ""ska-src-science-validations"" tenancy to determine the cause of the error. In the meantime, we may consider alternative options, such as creating a GPU VM outside of Azimuth. Please let us know if you have any further questions or concerns.
+
+SAFETY / POLICY NOTES
+- Ensure that any actions taken to free up hosts or allocate resources do not interfere with existing workload or compromise the stability of the Azimuth environment [4].
+
+REFERENCE KEY
+[2] : HPCSSUP-82544
+[4] : HPCSSUP-84078",r1:docs/local_official/legacy:https://docs.hpc.cam.ac.uk/hpc/user-guide/quickstart.html::chunk::0008 | r2:unknown/ticket_memory/current:HPCSSUP-82544 | r3:docs/local_official/unknown:https://docs.hpc.cam.ac.uk/hpc/user-guide/pvc-jobs-IDEs.html::chunk::0000,,,,
+HPCSSUP-89749,"Dear HPC support,
+I use the university MS authenticator on my phone and I would like to 
+set it up as my TOTP for HPC login
+Is it possible and how do I do this?
+I tried using the TOTP when I attempt to login but it does not seem to 
+work.
+Thank you!
+Cheers, Claudio
+– 
+Claudio Castelnovo
+Professor of Theoretical Physics and Fellow of Trinity College
+/Theory of Condensed Matter Group/
+Department of Physics, Cavendish Laboratory
+University of Cambridge
+19, J J Thomson Avenue, Cambridge CB3 0HE, UK
+phone: +44 (0)1223 337433
+fax: +44 (0)1223 337356
+web: [http://www.tcm.phy.cam.ac.uk/profiles/cc726/](http://www.tcm.phy.cam.ac.uk/profiles/cc726/)",HPC login TOTP,"CLASSIFICATION
+Category: Authentication / MFA Setup [1]
+Technical Action Required: Yes [1]
+Portal Action Required: No [1]
+
+QUICK ASSESSMENT
+The user is attempting to set up Microsoft Authenticator as their TOTP for HPC login, but it is not working [1]. The user has the University of Cambridge MS authenticator on their phone, which is not compatible with the HPC TOTP setup [1].
+
+ACTION STEPS (HELPDESK)
+To resolve this issue, the user needs to set up a separate TOTP for HPC login, which will appear as ""CSD3: SSH Login"" in their authenticator app [1]. The user can follow the walkthrough provided in the documentation to set up the TOTP [1]. If the user has already set up TOTP for other services, they can feed the QR code or secret key into their existing application [1].
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Are you using the correct QR code or secret key for the HPC TOTP setup?
+- Have you confirmed that the TOTP is working correctly by entering the 6-digit number at the prompt on your terminal?
+
+EXAMPLE CUSTOMER REPLY
+Hello,
+To set up Microsoft Authenticator as your TOTP for HPC login, please follow the walkthrough provided in our documentation: https://docs.hpc.cam.ac.uk/hpc/user-guide/mfa.html [1]. This will generate a new QR code and secret key for the HPC TOTP setup, which will appear as ""CSD3: SSH Login"" in your authenticator app [1]. If you have any issues or concerns, please let us know.
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Do not use the University of Cambridge MS authenticator for HPC login, as it is not compatible with the HPC TOTP setup [1].
+- Always use the correct QR code or secret key for the HPC TOTP setup to avoid authentication issues [1].
+
+REFERENCE KEY
+[1] : https://docs.hpc.cam.ac.uk/hpc/user-guide/mfa.html::chunk::0001",r1:docs/local_official/current:https://docs.hpc.cam.ac.uk/hpc/user-guide/mfa.html::chunk::0001 | r2:external_docs/external_official/unknown:https://slurm.schedmd.com/authentication.html::chunk::0000 | r3:unknown/ticket_memory/unknown:HPCSSUP-96740,,,,,"CLASSIFICATION
+Category: Authentication / MFA Setup
+Technical Action Required: Yes
+Portal Action Required: No
+
+QUICK ASSESSMENT
+The user is attempting to set up Microsoft Authenticator for HPC login, but the TOTP code is not working [8]. The user already has the University of Cambridge MS Authenticator set up, but this is separate from the HPC TOTP [1].
+
+ACTION STEPS (HELPDESK)
+To set up the HPC TOTP, the user needs to follow the instructions on the HPC wiki [1]. If the user has already set up MFA, they may need to reset it before setting up the new TOTP [4]. The user should delete the existing account in their Authenticator app and recreate it, making sure to select the ""Other"" account type [7].
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Are you still having trouble with the TOTP code after following the instructions on the HPC wiki?
+- Have you tried deleting the existing account in your Authenticator app and recreating it?
+
+EXAMPLE CUSTOMER REPLY
+Hello,
+To set up the HPC TOTP, please follow the instructions on the HPC wiki: https://docs.hpc.cam.ac.uk/hpc/user-guide/mfa.html [1]. If you have already set up MFA, you may need to reset it before setting up the new TOTP [4]. Please let me know if you have any further questions or issues.
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- The HPC TOTP is separate from the University of Cambridge MS Authenticator [1].
+- The user should not use the University of Cambridge TOTP code for HPC login [8].
+
+REFERENCE KEY
+[1] : https://docs.hpc.cam.ac.uk/hpc/user-guide/mfa.html::chunk::0001
+[4] : HPCSSUP-50253
+[7] : https://docs.hpc.cam.ac.uk/hpc/user-guide/mfa.html::chunk::0008
+[8] : HPCSSUP-51576",r1:docs/local_official/current:https://docs.hpc.cam.ac.uk/hpc/user-guide/mfa.html::chunk::0001 | r2:unknown/ticket_memory/unknown:HPCSSUP-96740 | r3:docs/local_official/current:https://docs.hpc.cam.ac.uk/hpc/user-guide/mfa.html::chunk::0003,,,,
+HPCSSUP-88966,"Hello,
+I hope this email finds you well!
+I am working on CSD3 for some cpu jobs, particularly nodes cclake and Icelake. I submitted some jobs last week and I found the queueing time very long. I am wondering if you can give advice on this regarding if there is anything I did wrong causing the long wait. Some general info:
+- Name: Hongyu Zhou
+- Account/PI: N-LAWRENCE-SL3-CPU
+- Working directory: /home/hz488/project/ai_ranking_report
+- Task:
+- Data: I work with bibliographic data on hundreds of millions of paper including their title, abstract, and citation relationships
+- Task:
+- I am trying to calculate the cooccurence frequency of concepts in papers (two concepts used in one paper), for which the concepts are extracted already in our current data (one paper associated with a list of paper).
+- I am building these cooccurrence networks for using papers since 1990 to current and group them to a interval of 3 years
+- I generate networks for every three years.
+- Problem:
+- The queueing time is quite long.
+- Slurm Job_id=10784619 Name=build_cooccur_net Began, Queued time 17:19:49
+- I tried to minimise the potential RAM usage by using smaller intervals, using smaller samples and use sql-like ducked to calculate the concurrences. But in the future, there will definitely be larger jobs I need to run considering the size of my data in nature, especially if we were use Node2Vec to embed the networks we obtained.
+- Job submission script:
+#!/bin/bash
+#SBATCH -J build_cooccur_net
+#SBATCH -A N-LAWRENCE-SL3-CPU
+#SBATCH -p icelake
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=6
+#SBATCH --mem=30G
+#SBATCH --time=4:00:00
+#SBATCH --output=1_build_net_duck_%j.out
+#SBATCH --error=1_build_net_duck_%j.err
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=hz488@cam.ac.uk
+set -euo pipefail
+echo ""[$(date '+%Y-%m-%d %T')] Job started""
+module purge
+module load python/3.8
+source ""$HOME/hzenv/bin/activate""
+export OMP_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+TEMP_DIR=""${SLURM_TMPDIR:-./temp_edges}""
+mkdir -p ""$TEMP_DIR""
+python /home/hz488/project/ai_ranking_report/scripts/1_build_net_save_duckdb.py \
+--input-dir /home/hz488/project/dimensions/publications/ \
+--output-dir /home/hz488/project/data/ai_ranking_report/data/1_build_net \
+--batch-size 200000 \
+--batches-per-file 50 \
+--sample-frac 1
+echo ""[$(date '+%Y-%m-%d %T')] Job finished”
+Could you kindly advise me on this?
+Best,
+Hongyu",Long queue time,"CLASSIFICATION
+Category: Job Submission / Queue Time
+Technical Action Required: No
+Escalation Required: Possibly
+Urgency: Medium
+
+QUICK ASSESSMENT
+The user is experiencing long queue times for their jobs on the CSD3 cluster, specifically on the icelake and cclake nodes [1]. The user has provided their job submission script, which requests 1 node, 6 CPUs per task, and 30G of memory, with a time limit of 4 hours [1]. The user has tried to minimize potential RAM usage by using smaller intervals, smaller samples, and SQL-like queries [1].
+
+ACTION STEPS (HELPDESK)
+1. Check the current queue status and node availability using commands like `squeue`, `sinfo`, and `sview` [8].
+2. Verify that the user's account and project have sufficient resources and priority [1][7].
+3. Consider suggesting alternative nodes or partitions, such as icelake-long or cclake-long, which may have more available resources [2].
+4. Advise the user to check their job's dependencies, constraints, and QOS settings, as these may be contributing to the long queue times [3][6].
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Can you provide more information about your job's dependencies and constraints?
+- Have you tried submitting your job to a different partition or node type?
+- Are there any specific error messages or warnings in your job's output or error files?
+
+EXAMPLE CUSTOMER REPLY
+Hello,
+Thank you for your inquiry about the long queue times for your jobs on the CSD3 cluster. We have reviewed your job submission script and account settings. To help us better understand the issue, could you please provide more information about your job's dependencies and constraints? Additionally, you may want to consider submitting your job to a different partition or node type, such as icelake-long or cclake-long.
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Be cautious when suggesting alternative nodes or partitions, as this may affect the user's job priorities and resource availability [2][7].
+- Ensure that the user's account and project have sufficient resources and priority before providing assistance [1][7].
+
+REFERENCE KEY
+[1] : HPCSSUP-88272
+[2] : https://docs.hpc.cam.ac.uk/hpc/user-guide/long.html::chunk::0001
+[3] : https://slurm.schedmd.com/job_reason_codes.html::chunk::0000
+[6] : https://slurm.schedmd.com/rest_api.html::chunk::0134
+[7] : HPCSSUP-47777
+[8] : https://docs.hpc.cam.ac.uk/hpc/user-guide/quickstart.html::chunk::0006",r1:unknown/ticket_memory/current:HPCSSUP-88272 | r2:docs/local_official/current:https://docs.hpc.cam.ac.uk/hpc/user-guide/long.html::chunk::0001 | r3:external_docs/external_official/unknown:https://slurm.schedmd.com/job_reason_codes.html::chunk::0000,,,,,"CLASSIFICATION
+Category: Job Submission / Queue Time
+Technical Action Required: Possibly
+Escalation Required: Possibly
+Urgency: Medium
+
+QUICK ASSESSMENT
+The user is experiencing long queue times for their jobs on the CSD3 cluster, specifically on the icelake and cclake nodes [1][3]. The user has provided their job submission script and details about their job, including the account, working directory, and task [1]. The script requests 1 node, 1 task, 6 CPUs per task, and 30G of memory, with a time limit of 4 hours [1].
+
+ACTION STEPS (HELPDESK)
+To assist the user, we should first review their job submission script to ensure it is optimized for the CSD3 cluster [1][6]. We can also check the current queue status and node availability using commands such as squeue, sinfo, and sview [6]. Additionally, we can suggest alternative partitions, such as the long queue, if the user's job requires a longer runtime [2].
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Can you please provide more information about your job's memory requirements and whether you have tried reducing the memory request [1]?
+- Have you considered using the long queue or other partitions that may be more suitable for your job's runtime requirements [2]?
+
+EXAMPLE CUSTOMER REPLY
+Hello,
+Thank you for reaching out to us about your job submission issues. We have reviewed your script and suggest trying the long queue or reducing your memory request to optimize your job's performance. Please let us know if you have any further questions or concerns.
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Users should be aware of the queueing system's policies and procedures to optimize their job submissions [1][6].
+- It is essential to review and optimize job submission scripts to ensure efficient use of cluster resources [1][6].
+
+REFERENCE KEY
+[1] : HPCSSUP-88272
+[2] : https://docs.hpc.cam.ac.uk/hpc/user-guide/long.html::chunk::0001
+[3] : HPCSSUP-66025
+[6] : https://docs.hpc.cam.ac.uk/hpc/user-guide/quickstart.html::chunk::0006",r1:unknown/ticket_memory/current:HPCSSUP-88272 | r2:docs/local_official/current:https://docs.hpc.cam.ac.uk/hpc/user-guide/long.html::chunk::0001 | r3:unknown/ticket_memory/current:HPCSSUP-66025,,,,
+HPCSSUP-85626,"Dear HPC team,
+Good afternoon, I am contacting you since I am trying to run Freesurfer 8.0.0 on HPC but I am getting the following error:
+FREESURFER: Undefined variable.
+This makes me wonder if for some reason the path to freesurfer cannot be found. Since this is a new module can you please advise on the path where the application is so that I can use in my scripts? Has this been tested and was running as intended?
+Needless to say I have loaded the module.
+Best wishes,
+Marialena",Freesurfer 8 crashing,"CLASSIFICATION
+Category: Software / Module Management [3][6]
+Technical Action Required: Yes [3]
+Portal Action Required: No [7]
+Urgency: Medium [3]
+
+QUICK ASSESSMENT
+The user is experiencing an issue with running Freesurfer 8.0.0 on HPC, receiving an error message indicating an undefined variable [3]. This suggests that the path to Freesurfer may not be correctly set or the module may not be properly loaded [3][7]. The user has loaded the module, but the issue persists [3].
+
+ACTION STEPS (HELPDESK)
+To resolve the issue, please try the following steps:
+1. Run `module av freesurfer` to check the availability of the Freesurfer module [3].
+2. Load the Freesurfer module using `module load freesurfer/8.0.0` [3].
+3. Verify that the Freesurfer executable is in the system's PATH environment variable [7].
+4. If the issue persists, try running `freesurfer --help` to check if the executable is working correctly [3].
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Can you please provide the output of `module list` to confirm which modules are currently loaded [7]?
+- Have you tried running Freesurfer on a different node or with a different version of the module [3]?
+
+SAFETY / POLICY NOTES
+- It is essential to use the correct version of the module and ensure that it is properly loaded to avoid conflicts or errors [3][7].
+- The user should be aware of the module's documentation and usage guidelines to ensure correct usage [7].
+
+EXAMPLE CUSTOMER REPLY
+Hello,
+To resolve the issue with running Freesurfer 8.0.0 on HPC, please try the steps outlined above. If you have any further questions or concerns, please do not hesitate to contact us.
+Best regards,
+HPC Support
+
+REFERENCE KEY
+[3] : HPCSSUP-85600
+[6] : HPCSSUP-84143
+[7] : https://docs.hpc.cam.ac.uk/hpc/user-guide/modules.html::chunk::0001",r1:docs/local_official/current:https://docs.hpc.cam.ac.uk/hpc/user-guide/sapphire.html::chunk::0002 | r2:external_docs/external_official/unknown:https://www.intel.com/content/www/us/en/docs/mpi-library/developer-guide-linux/2021-16/error-message-no-such-file-or-directory.html::chunk::0004 | r3:unknown/ticket_memory/unknown:HPCSSUP-85600,,,,,"CLASSIFICATION
+Category: Software / Module Management [2]
+Technical Action Required: Yes [2]
+Portal Action Required: No [2]
+Urgency: Medium [2]
+
+QUICK ASSESSMENT
+The user is experiencing an issue with running Freesurfer 8.0.0 on HPC, receiving an error message indicating an undefined variable [2]. This suggests that the path to Freesurfer may not be correctly set or the module may not be properly loaded [2].
+
+ACTION STEPS (HELPDESK)
+To resolve the issue, please try the following steps:
+1. Load the Freesurfer module using the command `module load freesurfer/8.0.0` [2].
+2. Verify that the Freesurfer path is correctly set by running the command `which freesurfer` [2].
+3. If the issue persists, try running the command `freesurfer --help` to check if the installation is correct [2].
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Can you please provide the exact error message you are receiving when running Freesurfer?
+- Have you tried loading the Freesurfer module and running the command `freesurfer --help` as suggested?
+
+EXAMPLE CUSTOMER REPLY
+Hello,
+Thank you for your assistance. I have tried loading the Freesurfer module and running the command `freesurfer --help`, but I am still experiencing issues. The error message I receive is ""FREESURFER: Undefined variable."" I would appreciate any further guidance you can provide.
+Best regards,
+Marialena
+
+SAFETY / POLICY NOTES
+- Always load the required modules before running software on HPC [2].
+- Be cautious when editing shell initialization scripts, as this can affect the default environment settings [7].
+
+REFERENCE KEY
+[2] : HPCSSUP-85600
+[7] : https://docs.hpc.cam.ac.uk/hpc/user-guide/quickstart.html::chunk::0004",r1:docs/local_official/current:https://docs.hpc.cam.ac.uk/hpc/user-guide/sapphire.html::chunk::0002 | r2:unknown/ticket_memory/unknown:HPCSSUP-85600 | r3:docs/local_official/current:https://docs.hpc.cam.ac.uk/hpc/software-packages/openmm.html::chunk::0002,,,,
+HPCSSUP-81206,"Dear Sir or Madame,
+CRSID: leh50
+Account: CIA-DAMTP-SL2-CPU
+Location:
+/home/leh50/PLUTOSTUFF_CSD3/PLUTO_v4pt4Patch2_MonJun282021Download/PLUTO/RESEARCH_PROJECTS/08BrokenDiskProject/03BrokenDiskQuasi2DSims_Re4687/VSTRHYDRO2DRes32Re4687BrokenDiskForcedBreak22a0pt05Displace8HzBCReflectiveLx60H_2DHDIsoth_1920x0p008x768_ZBReflective_NonIdealNoMassSourceTermICDifferentVelocityPerts
+Code I'm trying to compile: C using mpicc
+Error:
+When I try to compile the code I get the following error
+icc: warning #10352: The directory '/tmp' is full.  Please check disk space.
+I didn't have any issues trying to compile the code a few days ago. According to ""quota"":
+Filesystem/Project    GB        quota     limit          grace           files    quota    limit   grace User/Grp/Proj
+/home                 11.8       50.0      55.0                                    -    ------- No File Quotas  -------     U:leh50
+/rds-d7                0.0     1099.5    1209.5                                 -        1  1048576  1048576             - P:45565
+/rds-d2                0.0        0.0       0.0                                           -        1        0        0       - G:rds
+rds-xg257ahCixg    19271.6    20000.0   20000.0           -  1096248 10240000 10240000   - P:92227
+I don't know what the /tmp folder is. As far as I know I haven't stored anything there. I would greatly appreciate your help with this.
+Best,
+Dr Loren E. Held
+Postdoctoral Researcher
+Astrophysical Fluid Dynamics Group
+Department of Applied Mathematics and Theoretical Physics (DAMTP)
+University of Cambridge",Can't compile code: error: icc: warning #10352: The directory '/tmp' is full.  Please check disk space.,"CLASSIFICATION
+Category: Compilation / Disk Space [2]
+Technical Action Required: Yes [2]
+Portal Action Required: No [2]
+Urgency: Medium [2]
+
+QUICK ASSESSMENT
+The error message ""icc: warning #10352: The directory '/tmp' is full.  Please check disk space."" indicates that the /tmp directory is full, which is preventing the compilation of the code [2]. This issue has been encountered before, and the solution was to clear space in the /tmp directory [2][4][6].
+
+ACTION STEPS (HELPDESK)
+The support team should investigate which node the user is working on and clear space in the /tmp directory on that node [2][4][6]. The user should then restart their session and try compiling the code again.
+
+EXAMPLE CUSTOMER REPLY
+Hello,
+The issue you are experiencing is likely due to the /tmp directory being full. We will clear space in the /tmp directory on the node you are working on. Please restart your session and try compiling the code again. If you still encounter issues, please let us know.
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- The /tmp directory should be regularly cleaned up to prevent it from becoming full [2][4][6].
+- Users should be aware of the available filesystems and their characteristics, including disk quotas and backup policies [1][3][5][7].
+
+REFERENCE KEY
+[1] : https://docs.hpc.cam.ac.uk/hpc/user-guide/quickstart.html::chunk::0005
+[2] : HPCSSUP-23131
+[3] : https://docs.hpc.cam.ac.uk/hpc/user-guide/io_management.html::chunk::0001
+[4] : HPCSSUP-71897
+[5] : https://docs.hpc.cam.ac.uk/hpc/user-guide/io_management.html::chunk::0002
+[6] : HPCSSUP-58315
+[7] : https://docs.hpc.cam.ac.uk/hpc/user-guide/io_management.html::chunk::0000",r1:docs/local_official/legacy:https://docs.hpc.cam.ac.uk/hpc/user-guide/quickstart.html::chunk::0005 | r2:unknown/ticket_memory/unknown:HPCSSUP-23131 | r3:docs/local_official/unknown:https://docs.hpc.cam.ac.uk/hpc/user-guide/io_management.html::chunk::0001,,,,,"CLASSIFICATION
+Category: Compilation / Temporary Directory Issue
+Technical Action Required: Yes
+Escalation Required: Possibly
+Urgency: Medium
+
+QUICK ASSESSMENT
+The error message ""The directory '/tmp' is full.  Please check disk space."" indicates that the temporary directory is full, which is preventing the compilation of the code [3][5]. This issue has been encountered before, and the solution was to clear space in the /tmp directory [3].
+
+ACTION STEPS (HELPDESK)
+1. Investigate which node the user is working on to identify the specific /tmp directory that is full.
+2. Clear space in the /tmp directory to resolve the issue [3][5].
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Can you confirm which node you are seeing /tmp full?
+- Are you using any specific scripts or commands that may be contributing to the /tmp directory being full?
+
+EXAMPLE CUSTOMER REPLY
+Hello,
+The issue you are experiencing is due to the /tmp directory being full. We will investigate and clear space in the /tmp directory to resolve the issue. Please confirm which node you are working on.
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- The /tmp directory is a temporary storage space and should not be used for long-term storage [4].
+- Users should ensure that they are not storing large amounts of data in the /tmp directory [4].
+
+REFERENCE KEY
+[3] : HPCSSUP-23131
+[4] : https://docs.hpc.cam.ac.uk/hpc/user-guide/io_management.html::chunk::0001
+[5] : HPCSSUP-71897",r1:docs/local_official/legacy:https://docs.hpc.cam.ac.uk/hpc/user-guide/quickstart.html::chunk::0005 | r2:external_docs/external_official/unknown:https://docs.nvidia.com/cuda/cutile-python/debugging.html::chunk::0001 | r3:unknown/ticket_memory/unknown:HPCSSUP-23131,,,,
+HPCSSUP-98917,"Dear Sir/Madam,
+My name is Guillaume Alexis, id : grfa2. My working directory is /rds/user/grfa2/hpc-work/
+For now, I don't have a job submission script. I'm solely trying to install a package named Dedalus ([https://dedalus-project.readthedocs.io/en/latest/pages/installation.html](https://dedalus-project.readthedocs.io/en/latest/pages/installation.html)) and its dependancies, in order to run my script.
+My main question is : How should I do it ? I tried in a conda environment, but I'm unsure about the intel/intel-mpi/fftw/hdf5 versions I should load, in order to build Dedalus correctly with these modules.
+Thank you for your help,
+Best wishes,
+Guillaume Alexis",Installing Dedalus (Python package) to run a python script on HPC,"CLASSIFICATION
+Category: Software Installation / HPC
+Technical Action Required: Yes
+Portal Action Required: No
+
+QUICK ASSESSMENT
+The user is trying to install the Dedalus package [1] on the CSD3 cluster and run it using MPI. The installation requires loading several modules, including intel, fftw, and hdf5, and setting environment variables [2]. The user has tried installing using conda and pip, but is experiencing issues with running the package in parallel [3].
+
+ACTION STEPS (HELPDESK)
+To install Dedalus, follow the instructions in [2] and load the required modules. To run Dedalus in parallel, use the salloc command with the correct options, such as -N, -n, and --ntasks-per-node [4]. Make sure to set the environment variables correctly and use the LD_PRELOAD command to preload the libmpi.so library [2].
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Can you provide more details about the error messages you are seeing when running Dedalus in parallel?
+- Have you tried running Dedalus on a single node with multiple cores to see if the issue is specific to multi-node runs?
+
+EXAMPLE CUSTOMER REPLY
+Dear Guillaume,
+To install Dedalus, please follow the instructions in the documentation [2]. Make sure to load the required modules, including intel, fftw, and hdf5, and set the environment variables correctly. To run Dedalus in parallel, use the salloc command with the correct options, such as -N, -n, and --ntasks-per-node [4]. If you encounter any issues, please provide more details about the error messages you are seeing.
+
+SAFETY / POLICY NOTES
+- Make sure to follow the documentation and load the required modules to avoid conflicts with other software [2].
+- Be aware of the limitations of the CSD3 cluster and the resources available to you [1].
+
+REFERENCE KEY
+[1] : https://docs.hpc.cam.ac.uk/hpc/user-guide/sapphire.html::chunk::0001
+[2] : HPCSSUP-15213
+[3] : https://www.intel.com/content/www/us/en/docs/mpi-library/developer-guide-linux/2021-16/run-the-application-with-a-container.html::chunk::0001
+[4] : HPCSSUP-26983",r1:docs/local_official/current:https://docs.hpc.cam.ac.uk/hpc/user-guide/sapphire.html::chunk::0001 | r2:unknown/ticket_memory/unknown:HPCSSUP-15213 | r3:external_docs/external_official/unknown:https://www.intel.com/content/www/us/en/docs/mpi-library/developer-guide-linux/2021-16/run-the-application-with-a-container.html::chunk::0001,,,,,"CLASSIFICATION
+Category: Software Installation / HPC
+Technical Action Required: Yes
+Portal Action Required: No
+
+QUICK ASSESSMENT
+The user is trying to install the Dedalus package on CSD3 and run it on the Sapphire Rapids nodes [1]. The installation process involves loading several modules, including intel, mpi, fftw, and hdf5, and setting environment variables [2]. The user has tried installing Dedalus using pip in a virtual environment, but is experiencing issues with parallelization when submitting scripts to the cluster [3].
+
+ACTION STEPS (HELPDESK)
+To resolve the issue, the user should try inserting a line `unset CONDA_SHLVL` before the `module load miniconda/3` line in their submission script [3]. This is because conda can get confused by environment variables being propagated from the submission environment. The user should also ensure that they are using the correct mpiexec command and that the environment variables are set correctly [2].
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Can you please provide the exact error message you are seeing when trying to run the script in parallel?
+- Have you tried running the script on a single node with multiple cores to see if the issue is specific to the Sapphire Rapids nodes?
+
+EXAMPLE CUSTOMER REPLY
+Dear Guillaume,
+To install Dedalus on CSD3, you will need to load several modules, including intel, mpi, fftw, and hdf5, and set environment variables [2]. You can try installing Dedalus using pip in a virtual environment, but you may need to insert a line `unset CONDA_SHLVL` before the `module load miniconda/3` line in your submission script [3]. If you are still experiencing issues, please provide the exact error message you are seeing and we can try to troubleshoot further.
+
+SAFETY / POLICY NOTES
+- When installing software on CSD3, users should ensure that they are using the correct modules and environment variables to avoid conflicts with other software [2].
+- Users should also be aware of the limitations of the Sapphire Rapids nodes, including the per-job wallclock time limits and per-job, per-user cpu limits [6].
+
+REFERENCE KEY
+[1] : https://docs.hpc.cam.ac.uk/hpc/user-guide/sapphire.html::chunk::0001
+[2] : HPCSSUP-15213
+[3] : HPCSSUP-26983
+[6] : https://docs.hpc.cam.ac.uk/hpc/user-guide/sapphire-hbm.html::chunk::0001",r1:docs/local_official/current:https://docs.hpc.cam.ac.uk/hpc/user-guide/sapphire.html::chunk::0001 | r2:unknown/ticket_memory/unknown:HPCSSUP-15213 | r3:unknown/ticket_memory/current:HPCSSUP-26983,,,,
+HPCSSUP-98460,"Good afternoon,
+A student from CEB would like to use abaqus 2024 on the HPC cluster. The student mentioned that they contacted you and you advised that this version is not compatible.
+I wanted to confirm if this is the case or did the end user misunderstand.
+Kind regards,
+Zac
+------------------------------------------------------
+Zac Iskander (he/him)
+IT Support Team Leader
+University of Cambridge
+Department of Engineering
+Trumpington Street
+Cambridge, CB2 1PZ, UK
+01223760591",Installing abaqus 2024 on HPC,"CLASSIFICATION
+Category: Software / Abaqus [2]
+Technical Action Required: Yes [2]
+Urgency: Medium [2]
+
+QUICK ASSESSMENT
+The user is trying to use Abaqus 2024 on the HPC cluster, but it appears that the version is not compatible [2]. The support team has previously advised that the 2024 version is not overseen by them and that the user should contact the Engineering team for guidance [2].
+
+ACTION STEPS (HELPDESK)
+Check the Engineering team's guidance on accessing Abaqus 2024 [2].
+Verify if the user has requested access to Abaqus 2024 through the proper channels [2].
+Investigate if there are any version compatibility issues with the current HPC setup [2].
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+Can you confirm if you have requested access to Abaqus 2024 through the Engineering team's website [2]?
+Have you tried using a different version of Abaqus on the HPC cluster [2]?
+
+EXAMPLE CUSTOMER REPLY
+Hello,
+Thank you for your email. We are currently investigating the compatibility of Abaqus 2024 on our HPC cluster. In the meantime, please check if you have requested access to Abaqus 2024 through the Engineering team's website [2]. If you have any further questions, please do not hesitate to contact us.
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+The HPC support team cannot provide specific guidance on licensed products like Abaqus [2]. Users must request access to Abaqus through the proper channels [2].
+
+REFERENCE KEY
+[2] : HPCSSUP-91919",r1:docs/local_official/unknown:https://docs.hpc.cam.ac.uk/hpc/user-guide/getting_support.html::chunk::0000 | r2:unknown/ticket_memory/unknown:HPCSSUP-91919 | r3:docs/local_official/unknown:https://docs.hpc.cam.ac.uk/hpc/user-guide/getting_support.html::chunk::0002,,,,,"CLASSIFICATION
+Category: Software / Abaqus Compatibility
+Technical Action Required: Yes
+Portal Action Required: No
+
+QUICK ASSESSMENT
+The user is inquiring about using Abaqus 2024 on the HPC cluster, and there is evidence that the version of Abaqus available on the cluster may not be compatible with the user's needs [3].
+
+ACTION STEPS (HELPDESK)
+To proceed, we need to confirm the compatibility of Abaqus 2024 with the HPC cluster. We recommend checking the official documentation and contacting the Engineering team for specific guidance on accessing the license [3][4]. 
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Can you confirm if you have requested access to Abaqus via https://help.eng.cam.ac.uk/software/abaqus/ [3]?
+- Are you using a departmental license for Abaqus, and if so, have you discussed the details with your PI [3]?
+
+EXAMPLE CUSTOMER REPLY
+Hello,
+We are looking into the compatibility of Abaqus 2024 with the HPC cluster. To proceed, could you please confirm if you have requested access to Abaqus via https://help.eng.cam.ac.uk/software/abaqus/ [3]? We also recommend discussing the details with your PI if you are using a departmental license [3]. 
+Please get back in touch if you have any further questions.
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- When using licensed products like Abaqus, it is essential to follow the official guidelines and documentation [3][4].
+- Users should prioritize official documentation and Service Desk advice over AI-generated suggestions [4].
+
+REFERENCE KEY
+[3] : HPCSSUP-91919
+[4] : https://docs.hpc.cam.ac.uk/hpc/user-guide/getting_support.html::chunk::0002",r1:docs/local_official/unknown:https://docs.hpc.cam.ac.uk/hpc/user-guide/getting_support.html::chunk::0000 | r2:external_docs/external_official/unknown:https://slurm.schedmd.com/openapi_release_notes.html::chunk::0428 | r3:unknown/ticket_memory/unknown:HPCSSUP-91919,,,,
+HPCSSUP-99428,"Hi Team,
+I’m getting in touch regarding an issue on the SRCP platform, which I’ve attached for reference. We urgently need the SNPolisher R package installed into the environment associated with the following platform ID: kjtcs2jvzw7.
+This is time‑critical, as the NHSBT Genomics Programme is currently unable to carry out essential clinical work without this package being available.
+Could you please prioritise this installation at your earliest opportunity and confirm once it has been completed?
+Grateful
+[cid:b9547aa4-5bed-4828-8cca-804065ce11a4]
+Many thanks,
+Justin Ofosu-Dankwa, PhD",Urgent: Request to Install SNPolisher R Package on SRCP Environment (Platform ID: kjtcs2jvzw7),"CLASSIFICATION
+Category: Software Installation / SRCP [1][5]
+Technical Action Required: Yes [1]
+Portal Action Required: No [1]
+Urgency: High [User Query)
+
+QUICK ASSESSMENT
+The user requires the installation of the SNPolisher R package on the SRCP platform with ID kjtcs2jvzw7 [User Query]. This is a time-critical request as it affects the NHSBT Genomics Programme's ability to carry out essential clinical work.
+
+ACTION STEPS (HELPDESK)
+1. Confirm the platform ID and the required R package with the user [User Query].
+2. Check if the SNPolisher R package is already installed on the SRCP platform or if a similar request has been made before [1][5].
+3. If not already installed, proceed with the installation of the SNPolisher R package on the SRCP platform [1][5].
+4. Verify the installation and ensure the package is working as expected [2].
+5. Inform the user of the completion of the installation and request confirmation that the package is working as expected [1][5].
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Can you please confirm the exact version of the SNPolisher R package required?
+- Are there any specific dependencies or libraries required for the installation of the SNPolisher R package?
+
+EXAMPLE CUSTOMER REPLY
+Hello,
+We have received your request to install the SNPolisher R package on the SRCP platform with ID kjtcs2jvzw7. We will proceed with the installation and verify that the package is working as expected. Please let us know if you have any further questions or concerns.
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- All software installations on the SRCP platform must be approved by the platform manager or a designated representative [1][5].
+- The installation of R packages on the SRCP platform should be done in accordance with the guidelines outlined in the SRCP documentation [2].
+
+REFERENCE KEY
+[1] : HPCSSUP-97677
+[2] : https://docs.hpc.cam.ac.uk/hpc/software-packages/r.html::chunk::0000
+[5] : HPCSSUP-97620",r1:unknown/ticket_memory/current:HPCSSUP-97677 | r2:docs/local_official/current:https://docs.hpc.cam.ac.uk/hpc/software-packages/r.html::chunk::0000 | r3:unknown/ticket_memory/current:HPCSSUP-83191,,,,,"CLASSIFICATION
+Category: Software Installation / R Package [2]
+Technical Action Required: Yes [2]
+Portal Action Required: No [1]
+
+QUICK ASSESSMENT
+The user is requesting the installation of the SNPolisher R package on the SRCP platform, which is associated with the platform ID kjtcs2jvzw7 [1]. This is a time-critical request as the NHSBT Genomics Programme is currently unable to carry out essential clinical work without this package being available [1].
+
+ACTION STEPS (HELPDESK)
+To install the SNPolisher R package, we need to follow the standard procedure for installing R packages on the SRCP platform [4]. We will need to check if the package is already available in the repository and if not, install it using the R package manager [2]. We will also need to ensure that the package is compatible with the current version of R and other dependencies on the platform [7].
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Can you please confirm if you have checked the R repository to see if the SNPolisher package is already installed? [7]
+- Are there any specific version requirements for the SNPolisher package? [7]
+
+EXAMPLE CUSTOMER REPLY
+Hello,
+Thank you for your request to install the SNPolisher R package on the SRCP platform. We will investigate this and get back to you as soon as possible. Please note that we may need to perform a risk assessment before installing the package [6]. If you have any further questions or concerns, please do not hesitate to contact us.
+
+SAFETY / POLICY NOTES
+- All software installations on the SRCP platform must be approved by the platform manager or a designated representative [6].
+- We must ensure that the installed package does not pose a security risk to the platform or its users [6].
+
+REFERENCE KEY
+[1] : HPCSSUP-97677
+[2] : https://docs.hpc.cam.ac.uk/hpc/software-packages/r.html::chunk::0000
+[4] : HPCSSUP-83191
+[6] : https://spack.readthedocs.io/en/latest/spack_repo.builtin.build_systems.html::chunk::0072
+[7] : HPCSSUP-97620",r1:unknown/ticket_memory/current:HPCSSUP-97677 | r2:docs/local_official/current:https://docs.hpc.cam.ac.uk/hpc/software-packages/r.html::chunk::0000 | r3:external_docs/external_official/unknown:https://spack.readthedocs.io/en/latest/build_systems/rpackage.html::chunk::0000,,,,
+HPCSSUP-95709,"Hi
+I've been getting an error on Ampere jobs recently where it fails immediately, stating that the CUDA-capable devices aren't available. I've had this error occur when using submission scripts for running turbostream 3.6.10 which has worked for years, and using a separate script running turbostream 4.2.127 recently. I've attached an example slurm.out file I've had from a turbostream4 job. This error seems to happen whenever I get assigned gpu-q-29, though I've heard colleagues mention getting something similar recently on different nodes. I'm aware I can exclude gpu-q-29 in my sbatch, but if it happens on other nodes and I lose all the time I waited in the queue, it's frustrating. Are there any sbatch instructions I can add to avoid this happening, or a fix for the route problem?
+Many Thanks,
+Dom
+Example slurm.out file
+_______________________________________________________________________
+Loading rhel8/default-amp
+Loading requirement: rhel8/slurm singularity/current rhel8/global cuda/11.4
+libpciaccess/0.16/gcc-9.4.0-6fonbj6 libiconv/1.16/gcc-9.4.0-ahebbov
+libxml2/2.9.12/gcc-9.4.0-gnknt5e ncurses/6.2/gcc-9.4.0-aiirok7
+hwloc/2.5.0/gcc-9.4.0-7sqomga libevent/2.1.12/gcc-9.4.0-hgny7cm
+numactl/2.0.14/gcc-9.4.0-52dwc6n cuda/11.4.0/gcc-9.4.0-3hnxhjt
+gdrcopy/2.2/gcc-9.4.0-e4igtfp knem/1.1.4/gcc-9.4.0-bpbxgva
+libnl/3.3.0/gcc-9.4.0-whwhrwb rdma-core/34.0/gcc-9.4.0-5eo5n2u
+ucx/1.11.1/gcc-9.4.0-lktqyl4 openmpi/4.1.1/gcc-9.4.0-epagguv
+Changed directory to /home/drc60/rds/hpc-work/Liftfan/TURBOSTREAM4.
+JobID: 17907836
+======
+Time: Thu 20 Nov 13:39:09 GMT 2025
+Running on master node: gpu-q-26
+Current directory: /home/drc60/rds/hpc-work/Liftfan/TURBOSTREAM4
+Nodes allocated:
+================
+gpu-q-[26 29]
+numprocs=8, numnodes=2, ppn=4 (OMP_NUM_THREADS=1)
+Executing command:
+==================
+mpirun -npernode 4 -np 8 python /usr/local/software/turbostream/ts42127/a100/turbostream_4/bin/turbostream.py config_initial.ofp lf_exp_sig1p15_l0p037_ns2_ULJSAAAJB51TSS77LLNE_nac_V1_thic_hover_input.hdf5 lf_exp_sig1p15_l0p037_ns2_ULJSAAAJB51TSS77LLNE_nac_V1_thic_hover_input.hdf5 lf_exp_sig1p15_l0p037_ns2_ULJSAAAJB51TSS77LLNE_nac_V1_thic_hover_input.hdf5 lf_exp_sig1p15_l0p037_ns2_ULJSAAAJB51TSS77LLNE_nac_V1_thic_hover_laminar 4
+Cuda error in file 'src/sbd/cuda/sbd_cuda.cu' in line 2002 : all CUDA-capable devices are busy or unavailable.
+Cuda error in file 'src/sbd/cuda/sbd_cuda.cu' in line 2002 : all CUDA-capable devices are busy or unavailable.
+--------------------------------------------------------------------------
+Primary job  terminated normally, but 1 process returned
+a non-zero exit code. Per user-direction, the job has been aborted.
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+mpirun detected that one or more processes exited with non-zero status, thus causing
+the job to be terminated. The first process to do so was:
+Process name: [[55555,1],7]
+Exit code:    1
+--------------------------------------------------------------------------",CUDA-capable devices unavailable error on ampere,"CLASSIFICATION
+Category: Job Submission / CUDA Error
+Technical Action Required: Yes
+Escalation Required: Possibly
+Urgency: Medium
+
+QUICK ASSESSMENT
+The user is experiencing a CUDA error where the CUDA-capable devices are busy or unavailable when running jobs on the Ampere nodes [1][2][3]. This issue seems to be intermittent and has been reported by other users as well [2][3]. The user has provided an example slurm.out file and has mentioned that the error occurs when assigned to gpu-q-29, but it's possible that the issue is not limited to this node [1].
+
+ACTION STEPS (HELPDESK)
+To troubleshoot this issue, we can try adding #SBATCH --reboot to the submit script to force each node allocated to the job to reboot before executing [7]. We can also try specifying the number of GPUs per node using #SBATCH --gres=gpu:N, where 1 <= N <= 4 [1][8]. Additionally, we can check the node status and see if there are any issues with the node that is being assigned to the job [2][6].
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Can you provide more information about the job script and the application being run?
+- Have you tried running the job on a different node or with a different number of GPUs?
+- Are there any other error messages or output that might be relevant to this issue?
+
+EXAMPLE CUSTOMER REPLY
+Hello,
+Thank you for reporting this issue. We are going to try adding #SBATCH --reboot to your submit script to see if that resolves the issue. We will also check the node status and see if there are any issues with the node that is being assigned to your job. Please let us know if you have any further questions or concerns.
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- It's possible that the issue is due to a malfunctioning node, and rebooting the node may resolve the issue [7].
+- The user should be aware that specifying the number of GPUs per node can affect the job's performance and resource allocation [1][8].
+
+REFERENCE KEY
+[1] : https://docs.hpc.cam.ac.uk/hpc/user-guide/a100.html::chunk::0001
+[2] : HPCSSUP-61873
+[3] : HPCSSUP-100531
+[6] : HPCSSUP-86140
+[7] : HPCSSUP-37575
+[8] : https://docs.hpc.cam.ac.uk/hpc/user-guide/batch.html::chunk::0005",r1:docs/local_official/current:https://docs.hpc.cam.ac.uk/hpc/user-guide/a100.html::chunk::0001 | r2:unknown/ticket_memory/current:HPCSSUP-61873 | r3:unknown/ticket_memory/current:HPCSSUP-100531,,,,,"CLASSIFICATION
+Category: Job Submission / GPU Allocation
+Technical Action Required: Yes
+Escalation Required: Possibly
+Urgency: Medium
+
+QUICK ASSESSMENT
+The user is experiencing issues with CUDA-capable devices being busy or unavailable when running jobs on the Ampere nodes [4]. The error message ""Cuda error in file 'src/sbd/cuda/sbd_cuda.cu' in line 2002 : all CUDA-capable devices are busy or unavailable"" is reported [4]. The user has tried running jobs on different nodes, including gpu-q-29, and has experienced similar issues [4]. The retrieved documents suggest that the user should specify the number of GPUs per node using the --gres=gpu directive [2][5][6].
+
+ACTION STEPS (HELPDESK)
+1. Check the job submission script to ensure that the --gres=gpu directive is used to specify the number of GPUs per node [2][5][6].
+2. Verify that the node is available and not experiencing any technical issues [8].
+3. If the issue persists, try rebooting the node or resubmitting the job [4].
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Can you provide the exact job submission script and the output file for the failed job?
+- Have you tried running the job on a different node or with a different number of GPUs?
+
+EXAMPLE CUSTOMER REPLY
+Hello,
+Thank you for reporting the issue with CUDA-capable devices being busy or unavailable on the Ampere nodes. We recommend checking the job submission script to ensure that the --gres=gpu directive is used to specify the number of GPUs per node. If the issue persists, please try rebooting the node or resubmitting the job. Please let us know if you have any further questions or concerns.
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Always specify the number of GPUs per node using the --gres=gpu directive to avoid conflicts [2][5][6].
+- Be aware of the node availability and technical issues before submitting jobs [8].
+
+REFERENCE KEY
+[2] : HPCSSUP-61873
+[4] : HPCSSUP-100531
+[5] : https://docs.hpc.cam.ac.uk/hpc/user-guide/quickstart.html::chunk::0008
+[6] : https://slurm.schedmd.com/gres.html::chunk::0005
+[8] : HPCSSUP-86140",r1:docs/local_official/current:https://docs.hpc.cam.ac.uk/hpc/user-guide/a100.html::chunk::0001 | r2:unknown/ticket_memory/current:HPCSSUP-61873 | r3:external_docs/external_official/unknown:https://slurm.schedmd.com/faq.html::chunk::0030,,,,
+HPCSSUP-100516,"Dear HPC team,
+Please find attached a purchase order for 2,000 CPU hours of service level 2 , to be credited to Emily Lines.
+Best wishes,
+Anne Baranger",Fw: Purchase order for Service Level 2 and simulation hours,"CLASSIFICATION
+Category: HPC Account Management [3]
+Technical Action Required: Yes [3]
+Portal Action Required: No [3]
+
+QUICK ASSESSMENT
+The user has provided a purchase order for 2,000 CPU hours of service level 2 to be credited to Emily Lines [3]. This is a standard procedure for adding compute hours to a user's account.
+
+ACTION STEPS (HELPDESK)
+1. Verify the purchase order and ensure it is complete and valid [3].
+2. Use the `makecpu` command to add the CPU hours to the user's account, following the format used in previous tickets [5].
+3. Update the account settings and associations as necessary [5].
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Can you please confirm the exact project name and ID for Emily Lines?
+- Are there any specific requirements or constraints for the CPU hours being added?
+
+EXAMPLE CUSTOMER REPLY
+Hello,
+Thank you for your purchase order for 2,000 CPU hours of service level 2. We will process this request and add the hours to Emily Lines' account.
+Please let us know if you have any further questions or concerns.
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Ensure that all purchase orders are verified and valid before processing [3].
+- Follow established procedures for adding compute hours to user accounts [5].
+
+REFERENCE KEY
+[3] : HPCSSUP-73957
+[5] : HPCSSUP-89499",r1:docs/local_official/unknown:https://docs.hpc.cam.ac.uk/hpc/user-guide/policies.html::chunk::0002 | r2:external_docs/external_official/unknown:https://slurm.schedmd.com/rest_api.html::chunk::0154 | r3:unknown/ticket_memory/unknown:HPCSSUP-73957,,,,,"CLASSIFICATION
+Category: Storage / Licence Management [1]
+Technical Action Required: Yes [6]
+Portal Action Required: No [6]
+Urgency: Low [6]
+
+QUICK ASSESSMENT
+The user has provided a purchase order for 2,000 CPU hours of service level 2 to be credited to Emily Lines [6]. This is a standard procedure for purchasing CPU hours for use on the HPC system [1][6].
+
+ACTION
+To process this request, the HPC support team will need to add the purchased CPU hours to the relevant account [6]. This can be done using the `gdeposit` command, specifying the account name, number of hours, and other relevant details [6].
+
+EXAMPLE CUSTOMER REPLY
+Hello,
+Thank you for your purchase order for 2,000 CPU hours of service level 2. We will process this request and add the hours to the relevant account.
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- The HPC support team will ensure that the purchased CPU hours are added to the correct account and that the user has access to the relevant resources [1][6].
+- The user should be aware that the funding body may have expectations regarding the consumption of the purchased CPU hours within the lifetime of the relevant grant [8].
+
+REFERENCE KEY
+[1] : https://docs.hpc.cam.ac.uk/hpc/user-guide/policies.html::chunk::0002
+[6] : HPCSSUP-75123
+[8] : HPCSSUP-54623",r1:docs/local_official/unknown:https://docs.hpc.cam.ac.uk/hpc/user-guide/policies.html::chunk::0002 | r2:unknown/ticket_memory/unknown:HPCSSUP-73957 | r3:docs/local_official/unknown:https://docs.hpc.cam.ac.uk/hpc/user-guide/policies.html::chunk::0004,,,,
+HPCSSUP-100411,"Hi there,
+I manage a Research Data store for the “kstarkstar” project:
+Directory: rds-mk652-kstarkstar
+Project ID: bUoO2gzww9Q
+It is about to expire. I want to extend the license for another year (for all 5TB) with all of the same permissions. I raised a PO have requested a new data store but think I may have made a mistake here. I don’t want a new storage area, I just want to extend the existing one.
+Please can you resolve my mistake?
+The PO for the extension is attached.
+Many thanks,
+Matt",Extension of project storage,"CLASSIFICATION
+Category: Storage / Licence Management [1]
+Technical Action Required: Yes [1]
+Portal Action Required: Yes [1][2]
+Urgency: Medium [1]
+
+QUICK ASSESSMENT
+The user has raised a purchase order (PO) for extending the licence of their existing Research Data Store (RDS) project, but instead of extending the existing project, a new project has been created [1]. The user wants to extend the licence of their existing RDS project, rds-mk652-kstarkstar, with the same permissions and capacity of 5TB [1].
+
+ACTION STEPS (HELPDESK)
+1. Cancel the new RDS project that was created in error [1][6].
+2. Use the PO to extend the licence of the existing RDS project, rds-mk652-kstarkstar, for another year with the same capacity of 5TB and permissions [1][3].
+3. Verify that the extension has been successfully applied to the existing project [1][5].
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Can you please confirm the exact PO number and date of the purchase order that was raised for the extension [1]?
+- Are there any changes to the permissions or capacity of the existing RDS project that need to be made during the extension process [1]?
+
+EXAMPLE CUSTOMER REPLY
+Hello,
+Thank you for bringing this to our attention. We will cancel the new RDS project and use the PO to extend the licence of your existing project, rds-mk652-kstarkstar, for another year with the same capacity and permissions. We will verify that the extension has been successfully applied and notify you once this is complete.
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Only data managers and data owners can initiate a time extension or capacity increase of an existing project [1][6].
+- The storage portal should be used to manage RDS projects, including extensions and cancellations [1][2].
+
+REFERENCE KEY
+[1] : HPCSSUP-20650
+[2] : https://docs.hpc.cam.ac.uk/hpc/user-guide/sbs.html::chunk::0000
+[3] : HPCSSUP-19348
+[5] : HPCSSUP-78876
+[6] : https://docs.hpc.cam.ac.uk/hpc/user-guide/wbic.html::chunk::0003",r1:unknown/ticket_memory/current:HPCSSUP-20650 | r2:docs/local_official/unknown:https://docs.hpc.cam.ac.uk/hpc/user-guide/sbs.html::chunk::0000 | r3:unknown/ticket_memory/current:HPCSSUP-19348,,,,,"CLASSIFICATION
+Category: Storage / Licence Management [1]
+Technical Action Required: Yes [1]
+Portal Action Required: Yes (Self Service) [1][2]
+Urgency: Medium [1]
+
+QUICK ASSESSMENT
+The user has raised a purchase order for a new Research Data Store (RDS) but intends to extend the existing storage instead [1]. The existing storage project is rds-mk652-kstarkstar with a project ID of bUoO2gzww9Q [1]. The user wants to extend the license for another year with the same permissions and 5TB capacity [1].
+
+ACTION STEPS (HELPDESK)
+1. Delete the new RDS storage request as it was submitted in error [7].
+2. Ask the user to upload the purchase order against the storage extension for the particular storage they wish to extend [7].
+3. Verify that the license for the current storage is extended correctly and matches the user's requirements [1][7].
+
+QUESTIONS TO ASK (ONLY IF NEEDED)
+- Can you confirm the exact purchase order number and date for the storage extension?
+- Are there any specific permissions or access controls that need to be maintained during the extension process?
+
+EXAMPLE CUSTOMER REPLY
+Hello,
+We will delete the new RDS storage request and ask you to upload the purchase order against the storage extension for rds-mk652-kstarkstar. Please let us know if you have any further questions or concerns.
+Best regards,
+HPC Support
+
+SAFETY / POLICY NOTES
+- Ensure that the correct storage project is extended to avoid data loss or unauthorized access [1][2].
+- Verify that the purchase order is valid and correctly uploaded to the self-service portal [7].
+
+REFERENCE KEY
+[1] : HPCSSUP-20650
+[2] : https://docs.hpc.cam.ac.uk/hpc/user-guide/sbs.html::chunk::0000
+[7] : HPCSSUP-78876",r1:unknown/ticket_memory/current:HPCSSUP-20650 | r2:docs/local_official/unknown:https://docs.hpc.cam.ac.uk/hpc/user-guide/sbs.html::chunk::0000 | r3:external_docs/external_official/unknown:https://slurm.schedmd.com/openapi_release_notes.html::chunk::0017,,,,

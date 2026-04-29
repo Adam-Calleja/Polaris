@@ -66,19 +66,20 @@
 \contentsline {subsection}{\numberline {6.4.1}Tuned-Finalist Comparison}{52}{subsection.6.4.1}%
 \contentsline {section}{\numberline {6.5}Manual Evaluation Results}{52}{section.6.5}%
 \contentsline {section}{\numberline {6.6}Error Analysis Results}{52}{section.6.6}%
-\contentsline {section}{\numberline {6.7}Stability and Robustness Results}{52}{section.6.7}%
-\contentsline {chapter}{\numberline {7}Discussion and Critical Appraisal}{53}{chapter.7}%
-\contentsline {section}{\numberline {7.1}Answers to the Research Questions}{53}{section.7.1}%
-\contentsline {section}{\numberline {7.2}What Improved and Why}{53}{section.7.2}%
-\contentsline {section}{\numberline {7.3}Comparison with Prior Work}{53}{section.7.3}%
-\contentsline {section}{\numberline {7.4}Where the System Still Fails}{53}{section.7.4}%
-\contentsline {section}{\numberline {7.5}Threats to Validity}{53}{section.7.5}%
-\contentsline {section}{\numberline {7.6}Review of the Project Plan}{53}{section.7.6}%
-\contentsline {chapter}{\numberline {8}Conclusion and Future Work}{54}{chapter.8}%
-\contentsline {section}{\numberline {8.1}Summary of Contributions}{54}{section.8.1}%
-\contentsline {section}{\numberline {8.2}Main Findings Against Objectives}{54}{section.8.2}%
-\contentsline {section}{\numberline {8.3}Limitations}{54}{section.8.3}%
-\contentsline {section}{\numberline {8.4}Future Work}{54}{section.8.4}%
-\contentsline {chapter}{\numberline {A}Approved External Documentation Sources}{59}{appendix.A}%
-\contentsline {chapter}{\numberline {B}Benchmark Taxonomy Label Definitions}{61}{appendix.B}%
-\contentsline {chapter}{\numberline {C}Authority Metadata Fields}{63}{appendix.C}%
+\contentsline {subsection}{\numberline {6.6.1}Manual Analysis of the Validity-Signal Ablation}{52}{subsection.6.6.1}%
+\contentsline {section}{\numberline {6.7}Stability and Robustness Results}{54}{section.6.7}%
+\contentsline {chapter}{\numberline {7}Discussion and Critical Appraisal}{55}{chapter.7}%
+\contentsline {section}{\numberline {7.1}Answers to the Research Questions}{55}{section.7.1}%
+\contentsline {section}{\numberline {7.2}What Improved and Why}{55}{section.7.2}%
+\contentsline {section}{\numberline {7.3}Comparison with Prior Work}{55}{section.7.3}%
+\contentsline {section}{\numberline {7.4}Where the System Still Fails}{55}{section.7.4}%
+\contentsline {section}{\numberline {7.5}Threats to Validity}{55}{section.7.5}%
+\contentsline {section}{\numberline {7.6}Review of the Project Plan}{55}{section.7.6}%
+\contentsline {chapter}{\numberline {8}Conclusion and Future Work}{56}{chapter.8}%
+\contentsline {section}{\numberline {8.1}Summary of Contributions}{56}{section.8.1}%
+\contentsline {section}{\numberline {8.2}Main Findings Against Objectives}{56}{section.8.2}%
+\contentsline {section}{\numberline {8.3}Limitations}{56}{section.8.3}%
+\contentsline {section}{\numberline {8.4}Future Work}{56}{section.8.4}%
+\contentsline {chapter}{\numberline {A}Approved External Documentation Sources}{61}{appendix.A}%
+\contentsline {chapter}{\numberline {B}Benchmark Taxonomy Label Definitions}{63}{appendix.B}%
+\contentsline {chapter}{\numberline {C}Authority Metadata Fields}{65}{appendix.C}%

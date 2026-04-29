@@ -109,7 +109,8 @@ describe("AssistantPage", () => {
 
     expect(screen.getByText("Hello Adam")).toBeInTheDocument();
     expect(screen.getByText("How can I help you today?")).toBeInTheDocument();
-    expect(screen.getByText("Storage renewal")).toBeInTheDocument();
+    expect(screen.getByText("HPCSSUP-98820")).toBeInTheDocument();
+    expect(screen.getByText("RDS and RCS licence renewal")).toBeInTheDocument();
     expect(screen.queryByText("Diagnostics")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Clear Assistant" })).not.toBeInTheDocument();
   });

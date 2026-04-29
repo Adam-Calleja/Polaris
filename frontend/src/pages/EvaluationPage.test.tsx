@@ -19,19 +19,23 @@ describe("EvaluationPage", () => {
   });
 
   it("guards against duplicate feedback for an existing response", async () => {
-    const query = "We need to renew RDS and transfer ownership. How should this be handled?";
+    const query = [
+      "Dear Storage Services team,",
+      "We would like to renew our licences for both the RDS and RCS  (account 80/81) for another year.",
+      "On top of this is it possible to change the ownership of these licences to Maria (Cc’ed) who is our new head of bioinformatics?",
+    ].join("\n");
     const answer = "Grounded answer";
     const fingerprint = await computeResponseFingerprint(query, answer, {
       contextDocIds: ["doc-1"],
-      scenarioId: "strong_answer",
+      scenarioId: "HPCSSUP-98820",
     });
 
     window.sessionStorage.setItem(
       "polaris-ui-state-v1",
       JSON.stringify({
         evaluationResults: {
-          strong_answer: {
-            scenarioId: "strong_answer",
+          "HPCSSUP-98820": {
+            scenarioId: "HPCSSUP-98820",
             query,
             response: {
               answer,
@@ -61,7 +65,7 @@ describe("EvaluationPage", () => {
           total: 1,
           helpful_yes: 1,
           grounded_yes: 1,
-          by_scenario: [{ scenario_id: "strong_answer", count: 1 }],
+          by_scenario: [{ scenario_id: "HPCSSUP-98820", count: 1 }],
           failure_types: [{ failure_type: "none", count: 1 }],
         });
       }

@@ -614,6 +614,15 @@ button {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
+.quick-prompt-card__eyebrow,
+.scenario-card__eyebrow {
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(81, 78, 231, 0.82);
+}
+
 .quick-prompt-card__title {
   font-size: 1.05rem;
   font-weight: 700;
@@ -1087,6 +1096,10 @@ button {
 .scenario-card__description,
 .scenario-card__focus {
   color: rgba(23, 21, 63, 0.7);
+}
+
+.scenario-card__eyebrow {
+  margin-bottom: 0.38rem;
 }
 
 .scenario-card__focus {

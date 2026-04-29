@@ -1,0 +1,22 @@
+{
+  "seed": 42,
+  "labels": [
+    "system_A",
+    "system_B"
+  ],
+  "conditions": [
+    "all_docs_validity_aware",
+    "validity_aware"
+  ],
+  "query_count": 30,
+  "runs": [
+    {
+      "condition_name": "all_docs_validity_aware",
+      "run_dir": "/Users/adam/Documents/University/Third Year Project/rag_project/artifacts/experiments/protocol_final_3runs/stage6_external_docs_ablation/all_docs_validity_aware/run_03"
+    },
+    {
+      "condition_name": "validity_aware",
+      "run_dir": "/Users/adam/Documents/University/Third Year Project/rag_project/artifacts/experiments/protocol_final_3runs/stage6_external_docs_ablation/validity_aware/run_03"
+    }
+  ]
+}
