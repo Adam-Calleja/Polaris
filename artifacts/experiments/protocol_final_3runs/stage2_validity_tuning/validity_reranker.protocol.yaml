@@ -1,5 +1,5 @@
 profile_name: validity_reranker.dev_v3
-generated_at: '2026-04-27T20:51:16.193697+00:00'
+generated_at: '2026-04-28T16:10:13.124547+00:00'
 dataset_path: /app/data/test/ragas_one_hop_eval_dataset_final.dev.jsonl
 objective_metrics:
 - factual_correctness
@@ -7,12 +7,12 @@ objective_metrics:
 - context_precision_without_reference
 weights:
   authority: 0.08
-  freshness: 0.0
+  freshness: 0.01
   scope: 0.08
-  scope_family: 0.0
+  scope_family: 0.02
   software: 0.0
-  status: 0.08
-  version: 0.0
+  status: 0.04
+  version: 0.04
 authority_values:
   local_official: 1.0
   external_official: 0.5
@@ -26,11 +26,27 @@ status_values:
   unknown: 0.0
 freshness:
   mode: relative_recency
+search:
+  grid_profile: two_phase
+  selection_strategy: coverage_guarded_factual_plus_faithfulness
+  selection_min_prepared_rows: 60
+  exploration_anchor_count: 1
+  phase1_trial_count: 25
+  phase2_anchor_signatures:
+  - authority: 0.08
+    scope: 0.08
+    status: 0.04
+    prepared_rows: 70
+    objective: 0.5697996403888085
+    metric_means:
+      factual_correctness: 0.3162121212121212
+      faithfulness: 0.6102112966398681
+      context_precision_without_reference: 0.7829755033144363
 selection:
-  objective: 0.5887006288795126
+  objective: 0.55540547958774
   metric_means:
-    factual_correctness: 0.31826086956521743
-    faithfulness: 0.6569938515590689
-    context_precision_without_reference: 0.7908471655142513
-  prepared_rows: 25
-  reranker_fingerprint: fa2facba4ead6277869d73df384634bce8467bf0b4226c0ed7edf4c49cc478cf
+    factual_correctness: 0.3142424242424242
+    faithfulness: 0.6127097612172239
+    context_precision_without_reference: 0.7392642533035717
+  prepared_rows: 70
+  reranker_fingerprint: 1c05315b281a4f766c167d979ec1f5fe9d446df9a431938179d2ce09efddccd0

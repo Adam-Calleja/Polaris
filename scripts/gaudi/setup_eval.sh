@@ -11,8 +11,8 @@ BASE_STATE="${BASE_STATE:-$HOME/.cache/polaris-gaudi}"
 SHARED_HF_CACHE="${SHARED_HF_CACHE:-$BASE_STATE/shared-hf-cache}"
 
 # Keep these as env vars, per your request
-EVAL_DEVICE_IDS="${EVAL_DEVICE_IDS:-0 1 2 3 4 5 6 7}"   # space- or comma-separated
-EVAL_REPLICA_COUNT="${EVAL_REPLICA_COUNT:-8}"
+EVAL_DEVICE_IDS="${EVAL_DEVICE_IDS:-0 1 2 3 4 5 7}"   # space- or comma-separated
+EVAL_REPLICA_COUNT="${EVAL_REPLICA_COUNT:-7}"
 
 # Runtime tuning
 MAX_MODEL_LEN="${MAX_MODEL_LEN:-32768}"

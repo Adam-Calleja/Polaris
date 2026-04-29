@@ -4,7 +4,7 @@ generator_llm:
   type: "openai_chat"
   # model_name: "llama-cam"
   # api_base: "https://llm.hpc.cam.ac.uk/v1"
-  model_name: "meta-llama/Llama-3.3-70B-Instruct:novita"
+  model_name: "meta-llama/Llama-3.3-70B-Instruct:preferred"
   api_base: "https://router.huggingface.co/v1"
   api_key: "${HF_TOKEN_TEST}"
   request_timeout: 90

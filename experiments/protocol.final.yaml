@@ -18,11 +18,11 @@ generator_candidates:
   llama33: &llama33_generator
     generator_llm:
       type: "openai_chat"
-      model_name: "meta-llama/Llama-3.3-70B-Instruct:novita"
+      model_name: "meta-llama/Llama-3.3-70B-Instruct:preferred"
       api_base: "https://router.huggingface.co/v1"
       api_key: "${HF_TOKEN_TEST}"
       request_timeout: 90
-      max_retries: 1
+      max_retries: 3
       model_kwargs:
         max_tokens: 1024
         temperature: 0
@@ -375,7 +375,7 @@ defaults:
     evaluation:
       generation:
         mode: "pipeline"
-        workers: 16
+        workers: 4
       run:
         max_workers: 28
       adaptive_concurrency:
@@ -1046,7 +1046,20 @@ stages:
     dataset_path: "../data/test/ragas_one_hop_eval_dataset_final.dev.jsonl"
     output_path: "../artifacts/experiments/protocol_final_3runs/stage2_validity_tuning/validity_reranker.protocol.yaml"
     manifest_path: "../artifacts/experiments/protocol_final_3runs/stage2_validity_tuning/validity_reranker.protocol.manifest.json"
-    generation_workers: 4
+    generation_workers: 16
+    grid_profile: "two_phase"
+    selection_min_prepared_rows: 60
+    exploration_anchor_count: 1
+    config_overrides:
+      evaluation:
+        generation:
+          retries:
+            max_attempts: 3
+            initial_backoff_seconds: 1.0
+            max_backoff_seconds: 8.0
+            jitter_seconds: 0.25
+            retry_on_empty_response: true
+
 
   stage3_benchmark_characterisation:
     type: "benchmark_analysis"
@@ -1094,120 +1107,120 @@ stages:
         preset: "validity_aware"
       - name: "all_docs_validity_aware"
         preset: "all_docs_validity_aware"
-        ingest:
-          - *external_docs_ingest
+        # ingest:
+        #   - *external_docs_ingest
 
-  stage7_prompt_ablation:
-    type: "evaluation_grid"
-    dataset_path: "../data/test/ragas_one_hop_eval_dataset_final.test.jsonl"
-    annotations_file: "../data/test/benchmark_annotations_final.csv"
-    repeats: 3
-    # If Stage 6 shows the external-docs system is the best retrieval stack,
-    # switch both presets in this stage from validity_aware to all_docs_validity_aware.
-    conditions:
-      - name: "generic_prompt"
-        preset: "validity_aware"
-        config_overrides:
-          <<: *generic_prompt_config
-      - name: "ticket_style_prompt"
-        preset: "validity_aware"
-        config_overrides:
-          <<: *ticket_prompt_config
+  # stage7_prompt_ablation:
+  #   type: "evaluation_grid"
+  #   dataset_path: "../data/test/ragas_one_hop_eval_dataset_final.test.jsonl"
+  #   annotations_file: "../data/test/benchmark_annotations_final.csv"
+  #   repeats: 3
+  #   # If Stage 6 shows the external-docs system is the best retrieval stack,
+  #   # switch both presets in this stage from validity_aware to all_docs_validity_aware.
+  #   conditions:
+  #     - name: "generic_prompt"
+  #       preset: "validity_aware"
+  #       config_overrides:
+  #         <<: *generic_prompt_config
+  #     - name: "ticket_style_prompt"
+  #       preset: "validity_aware"
+  #       config_overrides:
+  #         <<: *ticket_prompt_config
 
-  stage8a_finalist_dev_tuning:
-    type: "evaluation_grid"
-    dataset_path: "../data/test/ragas_one_hop_eval_dataset_final.dev.jsonl"
-    annotations_file: "../data/test/benchmark_annotations_final.csv"
-    repeats: 3
-    # This stage tunes the finalists individually on dev. If Stage 6 produces an
-    # external-docs finalist worth carrying forward, duplicate the validity_aware
-    # blocks below and change the preset to all_docs_validity_aware.
-    conditions:
-      - name: "naive_combined_topk5_final4"
-        preset: "naive_combined"
-        config_overrides:
-          retriever: *budget_5_4
-      - name: "naive_combined_topk5_final6"
-        preset: "naive_combined"
-        config_overrides:
-          retriever: *budget_5_6
-      - name: "naive_combined_topk5_final8"
-        preset: "naive_combined"
-        config_overrides:
-          retriever: *budget_5_8
-      - name: "naive_combined_topk8_final4"
-        preset: "naive_combined"
-        config_overrides:
-          retriever: *budget_8_4
-      - name: "naive_combined_topk8_final6"
-        preset: "naive_combined"
-        config_overrides:
-          retriever: *budget_8_6
-      - name: "naive_combined_topk8_final8"
-        preset: "naive_combined"
-        config_overrides:
-          retriever: *budget_8_8
-      - name: "naive_combined_topk12_final4"
-        preset: "naive_combined"
-        config_overrides:
-          retriever: *budget_12_4
-      - name: "naive_combined_topk12_final6"
-        preset: "naive_combined"
-        config_overrides:
-          retriever: *budget_12_6
-      - name: "naive_combined_topk12_final8"
-        preset: "naive_combined"
-        config_overrides:
-          retriever: *budget_12_8
-      - name: "validity_aware_topk5_final4"
-        preset: "validity_aware"
-        config_overrides:
-          retriever: *budget_5_4
-      - name: "validity_aware_topk5_final6"
-        preset: "validity_aware"
-        config_overrides:
-          retriever: *budget_5_6
-      - name: "validity_aware_topk5_final8"
-        preset: "validity_aware"
-        config_overrides:
-          retriever: *budget_5_8
-      - name: "validity_aware_topk8_final4"
-        preset: "validity_aware"
-        config_overrides:
-          retriever: *budget_8_4
-      - name: "validity_aware_topk8_final6"
-        preset: "validity_aware"
-        config_overrides:
-          retriever: *budget_8_6
-      - name: "validity_aware_topk8_final8"
-        preset: "validity_aware"
-        config_overrides:
-          retriever: *budget_8_8
-      - name: "validity_aware_topk12_final4"
-        preset: "validity_aware"
-        config_overrides:
-          retriever: *budget_12_4
-      - name: "validity_aware_topk12_final6"
-        preset: "validity_aware"
-        config_overrides:
-          retriever: *budget_12_6
-      - name: "validity_aware_topk12_final8"
-        preset: "validity_aware"
-        config_overrides:
-          retriever: *budget_12_8
+  # stage8a_finalist_dev_tuning:
+  #   type: "evaluation_grid"
+  #   dataset_path: "../data/test/ragas_one_hop_eval_dataset_final.dev.jsonl"
+  #   annotations_file: "../data/test/benchmark_annotations_final.csv"
+  #   repeats: 3
+  #   # This stage tunes the finalists individually on dev. If Stage 6 produces an
+  #   # external-docs finalist worth carrying forward, duplicate the validity_aware
+  #   # blocks below and change the preset to all_docs_validity_aware.
+  #   conditions:
+  #     - name: "naive_combined_topk5_final4"
+  #       preset: "naive_combined"
+  #       config_overrides:
+  #         retriever: *budget_5_4
+  #     - name: "naive_combined_topk5_final6"
+  #       preset: "naive_combined"
+  #       config_overrides:
+  #         retriever: *budget_5_6
+  #     - name: "naive_combined_topk5_final8"
+  #       preset: "naive_combined"
+  #       config_overrides:
+  #         retriever: *budget_5_8
+  #     - name: "naive_combined_topk8_final4"
+  #       preset: "naive_combined"
+  #       config_overrides:
+  #         retriever: *budget_8_4
+  #     - name: "naive_combined_topk8_final6"
+  #       preset: "naive_combined"
+  #       config_overrides:
+  #         retriever: *budget_8_6
+  #     - name: "naive_combined_topk8_final8"
+  #       preset: "naive_combined"
+  #       config_overrides:
+  #         retriever: *budget_8_8
+  #     - name: "naive_combined_topk12_final4"
+  #       preset: "naive_combined"
+  #       config_overrides:
+  #         retriever: *budget_12_4
+  #     - name: "naive_combined_topk12_final6"
+  #       preset: "naive_combined"
+  #       config_overrides:
+  #         retriever: *budget_12_6
+  #     - name: "naive_combined_topk12_final8"
+  #       preset: "naive_combined"
+  #       config_overrides:
+  #         retriever: *budget_12_8
+  #     - name: "validity_aware_topk5_final4"
+  #       preset: "validity_aware"
+  #       config_overrides:
+  #         retriever: *budget_5_4
+  #     - name: "validity_aware_topk5_final6"
+  #       preset: "validity_aware"
+  #       config_overrides:
+  #         retriever: *budget_5_6
+  #     - name: "validity_aware_topk5_final8"
+  #       preset: "validity_aware"
+  #       config_overrides:
+  #         retriever: *budget_5_8
+  #     - name: "validity_aware_topk8_final4"
+  #       preset: "validity_aware"
+  #       config_overrides:
+  #         retriever: *budget_8_4
+  #     - name: "validity_aware_topk8_final6"
+  #       preset: "validity_aware"
+  #       config_overrides:
+  #         retriever: *budget_8_6
+  #     - name: "validity_aware_topk8_final8"
+  #       preset: "validity_aware"
+  #       config_overrides:
+  #         retriever: *budget_8_8
+  #     - name: "validity_aware_topk12_final4"
+  #       preset: "validity_aware"
+  #       config_overrides:
+  #         retriever: *budget_12_4
+  #     - name: "validity_aware_topk12_final6"
+  #       preset: "validity_aware"
+  #       config_overrides:
+  #         retriever: *budget_12_6
+  #     - name: "validity_aware_topk12_final8"
+  #       preset: "validity_aware"
+  #       config_overrides:
+  #         retriever: *budget_12_8
 
-  stage8b_finalist_test_comparison:
-    type: "evaluation_grid"
-    dataset_path: "../data/test/ragas_one_hop_eval_dataset_final.test.jsonl"
-    annotations_file: "../data/test/benchmark_annotations_final.csv"
-    repeats: 3
-    # Add all_docs_validity_aware here only if Stage 6 justifies carrying it
-    # forward as a real finalist.
-    conditions:
-      - name: "naive_combined"
-        preset: "naive_combined"
-      - name: "validity_aware"
-        preset: "validity_aware"
+  # stage8b_finalist_test_comparison:
+  #   type: "evaluation_grid"
+  #   dataset_path: "../data/test/ragas_one_hop_eval_dataset_final.test.jsonl"
+  #   annotations_file: "../data/test/benchmark_annotations_final.csv"
+  #   repeats: 3
+  #   # Add all_docs_validity_aware here only if Stage 6 justifies carrying it
+  #   # forward as a real finalist.
+  #   conditions:
+  #     - name: "naive_combined"
+  #       preset: "naive_combined"
+  #     - name: "validity_aware"
+  #       preset: "validity_aware"
 
 # Stage 9 manual evaluation:
 #   Summarize Stage 7 or Stage 8B with --run-comparison to generate
