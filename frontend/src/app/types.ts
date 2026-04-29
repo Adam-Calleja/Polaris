@@ -104,6 +104,7 @@ export interface DemoScenario {
   title: string;
   description: string;
   query: string;
+  displayQuery?: string;
   queryConstraints?: QueryConstraintsPayload | null;
   serverTimeoutMs?: number | null;
   includeEvaluationMetadata?: boolean;

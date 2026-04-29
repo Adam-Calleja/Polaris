@@ -6,6 +6,7 @@ export interface AssistantPromptCard {
   description: string;
   icon: string;
   prompt: string;
+  displayQuery?: string;
 }
 
 type TicketExampleScenario = DemoScenario & {
@@ -35,6 +36,23 @@ Cambridge CB2 0QQ
 United Kingdom
 Phone: +44 (0)1223 768628
 Email: yhbl2@cam.ac.uk<[yhbl2@cam.ac.uk](mailto:yhbl2@cam.ac.uk)>`,
+    displayQuery: `Dear Storage Services team,
+We would like to renew our licences for both the RDS and RCS  (account ACCOUNT_001) for another year.
+On top of this is it possible to change the ownership of these licences to PERSON_001 (Cc’ed) who is our new head of bioinformatics?
+Many thanks
+PERSON_002
+**
+Dr. PERSON_002
+Assistant Research Professor
+ORG_001
+ORG_002
+ORG_003
+ORG_001
+Level 4, Box 289, LOCATION_001
+LOCATION_002
+United Kingdom
+Phone: PHONE_001
+Email: EMAIL_001<[EMAIL_001](mailto:EMAIL_001)>`,
     focus: "Shows a clean, grounded self-service answer with an explicit do-not-process-manually policy outcome.",
     includeEvaluationMetadata: true,
     icon: "✦",
@@ -60,6 +78,22 @@ exactly when Open MPI kills them.
 This is working without any issues when using version stable_29Aug2024_update2 as per the instructions. By any chance, do you happen to have any information on how to compile a more recent version of LAMMPS?
 Many thanks,
 Max`,
+    displayQuery: `Dear CSD3 support,
+I am trying to compile the newest release version of LAMMPS on Ampere with the GPU package. Following the instructions on [https://docs.hpc.cam.ac.uk/hpc/software-packages/lammps.html](https://docs.hpc.cam.ac.uk/hpc/software-packages/lammps.html) leads to an error when running a benchmark:
+Cuda driver error 1 in call at file '/home/USER_001/git/lammps_amp/lib/gpu/geryon/nvd_kernel.h' in line 340.
+Cuda driver error 1 in call at file '/home/USER_001/git/lammps_amp/lib/gpu/geryon/nvd_kernel.h' in line 340.
+Cuda driver error 1 in call at file '/home/USER_001/git/lammps_amp/lib/gpu/geryon/nvd_kernel.h' in line 340.
+Cuda driver error 1 in call at file '/home/USER_001/git/lammps_amp/lib/gpu/geryon/nvd_kernel.h' in line 340.
+--------------------------------------------------------------------------
+MPI_ABORT was invoked on rank 1 in communicator MPI_COMM_WORLD
+with errorcode -1.
+NOTE: invoking MPI_ABORT causes Open MPI to kill all MPI processes.
+You may or may not see output from other processes, depending on
+exactly when Open MPI kills them.
+--------------------------------------------------------------------------
+This is working without any issues when using version stable_29Aug2024_update2 as per the instructions. By any chance, do you happen to have any information on how to compile a more recent version of LAMMPS?
+Many thanks,
+PERSON_001`,
     focus: "Demonstrates precise technical guidance for a version-sensitive support ticket without drifting into unsafe system-level advice.",
     includeEvaluationMetadata: true,
     icon: "⌁",
@@ -88,6 +122,25 @@ SSH keys: AAAAC3NzaC1lZDI1NTE5AAAAIL+klunbwQNR+EoEuzyqe0y0HGjf25GM3hIfka8DL1Ra
 Thanks.
 Regards,
 Jun`,
+    displayQuery: `Dear Support,
+Can someone please address this one from yesterday and today? Thanks.
+Regards,
+PERSON_001
+________________________________
+From: PERSON_002 <EMAIL_001>
+Sent: 27 January 2026 12:34
+To: HPC JIRA service desk inbox <EMAIL_002>
+Cc: PERSON_003 <EMAIL_003>; PERSON_004 <EMAIL_004>
+Subject: DAWN Access Assistance
+Hi,
+I am looking to gain access to the DAWN Supercomputer, some of my colleagues already have access but I am not set up with an account yet. Are you able to set up login details for my account?
+Here is the all the details:
+Name: PERSON_002
+Email: EMAIL_001
+SSH keys: SSH_PUBLIC_KEY_001
+Thanks.
+Regards,
+PERSON_002`,
     focus: "Highlights policy-safe handling: require the approved invitation flow and avoid manual SSH key installation or account creation shortcuts.",
     includeEvaluationMetadata: true,
     icon: "⌘",
@@ -102,4 +155,5 @@ export const assistantPromptCards: AssistantPromptCard[] = ticketExampleScenario
   description: scenario.description,
   icon: scenario.icon,
   prompt: scenario.query,
+  displayQuery: scenario.displayQuery,
 }));

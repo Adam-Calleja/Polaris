@@ -319,7 +319,7 @@ export function EvaluationPage() {
                   </button>
                 </div>
                 <p className="scenario-card__focus">Focus: {scenario.focus}</p>
-                <pre className="code-block scenario-card__query">{scenario.query}</pre>
+                <pre className="code-block scenario-card__query">{scenario.displayQuery ?? scenario.query}</pre>
 
                 {result ? (
                   <>

@@ -35,12 +35,13 @@ export function AssistantPage() {
     setSubmitting(false);
   }
 
-  async function submitPrompt(prompt: string): Promise<boolean> {
+  async function submitPrompt(prompt: string, options: { displayPrompt?: string } = {}): Promise<boolean> {
     if (submitting) {
       return false;
     }
 
     const trimmed = prompt.trim();
+    const displayPrompt = (options.displayPrompt ?? prompt).trim();
     if (!trimmed) {
       return false;
     }
@@ -49,7 +50,7 @@ export function AssistantPage() {
     const userMessage: AssistantUserMessage = {
       id: createMessageId(),
       role: "user",
-      content: trimmed,
+      content: displayPrompt || trimmed,
       createdAt,
     };
     const placeholderId = createMessageId();
@@ -127,7 +128,7 @@ export function AssistantPage() {
                 className="quick-prompt-card quick-prompt-card--hero"
                 key={prompt.scenarioId}
                 onClick={() => {
-                  void submitPrompt(prompt.prompt);
+                  void submitPrompt(prompt.prompt, { displayPrompt: prompt.displayQuery });
                 }}
                 type="button"
               >

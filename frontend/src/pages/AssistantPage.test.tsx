@@ -18,6 +18,44 @@ describe("AssistantPage", () => {
     window.sessionStorage.clear();
   });
 
+  it("shows a sanitized example query while sending the real ticket query to the API", async () => {
+    let requestBody = "";
+
+    vi.spyOn(globalThis, "fetch").mockImplementation((input, init) => {
+      const url = String(input);
+      if (url.endsWith("/v1/query")) {
+        requestBody = String(init?.body ?? "");
+        return jsonResponse({
+          answer: "ACTION\nUse the storage portal.",
+          context: [],
+          answer_status: {
+            code: "grounded",
+            detail: "Answer generated.",
+          },
+          timings: {
+            retrieval_elapsed_ms: 12,
+            generation_elapsed_ms: 34,
+          },
+        });
+      }
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+
+    renderApp("/assistant");
+
+    await userEvent.click(screen.getByRole("button", { name: /RDS and RCS licence renewal/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Use the storage portal.")).toBeInTheDocument();
+    });
+
+    expect(screen.getByText(/PERSON_001/)).toBeInTheDocument();
+    expect(screen.queryByText(/Maria \(Cc’ed\)/)).not.toBeInTheDocument();
+    expect(requestBody).toContain("Maria (Cc’ed)");
+    expect(requestBody).toContain("Brian");
+    expect(requestBody).not.toContain("PERSON_001");
+  });
+
   it("submits a prompt and renders structured answer diagnostics", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
       const url = String(input);
