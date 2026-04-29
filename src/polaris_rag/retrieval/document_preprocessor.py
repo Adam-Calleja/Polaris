@@ -181,6 +181,12 @@ def preprocess_html(
         tag = condition_dict["tag"]
         condition = condition_dict["condition"]
         for element in soup.find_all(tag):
+            # BeautifulSoup tags that were already removed as descendants of an
+            # earlier decompose() call can remain in the precomputed find_all()
+            # result list with attrs set to None. Skip those detached nodes
+            # before evaluating the configured condition expression.
+            if getattr(element, "parent", None) is None or getattr(element, "attrs", None) is None:
+                continue
             if eval(condition):
                 element.decompose()
 
