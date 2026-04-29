@@ -1074,6 +1074,12 @@ stages:
     dataset_path: "../data/test/ragas_one_hop_eval_dataset_final.test.jsonl"
     annotations_file: "../data/test/benchmark_annotations_final.csv"
     repeats: 3
+    run_options:
+      metrics:
+        - factual_correctness
+        - faithfulness
+        - context_recall
+        - context_precision_without_reference
     conditions:
       - name: "docs_only"
         preset: "docs_only"
@@ -1087,6 +1093,12 @@ stages:
     dataset_path: "../data/test/ragas_one_hop_eval_dataset_final.test.jsonl"
     annotations_file: "../data/test/benchmark_annotations_final.csv"
     repeats: 3
+    run_options:
+      metrics:
+        - factual_correctness
+        - faithfulness
+        - context_recall
+        - context_precision_without_reference
     conditions:
       - name: "naive_combined"
         preset: "naive_combined"
@@ -1102,6 +1114,12 @@ stages:
     dataset_path: "../data/test/ragas_one_hop_eval_dataset_final.test.jsonl"
     annotations_file: "../data/test/benchmark_annotations_final.csv"
     repeats: 3
+    run_options:
+      metrics:
+        - factual_correctness
+        - faithfulness
+        - context_recall
+        - context_precision_without_reference
     conditions:
       - name: "validity_aware"
         preset: "validity_aware"

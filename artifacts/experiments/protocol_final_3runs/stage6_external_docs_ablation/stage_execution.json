@@ -13,10 +13,31 @@
       "config_path": "/app/.polaris_experiment_stage6_external_docs_ablation__all_docs_validity_aware.yaml",
       "preset": "all_docs_validity_aware",
       "execution_phase": "index",
-      "ingestion_commands": [],
+      "ingestion_commands": [
+        [
+          "/usr/local/bin/python",
+          "/app/scripts/ingest_external_docs.py",
+          "-c",
+          "/app/.polaris_experiment_stage6_external_docs_ablation__all_docs_validity_aware.yaml",
+          "--source-register-file",
+          "/app/data/authority/source_register.external_v1.yaml",
+          "--persist-dir",
+          "/app/data/storage/exp_external_docs_selected",
+          "--qdrant-collection-name",
+          "exp_external_docs_selected",
+          "--source",
+          "external_docs",
+          "--chunking-strategy",
+          "markdown_token",
+          "--chunk-size-tokens",
+          "800",
+          "--chunk-overlap-tokens",
+          "80"
+        ]
+      ],
       "runs": [],
       "ingestion_skipped": false
     }
   ],
-  "executed_at": "2026-04-29T07:46:00.921220+00:00"
+  "executed_at": "2026-04-29T08:24:03.486035+00:00"
 }
