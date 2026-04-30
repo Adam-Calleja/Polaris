@@ -30,45 +30,45 @@ Warning--empty journal in RAGAS
 Warning--empty year in RAGAS
 
 Done.
-You've used 25 entries,
+You've used 27 entries,
             4855 wiz_defined-function locations,
-            1128 strings with 17701 characters,
-and the built_in function-call counts, 30047 in all, are:
-= -- 2211
-> -- 1390
-< -- 182
-+ -- 665
-- -- 338
-* -- 1830
-:= -- 4055
-add.period$ -- 67
-call.type$ -- 25
-change.case$ -- 70
-chr.to.int$ -- 505
-cite$ -- 31
-duplicate$ -- 1917
-empty$ -- 2244
-format.name$ -- 387
-if$ -- 6850
+            1143 strings with 18802 characters,
+and the built_in function-call counts, 33892 in all, are:
+= -- 2450
+> -- 1672
+< -- 205
++ -- 793
+- -- 411
+* -- 2088
+:= -- 4568
+add.period$ -- 72
+call.type$ -- 27
+change.case$ -- 76
+chr.to.int$ -- 567
+cite$ -- 33
+duplicate$ -- 2132
+empty$ -- 2478
+format.name$ -- 465
+if$ -- 7713
 int.to.chr$ -- 1
-int.to.str$ -- 26
-missing$ -- 388
-newline$ -- 101
-num.names$ -- 83
-pop$ -- 1118
+int.to.str$ -- 28
+missing$ -- 441
+newline$ -- 107
+num.names$ -- 91
+pop$ -- 1267
 preamble$ -- 1
-purify$ -- 25
+purify$ -- 27
 quote$ -- 2
-skip$ -- 1970
+skip$ -- 2203
 stack$ -- 0
-substring$ -- 1233
-swap$ -- 1490
-text.length$ -- 19
+substring$ -- 1379
+swap$ -- 1681
+text.length$ -- 22
 text.prefix$ -- 0
 top$ -- 6
-type$ -- 395
+type$ -- 427
 warning$ -- 2
-while$ -- 121
+while$ -- 134
 width$ -- 0
-write$ -- 299
+write$ -- 323
 (There were 2 warnings)

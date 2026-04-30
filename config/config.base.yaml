@@ -90,6 +90,7 @@ jira_api_credentials:
 
 prompts:
   - "pkg:polaris_rag.prompts:hpc_rag_assistant_v3_ticket_refs.json"
+  - "pkg:polaris_rag.prompts:hpc_rag_assistant_v4_ticket_refs.json"
   - "pkg:polaris_rag.prompts:hpc_ticket_summarizer_v1.json"
 
 prompt_name: "hpc_rag_assistant_ticket_refs"
