@@ -1,7 +1,8 @@
 {
   "stage_name": "stage7_prompt_ablation",
-  "rows": 3,
+  "rows": 6,
   "conditions": [
+    "v3_ticket_prompt",
     "v4_prompt"
   ],
   "metrics": [
