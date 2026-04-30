@@ -1137,12 +1137,18 @@ stages:
     repeats: 3
     # If Stage 6 shows the external-docs system is the best retrieval stack,
     # switch both presets in this stage from validity_aware to all_docs_validity_aware.
+    run_options:
+      metrics:
+        - factual_correctness
+        - faithfulness
+        - context_recall
+        - context_precision_without_reference
     conditions:
-      - name: "generic_prompt"
+      - name: "v4_prompt"
         preset: "validity_aware"
         config_overrides:
           <<: *updated_prompt_config
-      - name: "ticket_style_prompt"
+      - name: "v3_ticket_prompt"
         preset: "validity_aware"
         config_overrides:
           <<: *ticket_prompt_config

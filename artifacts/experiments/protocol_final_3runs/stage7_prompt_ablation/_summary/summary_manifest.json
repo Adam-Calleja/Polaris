@@ -1,0 +1,14 @@
+{
+  "stage_name": "stage7_prompt_ablation",
+  "rows": 3,
+  "conditions": [
+    "v4_prompt"
+  ],
+  "metrics": [
+    "factual_correctness",
+    "faithfulness",
+    "context_recall",
+    "context_precision_without_reference"
+  ],
+  "comparison_repeat": "latest"
+}
