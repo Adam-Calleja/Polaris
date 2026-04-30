@@ -1,0 +1,16 @@
+{
+  "stage_name": "stage4_source_ablation",
+  "rows": 9,
+  "conditions": [
+    "docs_only",
+    "naive_combined",
+    "tickets_only"
+  ],
+  "metrics": [
+    "factual_correctness",
+    "faithfulness",
+    "context_recall",
+    "context_precision_without_reference"
+  ],
+  "comparison_repeat": "latest"
+}

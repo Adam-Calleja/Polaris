@@ -69,3 +69,13 @@ evaluation:
       max_backoff_seconds: 8.0
       jitter_seconds: 0.25
       retry_on_empty_response: true
+
+retriever:
+  rerank:
+    type: "validity_aware"
+    trace_enabled: true
+    semantic_base:
+      type: "rrf"
+      rrf_k: 60
+    weights_path: "weights/validity_reranker.protocol.yaml"
+

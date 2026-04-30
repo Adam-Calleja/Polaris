@@ -83,13 +83,13 @@ generator_candidates:
 
 
 prompt_configs:
-  generic_prompt: &generic_prompt_config
+  generic_prompt: &updated_prompt_config
     prompts:
       - "pkg:polaris_rag.prompts:hpc_rag_assistant_v1.json"
       - "pkg:polaris_rag.prompts:hpc_rag_assistant_v3_ticket_refs.json"
       - "pkg:polaris_rag.prompts:hpc_rag_assistant_v4_ticket_refs.json"
       - "pkg:polaris_rag.prompts:hpc_ticket_summarizer_v1.json"
-    prompt_name: "hpc_rag_assistant"
+    prompt_name: "hpc_rag_assistant_v4_ticket_refs"
     mlflow:
       prompt_registry:
         enabled: false
@@ -1130,22 +1130,22 @@ stages:
         # ingest:
         #   - *external_docs_ingest
 
-  # stage7_prompt_ablation:
-  #   type: "evaluation_grid"
-  #   dataset_path: "../data/test/ragas_one_hop_eval_dataset_final.test.jsonl"
-  #   annotations_file: "../data/test/benchmark_annotations_final.csv"
-  #   repeats: 3
-  #   # If Stage 6 shows the external-docs system is the best retrieval stack,
-  #   # switch both presets in this stage from validity_aware to all_docs_validity_aware.
-  #   conditions:
-  #     - name: "generic_prompt"
-  #       preset: "validity_aware"
-  #       config_overrides:
-  #         <<: *generic_prompt_config
-  #     - name: "ticket_style_prompt"
-  #       preset: "validity_aware"
-  #       config_overrides:
-  #         <<: *ticket_prompt_config
+  stage7_prompt_ablation:
+    type: "evaluation_grid"
+    dataset_path: "../data/test/ragas_one_hop_eval_dataset_final.test.jsonl"
+    annotations_file: "../data/test/benchmark_annotations_final.csv"
+    repeats: 3
+    # If Stage 6 shows the external-docs system is the best retrieval stack,
+    # switch both presets in this stage from validity_aware to all_docs_validity_aware.
+    conditions:
+      - name: "generic_prompt"
+        preset: "validity_aware"
+        config_overrides:
+          <<: *updated_prompt_config
+      - name: "ticket_style_prompt"
+        preset: "validity_aware"
+        config_overrides:
+          <<: *ticket_prompt_config
 
   # stage8a_finalist_dev_tuning:
   #   type: "evaluation_grid"
