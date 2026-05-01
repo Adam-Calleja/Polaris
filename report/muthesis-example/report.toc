@@ -12,73 +12,73 @@
 \contentsline {section}{\numberline {1.6}Report Structure}{17}{section.1.6}%
 \contentsline {chapter}{\numberline {2}Background and Related Work}{18}{chapter.2}%
 \contentsline {section}{\numberline {2.1}HPC Support as an Information Retrieval and Question Answering Problem}{18}{section.2.1}%
-\contentsline {section}{\numberline {2.2}Retrieval-Augmented Generation}{20}{section.2.2}%
-\contentsline {section}{\numberline {2.3}Heterogeneous Support Corpora: Documentation and Tickets}{22}{section.2.3}%
-\contentsline {section}{\numberline {2.4}Authority, Freshness, and Validity in Retrieval}{24}{section.2.4}%
-\contentsline {section}{\numberline {2.5}Evaluation of RAG Systems}{26}{section.2.5}%
-\contentsline {section}{\numberline {2.6}Gap Analysis and Research Positioning}{27}{section.2.6}%
-\contentsline {chapter}{\numberline {3}Problem Formulation and Requirements}{29}{chapter.3}%
-\contentsline {section}{\numberline {3.1}Task Definition}{29}{section.3.1}%
-\contentsline {section}{\numberline {3.2}Data Sources and Knowledge Characteristics}{30}{section.3.2}%
-\contentsline {section}{\numberline {3.3}Benchmark and Query Taxonomy}{32}{section.3.3}%
-\contentsline {section}{\numberline {3.4}Requirements and Constraints}{34}{section.3.4}%
-\contentsline {section}{\numberline {3.5}Success Criteria and Requirement-to-Evaluation Mapping}{35}{section.3.5}%
-\contentsline {section}{\numberline {3.6}Ethical, Privacy, and Data-Governance Considerations}{37}{section.3.6}%
-\contentsline {chapter}{\numberline {4}System Design and Implementation}{39}{chapter.4}%
-\contentsline {section}{\numberline {4.1}System Overview}{39}{section.4.1}%
-\contentsline {section}{\numberline {4.2}Baseline Systems}{41}{section.4.2}%
-\contentsline {section}{\numberline {4.3}Corpus Ingestion and Representation}{42}{section.4.3}%
-\contentsline {section}{\numberline {4.4}Authority Registry and Metadata Extraction}{43}{section.4.4}%
-\contentsline {section}{\numberline {4.5}Validity-Aware Reranking Design}{45}{section.4.5}%
-\contentsline {section}{\numberline {4.6}Prompt and Generation Design}{46}{section.4.6}%
-\contentsline {section}{\numberline {4.7}API, Tooling, and Observability}{47}{section.4.7}%
-\contentsline {section}{\numberline {4.8}User Interface and Interaction Design}{48}{section.4.8}%
-\contentsline {section}{\numberline {4.9}Verification and Software Testing}{48}{section.4.9}%
-\contentsline {section}{\numberline {4.10}Design Trade-offs}{49}{section.4.10}%
-\contentsline {chapter}{\numberline {5}Experimental Methodology}{51}{chapter.5}%
-\contentsline {section}{\numberline {5.1}Evaluation Goals}{52}{section.5.1}%
-\contentsline {section}{\numberline {5.2}Development and Test Split Discipline}{52}{section.5.2}%
-\contentsline {section}{\numberline {5.3}Benchmark Construction and Characterisation}{52}{section.5.3}%
-\contentsline {section}{\numberline {5.4}Frozen Backbone Decisions}{52}{section.5.4}%
-\contentsline {section}{\numberline {5.5}Metric Hierarchy and Decision Rules}{52}{section.5.5}%
-\contentsline {section}{\numberline {5.6}Development-Phase Tuning Protocol}{52}{section.5.6}%
-\contentsline {subsection}{\numberline {5.6.1}Generator Selection}{52}{subsection.5.6.1}%
-\contentsline {subsection}{\numberline {5.6.2}Chunking Tuning}{52}{subsection.5.6.2}%
-\contentsline {subsection}{\numberline {5.6.3}Retrieval-Mode Pilot}{52}{subsection.5.6.3}%
-\contentsline {subsection}{\numberline {5.6.4}Shared Retrieval Budget Tuning}{52}{subsection.5.6.4}%
-\contentsline {subsection}{\numberline {5.6.5}Validity-Reranker Tuning}{52}{subsection.5.6.5}%
-\contentsline {section}{\numberline {5.7}Final Test-Set Experiments}{52}{section.5.7}%
-\contentsline {subsection}{\numberline {5.7.1}Source Ablation}{52}{subsection.5.7.1}%
-\contentsline {subsection}{\numberline {5.7.2}Validity-Signal Ablation}{52}{subsection.5.7.2}%
-\contentsline {subsection}{\numberline {5.7.3}External-Document Scope Ablation}{52}{subsection.5.7.3}%
-\contentsline {subsection}{\numberline {5.7.4}Tuned-Finalist Comparison}{52}{subsection.5.7.4}%
-\contentsline {section}{\numberline {5.8}Manual Evaluation Protocol}{52}{section.5.8}%
-\contentsline {section}{\numberline {5.9}Error Analysis Protocol}{52}{section.5.9}%
-\contentsline {section}{\numberline {5.10}Reproducibility and Stability Controls}{52}{section.5.10}%
-\contentsline {chapter}{\numberline {6}Results}{53}{chapter.6}%
-\contentsline {section}{\numberline {6.1}Development-Phase Selection Results}{53}{section.6.1}%
-\contentsline {section}{\numberline {6.2}Overview of Main Test-Set Results}{53}{section.6.2}%
-\contentsline {section}{\numberline {6.3}Controlled Ablation Results}{53}{section.6.3}%
-\contentsline {subsection}{\numberline {6.3.1}Source Ablation}{53}{subsection.6.3.1}%
-\contentsline {subsection}{\numberline {6.3.2}Validity-Signal Ablation}{53}{subsection.6.3.2}%
-\contentsline {subsection}{\numberline {6.3.3}External-Document Scope Ablation}{53}{subsection.6.3.3}%
-\contentsline {section}{\numberline {6.4}Practical Comparison Results}{53}{section.6.4}%
-\contentsline {subsection}{\numberline {6.4.1}Tuned-Finalist Comparison}{53}{subsection.6.4.1}%
-\contentsline {section}{\numberline {6.5}Manual Evaluation Results}{53}{section.6.5}%
-\contentsline {section}{\numberline {6.6}Error Analysis Results}{53}{section.6.6}%
-\contentsline {section}{\numberline {6.7}Stability and Robustness Results}{53}{section.6.7}%
-\contentsline {chapter}{\numberline {7}Discussion and Critical Appraisal}{54}{chapter.7}%
-\contentsline {section}{\numberline {7.1}Answers to the Research Questions}{54}{section.7.1}%
-\contentsline {section}{\numberline {7.2}What Improved and Why}{54}{section.7.2}%
-\contentsline {section}{\numberline {7.3}Comparison with Prior Work}{54}{section.7.3}%
-\contentsline {section}{\numberline {7.4}Where the System Still Fails}{54}{section.7.4}%
-\contentsline {section}{\numberline {7.5}Threats to Validity}{54}{section.7.5}%
-\contentsline {section}{\numberline {7.6}Review of the Project Plan}{54}{section.7.6}%
-\contentsline {chapter}{\numberline {8}Conclusion and Future Work}{55}{chapter.8}%
-\contentsline {section}{\numberline {8.1}Summary of Contributions}{55}{section.8.1}%
-\contentsline {section}{\numberline {8.2}Main Findings Against Objectives}{55}{section.8.2}%
-\contentsline {section}{\numberline {8.3}Limitations}{55}{section.8.3}%
-\contentsline {section}{\numberline {8.4}Future Work}{55}{section.8.4}%
-\contentsline {chapter}{\numberline {A}Approved External Documentation Sources}{61}{appendix.A}%
-\contentsline {chapter}{\numberline {B}Benchmark Taxonomy Label Definitions}{63}{appendix.B}%
-\contentsline {chapter}{\numberline {C}Authority Metadata Fields}{65}{appendix.C}%
+\contentsline {section}{\numberline {2.2}Retrieval-Augmented Generation}{19}{section.2.2}%
+\contentsline {section}{\numberline {2.3}Heterogeneous Support Corpora: Documentation and Tickets}{20}{section.2.3}%
+\contentsline {section}{\numberline {2.4}Authority, Freshness, and Validity in Retrieval}{22}{section.2.4}%
+\contentsline {section}{\numberline {2.5}Evaluation of RAG Systems}{22}{section.2.5}%
+\contentsline {section}{\numberline {2.6}Gap Analysis and Research Positioning}{23}{section.2.6}%
+\contentsline {chapter}{\numberline {3}Problem Formulation and Requirements}{25}{chapter.3}%
+\contentsline {section}{\numberline {3.1}Task Definition}{25}{section.3.1}%
+\contentsline {section}{\numberline {3.2}Data Sources and Knowledge Characteristics}{26}{section.3.2}%
+\contentsline {section}{\numberline {3.3}Benchmark and Query Taxonomy}{28}{section.3.3}%
+\contentsline {section}{\numberline {3.4}Requirements and Constraints}{30}{section.3.4}%
+\contentsline {section}{\numberline {3.5}Success Criteria and Requirement-to-Evaluation Mapping}{31}{section.3.5}%
+\contentsline {section}{\numberline {3.6}Ethical, Privacy, and Data-Governance Considerations}{33}{section.3.6}%
+\contentsline {chapter}{\numberline {4}System Design and Implementation}{35}{chapter.4}%
+\contentsline {section}{\numberline {4.1}System Overview}{35}{section.4.1}%
+\contentsline {section}{\numberline {4.2}Baseline Systems}{37}{section.4.2}%
+\contentsline {section}{\numberline {4.3}Corpus Ingestion and Representation}{38}{section.4.3}%
+\contentsline {section}{\numberline {4.4}Authority Registry and Metadata Extraction}{39}{section.4.4}%
+\contentsline {section}{\numberline {4.5}Validity-Aware Reranking Design}{41}{section.4.5}%
+\contentsline {section}{\numberline {4.6}Prompt and Generation Design}{42}{section.4.6}%
+\contentsline {section}{\numberline {4.7}API, Tooling, and Observability}{43}{section.4.7}%
+\contentsline {section}{\numberline {4.8}User Interface and Interaction Design}{44}{section.4.8}%
+\contentsline {section}{\numberline {4.9}Verification and Software Testing}{44}{section.4.9}%
+\contentsline {section}{\numberline {4.10}Design Trade-offs}{45}{section.4.10}%
+\contentsline {chapter}{\numberline {5}Experimental Methodology}{47}{chapter.5}%
+\contentsline {section}{\numberline {5.1}Evaluation Goals}{48}{section.5.1}%
+\contentsline {section}{\numberline {5.2}Development and Test Split Discipline}{48}{section.5.2}%
+\contentsline {section}{\numberline {5.3}Benchmark Construction and Characterisation}{48}{section.5.3}%
+\contentsline {section}{\numberline {5.4}Frozen Backbone Decisions}{48}{section.5.4}%
+\contentsline {section}{\numberline {5.5}Metric Hierarchy and Decision Rules}{48}{section.5.5}%
+\contentsline {section}{\numberline {5.6}Development-Phase Tuning Protocol}{48}{section.5.6}%
+\contentsline {subsection}{\numberline {5.6.1}Generator Selection}{48}{subsection.5.6.1}%
+\contentsline {subsection}{\numberline {5.6.2}Chunking Tuning}{48}{subsection.5.6.2}%
+\contentsline {subsection}{\numberline {5.6.3}Retrieval-Mode Pilot}{48}{subsection.5.6.3}%
+\contentsline {subsection}{\numberline {5.6.4}Shared Retrieval Budget Tuning}{48}{subsection.5.6.4}%
+\contentsline {subsection}{\numberline {5.6.5}Validity-Reranker Tuning}{48}{subsection.5.6.5}%
+\contentsline {section}{\numberline {5.7}Final Test-Set Experiments}{48}{section.5.7}%
+\contentsline {subsection}{\numberline {5.7.1}Source Ablation}{48}{subsection.5.7.1}%
+\contentsline {subsection}{\numberline {5.7.2}Validity-Signal Ablation}{48}{subsection.5.7.2}%
+\contentsline {subsection}{\numberline {5.7.3}External-Document Scope Ablation}{48}{subsection.5.7.3}%
+\contentsline {subsection}{\numberline {5.7.4}Tuned-Finalist Comparison}{48}{subsection.5.7.4}%
+\contentsline {section}{\numberline {5.8}Manual Evaluation Protocol}{48}{section.5.8}%
+\contentsline {section}{\numberline {5.9}Error Analysis Protocol}{48}{section.5.9}%
+\contentsline {section}{\numberline {5.10}Reproducibility and Stability Controls}{48}{section.5.10}%
+\contentsline {chapter}{\numberline {6}Results}{49}{chapter.6}%
+\contentsline {section}{\numberline {6.1}Development-Phase Selection Results}{49}{section.6.1}%
+\contentsline {section}{\numberline {6.2}Overview of Main Test-Set Results}{49}{section.6.2}%
+\contentsline {section}{\numberline {6.3}Controlled Ablation Results}{49}{section.6.3}%
+\contentsline {subsection}{\numberline {6.3.1}Source Ablation}{49}{subsection.6.3.1}%
+\contentsline {subsection}{\numberline {6.3.2}Validity-Signal Ablation}{49}{subsection.6.3.2}%
+\contentsline {subsection}{\numberline {6.3.3}External-Document Scope Ablation}{49}{subsection.6.3.3}%
+\contentsline {section}{\numberline {6.4}Practical Comparison Results}{49}{section.6.4}%
+\contentsline {subsection}{\numberline {6.4.1}Tuned-Finalist Comparison}{49}{subsection.6.4.1}%
+\contentsline {section}{\numberline {6.5}Manual Evaluation Results}{49}{section.6.5}%
+\contentsline {section}{\numberline {6.6}Error Analysis Results}{49}{section.6.6}%
+\contentsline {section}{\numberline {6.7}Stability and Robustness Results}{49}{section.6.7}%
+\contentsline {chapter}{\numberline {7}Discussion and Critical Appraisal}{50}{chapter.7}%
+\contentsline {section}{\numberline {7.1}Answers to the Research Questions}{50}{section.7.1}%
+\contentsline {section}{\numberline {7.2}What Improved and Why}{50}{section.7.2}%
+\contentsline {section}{\numberline {7.3}Comparison with Prior Work}{50}{section.7.3}%
+\contentsline {section}{\numberline {7.4}Where the System Still Fails}{50}{section.7.4}%
+\contentsline {section}{\numberline {7.5}Threats to Validity}{50}{section.7.5}%
+\contentsline {section}{\numberline {7.6}Review of the Project Plan}{50}{section.7.6}%
+\contentsline {chapter}{\numberline {8}Conclusion and Future Work}{51}{chapter.8}%
+\contentsline {section}{\numberline {8.1}Summary of Contributions}{51}{section.8.1}%
+\contentsline {section}{\numberline {8.2}Main Findings Against Objectives}{51}{section.8.2}%
+\contentsline {section}{\numberline {8.3}Limitations}{51}{section.8.3}%
+\contentsline {section}{\numberline {8.4}Future Work}{51}{section.8.4}%
+\contentsline {chapter}{\numberline {A}Approved External Documentation Sources}{57}{appendix.A}%
+\contentsline {chapter}{\numberline {B}Benchmark Taxonomy Label Definitions}{59}{appendix.B}%
+\contentsline {chapter}{\numberline {C}Authority Metadata Fields}{61}{appendix.C}%

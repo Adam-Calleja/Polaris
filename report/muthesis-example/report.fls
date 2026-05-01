@@ -287,9 +287,6 @@ OUTPUT chapter2.aux
 INPUT ./chapter2.tex
 INPUT ./chapter2.tex
 INPUT chapter2.tex
-INPUT /usr/local/texlive/2026/texmf-dist/fonts/vf/adobe/times/zptmcmrm.vf
-INPUT /usr/local/texlive/2026/texmf-dist/fonts/tfm/adobe/times/ptmri8r.tfm
-INPUT /usr/local/texlive/2026/texmf-dist/fonts/tfm/public/cm/cmmi10.tfm
 INPUT /usr/local/texlive/2026/texmf-dist/fonts/tfm/adobe/times/ptmr7t.tfm
 INPUT /usr/local/texlive/2026/texmf-dist/fonts/tfm/adobe/times/zptmcmr.tfm
 INPUT /usr/local/texlive/2026/texmf-dist/fonts/tfm/adobe/times/zptmcmr.tfm
@@ -345,6 +342,9 @@ INPUT ./graphs/polaris_query_flow.pdf
 INPUT ./graphs/polaris_query_flow.pdf
 INPUT ./graphs/polaris_query_flow.pdf
 INPUT ./graphs/polaris_query_flow.pdf
+INPUT /usr/local/texlive/2026/texmf-dist/fonts/vf/adobe/times/zptmcmrm.vf
+INPUT /usr/local/texlive/2026/texmf-dist/fonts/tfm/adobe/times/ptmri8r.tfm
+INPUT /usr/local/texlive/2026/texmf-dist/fonts/tfm/public/cm/cmmi10.tfm
 INPUT ./graphs/polaris_reranking.pdf
 INPUT ./graphs/polaris_reranking.pdf
 INPUT ./graphs/polaris_reranking.pdf

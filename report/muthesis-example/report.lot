@@ -1,21 +1,21 @@
 \addvspace {10\p@ }
 \addvspace {10\p@ }
-\contentsline {table}{\numberline {2.1}{\ignorespaces The retrieval-control strategies most relevant to validity-aware support retrieval.}}{21}{table.2.1}%
-\contentsline {table}{\numberline {2.2}{\ignorespaces Comparison of the evidential roles, risks, and retrieval implications of the three source types in the \ac {CSD3} support setting.}}{22}{table.2.2}%
+\contentsline {table}{\numberline {2.1}{\ignorespaces The retrieval-control strategies most relevant to validity-aware support retrieval.}}{20}{table.2.1}%
+\contentsline {table}{\numberline {2.2}{\ignorespaces Comparison of the evidential roles, risks, and retrieval implications of the three source types in the \ac {CSD3} support setting.}}{21}{table.2.2}%
 \addvspace {10\p@ }
-\contentsline {table}{\numberline {3.1}{\ignorespaces Operational summary of the three source classes included in the project corpus. Counts and date bounds refer to the frozen corpus snapshot used for parameter tuning and final evaluation. The full external source list is given in Appendix \ref {app:external-sources}.}}{31}{table.3.1}%
-\contentsline {table}{\numberline {3.2}{Functional requirements, quality requirements, and scope constraints derived from the project task definition and benchmark design.}}{34}{table.3.2}%
-\contentsline {table}{\numberline {3.3}{Success-criteria and requirement-to-evaluation mapping for the project.}}{36}{table.3.3}%
+\contentsline {table}{\numberline {3.1}{\ignorespaces Operational summary of the three source classes included in the project corpus. Counts and date bounds refer to the frozen corpus snapshot used for parameter tuning and final evaluation. The full external source list is given in Appendix \ref {app:external-sources}.}}{27}{table.3.1}%
+\contentsline {table}{\numberline {3.2}{Functional requirements, quality requirements, and scope constraints derived from the project task definition and benchmark design.}}{30}{table.3.2}%
+\contentsline {table}{\numberline {3.3}{Success-criteria and requirement-to-evaluation mapping for the project.}}{32}{table.3.3}%
 \addvspace {10\p@ }
-\contentsline {table}{\numberline {4.1}{Summary of the authority registry.}}{44}{table.4.1}%
-\contentsline {table}{\numberline {4.2}{\ignorespaces Summary of the Polaris verification strategy.}}{49}{table.4.2}%
-\addvspace {10\p@ }
-\addvspace {10\p@ }
+\contentsline {table}{\numberline {4.1}{Summary of the authority registry.}}{40}{table.4.1}%
+\contentsline {table}{\numberline {4.2}{\ignorespaces Summary of the Polaris verification strategy.}}{45}{table.4.2}%
 \addvspace {10\p@ }
 \addvspace {10\p@ }
 \addvspace {10\p@ }
-\contentsline {table}{\numberline {A.1}{Approved external documentation source families included in the frozen external documentation snapshot used for parameter tuning and final evaluation.}}{61}{table.A.1}%
 \addvspace {10\p@ }
-\contentsline {table}{\numberline {B.1}{Benchmark taxonomy label definitions and allowed values.}}{63}{table.B.1}%
 \addvspace {10\p@ }
-\contentsline {table}{\numberline {C.1}{Authority metadata fields attached during ingestion.}}{65}{table.C.1}%
+\contentsline {table}{\numberline {A.1}{Approved external documentation source families included in the frozen external documentation snapshot used for parameter tuning and final evaluation.}}{57}{table.A.1}%
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {B.1}{Benchmark taxonomy label definitions and allowed values.}}{59}{table.B.1}%
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {C.1}{Authority metadata fields attached during ingestion.}}{61}{table.C.1}%
