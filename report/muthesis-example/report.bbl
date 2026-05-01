@@ -41,9 +41,6 @@ Z.~Li, J.~Zhang, C.~Yan, K.~Das, S.~Kumar, M.~Kantarcioglu, and B.~A. Malin, ``D
 \bibitem[Hwang et~al.(2025)Hwang, Park, Park, Kim, Park, and Ok]{hwangRetrievalAugmentedGenerationEstimation2025}
 J.~Hwang, J.~Park, H.~Park, D.~Kim, S.~Park, and J.~Ok, ``Retrieval-{{Augmented Generation}} with {{Estimation}} of {{Source Reliability}},'' in \emph{Proceedings of the 2025 {{Conference}} on {{Empirical Methods}} in {{Natural Language Processing}}}, C.~Christodoulopoulos, T.~Chakraborty, C.~Rose, and V.~Peng, Eds.\hskip 1em plus 0.5em minus 0.4em\relax Suzhou, China: Association for Computational Linguistics, Nov. 2025, pp. 34\,279--34\,303.
 
-\bibitem[CSD()]{CSD3UpgradeOctober}
-``{{CSD3 Upgrade October}} 2021 --- {{CSD3}} 1.0 documentation,'' https://docs.hpc.cam.ac.uk/hpc/user-guide/upgrade2021.html.
-
 \bibitem[Westphal and Brannath(2019)]{westphalImprovingModelSelection2019}
 M.~Westphal and W.~Brannath, ``Improving {{Model Selection}} by {{Employing}} the {{Test Data}},'' in \emph{Proceedings of the 36th {{International Conference}} on {{Machine Learning}}}.\hskip 1em plus 0.5em minus 0.4em\relax PMLR, May 2019, pp. 6747--6756.
 
@@ -76,6 +73,9 @@ Z.~Xu, M.~J. Cruz, M.~Guevara, T.~Wang, M.~Deshpande, X.~Wang, and Z.~Li, ``Retr
 
 \bibitem[Ouyang et~al.(2025)Ouyang, Pan, Cheng, Yan, Luo, Lin, and Liu]{ouyangHoHDynamicBenchmark2025}
 J.~Ouyang, T.~Pan, M.~Cheng, R.~Yan, Y.~Luo, J.~Lin, and Q.~Liu, ``{{HoH}}: {{A Dynamic Benchmark}} for {{Evaluating}} the {{Impact}} of {{Outdated Information}} on {{Retrieval-Augmented Generation}},'' in \emph{Proceedings of the 63rd {{Annual Meeting}} of the {{Association}} for {{Computational Linguistics}} ({{Volume}} 1: {{Long Papers}})}, W.~Che, J.~Nabende, E.~Shutova, and M.~T. Pilehvar, Eds.\hskip 1em plus 0.5em minus 0.4em\relax Vienna, Austria: Association for Computational Linguistics, Jul. 2025, pp. 6036--6063.
+
+\bibitem[CSD()]{CSD3UpgradeOctober}
+``{{CSD3 Upgrade October}} 2021 --- {{CSD3}} 1.0 documentation,'' https://docs.hpc.cam.ac.uk/hpc/user-guide/upgrade2021.html.
 
 \bibitem[Ru et~al.(2024)Ru, Qiu, Hu, Zhang, Shi, Chang, Jiayang, Wang, Sun, Li, Zhang, Wang, Jiang, He, Wang, Liu, Zhang, and Zhang]{ruRAGCheckerFinegrainedFramework2024}
 D.~Ru, L.~Qiu, X.~Hu, T.~Zhang, P.~Shi, S.~Chang, C.~Jiayang, C.~Wang, S.~Sun, H.~Li, Z.~Zhang, B.~Wang, J.~Jiang, T.~He, Z.~Wang, P.~Liu, Y.~Zhang, and Z.~Zhang, ``{{RAGChecker}}: {{A Fine-grained Framework}} for {{Diagnosing Retrieval-Augmented Generation}},'' in \emph{The {{Thirty-eight Conference}} on {{Neural Information Processing Systems Datasets}} and {{Benchmarks Track}}}, Nov. 2024.

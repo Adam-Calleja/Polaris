@@ -15,22 +15,12 @@ As a result of this complexity, users frequently turn to the \ac{RCS} helpdesk f
     \label{fig:ticket-counts}
 \end{figure}
 
-Recent studies have investigated the use of \ac{LLM}-based assistants for technical support and question answering, including domain-specific systems for \ac{HPC} user support \citep{AskHPC}. In particular, \ac{RAG}-based systems, which combine the generative capabilities of \ac{LLM}s with a retrieval mechanism to access relevant information from a knowledge base, have been shown to produce more specific and factual responses than non-retrieval-augmented \ac{LLM}s. This makes them a promising solution for evidence-grounded \ac{HPC} support \ac{QA} \citep{lewisRetrievalaugmentedGenerationKnowledgeintensive2020}.
-
-However, the generation quality of \ac{RAG} is highly dependent on the quality of the retrieved information. Recent work has shown that \ac{RAG} systems can generate incorrect answers when they are provided with documents of weak relevance \citep{liYouKnowWhat2024}. Furthermore, semantically relevant retrieved evidence can still be unusable if it comes from an unreliable source \citep{hwangRetrievalAugmentedGenerationEstimation2025} or if it reflects outdated information \citep{liYouKnowWhat2024}.
-
-In the \ac{CSD3} setting, these risks are amplified by the heterogeneous nature of the available evidence. Local \ac{CSD3} documentation is typically the primary source for currently supported usage \citep{ResearchComputingServicesDocumentation}, while external package documentation can provide additional context \citep{AskHPC}. Historical support tickets, by contrast, capture concrete prior issue-resolution cases \citep{joslinGeneratingFrequentlyAsked2025}, but these may not remain applicable after later system or software changes \citep{CSD3UpgradeOctober}. 
-
-The challenge is therefore not only to retrieve topically relevant information, but to prioritise evidence that is appropriate for the current \ac{CSD3} context. The next section formalises this challenge by defining the problem addressed in the dissertation and clarifying its scope.
+Recent work has shown that \ac{RAG} is a promising approach for technical support \ac{QA} because it combines language generation with access to external evidence \citep{AskHPC,lewisRetrievalaugmentedGenerationKnowledgeintensive2020}. However, in heterogeneous support environments, answer quality depends not only on topical relevance, but also on whether the retrieved evidence is authoritative, current, and applicable to the local system state \citep{liYouKnowWhat2024,hwangRetrievalAugmentedGenerationEstimation2025}. In the \ac{CSD3} setting, this matters because local documentation, external package documentation, and historical support tickets play different evidential roles. The central challenge is therefore to retrieve evidence that is not just similar to the query, but suitable for the current \ac{CSD3} context. 
 
 \section{Problem Definition and Scope}
 \label{sec:problem}
 
-This dissertation addresses the problem of answering \ac{CSD3} user support queries using retrieved evidence from multiple information sources. The task is not only to retrieve semantically similar information, but also to prioritise evidence that is appropriate for the current \ac{CSD3} context. In this setting, answer correctness depends not only on relevance, but also on the authoritativeness, freshness, and applicability of the retrieved evidence to the current system state \citep{liYouKnowWhat2024,hwangRetrievalAugmentedGenerationEstimation2025}. 
-
-The difficulty arises from the heterogeneous evidence base available to the system. Local \ac{CSD3} documentation provides the primary record of currently supported local usage \citep{ResearchComputingServicesDocumentation}; curated external documentation provides further software-specific guidance that may not be covered by the local documentation \citep{AskHPC}; and historical support tickets capture concrete prior issue-resolution cases \citep{joslinGeneratingFrequentlyAsked2025}. These sources therefore serve different evidential roles and should not be treated as interchangeable. In particular, historical tickets may become unreliable after changes to system configuration, software versions, or local policy \citep{joslinGeneratingFrequentlyAsked2025,CSD3UpgradeOctober}. This project therefore treats \ac{HPC} support \ac{QA} as a retrieval problem in which source validity, authority, and freshness must be considered alongside semantic relevance \citep{liYouKnowWhat2024,hwangRetrievalAugmentedGenerationEstimation2025}.
-
-This project is scoped to evidence-grounded first response assistance for \ac{CSD3} user support queries within a supervised internal support workflow, rather than a fully autonomous public-facing application. The present system is restricted to text-accessible evidence, using documentation text and visible ticket content rather than attachments, screenshots, log files, or other non-text artefacts. The study is further scoped to single-hop support queries, excluding more complex tasks that require multiple intermediate retrieval steps. On this basis, the following sections derive the research questions, objectives, success criteria, and evaluation strategy used in the remainder of the report.
+This dissertation studies evidence-grounded first-response assistance for \ac{CSD3} support queries within a supervised internal workflow. The system is limited to single-hop questions, that is, queries answerable in one retrieval step from text-accessible evidence drawn from local documentation, selected external documentation, and visible ticket content. It does not attempt autonomous resolution and excludes attachment-dependent or multimodal evidence such as screenshots and log files. These boundaries keep the task operationally realistic while allowing later experiments to isolate the effect of heterogeneous-source retrieval and validity-aware reranking. 
 
 \section{Research Questions and Hypotheses}
 \label{sec:questions}
@@ -48,9 +38,7 @@ To investigate the problems introduced by the heterogeneous evidence base, this 
     \end{itemize}
 \end{itemize}
 
-A secondary analysis also examines whether curated external documentation provides incremental benefit for software-specific queries beyond the core local evidence base, while treating such sources as supplementary rather than authoritative for local CSD3 policy or configuration. 
-
-These questions, along with their associated hypotheses, are evaluated later through held-out test-set comparisons of source ablations and validity-aware reranking, with paired statistical analysis where appropriate. 
+A secondary analysis examines whether curated external documentation adds value for software-specific queries beyond the core local evidence base. To answer these questions, this project uses held-out comparisons of source ablations and reranking variants. 
 
 \section{Aim, Objectives, and Success Criteria}
 \label{sec:aim}
@@ -65,53 +53,16 @@ The principal aim of this project is to design and evaluate an end-to-end \ac{RA
     \item \textbf{O5:} To evaluate whether heterogeneous-source retrieval and validity-aware reranking improve factual correctness over relevant baselines through controlled ablations, finalist comparisons, manual evaluation, and error analysis. 
 \end{itemize}
 
-The success of these objectives will be determined by the following success criteria:
-
-\textbf{Primary Research Success Criteria}
-
-\begin{itemize}
-    \item \textbf{SC1:} The project provides a convincing held-out test-set answer to whether combining local documentation and historical support tickets improves factual correctness over single-source baselines.
-    \item \textbf{SC2:} The project produces a convincing held-out test-set answer to whether validity-aware reranking improves over naive combined retrieval, judged primarily by factual correctness and checked against faithfulness.
-    \item \textbf{SC3:} The project reaches a justified conclusion about the role of external documentation for software-specific queries, including the possibility that any benefit is limited or conditional.
-\end{itemize}
-
-\textbf{Supporting Implementation and Validity Success Criteria}
-
-\begin{itemize}
-    \item \textbf{SC4:} A working end-to-end \ac{RAG} assistant is implemented for the scoped task of supervised, single-hop, text-accessible \ac{CSD3} support \ac{QA}. 
-    \item \textbf{SC5:} The system can ingest and retrieve from heterogeneous support sources, with local documentation, historical support tickets, and external documentation represented in a reproducible and source-distinct way. 
-    \item \textbf{SC6:} A fixed benchmark, validated and manually verified annotations, and a frozen development and test evaluation protocol are produced for the in-scope query class, supporting subgroup analysis of source requirements and validity sensitivity. 
-    \item \textbf{SC7:} The final conclusions are supported by controlled experiments, reproducible artefacts, and honest failure analysis, so that the strengths, limitations, and practical value of the approach can be assessed clearly.
-\end{itemize}
-
-These success criteria distinguish the core research questions from the supporting implementation requirements and provide the basis for the evaluation strategy outlined in the next section.
+These objectives are evaluated against three research-facing success criteria. First, the project must provide a convincing held-out answer to whether combining local documentation and historical tickets improves factual correctness over single-source baselines. Second, it must provide a convincing held-out answer to whether validity-aware reranking improves over naive combined retrieval, judged primarily by factual correctness and checked against faithfulness. Third, it must reach a justified conclusion about the role of external documentation for software-specific queries, including whether any benefit is limited or conditional. Supporting implementation, reproducibility, and protocol criteria are operationalised in Chapter~\ref{cha:problem}.
 
 \section{Overview of Evaluation Strategy}
 \label{sec:eval_overview}
 
-The evaluation strategy for this project was designed to test whether heterogeneous-source, validity-aware retrieval improved \ac{HPC} support answer quality. 
-
-The curated benchmark was split into development and held-out test partitions so that model selection and tuning could be performed separately from final evaluation, reducing selection bias in the reported results \citep{westphalImprovingModelSelection2019}. The development set was used for generator selection and hyperparameter tuning, while the held-out test set was reserved for final comparisons.
-
-A separate ablation was performed to investigate:
-
-\begin{itemize}
-    \item whether combining documentation and tickets outperformed single-source retrieval, 
-    \item whether validity-aware reranking outperformed naive combined retrieval, and
-    \item whether external documentation provided additional benefit on software-specific queries.
-\end{itemize}
-
-This allowed the contribution of each experimental factor to be assessed more directly and reduced confounding relative to a single aggregate comparison. 
-
-\ac{RAGAs} was used as the primary evaluation framework for all ablations, because it provides scalable \ac{LLM}-based scoring across both retrieval and generation \citep{RAGAS}. Factual correctness was the primary metric for all comparisons because the central aim of the project is to improve the correctness of support answers. Faithfulness was used as a guardrail metric since \ac{RAG} systems must ensure that generated answers are grounded in the retrieved evidence and not make unsupported claims \citep{RAGAS}. Additionally, context precision and context recall were used for retrieval ablations as diagnostic metrics to assess whether changes to retrieval improve the focus and coverage of the retrieved evidence \citep{RAGAS}. 
-
-Manual evaluation complemented automated scoring, because automated judge-based metrics could miss some user-relevant response qualities \citep{grittaHumanRankEvalAutomaticEvaluation2024}. Error analysis was also used to identify specific failure modes of the system and support critical evaluation beyond metric scores. A different model family was used for the evaluation and generation \ac{LLM}s to reduce the risk of self-preference bias in \ac{LLM}-as-a-judge evaluations \citep{chenSurfaceMeasuringSelfPreference2025}.
+The evaluation strategy was designed to answer the research questions with minimal selection bias. The benchmark was split into development and held-out test partitions so that generator selection and configuration tuning were separated from final comparison \citep{westphalImprovingModelSelection2019}. The held-out experiments then compare single-source retrieval, naive combined retrieval, validity-aware reranking, and the contribution of external documentation. Factual correctness is the primary metric because the central aim of the project is to improve the correctness of support answers. Faithfulness is used as a guardrail against unsupported generation, while additional retrieval metrics are used diagnostically when comparing retrieval variants. Manual evaluation and error analysis complement automated scoring by identifying user-relevant failure modes and limitations \citep{RAGAS,grittaHumanRankEvalAutomaticEvaluation2024,chenSurfaceMeasuringSelfPreference2025}.
 
 The full experimental protocol is further described in Chapter \ref{cha:methodology}, with results presented in Chapters \ref{cha:results} and \ref{cha:discussion}. 
 
 \section{Report Structure}
 \label{sec:structure}
 
-This report is structured with each subsequent chapter building on the previous, providing further background and context for the project. Chapter \ref{cha:background} reviews relevant literature on \ac{HPC} user support, \ac{RAG} systems, evidence quality in retrieval, and the evaluation of \ac{RAG} systems. Chapter \ref{cha:problem} formalises the problem definition, requirements, success criteria, and ethical considerations for the project. Chapter \ref{cha:system-design-implementation} describes the design and implementation of the system, including the corpus construction, retrieval design, and overall system architecture. Chapter \ref{cha:methodology} outlines the experimental methodology used to evaluate the research questions. Chapter \ref{cha:results} presents the results of the experiments, while Chapter \ref{cha:discussion} provides an analysis of the findings, their implications, and limitations. Finally, Chapter \ref{cha:conclusion} summarises the contributions of the project and suggests directions for future work.
-
-NOTE: 1.4 - SHORRTEN AND PUT INTO TABLE
+The remainder of this report is structured to move from background and problem definition through to system design, evaluation, results, and conclusions. Chapter~\ref{cha:background} reviews the literature, Chapter~\ref{cha:problem} defines the task, benchmark, and requirements, Chapter~\ref{cha:system-design-implementation} describes the system, Chapter~\ref{cha:methodology} presents the experimental methodology, Chapter~\ref{cha:results} reports the results, Chapter~\ref{cha:discussion} discusses the findings and limitations, and Chapter~\ref{cha:conclusion} concludes. 

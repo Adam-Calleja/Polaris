@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.3.18)  1 MAY 2026 00:42
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.3.18)  1 MAY 2026 15:49
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -454,7 +454,7 @@ although it is yet undefined on input line 7.
 Package acronym Info: Label `acro:HPC' newly defined as it shall be overridden
 although it is yet undefined on input line 7.
 Package acronym Info: Label `acro:RCS' overridden on input line 7.
-<graphs/ticket_counts.pdf, id=592, 431.17964pt x 254.86092pt>
+<graphs/ticket_counts.pdf, id=588, 431.17964pt x 254.86092pt>
 File: graphs/ticket_counts.pdf Graphic file (type pdf)
 <use graphs/ticket_counts.pdf>
 Package pdftex.def Info: graphs/ticket_counts.pdf  used on input line 13.
@@ -464,8 +464,6 @@ Overfull \hbox (18.61362pt too wide) in paragraph at lines 13--14
  [][] 
  []
 
-Package acronym Info: Label `acro:LLM' newly defined as it shall be overridden
-although it is yet undefined on input line 18.
 Package acronym Info: Label `acro:RAG' newly defined as it shall be overridden
 although it is yet undefined on input line 18.
 Package acronym Info: Label `acro:QA' newly defined as it shall be overridden
@@ -474,25 +472,19 @@ although it is yet undefined on input line 18.
 
 
 ]
-Underfull \vbox (badness 10000) has occurred while \output is active []
-
- [14 <./graphs/ticket_counts.pdf>]
-Overfull \hbox (0.26749pt too wide) in paragraph at lines 38--39
+Overfull \hbox (0.26749pt too wide) in paragraph at lines 28--29
 \OT1/ptm/m/n/12 To in-ves-ti-gate the prob-lems in-tro-duced by the het-ero-ge-neous ev-i-dence base, this project
  []
 
-LaTeX Font Info:    Trying to load font information for TS1+ptm on input line 41.
+LaTeX Font Info:    Trying to load font information for TS1+ptm on input line 31.
 (/usr/local/texlive/2026/texmf-dist/tex/latex/psnfss/ts1ptm.fd
 File: ts1ptm.fd 2001/06/04 font definitions for TS1/ptm.
-) [15] [16]
-Overfull \hbox (10.56215pt too wide) in paragraph at lines 65--66
+) [14 <./graphs/ticket_counts.pdf>] [15]
+Overfull \hbox (10.56215pt too wide) in paragraph at lines 53--54
 []\OT1/ptm/b/n/12 O5: \OT1/ptm/m/n/12 To eval-u-ate whether heterogeneous-source re-trieval and validity-aware rerank-
  []
 
-[17]
-Package acronym Info: Label `acro:RAGAs' newly defined as it shall be overridden
-although it is yet undefined on input line 106.
- [18]) [19]
+) [16] [17]
 \openout2 = `chapter2.aux'.
 
  (./chapter2.tex
@@ -504,7 +496,7 @@ Overfull \hbox (8.44052pt too wide) in paragraph at lines 6--6
 
 Package acronym Info: Label `acro:IR' newly defined as it shall be overridden
 although it is yet undefined on input line 11.
-[20
+[18
 
 
 
@@ -517,15 +509,15 @@ Underfull \vbox (badness 10000) has occurred while \output is active []
 
 
 Overfull \hbox (113.40976pt too wide) has occurred while \output is active
-\OT1/ptm/m/sl/12 2.1.  HPC SUPPORT AS AN INFORMATION RETRIEVAL AND QUESTION ANSWERING PROBLEM \OT1/ptm/m/n/12 21
+\OT1/ptm/m/sl/12 2.1.  HPC SUPPORT AS AN INFORMATION RETRIEVAL AND QUESTION ANSWERING PROBLEM \OT1/ptm/m/n/12 19
  []
 
-[21]
+[19]
 Overfull \hbox (26.4148pt too wide) in paragraph at lines 26--27
 \OT1/ptm/m/n/12 intensive gen-er-a-tion, and fact ver-i-fi-ca-tion bench-marks. Their mod-els out-per-form parametric-
  []
 
-[22]
+[20]
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <10.95> not available
 (Font)              Font shape `OT1/ptm/b/n' tried instead on input line 36.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <8> not available
@@ -602,7 +594,7 @@ Underfull \hbox (badness 4569) in paragraph at lines 50--50
 \OT1/ptm/m/n/10.95 sources in multi-
  []
 
-[23]
+[21]
 Underfull \hbox (badness 10000) in paragraph at lines 75--75
 []|\OT1/ptm/m/n/10.95 Local doc-u-
  []
@@ -802,7 +794,7 @@ Overfull \hbox (5.02779pt too wide) in paragraph at lines 96--97
 []\OT1/ptm/m/n/12 For facility-specific sup-port, lo-cal doc-u-men-ta-tion is the pri-mary doc-u-men-tary source
  []
 
-[24]
+[22]
 Overfull \hbox (3.75801pt too wide) in paragraph at lines 98--99
 \OT1/ptm/m/n/12 source [][], how-ever, such ma-te-rial still raises source-reliability and local-applicability
  []
@@ -812,16 +804,19 @@ Underfull \vbox (badness 10000) has occurred while \output is active []
 
 
 Overfull \hbox (27.58992pt too wide) has occurred while \output is active
-\OT1/ptm/m/sl/12 2.3.  HETEROGENEOUS SUPPORT CORPORA: DOCUMENTATION AND TICKETS \OT1/ptm/m/n/12 25
+\OT1/ptm/m/sl/12 2.3.  HETEROGENEOUS SUPPORT CORPORA: DOCUMENTATION AND TICKETS \OT1/ptm/m/n/12 23
  []
 
-[25] [26]
+[23] [24]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
- [27]
+ [25]
 Package acronym Info: Label `acro:RGB' newly defined as it shall be overridden
 although it is yet undefined on input line 126.
- [28] [29]) [30]
+ [26]
+Package acronym Info: Label `acro:LLM' newly defined as it shall be overridden
+although it is yet undefined on input line 128.
+ [27]) [28]
 \openout2 = `chapter3.aux'.
 
  (./chapter3.tex
@@ -836,7 +831,7 @@ Overfull \hbox (2.67947pt too wide) in paragraph at lines 7--8
 \OT1/ptm/m/n/12 answering task within a su-per-vised in-ter-nal sup-port work-flow. Given a natural-language
  []
 
-[31
+[29
 
 
 
@@ -1096,13 +1091,13 @@ Underfull \hbox (badness 10000) in paragraph at lines 29--30
 \OT1/ptm/m/n/10.95 privacy-sensitive,
  []
 
-[32]
+[30]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
- [33] [34]
+ [31] [32]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
- [35]
+ [33]
 Underfull \hbox (badness 5847) in paragraph at lines 89--90
 []|\OT1/ptm/m/n/10 In this set-ting, rel-e-vant ev-i-
  []
@@ -1178,17 +1173,17 @@ Underfull \hbox (badness 6725) in paragraph at lines 111--112
  []
 
 
-ignored: Infinite glue shrinkage found in box being split [36]
+ignored: Infinite glue shrinkage found in box being split [34]
 Overfull \hbox (25.80722pt too wide) in paragraph at lines 118--118
 []\OT1/ptm/b/n/17.28 Success Cri-te-ria and Requirement-to-Evaluation Map-
  []
 
 
 Overfull \hbox (2.73805pt too wide) has occurred while \output is active
-\OT1/ptm/m/sl/12 3.5.  SUCCESS CRITERIA AND REQUIREMENT-TO-EVALUATION MAPPING \OT1/ptm/m/n/12 37
+\OT1/ptm/m/sl/12 3.5.  SUCCESS CRITERIA AND REQUIREMENT-TO-EVALUATION MAPPING \OT1/ptm/m/n/12 35
  []
 
-[37]
+[35]
 Overfull \hbox (57.07135pt too wide) in alignment at lines 128--135
  [] [] [] [] [] 
  []
@@ -1394,24 +1389,24 @@ Overfull \hbox (57.07135pt too wide) in alignment at lines 148--192
  []
 
 
-ignored: Infinite glue shrinkage found in box being split [38]) [39] [40]
+ignored: Infinite glue shrinkage found in box being split [36]) [37] [38]
 \openout2 = `chapter4.aux'.
 
  (./chapter4.tex
 Chapter 4.
-<graphs/polaris_architecture.pdf, id=1167, 522.33847pt x 375.71468pt>
+<graphs/polaris_architecture.pdf, id=1113, 522.33847pt x 375.71468pt>
 File: graphs/polaris_architecture.pdf Graphic file (type pdf)
 <use graphs/polaris_architecture.pdf>
 Package pdftex.def Info: graphs/polaris_architecture.pdf  used on input line 11.
 (pdftex.def)             Requested size: 412.56496pt x 296.76547pt.
-<graphs/polaris_query_flow.pdf, id=1170, 510.96394pt x 283.3245pt>
+<graphs/polaris_query_flow.pdf, id=1116, 510.96394pt x 283.3245pt>
 File: graphs/polaris_query_flow.pdf Graphic file (type pdf)
 <use graphs/polaris_query_flow.pdf>
 Package pdftex.def Info: graphs/polaris_query_flow.pdf  used on input line 20.
 (pdftex.def)             Requested size: 412.56496pt x 228.77393pt.
 Package acronym Info: Label `acro:RRF' newly defined as it shall be overridden
 although it is yet undefined on input line 25.
-[41
+[39
 
 
 
@@ -1419,7 +1414,7 @@ although it is yet undefined on input line 25.
 ]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
- [42 <./graphs/polaris_architecture.pdf>]
+ [40 <./graphs/polaris_architecture.pdf>]
 Overfull \hbox (22.62007pt too wide) in paragraph at lines 34--35
 []\OT1/ptm/m/n/12 Two base-line sys-tems were im-ple-mented for [][]Re-search Ques-tion 1[][]. The first, \OT1/pcr/m/n/12 docs[]only\OT1/ptm/m/n/12 ,
  []
@@ -1429,7 +1424,7 @@ Overfull \hbox (20.81195pt too wide) in paragraph at lines 34--35
 \OT1/ptm/m/n/12 cal doc-u-men-ta-tion alone could sup-port the bench-mark queries. The sec-ond, \OT1/pcr/m/n/12 tickets[]only\OT1/ptm/m/n/12 ,
  []
 
-[43 <./graphs/polaris_query_flow.pdf>] [44]
+[41 <./graphs/polaris_query_flow.pdf>] [42]
 Underfull \hbox (badness 2050) in paragraph at lines 74--74
 \OT1/ptm/m/n/12 vices, soft-ware, mod-
  []
@@ -1449,20 +1444,20 @@ Underfull \hbox (badness 1242) in paragraph at lines 82--82
 []|\OT1/ptm/m/n/12 extraction method, re-
  []
 
-[45] [46]
-<graphs/polaris_reranking.pdf, id=1245, 620.50018pt x 245.52026pt>
+[43] [44]
+<graphs/polaris_reranking.pdf, id=1190, 620.50018pt x 245.52026pt>
 File: graphs/polaris_reranking.pdf Graphic file (type pdf)
 <use graphs/polaris_reranking.pdf>
 Package pdftex.def Info: graphs/polaris_reranking.pdf  used on input line 101.
 (pdftex.def)             Requested size: 412.56496pt x 163.25018pt.
- [47] [48 <./graphs/polaris_reranking.pdf>]
+ [45] [46 <./graphs/polaris_reranking.pdf>]
 Overfull \hbox (3.9399pt too wide) in paragraph at lines 126--127
 \OT1/ptm/m/n/12 ness is sep-a-rated from dependency-aware readi-ness by pro-vid-ing both a sim-ple \OT1/pcr/m/n/12 /health
  []
 
-[49]
+[47]
 
-LaTeX Warning: Reference `fig:polaris-ui' on page 50 undefined on input line 135.
+LaTeX Warning: Reference `fig:polaris-ui' on page 48 undefined on input line 135.
 
 
 Underfull \hbox (badness 7486) in paragraph at lines 150--150
@@ -1514,7 +1509,7 @@ Underfull \hbox (badness 10000) in paragraph at lines 152--153
 []|\OT1/ptm/m/n/12 Reduce re-gres-sion
  []
 
-[50]
+[48]
 Overfull \hbox (11.9634pt too wide) in paragraph at lines 157--158
 []\OT1/ptm/m/n/12 At the com-po-nent level, tests tar-get the project's highest-risk logic di-rectly. Authority-
  []
@@ -1529,7 +1524,7 @@ Overfull \hbox (3.13391pt too wide) in paragraph at lines 157--158
 \OT1/ptm/m/n/12 stamp-ing. Pipeline and API tests checked answer-status and tim-ing pay-loads, reference-
  []
 
-[51]) [52]
+[49]) [50]
 \openout2 = `chapter5.aux'.
 
  (./chapter5.tex
@@ -1537,7 +1532,7 @@ Chapter 5.
 )
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
- [53
+ [51
 
 
 
@@ -1545,12 +1540,12 @@ Underfull \vbox (badness 10000) has occurred while \output is active []
 ]
 Overfull \vbox (233.79532pt too high) has occurred while \output is active []
 
- [54]
+ [52]
 \openout2 = `chapter6.aux'.
 
  (./chapter6.tex
 Chapter 6.
-) [55
+) [53
 
 
 
@@ -1560,7 +1555,7 @@ Chapter 6.
 
  (./chapter7.tex
 Chapter 7.
-) [56
+) [54
 
 
 
@@ -1570,12 +1565,12 @@ Chapter 7.
 
  (./chapter8.tex
 Chapter 8.
-) [57
+) [55
 
 
 
 
-] (./report.bbl [58
+] (./report.bbl [56
 
 
 
@@ -1584,12 +1579,12 @@ Underfull \hbox (badness 1742) in paragraph at lines 42--43
 []\OT1/ptm/m/n/12 J. Hwang, J. Park, H. Park, D. Kim, S. Park, and J. Ok, ``Retrieval-
  []
 
-
-Underfull \hbox (badness 10000) in paragraph at lines 45--46
+[57]
+Underfull \hbox (badness 10000) in paragraph at lines 78--79
 []\OT1/ptm/m/n/12 ``CSD3 Up-grade Oc-to-ber 2021 --- CSD3 1.0 doc-u-men-ta-tion,''
  []
 
-[59] [60]
+[58]
 LaTeX Font Info:    Font shape `OMS/ptm/m/n' in size <12> not available
 (Font)              Font shape `OMS/pzccm/m/n' tried instead on input line 87.
 
@@ -1612,12 +1607,12 @@ Underfull \hbox (badness 1005) in paragraph at lines 102--103
 []\OT1/ptm/m/n/12 T. Brown, B. Mann, N. Ry-der, M. Sub-biah, J. D. Ka-plan, P. Dhari-wal,
  []
 
-[61]
+[59]
 Underfull \hbox (badness 3525) in paragraph at lines 111--112
 []\OT1/ptm/m/n/12 ``MLflow - Open Source AI Plat-form for Agents, LLMs & Mod-els,''
  []
 
-) [62]
+) [60]
 \openout2 = `appendix1.aux'.
 
  (./appendix1.tex
@@ -1822,10 +1817,10 @@ Underfull \hbox (badness 10000) in paragraph at lines 82--82
  []
 
 
-ignored: Infinite glue shrinkage found in box being split [63
+ignored: Infinite glue shrinkage found in box being split [61
 
 
-]) [64]
+]) [62]
 \openout2 = `appendix2.aux'.
 
  (./appendix2.tex
@@ -1856,12 +1851,12 @@ Overfull \hbox (26.30994pt too wide) in alignment at lines 37--74
  []
 
 
-ignored: Infinite glue shrinkage found in box being split [65
+ignored: Infinite glue shrinkage found in box being split [63
 
 
 
 
-]) [66]
+]) [64]
 \openout2 = `appendix3.aux'.
 
  (./appendix3.tex
@@ -2087,13 +2082,13 @@ Underfull \hbox (badness 1789) in paragraph at lines 54--55
  []
 
 
-ignored: Infinite glue shrinkage found in box being split [67
+ignored: Infinite glue shrinkage found in box being split [65
 
 
 
 
 ]
-ignored: Infinite glue shrinkage found in box being split [68]) [69] (./report.aux (./chapter1.aux) (./chapter2.aux) (./chapter3.aux) (./chapter4.aux) (./chapter5.aux) (./chapter6.aux) (./chapter7.aux) (./chapter8.aux) (./appendix1.aux) (./appendix2.aux) (./appendix3.aux))
+ignored: Infinite glue shrinkage found in box being split [66]) [67] (./report.aux (./chapter1.aux) (./chapter2.aux) (./chapter3.aux) (./chapter4.aux) (./chapter5.aux) (./chapter6.aux) (./chapter7.aux) (./chapter8.aux) (./appendix1.aux) (./appendix2.aux) (./appendix3.aux))
  ***********
 LaTeX2e <2025-11-01>
 L3 programming layer <2026-01-19>
@@ -2109,18 +2104,18 @@ Package rerunfilecheck Info: File `report.out' has not changed.
 (rerunfilecheck)             Checksum: 84352057E3E7EC202F03BDCF6CB47877;16836.
  ) 
 Here is how much of TeX's memory you used:
- 12662 strings out of 467525
- 197713 string characters out of 5418982
- 628587 words of memory out of 5000000
- 41078 multiletter control sequences out of 15000+600000
+ 12654 strings out of 467525
+ 197624 string characters out of 5418982
+ 628523 words of memory out of 5000000
+ 41074 multiletter control sequences out of 15000+600000
  676807 words of font info for 129 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  75i,11n,79p,2002b,695s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/local/texlive/2026/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi8.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/helvetic/uhvb8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/helvetic/uhvr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
-Output written on report.pdf (69 pages, 318762 bytes).
+Output written on report.pdf (67 pages, 312544 bytes).
 PDF statistics:
- 1509 PDF objects out of 1728 (max. 8388607)
- 1352 compressed objects within 14 object streams
- 226 named destinations out of 1000 (max. 500000)
+ 1454 PDF objects out of 1728 (max. 8388607)
+ 1300 compressed objects within 13 object streams
+ 222 named destinations out of 1000 (max. 500000)
  693 words of extra memory for PDF output out of 10000 (max. 10000000)
 
