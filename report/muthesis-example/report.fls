@@ -350,6 +350,9 @@ INPUT ./graphs/polaris_reranking.pdf
 INPUT ./graphs/polaris_reranking.pdf
 INPUT ./graphs/polaris_reranking.pdf
 INPUT ./graphs/polaris_reranking.pdf
+INPUT /usr/local/texlive/2026/texmf-dist/fonts/vf/adobe/times/zpzccmry.vf
+INPUT /usr/local/texlive/2026/texmf-dist/fonts/tfm/public/cm/cmsy10.tfm
+INPUT /usr/local/texlive/2026/texmf-dist/fonts/tfm/adobe/zapfchan/pzcmi8r.tfm
 INPUT ./chapter5.tex
 INPUT ./chapter5.tex
 OUTPUT chapter5.aux
@@ -381,9 +384,6 @@ INPUT ./report.bbl
 INPUT ./report.bbl
 INPUT report.bbl
 INPUT /usr/local/texlive/2026/texmf-dist/fonts/vf/adobe/times/ptmri7t.vf
-INPUT /usr/local/texlive/2026/texmf-dist/fonts/vf/adobe/times/zpzccmry.vf
-INPUT /usr/local/texlive/2026/texmf-dist/fonts/tfm/public/cm/cmsy10.tfm
-INPUT /usr/local/texlive/2026/texmf-dist/fonts/tfm/adobe/zapfchan/pzcmi8r.tfm
 INPUT ./appendix1.tex
 INPUT ./appendix1.tex
 OUTPUT appendix1.aux
@@ -455,6 +455,7 @@ INPUT ./report.out
 INPUT ./report.out
 INPUT /usr/local/texlive/2026/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb
 INPUT /usr/local/texlive/2026/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi8.pfb
+INPUT /usr/local/texlive/2026/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb
 INPUT /usr/local/texlive/2026/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb
 INPUT /usr/local/texlive/2026/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb
 INPUT /usr/local/texlive/2026/texmf-dist/fonts/type1/urw/helvetic/uhvb8a.pfb

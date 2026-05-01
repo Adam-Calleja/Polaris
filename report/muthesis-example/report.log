@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.3.18)  30 APR 2026 12:44
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.3.18)  1 MAY 2026 00:42
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -400,7 +400,7 @@ Underfull \hbox (badness 10000) in paragraph at lines 55--55
 Package acronym Info: Label `acro:CSD3' newly defined as it shall be overridden
 although it is yet undefined on input line 4.
 
-Overfull \hbox (5.14026pt too wide) in paragraph at lines 16--16
+Overfull \hbox (5.14026pt too wide) in paragraph at lines 17--17
  [][] [][][]\OT1/ptm/m/n/12 Approved ex-ter-nal doc-u-men-ta-tion source fam-i-lies in-cluded in the frozen 
  []
 
@@ -454,7 +454,7 @@ although it is yet undefined on input line 7.
 Package acronym Info: Label `acro:HPC' newly defined as it shall be overridden
 although it is yet undefined on input line 7.
 Package acronym Info: Label `acro:RCS' overridden on input line 7.
-<graphs/ticket_counts.pdf, id=590, 431.17964pt x 254.86092pt>
+<graphs/ticket_counts.pdf, id=592, 431.17964pt x 254.86092pt>
 File: graphs/ticket_counts.pdf Graphic file (type pdf)
 <use graphs/ticket_counts.pdf>
 Package pdftex.def Info: graphs/ticket_counts.pdf  used on input line 13.
@@ -1399,12 +1399,12 @@ ignored: Infinite glue shrinkage found in box being split [38]) [39] [40]
 
  (./chapter4.tex
 Chapter 4.
-<graphs/polaris_architecture.pdf, id=1165, 522.33847pt x 375.71468pt>
+<graphs/polaris_architecture.pdf, id=1167, 522.33847pt x 375.71468pt>
 File: graphs/polaris_architecture.pdf Graphic file (type pdf)
 <use graphs/polaris_architecture.pdf>
 Package pdftex.def Info: graphs/polaris_architecture.pdf  used on input line 11.
 (pdftex.def)             Requested size: 412.56496pt x 296.76547pt.
-<graphs/polaris_query_flow.pdf, id=1168, 510.96394pt x 283.3245pt>
+<graphs/polaris_query_flow.pdf, id=1170, 510.96394pt x 283.3245pt>
 File: graphs/polaris_query_flow.pdf Graphic file (type pdf)
 <use graphs/polaris_query_flow.pdf>
 Package pdftex.def Info: graphs/polaris_query_flow.pdf  used on input line 20.
@@ -1419,36 +1419,117 @@ although it is yet undefined on input line 25.
 ]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
- [42 <./graphs/polaris_architecture.pdf>] [43 <./graphs/polaris_query_flow.pdf>] [44]
-Underfull \hbox (badness 2050) in paragraph at lines 76--76
+ [42 <./graphs/polaris_architecture.pdf>]
+Overfull \hbox (22.62007pt too wide) in paragraph at lines 34--35
+[]\OT1/ptm/m/n/12 Two base-line sys-tems were im-ple-mented for [][]Re-search Ques-tion 1[][]. The first, \OT1/pcr/m/n/12 docs[]only\OT1/ptm/m/n/12 ,
+ []
+
+
+Overfull \hbox (20.81195pt too wide) in paragraph at lines 34--35
+\OT1/ptm/m/n/12 cal doc-u-men-ta-tion alone could sup-port the bench-mark queries. The sec-ond, \OT1/pcr/m/n/12 tickets[]only\OT1/ptm/m/n/12 ,
+ []
+
+[43 <./graphs/polaris_query_flow.pdf>] [44]
+Underfull \hbox (badness 2050) in paragraph at lines 74--74
 \OT1/ptm/m/n/12 vices, soft-ware, mod-
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 80--80
+Underfull \hbox (badness 10000) in paragraph at lines 78--78
 \OT1/ptm/m/n/12 and ver-sion
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 82--82
+Underfull \hbox (badness 10000) in paragraph at lines 80--80
 []|\OT1/ptm/m/n/12 Provenance
  []
 
 
-Underfull \hbox (badness 1242) in paragraph at lines 84--84
+Underfull \hbox (badness 1242) in paragraph at lines 82--82
 []|\OT1/ptm/m/n/12 extraction method, re-
  []
 
 [45] [46]
-<graphs/polaris_reranking.pdf, id=1240, 620.50018pt x 245.52026pt>
+<graphs/polaris_reranking.pdf, id=1245, 620.50018pt x 245.52026pt>
 File: graphs/polaris_reranking.pdf Graphic file (type pdf)
 <use graphs/polaris_reranking.pdf>
-Package pdftex.def Info: graphs/polaris_reranking.pdf  used on input line 103.
+Package pdftex.def Info: graphs/polaris_reranking.pdf  used on input line 101.
 (pdftex.def)             Requested size: 412.56496pt x 163.25018pt.
- [47] [48 <./graphs/polaris_reranking.pdf>])
-Underfull \vbox (badness 10000) has occurred while \output is active []
+ [47] [48 <./graphs/polaris_reranking.pdf>]
+Overfull \hbox (3.9399pt too wide) in paragraph at lines 126--127
+\OT1/ptm/m/n/12 ness is sep-a-rated from dependency-aware readi-ness by pro-vid-ing both a sim-ple \OT1/pcr/m/n/12 /health
+ []
 
- [49] [50]
+[49]
+
+LaTeX Warning: Reference `fig:polaris-ui' on page 50 undefined on input line 135.
+
+
+Underfull \hbox (badness 7486) in paragraph at lines 150--150
+[]|\OT1/ptm/m/n/12 Unit / com-po-
+ []
+
+
+Underfull \hbox (badness 7486) in paragraph at lines 150--150
+[]|\OT1/ptm/m/n/12 Authority-registry de-ter-min-ism and
+ []
+
+
+Underfull \hbox (badness 5189) in paragraph at lines 150--150
+\OT1/ptm/m/n/12 ren-der-ing; validity-reranker fea-ture
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 151--152
+[]|\OT1/ptm/m/n/12 Verify end-to-end
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 151--152
+\OT1/ptm/m/n/12 run-time be-haviour
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 151--152
+\OT1/ptm/m/n/12 and re-sponse con-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 152--152
+[]|\OT1/ptm/m/n/12 Readiness and trac-ing be-haviour;
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 152--152
+\OT1/ptm/m/n/12 prompt-registry in-te-gra-tion;
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 152--152
+\OT1/ptm/m/n/12 evaluation-facing API paths and
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 152--153
+[]|\OT1/ptm/m/n/12 Reduce re-gres-sion
+ []
+
+[50]
+Overfull \hbox (11.9634pt too wide) in paragraph at lines 157--158
+[]\OT1/ptm/m/n/12 At the com-po-nent level, tests tar-get the project's highest-risk logic di-rectly. Authority-
+ []
+
+
+Overfull \hbox (1.08304pt too wide) in paragraph at lines 157--158
+\OT1/ptm/m/n/12 ver-i-fied official-match pro-mo-tion, software-gated scope-family boosts, and rerank trace
+ []
+
+
+Overfull \hbox (3.13391pt too wide) in paragraph at lines 157--158
+\OT1/ptm/m/n/12 stamp-ing. Pipeline and API tests checked answer-status and tim-ing pay-loads, reference-
+ []
+
+[51]) [52]
 \openout2 = `chapter5.aux'.
 
  (./chapter5.tex
@@ -1456,7 +1537,7 @@ Chapter 5.
 )
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
- [51
+ [53
 
 
 
@@ -1464,12 +1545,12 @@ Underfull \vbox (badness 10000) has occurred while \output is active []
 ]
 Overfull \vbox (233.79532pt too high) has occurred while \output is active []
 
- [52]
+ [54]
 \openout2 = `chapter6.aux'.
 
  (./chapter6.tex
 Chapter 6.
-) [53
+) [55
 
 
 
@@ -1479,7 +1560,7 @@ Chapter 6.
 
  (./chapter7.tex
 Chapter 7.
-) [54
+) [56
 
 
 
@@ -1489,12 +1570,12 @@ Chapter 7.
 
  (./chapter8.tex
 Chapter 8.
-) [55
+) [57
 
 
 
 
-] (./report.bbl [56
+] (./report.bbl [58
 
 
 
@@ -1508,7 +1589,7 @@ Underfull \hbox (badness 10000) in paragraph at lines 45--46
 []\OT1/ptm/m/n/12 ``CSD3 Up-grade Oc-to-ber 2021 --- CSD3 1.0 doc-u-men-ta-tion,''
  []
 
-[57] [58]
+[59] [60]
 LaTeX Font Info:    Font shape `OMS/ptm/m/n' in size <12> not available
 (Font)              Font shape `OMS/pzccm/m/n' tried instead on input line 87.
 
@@ -1531,7 +1612,12 @@ Underfull \hbox (badness 1005) in paragraph at lines 102--103
 []\OT1/ptm/m/n/12 T. Brown, B. Mann, N. Ry-der, M. Sub-biah, J. D. Ka-plan, P. Dhari-wal,
  []
 
-[59]) [60]
+[61]
+Underfull \hbox (badness 3525) in paragraph at lines 111--112
+[]\OT1/ptm/m/n/12 ``MLflow - Open Source AI Plat-form for Agents, LLMs & Mod-els,''
+ []
+
+) [62]
 \openout2 = `appendix1.aux'.
 
  (./appendix1.tex
@@ -1736,10 +1822,10 @@ Underfull \hbox (badness 10000) in paragraph at lines 82--82
  []
 
 
-ignored: Infinite glue shrinkage found in box being split [61
+ignored: Infinite glue shrinkage found in box being split [63
 
 
-]) [62]
+]) [64]
 \openout2 = `appendix2.aux'.
 
  (./appendix2.tex
@@ -1770,12 +1856,12 @@ Overfull \hbox (26.30994pt too wide) in alignment at lines 37--74
  []
 
 
-ignored: Infinite glue shrinkage found in box being split [63
+ignored: Infinite glue shrinkage found in box being split [65
 
 
 
 
-]) [64]
+]) [66]
 \openout2 = `appendix3.aux'.
 
  (./appendix3.tex
@@ -2001,17 +2087,20 @@ Underfull \hbox (badness 1789) in paragraph at lines 54--55
  []
 
 
-ignored: Infinite glue shrinkage found in box being split [65
+ignored: Infinite glue shrinkage found in box being split [67
 
 
 
 
 ]
-ignored: Infinite glue shrinkage found in box being split [66]) [67] (./report.aux (./chapter1.aux) (./chapter2.aux) (./chapter3.aux) (./chapter4.aux) (./chapter5.aux) (./chapter6.aux) (./chapter7.aux) (./chapter8.aux) (./appendix1.aux) (./appendix2.aux) (./appendix3.aux))
+ignored: Infinite glue shrinkage found in box being split [68]) [69] (./report.aux (./chapter1.aux) (./chapter2.aux) (./chapter3.aux) (./chapter4.aux) (./chapter5.aux) (./chapter6.aux) (./chapter7.aux) (./chapter8.aux) (./appendix1.aux) (./appendix2.aux) (./appendix3.aux))
  ***********
 LaTeX2e <2025-11-01>
 L3 programming layer <2026-01-19>
  ***********
+
+
+LaTeX Warning: There were undefined references.
 
 
 LaTeX Warning: There were multiply-defined labels.
@@ -2020,18 +2109,18 @@ Package rerunfilecheck Info: File `report.out' has not changed.
 (rerunfilecheck)             Checksum: 84352057E3E7EC202F03BDCF6CB47877;16836.
  ) 
 Here is how much of TeX's memory you used:
- 12649 strings out of 467525
- 197490 string characters out of 5418982
- 628479 words of memory out of 5000000
- 41070 multiletter control sequences out of 15000+600000
+ 12662 strings out of 467525
+ 197713 string characters out of 5418982
+ 628587 words of memory out of 5000000
+ 41078 multiletter control sequences out of 15000+600000
  676807 words of font info for 129 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  75i,11n,79p,2002b,695s stack positions out of 10000i,1000n,20000p,200000b,200000s
-</usr/local/texlive/2026/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi8.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/helvetic/uhvb8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/helvetic/uhvr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
-Output written on report.pdf (67 pages, 303705 bytes).
+</usr/local/texlive/2026/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi8.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/helvetic/uhvb8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/helvetic/uhvr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
+Output written on report.pdf (69 pages, 318762 bytes).
 PDF statistics:
- 1487 PDF objects out of 1728 (max. 8388607)
- 1334 compressed objects within 14 object streams
- 221 named destinations out of 1000 (max. 500000)
+ 1509 PDF objects out of 1728 (max. 8388607)
+ 1352 compressed objects within 14 object streams
+ 226 named destinations out of 1000 (max. 500000)
  693 words of extra memory for PDF output out of 10000 (max. 10000000)
 
