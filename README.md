@@ -36,6 +36,9 @@ exposing sensitive ticket data.
   automation.
 - A React interface under [`frontend/`](frontend/) with assistant,
   evaluation, and system views.
+- A portfolio case study in [`docs/portfolio-case-study.md`](docs/portfolio-case-study.md)
+  explaining the problem, constraints, architecture choices, evaluation, and
+  tradeoffs.
 
 ## Where to Inspect the Code
 
