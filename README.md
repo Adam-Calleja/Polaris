@@ -1,5 +1,10 @@
 # Polaris RAG
 
+[![CI](https://github.com/Adam-Calleja/Polaris/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Adam-Calleja/Polaris/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](pyproject.toml)
+[![Frontend: React + Vitest](https://img.shields.io/badge/frontend-React%20%2B%20Vitest-61dafb.svg)](frontend/package.json)
+
 Polaris is a Retrieval-Augmented Generation (RAG) system for HPC service support, built as a third-year project. It indexes Jira helpdesk tickets and documentation, then answers user questions using retrieval + LLM generation.
 
 > **Note on data:** Polaris was developed against a private corpus of real HPC support tickets, which is **not** included here. This public repository ships a small, **fully synthetic** ticket corpus and evaluation set (`data/synthetic/`) so the pipeline can be run and demonstrated without any real or sensitive data. See [Data Handling and Privacy](#data-handling-and-privacy).
