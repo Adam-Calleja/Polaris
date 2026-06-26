@@ -37,6 +37,21 @@ exposing sensitive ticket data.
 - A React interface under [`frontend/`](frontend/) with assistant,
   evaluation, and system views.
 
+## Where to Inspect the Code
+
+| Area | Start here | Why it matters |
+| --- | --- | --- |
+| API surface | [`src/polaris_rag/app/api.py`](src/polaris_rag/app/api.py) | Shows the FastAPI query/readiness endpoints, request validation, response shaping, and tracing hooks. |
+| RAG orchestration | [`src/polaris_rag/pipelines/rag_pipeline.py`](src/polaris_rag/pipelines/rag_pipeline.py) | Shows how retrieval, prompt construction, generation, source handling, and observability are composed into one query path. |
+| Retrieval and reranking | [`src/polaris_rag/retrieval/`](src/polaris_rag/retrieval/) | Contains document loading, preprocessing, chunking, vector-store integration, query constraints, hybrid retrieval, and validity-aware reranking. |
+| Generation | [`src/polaris_rag/generation/`](src/polaris_rag/generation/) | Contains the LLM interface, prompt construction, and MLflow prompt-registry integration. |
+| Evaluation | [`src/polaris_rag/evaluation/`](src/polaris_rag/evaluation/) | Contains benchmark preparation, RAGAS scoring, repeated-run analysis, experiment manifests, and result summaries. |
+| CLI tools | [`src/polaris_rag/cli/`](src/polaris_rag/cli/) | Shows packaged entrypoints for ingestion, evaluation, benchmark analysis, reranker tuning, and experiment automation. |
+| Frontend | [`frontend/src/`](frontend/src/) | Shows the React assistant, evaluation, and system-inspection views plus their Vitest coverage. |
+| Tests | [`src/polaris_rag/tests/`](src/polaris_rag/tests/) and [`frontend/src/**/*.test.tsx`](frontend/src/) | Shows backend and frontend coverage for the public, synthetic-data-safe release. |
+| Deployment/config | [`docker-compose.yaml`](docker-compose.yaml), [`Dockerfile.api`](Dockerfile.api), [`Dockerfile.frontend`](Dockerfile.frontend), [`config/`](config/) | Shows how the API, frontend, embeddings service, Qdrant, evaluation, and MLflow services are wired together. |
+| Public demo data | [`data/synthetic/`](data/synthetic/) | Shows the privacy-safe corpus and evaluation files used to make the project inspectable without private tickets. |
+
 > **Note on data:** Polaris was developed against a private corpus of real HPC support tickets, which is **not** included here. This public repository ships a small, **fully synthetic** ticket corpus and evaluation set (`data/synthetic/`) so the pipeline can be run and demonstrated without any real or sensitive data. See [Data Handling and Privacy](#data-handling-and-privacy).
 
 ## Project Goals
