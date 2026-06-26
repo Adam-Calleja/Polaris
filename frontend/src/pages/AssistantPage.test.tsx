@@ -18,7 +18,7 @@ describe("AssistantPage", () => {
     window.sessionStorage.clear();
   });
 
-  it("shows a sanitized example query while sending the real ticket query to the API", async () => {
+  it("submits a synthetic example query to the API and renders the response", async () => {
     let requestBody = "";
 
     vi.spyOn(globalThis, "fetch").mockImplementation((input, init) => {
@@ -43,17 +43,15 @@ describe("AssistantPage", () => {
 
     renderApp("/assistant");
 
-    await userEvent.click(screen.getByRole("button", { name: /RDS and RCS licence renewal/i }));
+    await userEvent.click(screen.getByRole("button", { name: /Project storage licence renewal/i }));
 
     await waitFor(() => {
       expect(screen.getByText("Use the storage portal.")).toBeInTheDocument();
     });
 
-    expect(screen.getByText(/PERSON_001/)).toBeInTheDocument();
-    expect(screen.queryByText(/Maria \(Cc’ed\)/)).not.toBeInTheDocument();
-    expect(requestBody).toContain("Maria (Cc’ed)");
-    expect(requestBody).toContain("Brian");
-    expect(requestBody).not.toContain("PERSON_001");
+    expect(screen.getByText(/DEMO-ACC-12/)).toBeInTheDocument();
+    expect(requestBody).toContain("DEMO-ACC-12");
+    expect(requestBody).toContain("researcher042@example.org");
   });
 
   it("submits a prompt and renders structured answer diagnostics", async () => {
@@ -148,7 +146,7 @@ describe("AssistantPage", () => {
     expect(screen.getByText("Hello Adam")).toBeInTheDocument();
     expect(screen.getByText("How can I help you today?")).toBeInTheDocument();
     expect(screen.getByText("DEMO-2001")).toBeInTheDocument();
-    expect(screen.getByText("RDS and RCS licence renewal")).toBeInTheDocument();
+    expect(screen.getByText("Project storage licence renewal")).toBeInTheDocument();
     expect(screen.queryByText("Diagnostics")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Clear Assistant" })).not.toBeInTheDocument();
   });
