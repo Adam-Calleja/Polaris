@@ -1,0 +1,1075 @@
+import json
+
+import pytest
+
+from polaris_rag.evaluation.benchmark_annotations import validate_annotation_rows
+from polaris_rag.evaluation.evaluation_dataset import (
+    PrepProgressEvent,
+    build_prepared_rows,
+    build_prepared_rows_from_api,
+    load_raw_examples,
+    load_sample_categories,
+    load_sample_ids,
+    preprocess_rows_for_evaluation,
+    stratified_split_raw_examples_by_annotation_labels,
+    stratified_split_raw_examples_by_categories,
+    split_raw_examples_by_ids,
+)
+
+
+class _Node:
+    def __init__(self, node_id: str, text: str, metadata: dict[str, object] | None = None):
+        self.id_ = node_id
+        self.text = text
+        self.metadata = dict(metadata or {})
+
+
+class _Source:
+    def __init__(self, node: _Node):
+        self.node = node
+
+
+class _FakePipeline:
+    def run(self, query: str, **kwargs):  # noqa: ANN001
+        return {
+            "response": f"resp::{query}",
+            "source_nodes": [
+                _Source(_Node("doc-1", "ctx-1")),
+                _Source(_Node("doc-2", "ctx-2")),
+            ],
+        }
+
+
+class _FlakyPipeline:
+    def run(self, query: str, **kwargs):  # noqa: ANN001
+        if query == "boom":
+            raise RuntimeError("simulated pipeline failure")
+        return {
+            "response": f"resp::{query}",
+            "source_nodes": [_Source(_Node("doc-1", f"ctx::{query}"))],
+        }
+
+
+class _ResolvedContextPipeline:
+    def run(self, query: str, **kwargs):  # noqa: ANN001
+        return {
+            "response": f"resp::{query}",
+            "source_nodes": [_Source(_Node("ticket-1", "full-ticket-context"))],
+            "raw_source_nodes": [_Source(_Node("ticket-1::chunk::0001", "chunk-context"))],
+        }
+
+
+class _ConstraintPipeline:
+    def run(self, query: str, **kwargs):  # noqa: ANN001
+        return {
+            "response": f"resp::{query}",
+            "source_nodes": [_Source(_Node("doc-1", "ctx-1"))],
+            "query_constraints": {
+                "query_type": "software_version",
+                "system_names": [],
+                "partition_names": [],
+                "service_names": [],
+                "scope_family_names": ["cclake"],
+                "software_names": ["GROMACS"],
+                "software_versions": ["2024.4"],
+                "module_names": [],
+                "toolchain_names": [],
+                "toolchain_versions": [],
+                "scope_required": None,
+                "version_sensitive_guess": True,
+            },
+        }
+
+
+class _TracePipeline:
+    def run(self, query: str, **kwargs):  # noqa: ANN001
+        return {
+            "response": f"resp::{query}",
+            "source_nodes": [
+                _Source(
+                    _Node(
+                        "doc-1",
+                        "ctx-1",
+                        metadata={
+                            "retrieval_source": "docs",
+                            "source_authority": "local_official",
+                            "authority_tier": 3,
+                            "validity_status": "current",
+                            "doc_title": "Official Docs",
+                            "software_names": ["GROMACS"],
+                            "software_versions": ["2024.4"],
+                            "private_email": "secret@example.com",
+                        },
+                    )
+                )
+            ],
+            "retrieval_trace": [
+                {
+                    "rank": 1,
+                    "doc_id": "doc-1",
+                    "text": "ctx-1",
+                    "score": 0.91,
+                    "source": "docs",
+                    "source_authority": "local_official",
+                    "authority_tier": 3,
+                    "validity_status": "current",
+                    "rerank_trace": {
+                        "reranker_type": "validity_aware",
+                        "final_score": 1.23,
+                        "authority_feature": 0.4,
+                        "scope_feature": 0.1,
+                        "version_feature": 0.3,
+                        "status_feature": 0.2,
+                        "freshness_feature": 0.05,
+                    },
+                }
+            ],
+            "retriever_profile": {
+                "type": "hybrid",
+                "fusion": {"type": "rrf", "rrf_k": 60},
+            },
+            "retriever_fingerprint": "retriever-fingerprint-123",
+            "reranker_profile": {"type": "validity_aware"},
+            "reranker_fingerprint": "fingerprint-123",
+        }
+
+
+def _ok_requester(
+    api_url: str, query: str, timeout_seconds: float, headers  # noqa: ANN001
+) -> dict[str, object]:
+    return {
+        "answer": f"answer::{query}",
+        "context": [
+            {"doc_id": f"doc::{query}", "text": f"ctx::{query}"},
+        ],
+    }
+
+
+def _flaky_requester(
+    api_url: str, query: str, timeout_seconds: float, headers  # noqa: ANN001
+) -> dict[str, object]:
+    if query == "boom":
+        raise RuntimeError("simulated api failure")
+    return _ok_requester(api_url, query, timeout_seconds, headers)
+
+
+def _constraint_requester(
+    api_url: str, query: str, timeout_seconds: float, headers  # noqa: ANN001
+) -> dict[str, object]:
+    return {
+        "answer": f"answer::{query}",
+        "context": [
+            {"doc_id": f"doc::{query}", "text": f"ctx::{query}"},
+        ],
+        "query_constraints": {
+            "query_type": "software_version",
+            "system_names": [],
+            "partition_names": [],
+            "service_names": [],
+            "scope_family_names": ["cclake"],
+            "software_names": ["GROMACS"],
+            "software_versions": ["2024.4"],
+            "module_names": [],
+            "toolchain_names": [],
+            "toolchain_versions": [],
+            "scope_required": None,
+            "version_sensitive_guess": True,
+        },
+    }
+
+
+def test_load_raw_examples_supports_json_array_in_jsonl_suffix(tmp_path) -> None:
+    path = tmp_path / "dataset.jsonl"
+    payload = [{"query": "q1", "expected_answer": "a1"}]
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    rows = load_raw_examples(path)
+    assert rows == payload
+
+
+def test_load_sample_ids_supports_plain_text(tmp_path) -> None:
+    path = tmp_path / "sample_ids.txt"
+    path.write_text("ex-2\n\n# comment\nex-1\n", encoding="utf-8")
+
+    ids = load_sample_ids(path)
+
+    assert ids == ["ex-2", "ex-1"]
+
+
+def test_load_sample_categories_supports_json_mapping(tmp_path) -> None:
+    path = tmp_path / "categories.json"
+    path.write_text(json.dumps({"cat-a": ["ex-1", "ex-2"], "cat-b": ["ex-3"]}), encoding="utf-8")
+
+    categories = load_sample_categories(path)
+
+    assert categories == {"cat-a": ["ex-1", "ex-2"], "cat-b": ["ex-3"]}
+
+
+def test_split_raw_examples_by_ids_preserves_requested_test_order() -> None:
+    raw_examples = [
+        {"id": "ex-1", "query": "Q1", "expected_answer": "A1"},
+        {"id": "ex-2", "query": "Q2", "expected_answer": "A2"},
+        {"id": "ex-3", "query": "Q3", "expected_answer": "A3"},
+    ]
+
+    dev_rows, test_rows = split_raw_examples_by_ids(raw_examples, ["ex-3", "ex-1"])
+
+    assert [row["id"] for row in dev_rows] == ["ex-2"]
+    assert [row["id"] for row in test_rows] == ["ex-3", "ex-1"]
+
+
+def test_split_raw_examples_by_ids_rejects_unknown_ids() -> None:
+    raw_examples = [{"id": "ex-1", "query": "Q1", "expected_answer": "A1"}]
+
+    with pytest.raises(ValueError, match="Unknown test sample ids: ex-2"):
+        split_raw_examples_by_ids(raw_examples, ["ex-2"])
+
+
+def test_stratified_split_raw_examples_by_categories_keeps_singletons_in_dev(
+    monkeypatch,
+) -> None:
+    raw_examples = [
+        {"id": "a-1", "query": "Q1", "expected_answer": "A1"},
+        {"id": "a-2", "query": "Q2", "expected_answer": "A2"},
+        {"id": "b-1", "query": "Q3", "expected_answer": "A3"},
+        {"id": "b-2", "query": "Q4", "expected_answer": "A4"},
+        {"id": "solo-1", "query": "Q5", "expected_answer": "A5"},
+    ]
+    categories = {
+        "cat-a": ["a-1", "a-2"],
+        "cat-b": ["b-1", "b-2"],
+        "cat-solo": ["solo-1"],
+    }
+
+    monkeypatch.setattr(
+        "polaris_rag.evaluation.evaluation_dataset._import_train_test_split",
+        lambda: (
+            lambda ticket_ids, *, test_size, random_state, stratify: (  # noqa: ARG005
+                ["a-2", "b-2"],
+                ["a-1", "b-1"],
+            )
+        ),
+    )
+
+    dev_rows, test_rows, stats = stratified_split_raw_examples_by_categories(
+        raw_examples,
+        categories,
+        test_size=2,
+        random_state=42,
+    )
+
+    assert [row["id"] for row in dev_rows] == ["a-2", "b-2", "solo-1"]
+    assert [row["id"] for row in test_rows] == ["a-1", "b-1"]
+    assert stats["category_test_counts"] == {
+        "cat-a": 1,
+        "cat-b": 1,
+        "cat-solo": 0,
+    }
+    assert stats["excluded_singleton_categories"] == ["cat-solo"]
+
+
+def test_stratified_split_raw_examples_by_annotation_labels_preserves_core_buckets() -> None:
+    raw_examples = [
+        {"id": "both-1", "summary": "S1", "query": "Q1", "expected_answer": "A1"},
+        {"id": "both-2", "summary": "S2", "query": "Q2", "expected_answer": "A2"},
+        {"id": "both-3", "summary": "S3", "query": "Q3", "expected_answer": "A3"},
+        {"id": "ticket-1", "summary": "S4", "query": "Q4", "expected_answer": "A4"},
+        {"id": "ticket-2", "summary": "S5", "query": "Q5", "expected_answer": "A5"},
+        {"id": "ticket-3", "summary": "S6", "query": "Q6", "expected_answer": "A6"},
+        {"id": "docs-1", "summary": "S7", "query": "Q7", "expected_answer": "A7"},
+        {"id": "docs-2", "summary": "S8", "query": "Q8", "expected_answer": "A8"},
+        {"id": "docs-3", "summary": "S9", "query": "Q9", "expected_answer": "A9"},
+        {"id": "docs-4", "summary": "S10", "query": "Q10", "expected_answer": "A10"},
+    ]
+    annotations = validate_annotation_rows(
+        annotation_rows=[
+            {
+                "id": "both-1",
+                "split": "",
+                "summary": "S1",
+                "source_needed": "both",
+                "docs_scope_needed": "local_and_external",
+                "validity_sensitive": "yes",
+                "attachment_dependent": "no",
+                "query_type": "software_version",
+                "version_sensitive": "yes",
+                "system_scope_required": "yes",
+                "review_status": "verified",
+                "notes": "",
+            },
+            {
+                "id": "both-2",
+                "split": "",
+                "summary": "S2",
+                "source_needed": "both",
+                "docs_scope_needed": "local_and_external",
+                "validity_sensitive": "yes",
+                "attachment_dependent": "no",
+                "query_type": "software_version",
+                "version_sensitive": "yes",
+                "system_scope_required": "yes",
+                "review_status": "verified",
+                "notes": "",
+            },
+            {
+                "id": "both-3",
+                "split": "",
+                "summary": "S3",
+                "source_needed": "both",
+                "docs_scope_needed": "local_and_external",
+                "validity_sensitive": "yes",
+                "attachment_dependent": "no",
+                "query_type": "software_version",
+                "version_sensitive": "yes",
+                "system_scope_required": "yes",
+                "review_status": "verified",
+                "notes": "",
+            },
+            {
+                "id": "ticket-1",
+                "split": "",
+                "summary": "S4",
+                "source_needed": "tickets",
+                "docs_scope_needed": "none",
+                "validity_sensitive": "yes",
+                "attachment_dependent": "yes",
+                "query_type": "general_how_to",
+                "version_sensitive": "no",
+                "system_scope_required": "no",
+                "review_status": "verified",
+                "notes": "",
+            },
+            {
+                "id": "ticket-2",
+                "split": "",
+                "summary": "S5",
+                "source_needed": "tickets",
+                "docs_scope_needed": "none",
+                "validity_sensitive": "yes",
+                "attachment_dependent": "yes",
+                "query_type": "general_how_to",
+                "version_sensitive": "no",
+                "system_scope_required": "no",
+                "review_status": "verified",
+                "notes": "",
+            },
+            {
+                "id": "ticket-3",
+                "split": "",
+                "summary": "S6",
+                "source_needed": "tickets",
+                "docs_scope_needed": "none",
+                "validity_sensitive": "yes",
+                "attachment_dependent": "yes",
+                "query_type": "general_how_to",
+                "version_sensitive": "no",
+                "system_scope_required": "no",
+                "review_status": "verified",
+                "notes": "",
+            },
+            {
+                "id": "docs-1",
+                "split": "",
+                "summary": "S7",
+                "source_needed": "docs",
+                "docs_scope_needed": "local_official",
+                "validity_sensitive": "no",
+                "attachment_dependent": "no",
+                "query_type": "local_operational",
+                "version_sensitive": "no",
+                "system_scope_required": "yes",
+                "review_status": "verified",
+                "notes": "",
+            },
+            {
+                "id": "docs-2",
+                "split": "",
+                "summary": "S8",
+                "source_needed": "docs",
+                "docs_scope_needed": "local_official",
+                "validity_sensitive": "no",
+                "attachment_dependent": "no",
+                "query_type": "local_operational",
+                "version_sensitive": "no",
+                "system_scope_required": "yes",
+                "review_status": "verified",
+                "notes": "",
+            },
+            {
+                "id": "docs-3",
+                "split": "",
+                "summary": "S9",
+                "source_needed": "docs",
+                "docs_scope_needed": "local_official",
+                "validity_sensitive": "no",
+                "attachment_dependent": "no",
+                "query_type": "local_operational",
+                "version_sensitive": "no",
+                "system_scope_required": "yes",
+                "review_status": "verified",
+                "notes": "",
+            },
+            {
+                "id": "docs-4",
+                "split": "",
+                "summary": "S10",
+                "source_needed": "docs",
+                "docs_scope_needed": "local_official",
+                "validity_sensitive": "no",
+                "attachment_dependent": "no",
+                "query_type": "local_operational",
+                "version_sensitive": "no",
+                "system_scope_required": "yes",
+                "review_status": "verified",
+                "notes": "",
+            },
+        ],
+        raw_examples=raw_examples,
+    )
+
+    dev_rows, test_rows, stats = stratified_split_raw_examples_by_annotation_labels(
+        raw_examples,
+        annotations,
+        test_size=3,
+        random_state=7,
+    )
+
+    assert len(dev_rows) == 7
+    assert len(test_rows) == 3
+    assert {row["id"] for row in dev_rows}.isdisjoint({row["id"] for row in test_rows})
+    assert {row["id"] for row in dev_rows} | {row["id"] for row in test_rows} == {
+        row["id"] for row in raw_examples
+    }
+    assert stats["feature_test_counts"]["source_needed=both"] == 1
+    assert stats["feature_test_counts"]["source_needed=tickets"] == 1
+    assert stats["feature_test_counts"]["source_needed=docs"] == 1
+    assert stats["feature_test_counts"]["docs_scope_bucket=external_involved"] == 1
+    assert stats["feature_test_counts"]["attachment_dependent=yes"] == 1
+    assert stats["feature_test_counts"]["query_type=software_version"] == 1
+
+
+def test_build_prepared_rows_maps_query_and_expected_answer() -> None:
+    raw_examples = [
+        {"id": "ex-1", "query": "Q1", "expected_answer": "A1", "metadata": {"k": 1}},
+        {"id": "ex-2", "query": "Q2", "expected_answer": "A2", "metadata": {"k": 2}},
+    ]
+
+    rows = build_prepared_rows(
+        raw_examples=raw_examples,
+        pipeline=_FakePipeline(),
+        generation_workers=2,
+    )
+
+    assert [row["id"] for row in rows] == ["ex-1", "ex-2"]
+    assert [row["user_input"] for row in rows] == ["Q1", "Q2"]
+    assert [row["reference"] for row in rows] == ["A1", "A2"]
+    assert [row["response"] for row in rows] == ["resp::Q1", "resp::Q2"]
+    assert rows[0]["retrieved_contexts"] == ["ctx-1", "ctx-2"]
+    assert rows[0]["retrieved_context_ids"] == ["doc-1", "doc-2"]
+
+
+def test_build_prepared_rows_from_api_maps_answer_and_context() -> None:
+    raw_examples = [
+        {"id": "ex-1", "query": "Q1", "expected_answer": "A1"},
+        {"id": "ex-2", "query": "Q2", "expected_answer": "A2"},
+    ]
+
+    def requester(api_url: str, query: str, timeout: float, headers):  # noqa: ANN001, ANN202
+        assert api_url == "http://127.0.0.1:8000/v1/query"
+        assert timeout == 30.0
+        assert headers == {"X-Test": "1"}
+        return {
+            "answer": f"ans::{query}",
+            "context": [
+                {"doc_id": "doc-1", "text": "ctx-1"},
+                {"doc_id": "doc-2", "text": "ctx-2"},
+            ],
+        }
+
+    rows = build_prepared_rows_from_api(
+        raw_examples=raw_examples,
+        api_url="http://127.0.0.1:8000/v1/query",
+        generation_workers=2,
+        timeout_seconds=30.0,
+        headers={"X-Test": "1"},
+        requester=requester,
+    )
+
+    assert [row["id"] for row in rows] == ["ex-1", "ex-2"]
+    assert [row["user_input"] for row in rows] == ["Q1", "Q2"]
+    assert [row["reference"] for row in rows] == ["A1", "A2"]
+    assert [row["response"] for row in rows] == ["ans::Q1", "ans::Q2"]
+    assert rows[0]["retrieved_contexts"] == ["ctx-1", "ctx-2"]
+    assert rows[0]["retrieved_context_ids"] == ["doc-1", "doc-2"]
+
+
+def test_build_prepared_rows_uses_resolved_source_nodes_not_raw_source_nodes() -> None:
+    raw_examples = [{"id": "ex-1", "query": "Q1", "expected_answer": "A1"}]
+
+    rows = build_prepared_rows(
+        raw_examples=raw_examples,
+        pipeline=_ResolvedContextPipeline(),
+        generation_workers=1,
+    )
+
+    assert rows[0]["retrieved_contexts"] == ["full-ticket-context"]
+    assert rows[0]["retrieved_context_ids"] == ["ticket-1"]
+
+
+def test_build_prepared_rows_persists_query_constraints_in_metadata() -> None:
+    raw_examples = [{"id": "ex-1", "query": "Q1", "expected_answer": "A1"}]
+
+    rows = build_prepared_rows(
+        raw_examples=raw_examples,
+        pipeline=_ConstraintPipeline(),
+        generation_workers=1,
+    )
+
+    assert rows[0]["metadata"]["query_constraints"]["query_type"] == "software_version"
+    assert rows[0]["metadata"]["query_constraints"]["software_names"] == ["GROMACS"]
+    assert rows[0]["metadata"]["query_constraints"]["scope_family_names"] == ["cclake"]
+
+
+def test_build_prepared_rows_persists_reranker_metadata_and_trace() -> None:
+    raw_examples = [
+        {
+            "id": "ex-1",
+            "query": "Q1",
+            "expected_answer": "A1",
+            "reference_context_ids": ["doc-1"],
+        }
+    ]
+
+    rows = build_prepared_rows(
+        raw_examples=raw_examples,
+        pipeline=_TracePipeline(),
+        generation_workers=1,
+    )
+
+    assert rows[0]["reference_context_ids"] == ["doc-1"]
+    assert rows[0]["metadata"]["retriever_profile"] == {
+        "type": "hybrid",
+        "fusion": {"type": "rrf", "rrf_k": 60},
+    }
+    assert rows[0]["metadata"]["retriever_fingerprint"] == "retriever-fingerprint-123"
+    assert rows[0]["metadata"]["reranker_profile"] == {"type": "validity_aware"}
+    assert rows[0]["metadata"]["reranker_fingerprint"] == "fingerprint-123"
+    assert rows[0]["metadata"]["retrieval_trace"][0]["doc_id"] == "doc-1"
+    assert rows[0]["metadata"]["retrieval_trace"][0]["rerank_trace"]["final_score"] == 1.23
+    assert rows[0]["metadata"]["retrieval_sources"] == ["docs"]
+    assert rows[0]["metadata"]["retrieval_source_types"] == ["local_official"]
+    assert rows[0]["metadata"]["retrieval_features"][0]["final_score"] == 1.23
+    assert rows[0]["metadata"]["ranked_context_metadata"][0]["doc_title"] == "Official Docs"
+    assert "private_email" not in rows[0]["metadata"]["ranked_context_metadata"][0]
+
+
+def test_build_prepared_rows_from_api_fail_soft_captures_source_error() -> None:
+    raw_examples = [{"id": "ex-1", "query": "Q1", "expected_answer": "A1"}]
+
+    def failing_requester(api_url: str, query: str, timeout: float, headers):  # noqa: ANN001, ANN202
+        raise RuntimeError("boom")
+
+    rows = build_prepared_rows_from_api(
+        raw_examples=raw_examples,
+        api_url="http://127.0.0.1:8000/v1/query",
+        raise_exceptions=False,
+        requester=failing_requester,
+    )
+
+    assert len(rows) == 1
+    assert rows[0]["response"] == ""
+    assert rows[0]["retrieved_contexts"] == []
+    assert rows[0]["retrieved_context_ids"] == []
+    assert "source_error" in rows[0]["metadata"]
+    assert "boom" in rows[0]["metadata"]["source_error"]
+    assert rows[0]["metadata"]["failure_class"] == "api_internal_error"
+
+
+def test_build_prepared_rows_from_api_persists_query_constraints_in_metadata() -> None:
+    raw_examples = [{"id": "ex-1", "query": "Q1", "expected_answer": "A1"}]
+
+    rows = build_prepared_rows_from_api(
+        raw_examples=raw_examples,
+        api_url="http://unused.local/v1/query",
+        generation_workers=1,
+        requester=_constraint_requester,
+    )
+
+    assert rows[0]["metadata"]["query_constraints"]["query_type"] == "software_version"
+    assert rows[0]["metadata"]["query_constraints"]["software_versions"] == ["2024.4"]
+    assert rows[0]["metadata"]["query_constraints"]["scope_family_names"] == ["cclake"]
+
+
+def test_build_prepared_rows_from_api_uses_default_reranker_metadata() -> None:
+    raw_examples = [{"id": "ex-1", "query": "Q1", "expected_answer": "A1"}]
+
+    rows = build_prepared_rows_from_api(
+        raw_examples=raw_examples,
+        api_url="http://unused.local/v1/query",
+        generation_workers=1,
+        requester=_ok_requester,
+        retriever_profile={"type": "hybrid"},
+        retriever_fingerprint="retriever-fingerprint",
+        reranker_profile={"type": "rrf", "rrf_k": 60},
+        reranker_fingerprint="rrf-fingerprint",
+    )
+
+    assert rows[0]["metadata"]["retriever_profile"] == {"type": "hybrid"}
+    assert rows[0]["metadata"]["retriever_fingerprint"] == "retriever-fingerprint"
+    assert rows[0]["metadata"]["reranker_profile"] == {"type": "rrf", "rrf_k": 60}
+    assert rows[0]["metadata"]["reranker_fingerprint"] == "rrf-fingerprint"
+
+
+def test_build_prepared_rows_from_api_persists_analysis_ready_metadata() -> None:
+    raw_examples = [{"id": "ex-1", "query": "Q1", "expected_answer": "A1"}]
+
+    def _requester(api_url: str, query: str, timeout_seconds: float, headers):  # noqa: ANN001, ARG001, ANN202
+        return {
+            "answer": f"answer::{query}",
+            "context": [{"doc_id": "doc-1", "text": "ctx-1"}],
+            "evaluation_metadata": {
+                "retriever_profile": {"type": "hybrid"},
+                "retriever_fingerprint": "retriever-fingerprint-123",
+                "reranker_profile": {"type": "validity_aware"},
+                "reranker_fingerprint": "fingerprint-123",
+                "retrieval_trace": [
+                    {
+                        "rank": 1,
+                        "doc_id": "doc-1",
+                        "source": "docs",
+                        "source_authority": "local_official",
+                        "authority_tier": 3,
+                        "validity_status": "current",
+                        "rerank_trace": {
+                            "reranker_type": "validity_aware",
+                            "final_score": 1.1,
+                            "authority_feature": 0.4,
+                            "scope_feature": 0.1,
+                            "version_feature": 0.3,
+                            "status_feature": 0.2,
+                            "freshness_feature": 0.05,
+                        },
+                    }
+                ],
+                "ranked_context_metadata": [
+                    {
+                        "rank": 1,
+                        "doc_id": "doc-1",
+                        "source": "docs",
+                        "source_authority": "local_official",
+                        "validity_status": "current",
+                        "doc_title": "Official Docs",
+                    }
+                ],
+            },
+        }
+
+    rows = build_prepared_rows_from_api(
+        raw_examples=raw_examples,
+        api_url="http://unused.local/v1/query",
+        generation_workers=1,
+        requester=_requester,
+    )
+
+    assert rows[0]["metadata"]["retriever_profile"] == {"type": "hybrid"}
+    assert rows[0]["metadata"]["retriever_fingerprint"] == "retriever-fingerprint-123"
+    assert rows[0]["metadata"]["reranker_profile"] == {"type": "validity_aware"}
+    assert rows[0]["metadata"]["reranker_fingerprint"] == "fingerprint-123"
+    assert rows[0]["metadata"]["retrieval_sources"] == ["docs"]
+    assert rows[0]["metadata"]["retrieval_source_types"] == ["local_official"]
+    assert rows[0]["metadata"]["retrieval_features"][0]["authority_feature"] == 0.4
+    assert rows[0]["metadata"]["ranked_context_metadata"][0]["doc_title"] == "Official Docs"
+
+
+def test_build_prepared_rows_emits_monotonic_progress_events() -> None:
+    raw_examples = [
+        {"id": "ex-1", "query": "Q1", "expected_answer": "A1"},
+        {"id": "ex-2", "query": "Q2", "expected_answer": "A2"},
+        {"id": "ex-3", "query": "Q3", "expected_answer": "A3"},
+    ]
+    events: list[PrepProgressEvent] = []
+
+    rows = build_prepared_rows(
+        raw_examples=raw_examples,
+        pipeline=_FakePipeline(),
+        generation_workers=1,
+        progress_callback=events.append,
+    )
+
+    assert len(rows) == 3
+    assert [event.completed for event in events] == [1, 2, 3]
+    assert all(event.total == 3 for event in events)
+    assert events[-1].successes == 3
+    assert events[-1].failures == 0
+    assert events[-1].mode == "pipeline"
+
+
+def test_build_prepared_rows_fail_soft_counts_failures() -> None:
+    raw_examples = [
+        {"id": "ex-1", "query": "Q1", "expected_answer": "A1"},
+        {"id": "ex-2", "query": "boom", "expected_answer": "A2"},
+        {"id": "ex-3", "query": "Q3", "expected_answer": "A3"},
+    ]
+    events: list[PrepProgressEvent] = []
+
+    rows = build_prepared_rows(
+        raw_examples=raw_examples,
+        pipeline=_FlakyPipeline(),
+        generation_workers=2,
+        raise_exceptions=False,
+        progress_callback=events.append,
+    )
+
+    assert len(rows) == 3
+    assert events[-1].completed == 3
+    assert events[-1].successes == 2
+    assert events[-1].failures == 1
+    failing = [row for row in rows if row["id"] == "ex-2"][0]
+    assert "source_error" in failing["metadata"]
+
+
+def test_build_prepared_rows_fail_fast_preserves_exception() -> None:
+    raw_examples = [{"id": "ex-1", "query": "boom", "expected_answer": "A1"}]
+    events: list[PrepProgressEvent] = []
+
+    with pytest.raises(RuntimeError, match="simulated pipeline failure"):
+        build_prepared_rows(
+            raw_examples=raw_examples,
+            pipeline=_FlakyPipeline(),
+            generation_workers=1,
+            raise_exceptions=True,
+            progress_callback=events.append,
+        )
+
+    assert len(events) == 1
+    assert events[0].completed == 1
+    assert events[0].failures == 1
+    assert events[0].last_error is not None
+    assert "RuntimeError" in events[0].last_error
+
+
+def test_build_prepared_rows_from_api_emits_progress_events() -> None:
+    raw_examples = [
+        {"id": "ex-1", "query": "Q1", "expected_answer": "A1"},
+        {"id": "ex-2", "query": "Q2", "expected_answer": "A2"},
+        {"id": "ex-3", "query": "Q3", "expected_answer": "A3"},
+        {"id": "ex-4", "query": "Q4", "expected_answer": "A4"},
+    ]
+    events: list[PrepProgressEvent] = []
+
+    rows = build_prepared_rows_from_api(
+        raw_examples=raw_examples,
+        api_url="http://unused.local/v1/query",
+        generation_workers=2,
+        requester=_ok_requester,
+        progress_callback=events.append,
+    )
+
+    assert len(rows) == 4
+    assert events[-1].completed == 4
+    assert events[-1].successes == 4
+    assert events[-1].failures == 0
+    assert events[-1].mode == "api"
+    assert rows[0]["retrieved_contexts"] == ["ctx::Q1"]
+    assert rows[0]["retrieved_context_ids"] == ["doc::Q1"]
+
+
+def test_build_prepared_rows_from_api_fail_soft_counts_failures() -> None:
+    raw_examples = [
+        {"id": "ex-1", "query": "Q1", "expected_answer": "A1"},
+        {"id": "ex-2", "query": "boom", "expected_answer": "A2"},
+    ]
+    events: list[PrepProgressEvent] = []
+
+    rows = build_prepared_rows_from_api(
+        raw_examples=raw_examples,
+        api_url="http://unused.local/v1/query",
+        generation_workers=1,
+        raise_exceptions=False,
+        requester=_flaky_requester,
+        progress_callback=events.append,
+    )
+
+    assert len(rows) == 2
+    assert events[-1].completed == 2
+    assert events[-1].successes == 1
+    assert events[-1].failures == 1
+    assert events[-1].last_error is not None
+    assert "simulated api failure" in events[-1].last_error
+    assert "id=ex-2" in events[-1].last_error
+    failing = [row for row in rows if row["id"] == "ex-2"][0]
+    assert "source_error" in failing["metadata"]
+    assert "id=ex-2" in failing["metadata"]["source_error"]
+    assert failing["metadata"]["failure_class"] == "api_internal_error"
+
+
+def test_build_prepared_rows_retries_fail_soft_then_succeeds() -> None:
+    raw_examples = [{"id": "ex-1", "query": "Q1", "expected_answer": "A1"}]
+    calls = {"count": 0}
+    events: list[PrepProgressEvent] = []
+
+    class _RetryingPipeline:
+        def run(self, query: str, **kwargs):  # noqa: ANN001
+            calls["count"] += 1
+            if calls["count"] < 3:
+                raise RuntimeError("transient")
+            return {
+                "response": "final-response",
+                "source_nodes": [_Source(_Node("doc-1", "ctx-1"))],
+            }
+
+    rows = build_prepared_rows(
+        raw_examples=raw_examples,
+        pipeline=_RetryingPipeline(),
+        generation_workers=1,
+        raise_exceptions=False,
+        progress_callback=events.append,
+        retry_policy={
+            "max_attempts": 3,
+            "initial_backoff_seconds": 0.0,
+            "max_backoff_seconds": 0.0,
+            "jitter_seconds": 0.0,
+            "retry_on_empty_response": True,
+        },
+    )
+
+    assert calls["count"] == 3
+    assert rows[0]["response"] == "final-response"
+    assert "source_error" not in rows[0]["metadata"]
+    retry_events = [event for event in events if event.retrying]
+    assert len(retry_events) == 2
+    assert retry_events[0].last_retry is not None
+    assert retry_events[0].last_retry.startswith("id=ex-1 retry=2/3 reason=RuntimeError: transient")
+    assert retry_events[1].last_retry is not None
+    assert retry_events[1].last_retry.startswith("id=ex-1 retry=3/3 reason=RuntimeError: transient")
+    assert events[-1].completed == 1
+    assert events[-1].retrying is False
+
+
+def test_build_prepared_rows_from_api_retries_fail_soft_then_succeeds() -> None:
+    raw_examples = [{"id": "ex-1", "query": "Q1", "expected_answer": "A1"}]
+    calls = {"count": 0}
+
+    def requester(api_url: str, query: str, timeout_seconds: float, headers):  # noqa: ANN001, ANN202
+        calls["count"] += 1
+        if calls["count"] < 3:
+            raise RuntimeError("transient-api")
+        return {
+            "answer": "final-answer",
+            "context": [{"doc_id": "doc-1", "text": "ctx-1"}],
+        }
+
+    rows = build_prepared_rows_from_api(
+        raw_examples=raw_examples,
+        api_url="http://unused.local/v1/query",
+        generation_workers=1,
+        raise_exceptions=False,
+        requester=requester,
+        retry_policy={
+            "max_attempts": 3,
+            "initial_backoff_seconds": 0.0,
+            "max_backoff_seconds": 0.0,
+            "jitter_seconds": 0.0,
+            "retry_on_empty_response": True,
+        },
+    )
+
+    assert calls["count"] == 3
+    assert rows[0]["response"] == "final-answer"
+    assert "source_error" not in rows[0]["metadata"]
+
+
+def test_build_prepared_rows_retries_on_empty_response_then_succeeds() -> None:
+    raw_examples = [{"id": "ex-1", "query": "Q1", "expected_answer": "A1"}]
+    calls = {"count": 0}
+
+    class _EmptyThenSuccessPipeline:
+        def run(self, query: str, **kwargs):  # noqa: ANN001
+            calls["count"] += 1
+            if calls["count"] == 1:
+                return {
+                    "response": "",
+                    "source_nodes": [_Source(_Node("doc-1", "ctx-1"))],
+                }
+            return {
+                "response": "non-empty",
+                "source_nodes": [_Source(_Node("doc-1", "ctx-1"))],
+            }
+
+    rows = build_prepared_rows(
+        raw_examples=raw_examples,
+        pipeline=_EmptyThenSuccessPipeline(),
+        generation_workers=1,
+        retry_policy={
+            "max_attempts": 2,
+            "initial_backoff_seconds": 0.0,
+            "max_backoff_seconds": 0.0,
+            "jitter_seconds": 0.0,
+            "retry_on_empty_response": True,
+        },
+    )
+
+    assert calls["count"] == 2
+    assert rows[0]["response"] == "non-empty"
+    assert "source_error" not in rows[0]["metadata"]
+
+
+def test_build_prepared_rows_exhausted_empty_response_sets_source_error() -> None:
+    raw_examples = [{"id": "ex-1", "query": "Q1", "expected_answer": "A1"}]
+
+    class _AlwaysEmptyPipeline:
+        def run(self, query: str, **kwargs):  # noqa: ANN001
+            return {
+                "response": "",
+                "source_nodes": [_Source(_Node("doc-1", "ctx-1"))],
+            }
+
+    rows = build_prepared_rows(
+        raw_examples=raw_examples,
+        pipeline=_AlwaysEmptyPipeline(),
+        generation_workers=1,
+        raise_exceptions=False,
+        retry_policy={
+            "max_attempts": 2,
+            "initial_backoff_seconds": 0.0,
+            "max_backoff_seconds": 0.0,
+            "jitter_seconds": 0.0,
+            "retry_on_empty_response": True,
+        },
+    )
+
+    assert rows[0]["response"] == ""
+    assert "source_error" in rows[0]["metadata"]
+    assert "response is empty after 2 attempt(s)" in rows[0]["metadata"]["source_error"]
+    assert rows[0]["metadata"]["failure_class"] == "empty_response"
+
+
+def test_build_prepared_rows_from_api_empty_response_without_retry_is_failure() -> None:
+    raw_examples = [{"id": "ex-1", "query": "Q1", "expected_answer": "A1"}]
+
+    def requester(api_url: str, query: str, timeout_seconds: float, headers):  # noqa: ANN001, ANN202
+        return {
+            "answer": "",
+            "context": [{"doc_id": "doc-1", "text": "ctx-1"}],
+        }
+
+    rows = build_prepared_rows_from_api(
+        raw_examples=raw_examples,
+        api_url="http://unused.local/v1/query",
+        generation_workers=1,
+        raise_exceptions=False,
+        requester=requester,
+        retry_policy={
+            "max_attempts": 1,
+            "initial_backoff_seconds": 0.0,
+            "max_backoff_seconds": 0.0,
+            "jitter_seconds": 0.0,
+            "retry_on_empty_response": False,
+        },
+        policy="official",
+        budget_ms=110000,
+    )
+
+    assert rows[0]["response"] == ""
+    assert rows[0]["metadata"]["failure_class"] == "empty_response"
+    assert rows[0]["metadata"]["response_status"] == "empty_response"
+    assert rows[0]["metadata"]["policy"] == "official"
+    assert rows[0]["metadata"]["budget_ms"] == 110000
+
+
+def test_build_prepared_rows_fail_fast_retries_then_raises() -> None:
+    raw_examples = [{"id": "ex-1", "query": "Q1", "expected_answer": "A1"}]
+    calls = {"count": 0}
+
+    class _AlwaysFailPipeline:
+        def run(self, query: str, **kwargs):  # noqa: ANN001
+            calls["count"] += 1
+            raise RuntimeError("always-fail")
+
+    with pytest.raises(RuntimeError, match="always-fail"):
+        build_prepared_rows(
+            raw_examples=raw_examples,
+            pipeline=_AlwaysFailPipeline(),
+            generation_workers=1,
+            raise_exceptions=True,
+            retry_policy={
+                "max_attempts": 3,
+                "initial_backoff_seconds": 0.0,
+                "max_backoff_seconds": 0.0,
+                "jitter_seconds": 0.0,
+                "retry_on_empty_response": True,
+            },
+        )
+
+    assert calls["count"] == 3
+
+
+def test_preprocess_rows_for_evaluation_clips_large_retrieved_contexts() -> None:
+    rows = [
+        {
+            "id": "row-1",
+            "user_input": "Q1",
+            "reference": "A1",
+            "response": "R1",
+            "retrieved_contexts": [
+                "abcdefgh",
+                "ijklmnop",
+                "qrstuvwx",
+            ],
+            "retrieved_context_ids": [
+                "doc-1",
+                "doc-2",
+                "doc-3",
+            ],
+            "metadata": {},
+        }
+    ]
+
+    processed_rows, summary = preprocess_rows_for_evaluation(
+        rows,
+        preprocessing={
+            "retrieved_contexts": {
+                "max_characters": 4,
+                "max_total_characters": 8,
+                "truncation_marker": "~",
+            }
+        },
+    )
+
+    assert rows[0]["retrieved_contexts"] == ["abcdefgh", "ijklmnop", "qrstuvwx"]
+    assert processed_rows[0]["retrieved_contexts"] == ["abc~", "ijk~"]
+    assert processed_rows[0]["retrieved_context_ids"] == ["doc-1", "doc-2"]
+    assert processed_rows[0]["metadata"]["evaluation_preprocessing"]["retrieved_contexts"] == {
+        "truncated": True,
+        "truncated_contexts": 3,
+        "original_count": 3,
+        "processed_count": 2,
+        "original_total_characters": 24,
+        "processed_total_characters": 8,
+        "max_characters": 4,
+        "max_total_characters": 8,
+    }
+    assert summary["enabled"] is True
+    assert summary["truncated_rows"] == 1
+    assert summary["truncated_contexts"] == 3
+    assert summary["processed_total_context_characters"] == 8
+
+
+def test_preprocess_rows_for_evaluation_is_noop_without_limits() -> None:
+    rows = [
+        {
+            "id": "row-1",
+            "user_input": "Q1",
+            "reference": "A1",
+            "response": "R1",
+            "retrieved_contexts": ["ctx-1"],
+            "retrieved_context_ids": ["doc-1"],
+            "metadata": {},
+        }
+    ]
+
+    processed_rows, summary = preprocess_rows_for_evaluation(rows, preprocessing={})
+
+    assert processed_rows is rows
+    assert summary["enabled"] is False
+    assert summary["truncated_rows"] == 0

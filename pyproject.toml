@@ -1,0 +1,118 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "polaris-rag"
+version = "0.1.0"
+description = "Polaris RAG pipeline"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{ name = "Adam Calleja", email = "adampaulcalleja@gmail.com" }]
+license = { text = "MIT" }
+
+dependencies = [
+  "pyyaml>=6.0",
+  "jinja2>=3.1",
+  "beautifulsoup4>=4.12",
+
+  # --- Runtime (API/RAG) dependencies ---
+  # LangChain
+  "langchain-core>=0.1",
+  "langchain-openai>=0.1,<1",
+  "langchain-community>=0.1",
+  "openai>=2,<3",
+
+  # LlamaIndex core + integrations used at runtime
+  "llama-index-core>=0.10",
+  "llama-index-vector-stores-qdrant>=0.1",
+  "llama-index-retrievers-bm25>=0.1",
+  "llama-index-llms-openai-like>=0.1",
+  "llama-index-embeddings-openai-like>=0.1",
+  "fastembed>=0.3",
+
+  # Vector DB client
+  "qdrant-client>=1.14,<1.15",
+
+  # Tokenizers / HF utilities (required by llama-index openai_like + your tokenisation paths)
+  "tiktoken>=0.5",
+  "transformers>=4.36",
+]
+
+[project.optional-dependencies]
+ingestion = [
+  "requests>=2.31",
+  "beautifulsoup4>=4.12",
+  "atlassian-python-api>=3.41",
+  "markitdown==0.1.5",
+]
+llm = [
+  "langchain-core>=0.1",
+  "langchain-openai>=0.1",
+  "langchain-community>=0.1",
+  "llama-index-llms-openai-like>=0.1",
+  "llama-index-embeddings-openai-like>=0.1",
+  "llama-index-embeddings-huggingface>=0.1",
+]
+retrieval = [
+  "llama-index-core>=0.10",
+  "llama-index-vector-stores-qdrant>=0.1",
+  "llama-index-retrievers-bm25>=0.1",
+  "fastembed>=0.3",
+  "qdrant-client>=1.14,<1.15",
+]
+tokenizers = [
+  "tiktoken>=0.5",
+  "transformers>=4.36",
+]
+eval = [
+  "ragas>=0.4.3,<0.5",
+  "instructor>=1.14.5,<1.15",
+  "openai>=2,<3",
+  "pandas>=2.0",
+  "pyarrow>=15",
+  "scikit-learn>=1.4",
+  "matplotlib>=3.8",
+]
+
+tracking = [
+  "mlflow>=3.6,<4",
+  "psutil>=5.9",
+]
+
+api = [
+  "fastapi>=0.110",
+  "uvicorn[standard]>=0.27",
+  "requests>=2.31",
+  "beautifulsoup4>=4.12",
+  "atlassian-python-api>=3.41",
+]
+
+[project.scripts]
+polaris-analyze-eval-runs = "polaris_rag.cli.analyze_eval_runs:main"
+polaris-benchmark-analysis = "polaris_rag.cli.benchmark_analysis:main"
+polaris-benchmark-annotations = "polaris_rag.cli.benchmark_annotations:main"
+polaris-build-authority-registry = "polaris_rag.cli.build_authority_registry:main"
+polaris-build-external-authority-registry = "polaris_rag.cli.build_external_authority_registry:main"
+polaris-backfill-qdrant-docstores = "polaris_rag.cli.backfill_qdrant_docstores:main"
+polaris-count-docstore-tickets = "polaris_rag.cli.count_docstore_tickets:main"
+polaris-ingest-html = "polaris_rag.cli.ingest_html_documents:main"
+polaris-ingest-external-docs = "polaris_rag.cli.ingest_external_docs:main"
+polaris-ingest-jira = "polaris_rag.cli.ingest_jira_tickets:main"
+polaris-eval = "polaris_rag.cli.evaluate_rag:main"
+polaris-tune-validity-reranker = "polaris_rag.cli.tune_validity_reranker:main"
+polaris-register-prompts-mlflow = "polaris_rag.cli.register_prompts_mlflow:main"
+polaris-create-dev-test-sets = "polaris_rag.cli.create_dev_test_sets:main"
+polaris-render-experiment-config = "polaris_rag.cli.render_experiment_config:main"
+polaris-run-experiment-stage = "polaris_rag.cli.run_experiment_stage:main"
+polaris-summarize-experiment-stage = "polaris_rag.cli.summarize_experiment_stage:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+packages = { find = { where = ["src"] } }
+include-package-data = true
+
+[tool.setuptools.package-data]
+polaris_rag = [
+  "prompts/*.json",
+]

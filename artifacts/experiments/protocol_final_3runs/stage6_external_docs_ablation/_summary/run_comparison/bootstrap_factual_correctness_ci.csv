@@ -1,0 +1,4 @@
+row_type,condition_a,condition_b,n_queries,estimate,ci_low,ci_high
+condition_mean,all_docs_validity_aware,,29,0.266379,0.212069,0.323276
+condition_mean,validity_aware,,30,0.276000,0.226667,0.327667
+paired_difference,all_docs_validity_aware,validity_aware,29,-0.011437,-0.049138,0.029713

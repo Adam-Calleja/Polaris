@@ -1,0 +1,569 @@
+"""polaris_rag.retrieval.document_loader
+
+Document loading utilities for multiple data sources.
+
+This module provides helpers for acquiring raw documents from:
+- Websites (HTML pages)
+- Jira (support tickets)
+
+The primary outputs are :class:`polaris_rag.common.schemas.Document` objects
+for web content, and raw Jira issue dictionaries for tickets (which are
+typically preprocessed into :class:`~polaris_rag.common.schemas.Document`
+instances elsewhere).
+
+Functions
+---------
+is_internal_link
+    Check whether a hyperlink is internal relative to a base URL.
+remove_link_fragment
+    Remove the fragment component (``#...``) from a URL.
+get_internal_links
+    Extract internal links from an HTML page.
+load_website_docs
+    Fetch HTML pages and return them as :class:`~polaris_rag.common.schemas.Document` objects.
+create_jira_jql_query
+    Build a JQL query string for resolved Jira issues over a date window.
+load_support_tickets
+    Retrieve resolved Jira issues over a date window using configured credentials.
+"""
+from http.client import RemoteDisconnected
+import time
+
+import requests
+from bs4 import BeautifulSoup
+from urllib.parse import urlparse, urljoin, urlsplit, urlunsplit
+from urllib3.exceptions import ProtocolError
+from datetime import datetime
+from typing import Iterator
+
+from polaris_rag.common import Document
+from polaris_rag.config import GlobalConfig
+
+DEFAULT_CHARSET = "UTF-8"
+JIRA_REQUEST_MAX_ATTEMPTS = 5
+JIRA_REQUEST_BASE_BACKOFF_SECONDS = 1.0
+JIRA_RETRYABLE_HTTP_STATUS_CODES = frozenset({408, 429, 500, 502, 503, 504})
+
+
+def _build_jira_client(*, username: str, password: str):
+    from atlassian import Jira
+
+    return Jira(
+        url='https://ucam-rcs.atlassian.net',
+        username=username,
+        password=password,
+        cloud=True,
+        api_version='3',
+    )
+
+
+def _is_retryable_jira_request_error(exc: Exception) -> bool:
+    if isinstance(
+        exc,
+        (
+            requests.exceptions.ConnectionError,
+            requests.exceptions.Timeout,
+            requests.exceptions.ChunkedEncodingError,
+            ProtocolError,
+            RemoteDisconnected,
+        ),
+    ):
+        return True
+
+    if isinstance(exc, requests.exceptions.HTTPError):
+        status_code = getattr(getattr(exc, "response", None), "status_code", None)
+        return status_code in JIRA_RETRYABLE_HTTP_STATUS_CODES
+
+    return False
+
+
+def _fetch_jira_page_with_retry(
+    *,
+    jira,
+    username: str,
+    password: str,
+    jql_query: str,
+    next_page_token: str | None,
+) -> tuple[dict, object]:
+    current_jira = jira
+
+    for attempt in range(1, JIRA_REQUEST_MAX_ATTEMPTS + 1):
+        try:
+            result = current_jira.enhanced_jql(
+                jql_query,
+                nextPageToken=next_page_token,
+                expand=None,
+            )
+            return result, current_jira
+        except Exception as exc:
+            if not _is_retryable_jira_request_error(exc) or attempt >= JIRA_REQUEST_MAX_ATTEMPTS:
+                raise
+
+            retry_delay = JIRA_REQUEST_BASE_BACKOFF_SECONDS * (2 ** (attempt - 1))
+            token_label = next_page_token or "<initial>"
+            print(
+                "Jira page fetch failed for "
+                f"nextPageToken={token_label} "
+                f"(attempt {attempt}/{JIRA_REQUEST_MAX_ATTEMPTS}): {exc}. "
+                f"Retrying in {retry_delay:.1f}s..."
+            )
+            time.sleep(retry_delay)
+            current_jira = _build_jira_client(username=username, password=password)
+
+    raise RuntimeError("Jira fetch retry loop exited unexpectedly.")
+
+def is_internal_link(link: str,
+                base_url: str,
+                allow_subdomains: bool = True) -> bool:
+    """Check whether a hyperlink is internal relative to a base URL.
+
+    A link is considered internal if it resolves to the same host as ``base_url``.
+    When ``allow_subdomains`` is ``True``, subdomains of the base host are also
+    treated as internal.
+
+    Non-HTTP(S) schemes (e.g., ``mailto:``, ``tel:``, ``javascript:``) are treated
+    as external.
+
+    Parameters
+    ----------
+    link : str
+        The hyperlink URL to check. This may be relative or absolute.
+    base_url : str
+        Base page URL used to resolve relative links and define the host boundary.
+    allow_subdomains : bool, optional
+        Whether subdomains of the base host should be treated as internal.
+        Defaults to ``True``.
+
+    Returns
+    -------
+    bool
+        ``True`` if the resolved link is internal, otherwise ``False``.
+    """
+    resolved = urlparse(urljoin(base_url, link))
+    base     = urlparse(base_url)
+
+    if resolved.scheme not in ("http", "https"):
+        return False
+
+    if not resolved.hostname:
+        return True
+
+    if resolved.hostname == base.hostname:
+        return True
+
+    if allow_subdomains and base.hostname and resolved.hostname.endswith("." + base.hostname):
+        return True
+
+    return False
+
+def remove_link_fragment(link: str) -> str:
+    """Remove the fragment component from a URL.
+
+    Parameters
+    ----------
+    link : str
+        URL that may contain a fragment (``#...``).
+
+    Returns
+    -------
+    str
+        URL with the fragment removed.
+    """
+    parts = urlsplit(link)
+
+    return urlunsplit(parts._replace(fragment=""))
+
+
+def canonicalize_url(url: str) -> str:
+    """Return a stable canonical representation for an HTTP(S) URL.
+    
+    Parameters
+    ----------
+    url : str
+        URL used by the operation.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
+    parts = urlsplit(remove_link_fragment(url.strip()))
+    scheme = parts.scheme.lower()
+    netloc = parts.netloc.lower()
+    path = parts.path or "/"
+    if path != "/" and path.endswith("/"):
+        path = path.rstrip("/")
+    return urlunsplit((scheme, netloc, path, parts.query, ""))
+
+
+def get_internal_links(webpage_url: str) -> list[str]:
+    """Extract internal links from a webpage.
+
+    This function downloads ``webpage_url``, parses all ``<a href="...">`` links,
+    filters them to those considered internal by :func:`is_internal_link`, removes
+    fragments via :func:`remove_link_fragment`, and returns a de-duplicated list
+    including ``webpage_url`` itself.
+
+    Parameters
+    ----------
+    webpage_url : str
+        URL of the page to fetch and parse.
+
+    Returns
+    -------
+    list[str]
+        De-duplicated list of internal URLs. Returns an empty list if the page
+        cannot be fetched.
+    """
+    try:
+        response = requests.get(webpage_url)
+        response.raise_for_status()
+    except Exception as e:
+        print(f"Could not access {webpage_url}: {e}")
+        return []
+
+    html_content = response.text
+
+    soup = BeautifulSoup(html_content, 'html.parser')
+    links = soup.find_all('a')
+    documentation_urls = [canonicalize_url(webpage_url)]
+
+    for link in links:
+        url = link.get('href', None)
+
+        if url and is_internal_link(link=url, base_url=webpage_url):
+            url = remove_link_fragment(url)
+
+            documentation_urls.append(canonicalize_url(urljoin(webpage_url, url)))
+
+    return list(dict.fromkeys(documentation_urls))
+
+def load_website_docs(urls: list[str]) -> list[Document]:
+    """Fetch HTML pages and return them as :class:`~polaris_rag.common.schemas.Document` objects.
+
+    For each URL, the page is fetched via HTTP GET and the response body is
+    decoded into text. Each returned :class:`~polaris_rag.common.schemas.Document`
+    has ``document_type="html"`` and a ``metadata`` entry containing the source URL.
+
+    Parameters
+    ----------
+    urls : list[str]
+        List of webpage URLs to retrieve.
+
+    Returns
+    -------
+    list[Document]
+        List of documents corresponding to successfully fetched pages. URLs that
+        cannot be retrieved are skipped.
+    """
+    documents = []
+
+    for url in urls:
+        try:
+            response = requests.get(url, timeout=10)
+            response.raise_for_status()
+        except Exception as e:
+            print(f"Skipping {url}: {e}")
+            continue
+
+        html_content = response.content
+
+        soup = BeautifulSoup(html_content, 'html.parser')
+
+        charset = DEFAULT_CHARSET
+        tag = soup.find('meta', charset=True)
+        if tag and tag.get('charset'):
+            charset = tag['charset']
+
+        try:
+            html_text = html_content.decode(charset, errors="replace")
+        except LookupError:
+            html_text = html_content.decode(DEFAULT_CHARSET, errors="replace")
+
+        canonical_url = canonicalize_url(url)
+
+        documents.append(
+            Document(
+                document_type='html',
+                text=html_text,
+                id=canonical_url,
+                metadata={
+                    "source": canonical_url,
+                }
+            )
+        )
+
+    return documents
+
+def create_jira_jql_query(
+        start_date: str, 
+        end_date: str, 
+        keywords: list[str] | None = None,
+        exclude_keys: list[str] | None = None,
+        keys: list[str] | None = None,
+        project_key: str = "DEMO"
+    ) -> str:
+    """Build a JQL string for resolved issues within a created-date window.
+
+    The generated query always filters by the given project and `status = Resolved`,
+    applies an inclusive lower bound and an exclusive upper bound on the
+    `created` field when `start_date` and/or `end_date` are provided, and orders
+    results by most recent creation time.
+
+    Parameters
+    ----------
+    start_date : str
+        Inclusive lower bound for the `created` field in ISO date format
+        ``YYYY-MM-DD``. If empty or ``None``, no lower bound is applied.
+    end_date : str
+        Exclusive upper bound for the `created` field in ISO date format
+        ``YYYY-MM-DD``. If empty or ``None``, no upper bound is applied.
+    keywords : list[str] | None, optional
+        Optional list of keywords to filter issue summaries. If provided,
+        only issues whose summary contains at least one keyword will be included.
+        Defaults to ``None`` (no keyword filtering).
+    exclude_keys : list[str] | None, optional
+        Optional list of issue keys to exclude from results. If provided, any issue
+        whose key matches one in this list will be filtered out. Defaults to ``None`` (no exclusions).
+    keys : list[str] | None, optional
+        Optional list of issue keys to include in results. If provided, only issues
+        whose key matches one in this list will be included. Defaults to ``None`` (no key filtering).
+    project_key : str, optional
+        Jira project key to filter on. Defaults to ``"DEMO"``.
+
+    Returns
+    -------
+    str
+        A JQL string of the form:
+        ``project = '<project_key>' AND status = Resolved [AND created >= 'YYYY-MM-DD'] [AND created < 'YYYY-MM-DD'] ORDER BY created DESC``.
+
+    Raises
+    ------
+    ValueError
+        If ``start_date`` or ``end_date`` are provided but not in the
+        ``YYYY-MM-DD`` format.
+
+    Examples
+    --------
+    >>> create_jira_jql_query("2025-01-01", "2025-01-31", project_key="SUP")
+    "project = 'SUP' AND status = Resolved AND created >= '2025-01-01' AND created < '2025-01-31' ORDER BY created DESC"
+    """
+    
+    jql_query = (
+        f"project = '{project_key}' "
+        f"AND status = Resolved "
+    )
+    if start_date:
+        try:
+            parsed_date = None
+
+            try:
+                parsed_date = datetime.strptime(start_date, "%Y-%m-%d")
+            except ValueError:
+                pass
+
+            if parsed_date is None:
+                raise ValueError(f"Invalid date format: {start_date}")
+            
+            formatted_date = parsed_date.strftime("%Y-%m-%d")
+            jql_query += f"AND created >= '{formatted_date}' "
+        except ValueError as e:
+            raise ValueError(f"Invalid start_date provided: {start_date}") from e
+        
+    
+    if end_date:
+        try:
+            parsed_date = None
+
+            try:
+                parsed_date = datetime.strptime(end_date, "%Y-%m-%d")
+            except ValueError:
+                pass
+
+            if parsed_date is None:
+                raise ValueError(f"Invalid date format: {end_date}")
+            
+            formatted_date = parsed_date.strftime("%Y-%m-%d")
+            jql_query += f"AND created < '{formatted_date}' "
+        except ValueError as e:
+            raise ValueError(f"Invalid end_date provided: {end_date}") from e
+        
+    keyword_clause = ""
+
+    if keywords: 
+        keyword_clause = " AND (" + " OR ".join([f'summary ~ "{keyword}"' for keyword in keywords]) + ")"
+        jql_query += keyword_clause
+
+    if exclude_keys:
+        exclude_clause = " AND " + "key NOT IN (" + ", ".join([f'"{key}"' for key in exclude_keys]) + ")"
+        jql_query += exclude_clause
+
+    if keys:
+        key_clause = " AND " + "key IN (" + ", ".join([f'"{key}"' for key in keys]) + ")"
+        jql_query += key_clause
+        
+    jql_query += f"ORDER BY created DESC"
+
+    return jql_query
+
+def iter_support_ticket_batches(
+        cfg: GlobalConfig = None,
+        username: str = None,
+        password: str = None,
+        start_date: str = None, 
+        end_date: str = None, 
+        keywords: list[str] | None = None,
+        exclude_keys: list[str] | None = None,
+        keys: list[str] | None = None,
+        project_key: str = "DEMO",
+        limit: int | None = 100,
+        batch_size: int | None = None,
+    ) -> Iterator[list[dict]]:
+    """Yield resolved Jira support tickets in bounded batches.
+
+    This function connects to the Jira Cloud instance and retrieves issues from
+    the specified project that are marked as *Resolved*. Authentication credentials
+    are read from ``cfg`` via :attr:`polaris_rag.config.global_config.GlobalConfig.jira_api_credentials`.
+    Results are fetched via :meth:`atlassian.Jira.enhanced_jql` with pagination
+    and yielded incrementally.
+
+    Parameters
+    ----------
+    start_date : str
+        Inclusive lower bound for the issue creation date in ISO format
+        (``YYYY-MM-DD``). If empty or ``None``, no lower bound is applied.
+    end_date : str
+        Exclusive upper bound for the issue creation date in ISO format
+        (``YYYY-MM-DD``). If empty or ``None``, no upper bound is applied.
+    cfg : GlobalConfig
+        Loaded configuration containing Jira API credentials.
+    keywords : list[str] | None, optional
+        Optional list of keywords to filter issue summaries. If provided, 
+        only issues whose summary contains at least one keyword will be 
+        returned. Defaults to ``None`` (no keyword filtering).
+    exclude_keys : list[str] | None, optional
+        Optional list of issue keys to exclude from results. If provided, any issue
+        whose key matches one in this list will be filtered out. Defaults to ``None`` (no exclusions).
+    keys : list[str] | None, optional
+        Optional list of issue keys to include in results. If provided, only issues
+        whose key matches one in this list will be included. Defaults to ``None`` (no key filtering).
+    project_key : str, optional
+        Jira project key to query. Defaults to ``"DEMO"``.
+    limit : int or None, optional
+        Maximum number of issues to retrieve. If ``None`` (default), all matching
+        issues are returned.
+
+    batch_size : int or None, optional
+        Maximum number of issues to yield in each batch. If ``None``, each Jira
+        API page is yielded as-is.
+
+    Yields
+    ------
+    list[dict]
+        Jira issue dictionaries in bounded batches.
+
+    Raises
+    ------
+    ValueError
+        If ``start_date`` or ``end_date`` are provided but not valid ``YYYY-MM-DD`` strings.
+    KeyError
+        If Jira credentials are missing required keys (e.g., ``username`` or ``password``).
+    """
+    if cfg:
+        config = cfg
+        jira_api_config = config.jira_api_credentials
+
+        username = jira_api_config['username']
+        password = jira_api_config['password']
+    if not username or not password:
+        raise KeyError("Jira credentials are not properly configured.")
+    if batch_size is not None and int(batch_size) < 1:
+        raise ValueError("batch_size must be >= 1 when provided.")
+
+    jira = _build_jira_client(username=username, password=password)
+
+    jql_query = create_jira_jql_query(
+        start_date=start_date,
+        end_date=end_date,
+        keywords=keywords,
+        exclude_keys=exclude_keys,
+        keys=keys,
+        project_key=project_key,
+    )
+
+    next_page_token = None
+    buffered_issues: list[dict] = []
+    emitted = 0
+    target_batch_size = int(batch_size) if batch_size is not None else None
+
+    while True:
+        if limit is not None and emitted >= limit:
+            break
+
+        result, jira = _fetch_jira_page_with_retry(
+            jira=jira,
+            username=username,
+            password=password,
+            jql_query=jql_query,
+            next_page_token=next_page_token,
+        )
+
+        temp_issues = list(result.get('issues', []) or [])
+        if limit is not None:
+            remaining = int(limit) - emitted - len(buffered_issues)
+            if remaining <= 0:
+                temp_issues = []
+            else:
+                temp_issues = temp_issues[:remaining]
+
+        if target_batch_size is None:
+            if temp_issues:
+                emitted += len(temp_issues)
+                yield temp_issues
+        else:
+            buffered_issues.extend(temp_issues)
+            while len(buffered_issues) >= target_batch_size:
+                batch = buffered_issues[:target_batch_size]
+                emitted += len(batch)
+                yield batch
+                buffered_issues = buffered_issues[target_batch_size:]
+
+        next_page_token = result.get('nextPageToken')
+
+        if not next_page_token:
+            break
+
+    if buffered_issues:
+        emitted += len(buffered_issues)
+        yield buffered_issues
+
+
+def load_support_tickets(
+        cfg: GlobalConfig = None,
+        username: str = None,
+        password: str = None,
+        start_date: str = None, 
+        end_date: str = None, 
+        keywords: list[str] | None = None,
+        exclude_keys: list[str] | None = None,
+        keys: list[str] | None = None,
+        project_key: str = "DEMO",
+        limit: int | None = 100,
+    ) -> list[dict]:
+    """Retrieve resolved Jira support tickets within a date range."""
+    issues: list[dict] = []
+    for batch in iter_support_ticket_batches(
+        cfg=cfg,
+        username=username,
+        password=password,
+        start_date=start_date,
+        end_date=end_date,
+        keywords=keywords,
+        exclude_keys=exclude_keys,
+        keys=keys,
+        project_key=project_key,
+        limit=limit,
+        batch_size=None,
+    ):
+        issues.extend(batch)
+    return issues

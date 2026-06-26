@@ -1,0 +1,4 @@
+row_type,condition_a,condition_b,n_queries,estimate,ci_low,ci_high
+condition_mean,v3_ticket_prompt,,30,0.278278,0.232444,0.325778
+condition_mean,v4_prompt,,30,0.349833,0.301000,0.402333
+paired_difference,v4_prompt,v3_ticket_prompt,30,0.071556,0.029778,0.113611

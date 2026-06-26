@@ -1,0 +1,3 @@
+# Default local runtime config.
+# On a Gaudi node, use docker-compose.gaudi.yaml and /app/config/config.gaudi.yaml.
+extends: "config.local.yaml"

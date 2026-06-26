@@ -1,0 +1,31 @@
+profile_name: validity_reranker.dev_v1
+generated_at: "1970-01-01T00:00:00+00:00"
+dataset_path: ""
+objective_metrics:
+  - factual_correctness
+  - faithfulness
+  - context_precision_without_reference
+weights:
+  authority: 0.04
+  freshness: 0.01
+  scope: 0.04
+  status: 0.04
+  version: 0.04
+authority_values:
+  local_official: 1.0
+  external_official: 0.5
+  ticket_memory: 0.0
+  unknown: 0.0
+status_values:
+  current: 1.0
+  maintenance: 0.25
+  legacy: -0.5
+  eol: -1.0
+  unknown: 0.0
+freshness:
+  mode: relative_recency
+selection:
+  objective: 0.0
+  metric_means: {}
+  prepared_rows: 0
+  reranker_fingerprint: null

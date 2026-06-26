@@ -1,0 +1,17 @@
+extends: "config.gaudi.yaml"
+
+evaluator_llm:
+  type: "OpenAILike"
+  model_name: "Qwen/Qwen2.5-32B-Instruct"
+  api_base: "http://vllm-eval-lb:8080/v1"
+  api_key: "fake"
+  model_kwargs:
+    temperature: 0
+    top_p: 0.99
+    max_tokens: 256
+    instructor_mode: MD_JSON
+
+evaluation:
+  run:
+    timeout: 600
+    max_workers: 4

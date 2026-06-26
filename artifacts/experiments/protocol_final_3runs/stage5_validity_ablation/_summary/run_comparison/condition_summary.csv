@@ -1,0 +1,5 @@
+condition_name,preset_name,condition_fingerprint,rows,success_rows,failed_rows,mean_context_precision_without_reference,mean_context_recall,mean_factual_correctness,mean_faithfulness,mean_reference,mean_response,mean_user_input
+freshness_only,freshness_only,d217c406714c8a3271a3dee30aaa85e45a4645616e78ba644705641ed49a1aa5,30,30,0,0.73891402114601,0.7146164021164021,nan,nan,,,
+naive_combined,naive_combined,bda73dd8e7fc88e45a3bc5dc009519d5407276adbad7ea895864ad7a31a8e4b6,30,30,0,nan,0.7066269841269841,nan,nan,,,
+source_aware,source_aware,2d12e33696576f1f99203f7e01882c3b63da6dbc89e42ba7cdf7aa8bcf897116,30,30,0,nan,0.7913369963369963,nan,nan,,,
+validity_aware,validity_aware,e1b2db4c1bc5752d135b7fee80750e395d405cf2cf97e8c61f283b949460e145,30,30,0,nan,nan,nan,0.5834120971620972,,,

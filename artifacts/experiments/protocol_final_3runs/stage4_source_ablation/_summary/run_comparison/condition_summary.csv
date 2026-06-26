@@ -1,0 +1,4 @@
+condition_name,preset_name,condition_fingerprint,rows,success_rows,failed_rows,mean_context_precision_without_reference,mean_context_recall,mean_factual_correctness,mean_faithfulness,mean_reference,mean_response,mean_user_input
+docs_only,docs_only,4dea0c5a145c9cd9678ee0ce087ed3fef4b9432ef6c367c9d98a31835dbad5e6,30,30,0,nan,0.5749867724867724,nan,nan,,,
+naive_combined,naive_combined,bda73dd8e7fc88e45a3bc5dc009519d5407276adbad7ea895864ad7a31a8e4b6,30,30,0,nan,0.6444179894179894,nan,nan,,,
+tickets_only,tickets_only,8e79a46a242b937a3b52d3bce79e83a5c7e6de1ed49f74343c48bcaa3e2d3f15,30,30,0,nan,0.7386904761904761,nan,0.55,,,

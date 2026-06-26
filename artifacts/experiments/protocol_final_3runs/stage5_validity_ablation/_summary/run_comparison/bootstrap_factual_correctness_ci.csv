@@ -1,0 +1,11 @@
+row_type,condition_a,condition_b,n_queries,estimate,ci_low,ci_high
+condition_mean,freshness_only,,30,0.273111,0.227000,0.320111
+condition_mean,naive_combined,,30,0.278389,0.238556,0.319667
+condition_mean,source_aware,,29,0.300517,0.251437,0.349312
+condition_mean,validity_aware,,30,0.277389,0.226165,0.330224
+paired_difference,freshness_only,naive_combined,30,-0.005278,-0.036222,0.024667
+paired_difference,source_aware,naive_combined,29,0.018736,-0.018046,0.055517
+paired_difference,validity_aware,naive_combined,30,-0.001000,-0.042612,0.038000
+paired_difference,validity_aware,source_aware,29,-0.021149,-0.054886,0.014425
+paired_difference,validity_aware,freshness_only,30,0.004278,-0.039333,0.047946
+paired_difference,source_aware,freshness_only,29,0.026954,-0.005404,0.058621

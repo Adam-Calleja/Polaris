@@ -1,0 +1,1729 @@
+"""polaris_rag.generation.llm_interface
+
+from __future__ import annotations
+
+Unified interface and factory for large language model (LLM) backends.
+
+This module defines a small, provider-agnostic abstraction for text
+generation and concrete implementations backed by LangChain-compatible LLM
+wrappers. A factory function is provided to instantiate the appropriate LLM
+implementation from a configuration mapping.
+
+Classes
+-------
+BaseLLM
+    Abstract interface specifying the API used by the Polaris RAG pipeline.
+OpenAILikeLLM
+    Text generation using an OpenAI-compatible HTTP API via LangChain.
+OpenAIChatLikeLLM
+    Chat completions using an OpenAI-compatible HTTP API via LangChain.
+HuggingFaceTGI
+    Text generation using Hugging Face Text Generation Inference (TGI) via LangChain.
+
+Functions
+---------
+create_llm
+    Construct an LLM implementation from a configuration mapping.
+"""
+
+from abc import ABC, abstractmethod
+import inspect
+from typing import Any
+from typing import Mapping, Optional
+import warnings
+import yaml
+import httpx
+from langchain_core.callbacks import BaseCallbackHandler
+from langchain_openai import OpenAI, ChatOpenAI
+from langchain_core.language_models.llms import LLM as LangChainBaseLLM
+from langchain_community.llms import HuggingFaceTextGenInference
+from openai import AsyncOpenAI, OpenAI as OpenAIClient
+from openai import APITimeoutError as OpenAIAPITimeoutError
+
+from polaris_rag.common.request_budget import GenerationTimeoutError
+
+
+def _is_gemini_openai_compat(api_base: str | None) -> bool:
+    """Return ``True`` when the API base points to Gemini's OpenAI-compatible endpoint."""
+    if not api_base:
+        return False
+    base = api_base.lower()
+    return "generativelanguage.googleapis.com" in base and "/openai" in base
+
+
+def _sanitize_openai_kwargs(
+    api_base: str | None,
+    kwargs: dict[str, Any],
+    *,
+    context: str,
+) -> dict[str, Any]:
+    """Drop provider-incompatible OpenAI kwargs for known OpenAI-compatible backends."""
+    sanitized = dict(kwargs)
+
+    if _is_gemini_openai_compat(api_base):
+        unsupported_keys = {"frequency_penalty", "presence_penalty"}
+        removed = sorted(k for k in unsupported_keys if k in sanitized)
+        for key in removed:
+            sanitized.pop(key, None)
+        if removed:
+            warnings.warn(
+                "Dropping unsupported Gemini OpenAI-compatible params "
+                f"during {context}: {', '.join(removed)}",
+                UserWarning,
+            )
+
+    return sanitized
+
+
+def _coerce_transport_kwarg(key: str, value: Any) -> Any:
+    """Coerce common OpenAI transport kwargs to stable scalar types."""
+    if value is None:
+        return None
+    if key in {"timeout", "request_timeout"}:
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return value
+    if key == "max_retries":
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return value
+    return value
+
+
+def _coerce_timeout_seconds(value: Any) -> float | None:
+    """Coerce timeout Seconds.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    
+    Returns
+    -------
+    float or None
+        Result of the operation.
+    """
+    if value is None:
+        return None
+    try:
+        timeout = float(value)
+    except (TypeError, ValueError):
+        return None
+    return timeout if timeout > 0 else None
+
+
+def _coerce_retry_count(value: Any) -> int | None:
+    """Coerce retry Count.
+    
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize, coerce, or inspect.
+    
+    Returns
+    -------
+    int or None
+        Result of the operation.
+    """
+    if value is None:
+        return None
+    try:
+        retries = int(value)
+    except (TypeError, ValueError):
+        return None
+    return max(0, retries)
+
+
+def _strip_runtime_only_kwargs(kwargs: dict[str, Any]) -> dict[str, Any]:
+    """Strip Runtime Only Kwargs.
+    
+    Parameters
+    ----------
+    kwargs : dict[str, Any]
+        Value for kwargs.
+    
+    Returns
+    -------
+    dict[str, Any]
+        Structured result of the operation.
+    """
+    sanitized = dict(kwargs)
+    for key in ("callbacks", "callback_manager", "request_timeout", "timeout", "max_retries"):
+        sanitized.pop(key, None)
+    return sanitized
+
+
+def _coerce_chat_messages(prompt: Any) -> list[dict[str, Any]] | None:
+    """Normalize a structured chat payload when one is provided."""
+    if not isinstance(prompt, list):
+        return None
+
+    messages: list[dict[str, Any]] = []
+    for item in prompt:
+        if not isinstance(item, Mapping):
+            raise TypeError(f"chat messages must be mappings, got {type(item)!r}")
+        role = str(item.get("role", "user")).strip() or "user"
+        content = item.get("content", "")
+        if isinstance(content, list):
+            normalized_content = content
+        else:
+            normalized_content = content if isinstance(content, str) else str(content or "")
+        messages.append({"role": role, "content": normalized_content})
+    return messages
+
+
+def _chat_completion_to_text(response: Any) -> str:
+    """Chat Completion To Text.
+    
+    Parameters
+    ----------
+    response : Any
+        HTTP response object or normalized backend response.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
+    choices = getattr(response, "choices", None) or []
+    if not choices:
+        return ""
+    message = getattr(choices[0], "message", None)
+    content = getattr(message, "content", None)
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts: list[str] = []
+        for item in content:
+            if isinstance(item, str):
+                parts.append(item)
+                continue
+            text = getattr(item, "text", None)
+            if isinstance(text, str):
+                parts.append(text)
+        return "".join(parts)
+    return str(content or "")
+
+
+def _completion_to_text(response: Any) -> str:
+    """Completion To Text.
+    
+    Parameters
+    ----------
+    response : Any
+        HTTP response object or normalized backend response.
+    
+    Returns
+    -------
+    str
+        Resulting string value.
+    """
+    choices = getattr(response, "choices", None) or []
+    if not choices:
+        return ""
+    text = getattr(choices[0], "text", None)
+    return text if isinstance(text, str) else str(text or "")
+
+
+def _merge_supported_transport_kwargs(
+    client_ctor: Any,
+    *,
+    config: Mapping[str, Any],
+    model_kwargs: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    """Merge transport-level config into model kwargs when the client supports it."""
+    merged = dict(model_kwargs or {})
+
+    try:
+        sig = inspect.signature(client_ctor)
+    except (TypeError, ValueError):
+        supported_names: set[str] = set()
+        supports_var_kwargs = True
+    else:
+        supported_names = set(sig.parameters.keys())
+        supports_var_kwargs = any(
+            param.kind == inspect.Parameter.VAR_KEYWORD
+            for param in sig.parameters.values()
+        )
+
+    for key in ("timeout", "request_timeout", "max_retries"):
+        if key in merged:
+            continue
+        raw_value = config.get(key)
+        if raw_value is None:
+            continue
+        if key not in supported_names and not supports_var_kwargs:
+            continue
+        merged[key] = _coerce_transport_kwarg(key, raw_value)
+
+    return merged
+
+class _SimpleGeneration:
+    """Minimal generation object compatible with LangChain result structures.
+
+    This class exists to satisfy downstream access patterns that expect a
+    ``.text`` attribute on generation items.
+
+    Attributes
+    ----------
+    text : str
+        Generated text.
+    generation_info : Any or None
+        Optional provider-specific metadata. Always ``None`` for this shim.
+    """
+    def __init__(
+            self, 
+            text: str
+        ):
+        """Initialise a _SimpleGeneration instance.
+
+        Parameters
+        ----------
+        text : str
+            Generated text.
+        """
+        self.text = text
+        self.generation_info = None
+
+class _SimpleResult:
+    """Minimal result object compatible with LangChain result structures.
+
+    This class provides a ``generations`` attribute shaped like LangChain's
+    ``LLMResult.generations`` (a list of lists), enabling reuse of existing
+    code that expects that structure.
+
+    Attributes
+    ----------
+    generations : list[list[_SimpleGeneration]]
+        Nested list of generation objects, one list per prompt.
+    """
+    def __init__(
+            self, 
+            generations: list[list[_SimpleGeneration]]
+        ):
+        """Initialise a _SimpleResult instance.
+
+        Parameters
+        ----------
+        generations : list[list[_SimpleGeneration]]
+            Nested list of generations, one list per prompt.
+        """
+        self.generations = generations
+
+    def flatten(self) -> list["_SimpleResult"]:
+        """Return this result wrapped in a list for compatibility.
+
+        Returns
+        -------
+        list[_SimpleResult]
+            A one-element list containing this instance (i.e., ``[self]``).
+
+        Notes
+        -----
+        This method does not modify ``self.generations``; it only wraps the
+        current instance in a list.
+        """
+        return [self]
+
+
+class BaseLLM(ABC):
+    """Abstract interface for LLM text generation.
+    
+    Concrete implementations wrap provider-specific clients and expose a small,
+    consistent API used by the Polaris RAG pipeline.
+    
+    Methods
+    -------
+    from_config
+        Create an LLM instance from a YAML configuration file.
+    from_config_dict
+        Create an LLM instance from a configuration mapping.
+    get_llm
+        Return the underlying LangChain LLM object.
+    generate
+        Generate text for a single prompt.
+    """
+    supports_chat_messages = False
+
+    @classmethod
+    @abstractmethod
+    def from_config(
+            cls, 
+            config_path: str, 
+            callback_manager: BaseCallbackHandler = None
+        ):
+        """Create an LLM instance from a YAML configuration file.
+
+        Parameters
+        ----------
+        config_path : str
+            Path to the YAML configuration file.
+        callback_manager : BaseCallbackHandler, optional
+            Optional callback handler for logging/telemetry/streaming.
+
+        Returns
+        -------
+        BaseLLM
+            An initialised LLM implementation.
+
+        Raises
+        ------
+        FileNotFoundError
+            If ``config_path`` does not exist.
+        ValueError
+            If the configuration is invalid for the concrete implementation.
+        """
+        pass
+
+    @classmethod
+    @abstractmethod
+    def from_config_dict(
+            cls,
+            config: dict,
+            callback_manager: BaseCallbackHandler = None
+        ):
+        """Create an LLM instance from a configuration mapping.
+
+        Parameters
+        ----------
+        config : dict
+            Configuration parameters for the concrete implementation.
+        callback_manager : BaseCallbackHandler, optional
+            Optional callback handler for logging/telemetry/streaming.
+
+        Returns
+        -------
+        BaseLLM
+            An initialised LLM implementation.
+
+        Raises
+        ------
+        ValueError
+            If required configuration keys are missing or invalid.
+        """
+        pass
+
+    @abstractmethod
+    def get_llm(self) -> LangChainBaseLLM:
+        """Return the underlying LangChain LLM object.
+
+        Returns
+        -------
+        LangChainBaseLLM
+            The wrapped LangChain-compatible LLM instance.
+        """
+        pass
+
+    @abstractmethod
+    def generate(
+            self, 
+            prompt: Any,
+            *,
+            timeout_seconds: float | None = None,
+            **kwargs
+        ) -> Any:
+        """Generate text for a single prompt.
+
+        Parameters
+        ----------
+        prompt : Any
+            Prompt payload to send to the model. Most implementations expect a
+            ``str``; chat-capable implementations may also accept a structured
+            message list.
+        timeout_seconds : float or None, optional
+            Per-request transport timeout applied to the provider call when
+            supported. ``None`` uses the implementation default.
+        **kwargs
+            Additional keyword arguments forwarded to the underlying model.
+
+        Returns
+        -------
+        Any
+            Provider-specific generation result (often a ``str``).
+        """
+        pass
+
+class OpenAILikeLLM(BaseLLM):
+    """LLM interface using an OpenAI-compatible API.
+    
+    This implementation wraps :class:`langchain_openai.OpenAI` and exposes a small
+    synchronous/async surface used throughout the codebase.
+    
+    Parameters
+    ----------
+    model_name : str
+        Value for model Name.
+    api_base : str
+        Base URL of the configured HTTP dependency.
+    api_key : str, optional
+        Value for API Key.
+    callback_manager : BaseCallbackHandler, optional
+        Value for callback Manager.
+    **model_kwargs : Any
+        Value for model Kwargs.
+    
+    Methods
+    -------
+    get_stop_list
+        Return the configured default stop sequences.
+    from_config
+        Create an :class:`~polaris_rag.generation.llm_interface.OpenAILikeLLM`
+        from YAML.
+    from_config_dict
+        Create an :class:`~polaris_rag.generation.llm_interface.OpenAILikeLLM`
+        from a mapping.
+    get_llm
+        Return the underlying LangChain LLM object.
+    generate
+        Generate text for a single prompt.
+    generate_prompt
+        Generate text for a single prompt.
+    acomplete
+        Asynchronously generate text for a single prompt.
+    agenerate_prompt
+        Asynchronously generate text for a batch of prompts.
+    """
+
+    def __init__(
+        self,
+        model_name: str,
+        api_base: str,
+        api_key: str = "fake",
+        callback_manager: BaseCallbackHandler = None,
+        **model_kwargs: Any,
+    ):
+        """Initialise an OpenAI-compatible LLM wrapper.
+
+        Parameters
+        ----------
+        model_name : str
+            Model identifier (e.g., ``"gpt-4"`` or a local model name).
+        api_base : str
+            Base URL for the OpenAI-compatible API endpoint.
+        api_key : str, optional
+            API key value. Defaults to ``"fake"`` for local deployments that do
+            not require authentication.
+        callback_manager : BaseCallbackHandler, optional
+            Optional callback handler for logging/telemetry/streaming.
+        **model_kwargs : Any
+            Additional keyword arguments forwarded to the underlying LangChain
+            OpenAI wrapper (e.g., ``temperature``, ``top_p``).
+
+        Notes
+        -----
+        Stop sequences may be supplied at call time via ``stop`` or
+        ``stop_list``. If none are provided, no stop sequence is injected.
+        """
+        self.model_name = model_name
+        self.api_base = api_base
+        self.api_key = api_key or "fake"
+        model_kwargs = _sanitize_openai_kwargs(api_base, model_kwargs, context="model init")
+        self.model_kwargs = dict(model_kwargs)
+        self.request_defaults = {
+            str(k): v
+            for k, v in self.model_kwargs.items()
+            if k not in {"timeout", "request_timeout", "max_retries", "stop_list"}
+        }
+        self.default_timeout_seconds = _coerce_timeout_seconds(
+            self.model_kwargs.get("timeout", self.model_kwargs.get("request_timeout"))
+        )
+        self.default_max_retries = _coerce_retry_count(self.model_kwargs.get("max_retries"))
+        self.default_stop_list = model_kwargs.pop("stop_list", None)
+        self.stop_list = self.default_stop_list
+
+        top_p = model_kwargs.pop("top_p", None)
+        if top_p is not None:
+            try:
+                top_p_val = float(top_p)
+            except (TypeError, ValueError):
+                top_p_val = None
+            else:
+                if not (0.0 < top_p_val < 1.0):
+                    top_p_val = None
+            top_p = top_p_val
+
+        self.llm = OpenAI(
+            model_name=model_name,
+            openai_api_base=api_base,
+            openai_api_key=self.api_key,
+            top_p=top_p or 1,
+            **model_kwargs,
+        )
+
+    def _client_timeout_seconds(self, timeout_seconds: float | None, run_kwargs: dict[str, Any]) -> float | None:
+        """Client Timeout Seconds.
+        
+        Parameters
+        ----------
+        timeout_seconds : float or None, optional
+            timeout Seconds expressed in seconds.
+        run_kwargs : dict[str, Any]
+            Value for run Kwargs.
+        
+        Returns
+        -------
+        float or None
+            Result of the operation.
+        """
+        per_call_timeout = _coerce_timeout_seconds(
+            run_kwargs.pop("timeout", run_kwargs.pop("request_timeout", None))
+        )
+        return _coerce_timeout_seconds(timeout_seconds) or per_call_timeout or self.default_timeout_seconds
+
+    def _build_openai_client(self, *, timeout_seconds: float | None = None) -> OpenAIClient:
+        """Build openai Client.
+        
+        Parameters
+        ----------
+        timeout_seconds : float or None, optional
+            timeout Seconds expressed in seconds.
+        
+        Returns
+        -------
+        OpenAIClient
+            Result of the operation.
+        """
+        client_kwargs: dict[str, Any] = {
+            "api_key": self.api_key,
+            "base_url": self.api_base,
+        }
+        if timeout_seconds is not None:
+            client_kwargs["timeout"] = timeout_seconds
+        elif self.default_timeout_seconds is not None:
+            client_kwargs["timeout"] = self.default_timeout_seconds
+        if self.default_max_retries is not None:
+            client_kwargs["max_retries"] = self.default_max_retries
+        return OpenAIClient(**client_kwargs)
+
+    def get_stop_list(self) -> list[str] | None:
+        """Return the configured default stop sequences.
+
+        Returns
+        -------
+        list[str] or None
+            Default stop sequences, or ``None`` if not configured.
+        """
+        return self.default_stop_list
+
+    @classmethod
+    def from_config(
+        cls, 
+        config_path: str, 
+        callback_manager: BaseCallbackHandler = None
+    ):
+        """Create an :class:`~polaris_rag.generation.llm_interface.OpenAILikeLLM` from YAML.
+
+        Parameters
+        ----------
+        config_path : str
+            Path to the YAML configuration file.
+        callback_manager : BaseCallbackHandler, optional
+            Optional callback handler for logging/telemetry/streaming.
+
+        Returns
+        -------
+        OpenAILikeLLM
+            An initialised instance.
+
+        Notes
+        -----
+        The YAML is expected to contain ``model_name`` and ``api_base`` keys, plus
+        optional ``api_key`` and ``model_kwargs``.
+        """
+        with open(config_path, 'r') as f:
+            cfg = yaml.safe_load(f)
+        return cls.from_config_dict(cfg, callback_manager)
+
+    @classmethod
+    def from_config_dict(
+            cls,
+            config: dict,
+            callback_manager: BaseCallbackHandler = None
+        ) -> "OpenAILikeLLM":
+        """Create an :class:`~polaris_rag.generation.llm_interface.OpenAILikeLLM` from a mapping.
+
+        Parameters
+        ----------
+        config : dict
+            Configuration mapping.
+        callback_manager : BaseCallbackHandler, optional
+            Optional callback handler for logging/telemetry/streaming.
+
+        Returns
+        -------
+        OpenAILikeLLM
+            An initialised instance.
+
+        Raises
+        ------
+        ValueError
+            If required keys (e.g., ``model_name`` or ``api_base``) are missing.
+        """
+        model_name = config.get('model_name')
+        api_base = config.get('api_base')
+        model_kwargs = _merge_supported_transport_kwargs(
+            OpenAI,
+            config=config,
+            model_kwargs=config.get('model_kwargs', {}),
+        )
+        api_key = config.get('api_key', None)
+        return cls(
+            model_name=model_name,
+            api_base=api_base,
+            api_key=api_key,
+            callback_manager=callback_manager,
+            **model_kwargs,
+        )
+
+    def get_llm(self) -> LangChainBaseLLM:
+        """Return the underlying LangChain LLM object.
+
+        Returns
+        -------
+        LangChainBaseLLM
+            The wrapped :class:`langchain_openai.OpenAI` instance.
+        """
+        return self.llm
+
+    def generate(
+            self, 
+            prompt: str, 
+            *,
+            timeout_seconds: float | None = None,
+            **kwargs
+        ) -> Any:
+        """Generate text for a single prompt.
+
+        Parameters
+        ----------
+        prompt : str
+            Prompt text to send to the model.
+        **kwargs
+            Additional generation parameters forwarded to the underlying LLM.
+
+        Returns
+        -------
+        str
+            Generated text for the prompt.
+
+        Notes
+        -----
+        Stop sequences are resolved in the following order: explicit ``stop``,
+        per-call ``stop_list``, then instance default stop list.
+        """
+        if not isinstance(prompt, str):
+            prompt = prompt.to_string() if hasattr(prompt, "to_string") else str(prompt)
+
+        run_kwargs = _sanitize_openai_kwargs(
+            self.api_base,
+            {**self.request_defaults, **kwargs},
+            context="generation",
+        )
+        client_timeout_seconds = self._client_timeout_seconds(timeout_seconds, run_kwargs)
+        run_kwargs = _strip_runtime_only_kwargs(run_kwargs)
+
+        explicit_stop = run_kwargs.pop("stop", None)
+        alt_stop_list = run_kwargs.pop("stop_list", None)
+        final_stop = explicit_stop or alt_stop_list or self.default_stop_list
+
+        client = self._build_openai_client(timeout_seconds=client_timeout_seconds)
+        try:
+            request_kwargs = dict(
+                model=self.model_name,
+                prompt=prompt,
+                timeout=client_timeout_seconds,
+            )
+            if final_stop is not None:
+                request_kwargs["stop"] = final_stop
+            request_kwargs.update(run_kwargs)
+            response = client.completions.create(**request_kwargs)
+        except (OpenAIAPITimeoutError, httpx.TimeoutException, TimeoutError) as exc:
+            timeout_desc = f" after {client_timeout_seconds:.3f}s" if client_timeout_seconds is not None else ""
+            raise GenerationTimeoutError(f"generation request timed out{timeout_desc}") from exc
+        return _completion_to_text(response)
+
+    def generate_prompt(
+            self, 
+            prompt: str, 
+            **kwargs
+        ) -> Any:
+        """Generate text for a single prompt.
+
+        This is an alias for :meth:`~polaris_rag.generation.llm_interface.OpenAILikeLLM.generate`
+        kept for compatibility with callers expecting a ``generate_prompt`` API.
+
+        Parameters
+        ----------
+        prompt : str
+            Prompt text to send to the model.
+        **kwargs
+            Additional generation parameters forwarded to :meth:`generate`.
+
+        Returns
+        -------
+        str
+            Generated text for the prompt.
+        """
+        return self.generate(prompt, **kwargs)
+
+    async def acomplete(
+            self, 
+            prompt: str, 
+            **kwargs
+        ) -> Any:
+        """Asynchronously generate text for a single prompt.
+
+        Parameters
+        ----------
+        prompt : str
+            Prompt text to send to the model.
+        **kwargs
+            Additional generation parameters forwarded to the underlying LLM.
+
+        Returns
+        -------
+        Any
+            Provider-specific generation result (often a ``str``).
+
+        Notes
+        -----
+        If the underlying client does not expose an async API, synchronous
+        generation is executed in a thread pool via ``run_in_executor``.
+        """
+
+        run_kwargs = dict(self.request_defaults)
+        if hasattr(self, "run_config"):
+            run_kwargs.update(dict(self.run_config))
+
+        if not isinstance(prompt, str):
+            prompt = prompt.to_string() if hasattr(prompt, "to_string") else str(prompt)
+
+        run_kwargs.update(kwargs)
+        run_kwargs = _sanitize_openai_kwargs(self.api_base, run_kwargs, context="generation")
+        client_timeout_seconds = self._client_timeout_seconds(None, run_kwargs)
+        run_kwargs = _strip_runtime_only_kwargs(run_kwargs)
+        explicit_stop = run_kwargs.pop("stop", None)
+        alt_stop_list = run_kwargs.pop("stop_list", None)
+        final_stop = explicit_stop or alt_stop_list or self.default_stop_list
+
+        client_kwargs: dict[str, Any] = {
+            "api_key": self.api_key,
+            "base_url": self.api_base,
+        }
+        if client_timeout_seconds is not None:
+            client_kwargs["timeout"] = client_timeout_seconds
+        if self.default_max_retries is not None:
+            client_kwargs["max_retries"] = self.default_max_retries
+
+        client = AsyncOpenAI(**client_kwargs)
+        try:
+            request_kwargs = dict(
+                model=self.model_name,
+                prompt=prompt,
+                timeout=client_timeout_seconds,
+            )
+            if final_stop is not None:
+                request_kwargs["stop"] = final_stop
+            request_kwargs.update(run_kwargs)
+            response = await client.completions.create(**request_kwargs)
+        except (OpenAIAPITimeoutError, httpx.TimeoutException, TimeoutError) as exc:
+            timeout_desc = f" after {client_timeout_seconds:.3f}s" if client_timeout_seconds is not None else ""
+            raise GenerationTimeoutError(f"generation request timed out{timeout_desc}") from exc
+        return _completion_to_text(response)
+
+    async def agenerate_prompt(
+            self, 
+            prompts: list[str], 
+            **kwargs
+        ) -> list[Any]:
+        """Asynchronously generate text for a batch of prompts.
+
+        Parameters
+        ----------
+        prompts : list[str]
+            Prompt texts to send to the model.
+        **kwargs
+            Additional generation parameters forwarded to the underlying LLM.
+
+        Returns
+        -------
+        _SimpleResult
+            LangChain-compatible result object containing a generation per prompt.
+
+        Notes
+        -----
+        Callback-related keyword arguments are stripped since callbacks are handled
+        at initialisation.
+        """
+        kwargs.pop("callbacks", None)
+        kwargs.pop("callback_manager", None)
+
+        gen_results: list[list[_SimpleGeneration]] = []
+
+        for p in prompts:
+            text = await self.acomplete(p, **kwargs)
+            gen_results.append([_SimpleGeneration(text)])
+            
+        return _SimpleResult(gen_results)
+
+class OpenAIChatLikeLLM(BaseLLM):
+    """LLM interface using an OpenAI-compatible Chat Completions API via LangChain.
+    
+    This implementation wraps :class:`langchain_openai.ChatOpenAI`.
+    
+    Parameters
+    ----------
+    model_name : str
+        Value for model Name.
+    api_base : str
+        Base URL of the configured HTTP dependency.
+    api_key : str, optional
+        Value for API Key.
+    callback_manager : BaseCallbackHandler, optional
+        Value for callback Manager.
+    **model_kwargs : Any
+        Value for model Kwargs.
+    
+    Methods
+    -------
+    get_stop_list
+        Return the configured default stop sequences.
+    from_config
+        Create an OpenAI-compatible chat LLM from YAML.
+    from_config_dict
+        Create an OpenAI-compatible chat LLM from a mapping.
+    get_llm
+        Return the underlying LangChain chat model object.
+    generate
+        Generate text for a single prompt.
+    generate_prompt
+        Alias for ``generate`` kept for compatibility.
+    acomplete
+        Asynchronously generate text for a single prompt.
+    agenerate_prompt
+        Asynchronously generate text for a batch of prompts.
+    """
+    supports_chat_messages = True
+
+    def __init__(
+        self,
+        model_name: str,
+        api_base: str,
+        api_key: str = "fake",
+        callback_manager: BaseCallbackHandler = None,
+        **model_kwargs: Any,
+    ):
+        """Initialise an OpenAI-compatible chat LLM wrapper.
+
+        Parameters
+        ----------
+        model_name : str
+            Model identifier (e.g., ``"llama-3.3-70b-versatile"``).
+        api_base : str
+            Base URL for the OpenAI-compatible API endpoint.
+        api_key : str, optional
+            API key value. Defaults to ``"fake"`` for local deployments that do
+            not require authentication.
+        callback_manager : BaseCallbackHandler, optional
+            Optional callback handler for logging/telemetry/streaming.
+        **model_kwargs : Any
+            Additional keyword arguments forwarded to the underlying LangChain
+            ChatOpenAI wrapper (e.g., ``temperature``, ``top_p``).
+        """
+        import inspect
+
+        self.model_name = model_name
+        self.api_base = api_base
+        self.api_key = api_key or "fake"
+        model_kwargs = _sanitize_openai_kwargs(api_base, model_kwargs, context="model init")
+        self.model_kwargs = dict(model_kwargs)
+        self.request_defaults = {
+            str(k): v
+            for k, v in self.model_kwargs.items()
+            if k not in {"timeout", "request_timeout", "max_retries", "stop_list"}
+        }
+        self.default_timeout_seconds = _coerce_timeout_seconds(
+            self.model_kwargs.get("timeout", self.model_kwargs.get("request_timeout"))
+        )
+        self.default_max_retries = _coerce_retry_count(self.model_kwargs.get("max_retries"))
+        self.default_stop_list = model_kwargs.pop("stop_list", None)
+        self.stop_list = self.default_stop_list
+
+        top_p = model_kwargs.pop("top_p", None)
+        if top_p is not None:
+            try:
+                top_p_val = float(top_p)
+            except (TypeError, ValueError):
+                top_p_val = None
+            else:
+                if not (0.0 < top_p_val < 1.0):
+                    top_p_val = None
+            top_p = top_p_val
+
+        sig = inspect.signature(ChatOpenAI)
+        init_kwargs: dict[str, Any] = dict(model_kwargs)
+
+        if "model" in sig.parameters:
+            init_kwargs["model"] = model_name
+        else:
+            init_kwargs["model_name"] = model_name
+
+        if "openai_api_base" in sig.parameters:
+            init_kwargs["openai_api_base"] = api_base
+        elif "base_url" in sig.parameters:
+            init_kwargs["base_url"] = api_base
+        else:
+            init_kwargs["api_base"] = api_base
+
+        if api_key is not None:
+            if "openai_api_key" in sig.parameters:
+                init_kwargs["openai_api_key"] = self.api_key
+            else:
+                init_kwargs["api_key"] = self.api_key
+
+        if top_p is not None:
+            init_kwargs["top_p"] = top_p
+
+        self.llm = ChatOpenAI(**init_kwargs)
+
+    def _client_timeout_seconds(self, timeout_seconds: float | None, run_kwargs: dict[str, Any]) -> float | None:
+        """Client Timeout Seconds.
+        
+        Parameters
+        ----------
+        timeout_seconds : float or None, optional
+            timeout Seconds expressed in seconds.
+        run_kwargs : dict[str, Any]
+            Value for run Kwargs.
+        
+        Returns
+        -------
+        float or None
+            Result of the operation.
+        """
+        per_call_timeout = _coerce_timeout_seconds(
+            run_kwargs.pop("timeout", run_kwargs.pop("request_timeout", None))
+        )
+        return _coerce_timeout_seconds(timeout_seconds) or per_call_timeout or self.default_timeout_seconds
+
+    def _build_openai_client(self, *, timeout_seconds: float | None = None) -> OpenAIClient:
+        """Build openai Client.
+        
+        Parameters
+        ----------
+        timeout_seconds : float or None, optional
+            timeout Seconds expressed in seconds.
+        
+        Returns
+        -------
+        OpenAIClient
+            Result of the operation.
+        """
+        client_kwargs: dict[str, Any] = {
+            "api_key": self.api_key,
+            "base_url": self.api_base,
+        }
+        if timeout_seconds is not None:
+            client_kwargs["timeout"] = timeout_seconds
+        elif self.default_timeout_seconds is not None:
+            client_kwargs["timeout"] = self.default_timeout_seconds
+        if self.default_max_retries is not None:
+            client_kwargs["max_retries"] = self.default_max_retries
+        return OpenAIClient(**client_kwargs)
+
+    def get_stop_list(self) -> list[str] | None:
+        """Return the configured default stop sequences.
+        
+        Returns
+        -------
+        list[str] or None
+            Requested stop List.
+        """
+        return self.default_stop_list
+
+    @classmethod
+    def from_config(
+        cls,
+        config_path: str,
+        callback_manager: BaseCallbackHandler = None,
+    ):
+        """Create an OpenAI-compatible chat LLM from YAML.
+        
+        Parameters
+        ----------
+        config_path : str
+            Filesystem path used by the operation.
+        callback_manager : BaseCallbackHandler, optional
+            Value for callback Manager.
+        """
+        with open(config_path, 'r') as f:
+            cfg = yaml.safe_load(f)
+        return cls.from_config_dict(cfg, callback_manager)
+
+    @classmethod
+    def from_config_dict(
+        cls,
+        config: dict,
+        callback_manager: BaseCallbackHandler = None,
+    ) -> "OpenAIChatLikeLLM":
+        """Create an OpenAI-compatible chat LLM from a mapping.
+        
+        Parameters
+        ----------
+        config : dict
+            Configuration object or mapping used by the operation.
+        callback_manager : BaseCallbackHandler, optional
+            Value for callback Manager.
+        
+        Returns
+        -------
+        OpenAIChatLikeLLM
+            Result of the operation.
+        """
+        model_name = config.get('model_name')
+        api_base = config.get('api_base')
+        model_kwargs = _merge_supported_transport_kwargs(
+            ChatOpenAI,
+            config=config,
+            model_kwargs=config.get('model_kwargs', {}),
+        )
+        api_key = config.get('api_key', None)
+        return cls(
+            model_name=model_name,
+            api_base=api_base,
+            api_key=api_key,
+            callback_manager=callback_manager,
+            **model_kwargs,
+        )
+
+    def get_llm(self) -> Any:
+        """Return the underlying LangChain chat model object.
+        
+        Returns
+        -------
+        Any
+            Requested LLM.
+        """
+        return self.llm
+
+    def generate(
+        self,
+        prompt: Any,
+        *,
+        timeout_seconds: float | None = None,
+        **kwargs,
+    ) -> Any:
+        """Generate text for a single prompt.
+        
+        Parameters
+        ----------
+        prompt : Any
+            User prompt or query text to send to the backend. Structured chat
+            message lists are accepted directly.
+        timeout_seconds : float or None, optional
+            timeout Seconds expressed in seconds.
+        **kwargs : Any
+            Value for kwargs.
+        
+        Returns
+        -------
+        Any
+            Result of the operation.
+        
+        Raises
+        ------
+        GenerationTimeoutError
+            If `GenerationTimeoutError` is raised while executing the operation.
+        """
+        messages = _coerce_chat_messages(prompt)
+        if messages is None:
+            if not isinstance(prompt, str):
+                prompt = prompt.to_string() if hasattr(prompt, "to_string") else str(prompt)
+            messages = [{"role": "user", "content": prompt}]
+
+        run_kwargs = _sanitize_openai_kwargs(
+            self.api_base,
+            {**self.request_defaults, **kwargs},
+            context="generation",
+        )
+        client_timeout_seconds = self._client_timeout_seconds(timeout_seconds, run_kwargs)
+        run_kwargs = _strip_runtime_only_kwargs(run_kwargs)
+
+        explicit_stop = run_kwargs.pop("stop", None)
+        alt_stop_list = run_kwargs.pop("stop_list", None)
+        final_stop = explicit_stop or alt_stop_list or self.default_stop_list
+
+        client = self._build_openai_client(timeout_seconds=client_timeout_seconds)
+        try:
+            request_kwargs = dict(
+                model=self.model_name,
+                messages=messages,
+                timeout=client_timeout_seconds,
+            )
+            if final_stop is not None:
+                request_kwargs["stop"] = final_stop
+            request_kwargs.update(run_kwargs)
+            response = client.chat.completions.create(**request_kwargs)
+        except (OpenAIAPITimeoutError, httpx.TimeoutException, TimeoutError) as exc:
+            timeout_desc = f" after {client_timeout_seconds:.3f}s" if client_timeout_seconds is not None else ""
+            raise GenerationTimeoutError(f"generation request timed out{timeout_desc}") from exc
+        return _chat_completion_to_text(response)
+
+    def generate_prompt(self, prompt: str, **kwargs) -> Any:
+        """Alias for ``generate`` kept for compatibility.
+        
+        Parameters
+        ----------
+        prompt : str
+            User prompt or query text to send to the backend.
+        **kwargs : Any
+            Value for kwargs.
+        
+        Returns
+        -------
+        Any
+            Result of the operation.
+        """
+        return self.generate(prompt, **kwargs)
+
+    async def acomplete(self, prompt: Any, **kwargs) -> Any:
+        """Asynchronously generate text for a single prompt.
+        
+        Parameters
+        ----------
+        prompt : Any
+            User prompt or query text to send to the backend. Structured chat
+            message lists are accepted directly.
+        **kwargs : Any
+            Value for kwargs.
+        
+        Returns
+        -------
+        Any
+            Result of the operation.
+        
+        Raises
+        ------
+        GenerationTimeoutError
+            If `GenerationTimeoutError` is raised while executing the operation.
+        """
+        run_kwargs = dict(self.request_defaults)
+        if hasattr(self, "run_config"):
+            run_kwargs.update(dict(self.run_config))
+
+        messages = _coerce_chat_messages(prompt)
+        if messages is None:
+            if not isinstance(prompt, str):
+                prompt = prompt.to_string() if hasattr(prompt, "to_string") else str(prompt)
+            messages = [{"role": "user", "content": prompt}]
+
+        explicit_stop = kwargs.pop("stop", None)
+        alt_stop_list = kwargs.pop("stop_list", None)
+        final_stop = explicit_stop or alt_stop_list or self.default_stop_list
+
+        run_kwargs.update(kwargs)
+        run_kwargs = _sanitize_openai_kwargs(self.api_base, run_kwargs, context="generation")
+        client_timeout_seconds = self._client_timeout_seconds(None, run_kwargs)
+        run_kwargs = _strip_runtime_only_kwargs(run_kwargs)
+
+        client_kwargs: dict[str, Any] = {
+            "api_key": self.api_key,
+            "base_url": self.api_base,
+        }
+        if client_timeout_seconds is not None:
+            client_kwargs["timeout"] = client_timeout_seconds
+        if self.default_max_retries is not None:
+            client_kwargs["max_retries"] = self.default_max_retries
+
+        client = AsyncOpenAI(**client_kwargs)
+        try:
+            request_kwargs = dict(
+                model=self.model_name,
+                messages=messages,
+                timeout=client_timeout_seconds,
+            )
+            if final_stop is not None:
+                request_kwargs["stop"] = final_stop
+            request_kwargs.update(run_kwargs)
+            response = await client.chat.completions.create(**request_kwargs)
+        except (OpenAIAPITimeoutError, httpx.TimeoutException, TimeoutError) as exc:
+            timeout_desc = f" after {client_timeout_seconds:.3f}s" if client_timeout_seconds is not None else ""
+            raise GenerationTimeoutError(f"generation request timed out{timeout_desc}") from exc
+        return _chat_completion_to_text(response)
+
+    async def agenerate_prompt(self, prompts: list[str], **kwargs) -> list[Any]:
+        """Asynchronously generate text for a batch of prompts.
+        
+        Parameters
+        ----------
+        prompts : list[str]
+            Value for prompts.
+        **kwargs : Any
+            Value for kwargs.
+        
+        Returns
+        -------
+        list[Any]
+            Collected results from the operation.
+        """
+        kwargs.pop("callbacks", None)
+        kwargs.pop("callback_manager", None)
+
+        gen_results: list[list[_SimpleGeneration]] = []
+
+        for p in prompts:
+            text = await self.acomplete(p, **kwargs)
+            gen_results.append([_SimpleGeneration(text)])
+
+        return _SimpleResult(gen_results)
+
+class HuggingFaceTGI(BaseLLM):
+    """An LLM interface using Hugging Face Text Generation Inference (TGI).
+    
+    Parameters
+    ----------
+    inference_server_url : str
+        URL used by the operation.
+    callback_manager : BaseCallbackHandler, optional
+        Value for callback Manager.
+    stop_sequences : list[str] or None, optional
+        Value for stop Sequences.
+    temperature : float or None, optional
+        Value for temperature.
+    repetition_penalty : float or None, optional
+        Value for repetition Penalty.
+    max_new_tokens : int or None, optional
+        Value for max New Tokens.
+    **model_kwargs : Any
+        Value for model Kwargs.
+    
+    Methods
+    -------
+    get_stop_list
+        Return the configured default stop sequences.
+    from_config
+        Create a ``HuggingFaceTGI`` instance from a YAML configuration file.
+    from_config_dict
+        Create a ``HuggingFaceTGI`` instance from a configuration dictionary.
+    get_llm
+        Return the underlying LangChain LLM object.
+    generate
+        Generate text for a single prompt synchronously.
+    generate_prompt
+        Alias for ``generate`` kept for compatibility with callers expecting a
+        ``generate_prompt`` API.
+    acomplete
+        Asynchronously generate text for a single prompt.
+    agenerate_prompt
+        Asynchronously generate text for a batch of prompts.
+    """
+
+    def __init__(
+        self,
+        inference_server_url: str,
+        callback_manager: BaseCallbackHandler = None,
+        stop_sequences: list[str] | None = None,
+        temperature: float | None = None,
+        repetition_penalty: float | None = None,
+        max_new_tokens: int | None = None,
+        **model_kwargs: Any,
+    ):
+        """
+        Initialize the Hugging Face TGI LLM interface.
+
+        Parameters
+        ----------
+        inference_server_url : str
+            Base URL of the TGI server, for example ``"http://localhost:8080"``. Must not include a path.
+        callback_manager : BaseCallbackHandler, optional
+            Callback manager for logging/telemetry. If provided, it is passed to the underlying LangChain LLM.
+        stop_sequences : list of str or None, optional
+            List of strings that, if generated, will cause decoding to stop. If ``None``, no stop sequences are enforced unless provided at call time.
+        temperature : float or None, optional
+            Sampling temperature. Higher values (e.g., 1.0) produce more random outputs; lower values (e.g., 0.3) are more deterministic. If ``None``, the backend default is used.
+        repetition_penalty : float or None, optional
+            Penalty applied to previously generated tokens. Values > 1 discourage repetition; 1.0 disables the penalty. If ``None``, the backend default is used.
+        max_new_tokens : int or None, optional
+            Maximum number of tokens to generate beyond the prompt. If ``None``, the backend default is used.
+        **model_kwargs
+            Additional generation parameters forwarded to the TGI backend (e.g., ``top_p``, ``top_k``, ``do_sample``, ``typical_p``).
+
+        Notes
+        -----
+        This class wraps ``langchain_community.llms.HuggingFaceTextGenInference`` and forwards supported parameters to the TGI server.
+        """
+        self.llm = HuggingFaceTextGenInference(
+            inference_server_url=inference_server_url,
+            callbacks=[callback_manager] if callback_manager else None,
+            stop_sequences=stop_sequences,
+            temperature=temperature,
+            repetition_penalty=repetition_penalty,
+            max_new_tokens=max_new_tokens,
+            **model_kwargs
+        )
+
+        self._default_stop_sequences = stop_sequences
+
+    def get_stop_list(self) -> list[str] | None:
+        """Return the configured default stop sequences.
+
+        Returns
+        -------
+        list[str] or None
+            Default stop sequences, or ``None`` if not configured.
+        """
+        return self._default_stop_sequences
+
+    @classmethod
+    def from_config(cls, config_path: str, callback_manager: BaseCallbackHandler = None):
+        """
+        Create a ``HuggingFaceTGI`` instance from a YAML configuration file.
+
+        Parameters
+        ----------
+        config_path : str
+            Path to the YAML configuration file.
+        callback_manager : BaseCallbackHandler, optional
+            Optional callback manager to attach to the LLM.
+
+        Returns
+        -------
+        HuggingFaceTGI
+            An initialized instance configured from the provided file.
+
+        Raises
+        ------
+        FileNotFoundError
+            If ``config_path`` does not exist.
+        ValueError
+            If required fields are missing in the configuration.
+        """
+        with open(config_path, 'r') as f:
+            cfg = yaml.safe_load(f)
+        return cls.from_config_dict(cfg, callback_manager)
+
+    @classmethod
+    def from_config_dict(cls, config: dict, callback_manager: BaseCallbackHandler = None) -> "HuggingFaceTGI":
+        """
+        Create a ``HuggingFaceTGI`` instance from a configuration dictionary.
+
+        Parameters
+        ----------
+        config : dict
+            Configuration mapping. Expected keys:
+
+            - ``inference_server_url`` (str): Base URL of the TGI server.
+            - ``model_kwargs`` (dict, optional): Additional generation parameters.
+            - ``stop_sequences`` (list[str], optional)
+            - ``temperature`` (float, optional)
+            - ``repetition_penalty`` (float, optional)
+            - ``max_new_tokens`` (int, optional)
+        callback_manager : BaseCallbackHandler, optional
+            Optional callback manager to attach to the LLM.
+
+        Returns
+        -------
+        HuggingFaceTGI
+            An initialized instance configured from the provided dictionary.
+
+        Raises
+        ------
+        ValueError
+            If ``inference_server_url`` is missing or empty.
+        """
+        inference_server_url = config.get('inference_server_url')
+        model_kwargs = dict(config.get('model_kwargs', {}))
+        stop_sequences = config.get('stop_sequences', None)
+        temperature = config.get('temperature', None)
+        repetition_penalty = config.get('repetition_penalty', None)
+        max_new_tokens = config.get('max_new_tokens', None)
+
+        return cls(
+            inference_server_url=inference_server_url,
+            callback_manager=callback_manager,
+            stop_sequences=stop_sequences,
+            temperature=temperature,
+            repetition_penalty=repetition_penalty,
+            max_new_tokens=max_new_tokens,
+            **model_kwargs
+        )
+
+    def get_llm(self) -> LangChainBaseLLM:
+        """
+        Return the underlying LangChain LLM object.
+
+        Returns
+        -------
+        langchain.llms.base.LLM
+            The wrapped ``HuggingFaceTextGenInference`` instance.
+        """
+        return self.llm
+
+    def generate(
+        self,
+        prompt: str,
+        *,
+        timeout_seconds: float | None = None,
+        **kwargs,
+    ) -> Any:
+        """
+        Generate text for a single prompt synchronously.
+
+        Parameters
+        ----------
+        prompt : str
+            The input prompt string.
+        **kwargs
+            Additional generation parameters that override instance defaults for this call.
+
+        Returns
+        -------
+        str
+            The generated text.
+
+        Notes
+        -----
+        ``kwargs`` are passed through to the underlying LLM. Any incompatible keys will raise at the client level.
+        """
+        if not isinstance(prompt, str):
+            prompt = prompt.to_string() if hasattr(prompt, "to_string") else str(prompt)
+        if timeout_seconds is not None:
+            kwargs.setdefault("timeout", timeout_seconds)
+        response = self.llm.generate([prompt], **kwargs)
+        return response.generations[0][0].text
+
+    def generate_prompt(self, prompt: str, **kwargs) -> Any:
+        """
+        Alias for ``generate`` kept for compatibility with callers expecting a ``generate_prompt`` API.
+
+        Parameters
+        ----------
+        prompt : str
+            The input prompt string.
+        **kwargs
+            Additional generation parameters forwarded to :meth:`generate`.
+
+        Returns
+        -------
+        str
+            The generated text.
+        """
+        return self.generate(prompt, **kwargs)
+
+    async def acomplete(self, prompt: str, **kwargs) -> Any:
+        """
+        Asynchronously generate text for a single prompt.
+
+        Parameters
+        ----------
+        prompt : str
+            The input prompt string.
+        **kwargs
+            Additional generation parameters that override instance defaults for this call.
+
+        Returns
+        -------
+        str
+            The generated text.
+
+        Notes
+        -----
+        This implementation delegates synchronous generation to a background executor to provide an async interface.
+        """
+        import asyncio
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(
+            None,
+            lambda: self.generate(prompt, **kwargs)
+        )
+
+    async def agenerate_prompt(self, prompts: list[str], **kwargs) -> list[Any]:
+        """
+        Asynchronously generate text for a batch of prompts.
+
+        Parameters
+        ----------
+        prompts : list of str
+            A list of prompt strings to generate for.
+        **kwargs
+            Additional generation parameters applied to each prompt.
+
+        Returns
+        -------
+        _SimpleResult
+            A lightweight LangChain-compatible result object containing generations for each prompt.
+
+        Notes
+        -----
+        Callback-related kwargs are stripped since callbacks are handled at initialization.
+        """
+        kwargs.pop("callbacks", None)
+        kwargs.pop("callback_manager", None)
+
+        gen_results: list[list[_SimpleGeneration]] = []
+
+        for p in prompts:
+            text = await self.acomplete(p, **kwargs)
+            gen_results.append([_SimpleGeneration(text)])
+
+        return _SimpleResult(gen_results)
+
+
+# ----------------- Factory helpers -----------------
+
+def _get_llm_kind(cfg: Mapping[str, Any]) -> str:
+    """Extract the LLM kind/type/provider discriminator from a config mapping.
+
+    Parameters
+    ----------
+    cfg : Mapping[str, Any]
+        Configuration mapping.
+
+    Returns
+    -------
+    str
+        The first non-empty discriminator value found, or an empty string if none
+        is present.
+    """
+    for key in ("kind", "type", "provider", "backend", "impl"):
+        val = cfg.get(key)
+        if isinstance(val, str) and val.strip():
+            return val.strip()
+    return ""
+
+
+def _normalize_llm_kind(kind: str) -> str:
+    """Normalise an LLM kind/type string to a stable registry key.
+
+    Parameters
+    ----------
+    kind : str
+        Provider/type discriminator value.
+
+    Returns
+    -------
+    str
+        Normalised registry key (e.g., ``"OpenAILike"`` -> ``"openai_like"``).
+
+    Notes
+    -----
+    The normalisation process:
+    - converts CamelCase to snake_case
+    - replaces whitespace and hyphens with underscores
+    - collapses repeated underscores
+    - applies a small set of provider-specific aliases
+    """
+    k = kind.strip()
+    if not k:
+        return ""
+
+    out: list[str] = []
+    prev = ""
+    for ch in k:
+        if prev and prev.islower() and ch.isupper():
+            out.append("_")
+        out.append(ch)
+        prev = ch
+
+    k2 = "".join(out)
+    k2 = k2.replace("-", "_").replace(" ", "_")
+
+    while "__" in k2:
+        k2 = k2.replace("__", "_")
+
+    k2 = k2.lower()
+
+    k2 = k2.replace("openailike", "openai_like")
+    k2 = k2.replace("open_ailike", "openai_like")
+    k2 = k2.replace("open_ai_like", "openai_like")
+    k2 = k2.replace("chatopenai", "openai_chat")
+    k2 = k2.replace("chat_openai", "openai_chat")
+    k2 = k2.replace("openai_chatlike", "openai_chat")
+    k2 = k2.replace("open_ai_chatlike", "openai_chat")
+    k2 = k2.replace("openai_chat_like", "openai_chat")
+    k2 = k2.replace("open_aichat_like", "openai_chat")
+    k2 = k2.replace("open_ai_chat_like", "openai_chat")
+
+    k2 = k2.replace("huggingfacetgi", "huggingface_tgi")
+    k2 = k2.replace("huggingface_tgi", "huggingface_tgi")
+
+    return k2
+
+
+def create_llm(config: dict, callback_manager: Optional[BaseCallbackHandler] = None) -> BaseLLM:
+    """Create an LLM implementation from a configuration mapping.
+
+    This is the preferred entry point for wiring LLMs (used by the application
+    container). The concrete implementation is selected by a discriminator field
+    in the configuration (one of: ``kind``, ``type``, ``provider``, ``backend``,
+    or ``impl``).
+
+    Parameters
+    ----------
+    config : dict
+        Configuration mapping used to construct the LLM.
+    callback_manager : BaseCallbackHandler, optional
+        Optional callback handler for logging/telemetry/streaming.
+
+    Returns
+    -------
+    BaseLLM
+        An initialised LLM implementation.
+
+    Raises
+    ------
+    TypeError
+        If ``config`` is not a mapping.
+    ValueError
+        If the discriminator field is missing, or if the discriminator selects
+        an unsupported implementation.
+
+    Notes
+    -----
+    The returned object is a concrete :class:`BaseLLM` implementation. Call
+    :meth:`BaseLLM.get_llm` to access the underlying LangChain LLM object.
+    """
+
+    if not isinstance(config, Mapping):
+        raise TypeError(f"create_llm expected a mapping/dict, got {type(config)}")
+
+    kind_raw = _get_llm_kind(config)
+    kind = _normalize_llm_kind(kind_raw)
+
+    if not kind:
+        raise ValueError(
+            "LLM config is missing a discriminator field (type/kind/provider/etc.). "
+            "Add e.g. type: OpenAILike or type: HuggingFaceTGI."
+        )
+
+    registry: dict[str, type[BaseLLM]] = {
+        "openai_like": OpenAILikeLLM,
+        "openai": OpenAILikeLLM,
+        "openailike": OpenAILikeLLM,
+        "openai_chat": OpenAIChatLikeLLM,
+        "openai_chatlike": OpenAIChatLikeLLM,
+        "chat_openai": OpenAIChatLikeLLM,
+        "chatopenai": OpenAIChatLikeLLM,
+        "huggingface_tgi": HuggingFaceTGI,
+        "huggingfacetgi": HuggingFaceTGI,
+        "tgi": HuggingFaceTGI,
+    }
+
+    cls = registry.get(kind)
+    if cls is None:
+        raise ValueError(
+            f"Unknown LLM kind '{kind_raw}' (normalized to '{kind}'). Supported kinds: {sorted(registry.keys())}."
+        )
+
+    return cls.from_config_dict(dict(config), callback_manager=callback_manager)
+
+
+__all__ = [
+    "BaseLLM",
+    "OpenAILikeLLM",
+    "OpenAIChatLikeLLM",
+    "HuggingFaceTGI",
+    "create_llm",
+]

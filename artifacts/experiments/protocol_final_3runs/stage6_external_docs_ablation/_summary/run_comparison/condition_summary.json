@@ -1,0 +1,32 @@
+[
+  {
+    "condition_name": "all_docs_validity_aware",
+    "preset_name": "all_docs_validity_aware",
+    "condition_fingerprint": "14f556f5514999eeb8eef525125461e8fc320092b134048e14365bac87faf3b1",
+    "rows": 30,
+    "success_rows": 30,
+    "failed_rows": 0,
+    "mean_context_precision_without_reference": 0.6984374527408757,
+    "mean_context_recall": 0.7763854079643553,
+    "mean_factual_correctness": NaN,
+    "mean_faithfulness": 0.5018512750865692,
+    "mean_reference": null,
+    "mean_response": null,
+    "mean_user_input": null
+  },
+  {
+    "condition_name": "validity_aware",
+    "preset_name": "validity_aware",
+    "condition_fingerprint": "e1b2db4c1bc5752d135b7fee80750e395d405cf2cf97e8c61f283b949460e145",
+    "rows": 30,
+    "success_rows": 30,
+    "failed_rows": 0,
+    "mean_context_precision_without_reference": 0.7416592970331982,
+    "mean_context_recall": NaN,
+    "mean_factual_correctness": 0.25866666666666666,
+    "mean_faithfulness": NaN,
+    "mean_reference": null,
+    "mean_response": null,
+    "mean_user_input": null
+  }
+]

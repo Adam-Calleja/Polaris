@@ -1,0 +1,9 @@
+{
+  "synthetic": true,
+  "note": "Fully synthetic ragas one-hop evaluation set over the synthetic ticket corpus. No real query, answer, or ticket is represented.",
+  "total": 25,
+  "dev": 19,
+  "test": 6,
+  "validity_sensitive_yes": 22,
+  "attachment_dependent_yes": 1
+}

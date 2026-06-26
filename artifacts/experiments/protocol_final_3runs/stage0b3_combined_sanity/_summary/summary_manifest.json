@@ -1,0 +1,13 @@
+{
+  "stage_name": "stage0b3_combined_sanity",
+  "rows": 3,
+  "conditions": [
+    "combined_selected_chunking"
+  ],
+  "metrics": [
+    "factual_correctness",
+    "faithfulness",
+    "context_recall"
+  ],
+  "comparison_repeat": "latest"
+}

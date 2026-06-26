@@ -1,0 +1,16 @@
+{
+  "stage_name": "stage1_shared_budget",
+  "rows": 12,
+  "conditions": [
+    "naive_combined_topk12_final6",
+    "naive_combined_topk12_final8",
+    "naive_combined_topk8_final6",
+    "naive_combined_topk8_final8"
+  ],
+  "metrics": [
+    "factual_correctness",
+    "faithfulness",
+    "context_precision_without_reference"
+  ],
+  "comparison_repeat": "latest"
+}

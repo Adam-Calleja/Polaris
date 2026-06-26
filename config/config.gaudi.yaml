@@ -1,0 +1,81 @@
+extends: "config.base.yaml"
+
+generator_llm:
+  type: "openai_chat"
+  # model_name: "llama-cam"
+  # api_base: "${POLARIS_LLM_API_BASE}"
+  model_name: "meta-llama/Llama-3.3-70B-Instruct:preferred"
+  api_base: "https://router.huggingface.co/v1"
+  api_key: "${HF_TOKEN_TEST}"
+  request_timeout: 90
+  max_retries: 1
+  model_kwargs:
+    max_tokens: 2048
+    temperature: 0.8
+    top_p: 0.9
+    stop_list: ["\nUser:", "\n\nUser:"]
+
+evaluator_llm:
+  type: "OpenAILike"
+  model_name: "Qwen/Qwen2.5-32B-Instruct"
+  api_base: "http://vllm-eval-lb:8080/v1"
+  api_key: "${POLARIS_LLM_API_KEY}"
+  model_kwargs:
+    temperature: 0
+    top_p: 0.99
+    max_tokens: 2048
+    instructor_mode: MD_JSON
+
+embedder:
+  type: "OpenAILike"
+  api_base: "${EMBED_API_BASE}"
+  model_name: "Qwen/Qwen3-Embedding-8B"
+  api_key: ""
+  timeout: 600
+  max_retries: 3
+  embed_batch_size: 1
+  num_workers: 1
+  model_kwargs: {}
+
+vector_stores:
+  docs:
+    collection_name: "exp_docs_cs400_ov0"
+  tickets:
+    collection_name: "exp_tickets_cs1000_ov80"
+
+storage_context:
+  persist_dir: "/app/persist/turn_based_chunking"
+
+evaluation:
+  metrics:
+    requested:
+      - "context_recall"
+      - "faithfulness"
+      - "answer_relevancy"
+      - "factual_correctness"
+  preprocessing:
+    retrieved_contexts:
+      max_characters: 4000
+      max_total_characters: 20000
+  run:
+    timeout: 300
+    max_retries: 0
+    max_workers: 16
+    batch_size: 210
+  generation:
+    retries:
+      max_attempts: 3
+      initial_backoff_seconds: 1.0
+      max_backoff_seconds: 8.0
+      jitter_seconds: 0.25
+      retry_on_empty_response: true
+
+retriever:
+  rerank:
+    type: "validity_aware"
+    trace_enabled: true
+    semantic_base:
+      type: "rrf"
+      rrf_k: 60
+    weights_path: "weights/validity_reranker.protocol.yaml"
+

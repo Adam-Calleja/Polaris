@@ -1,0 +1,7 @@
+row_type,condition_a,condition_b,n_queries,estimate,ci_low,ci_high
+condition_mean,docs_only,,30,0.239722,0.193444,0.286944
+condition_mean,naive_combined,,30,0.298111,0.251222,0.345444
+condition_mean,tickets_only,,30,0.315500,0.270167,0.363944
+paired_difference,naive_combined,docs_only,30,0.058389,0.014665,0.103611
+paired_difference,naive_combined,tickets_only,30,-0.017389,-0.051778,0.018111
+paired_difference,tickets_only,docs_only,30,0.075778,0.028610,0.123611

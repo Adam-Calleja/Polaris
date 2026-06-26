@@ -1,0 +1,59 @@
+# --- Python ---
+__pycache__/
+*.egg-info/
+build/
+dist/
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+coverage/
+
+# --- Secrets / environment ---
+.env
+.env.*
+!.env.example
+
+# --- Models, caches, and large binaries ---
+hf_cache/
+models/
+*.pt
+*.bin
+*.dylib
+
+# --- Vector store / persistence (regenerated locally) ---
+qdrant_data/
+qdrant_storage/
+persist/
+data/storage/*
+sources/*
+
+# --- Data that is generated at runtime, not committed ---
+data/eval_runs
+data/debug/
+data/ui_feedback/
+
+# --- MLflow ---
+mlflow_backend/
+mlflow_artifacts/
+mlruns/
+mlflow.db
+
+# --- Experiment run artifacts ---
+*config_snapshot.json
+# generated per-run experiment configs
+.polaris_experiment_*.yaml
+
+# --- Frontend ---
+node_modules/
+frontend/node_modules/
+frontend/dist/
+
+# --- Editors / OS ---
+.vscode/
+.idea/
+.DS_Store
+*.swp
+*.log

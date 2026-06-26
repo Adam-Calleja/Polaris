@@ -1,0 +1,18 @@
+{
+  "stage_name": "stage0b2_ticket_chunking",
+  "rows": 18,
+  "conditions": [
+    "tickets_cs1000_ov0",
+    "tickets_cs1000_ov80",
+    "tickets_cs600_ov0",
+    "tickets_cs600_ov80",
+    "tickets_cs800_ov0",
+    "tickets_cs800_ov80"
+  ],
+  "metrics": [
+    "factual_correctness",
+    "faithfulness",
+    "context_recall"
+  ],
+  "comparison_repeat": "latest"
+}

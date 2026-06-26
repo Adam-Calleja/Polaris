@@ -1,0 +1,522 @@
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from types import SimpleNamespace
+
+from polaris_rag.cli import tune_validity_reranker
+from polaris_rag.evaluation.evaluation_dataset import PrepProgressEvent
+
+
+def test_weight_trials_build_expected_default_grid_size() -> None:
+    trials = tune_validity_reranker._weight_trials()
+
+    assert len(trials) == 54
+    assert trials[0]["authority"] == 0.0
+    assert trials[0]["software"] == 0.0
+    assert trials[0]["scope_family"] == 0.0
+    assert trials[-1]["freshness"] == 0.01
+
+
+def test_resolve_initial_trials_core_profile_builds_expected_grid_size() -> None:
+    trials = tune_validity_reranker._resolve_initial_trials(
+        tune_validity_reranker.GRID_PROFILE_CORE
+    )
+
+    assert len(trials) == 25
+    assert trials[0] == {
+        "authority": 0.0,
+        "freshness": 0.0,
+        "scope": 0.0,
+        "scope_family": 0.0,
+        "software": 0.0,
+        "status": 0.0,
+        "version": 0.0,
+    }
+    assert any(
+        trial["authority"] == 0.08
+        and trial["scope"] == 0.08
+        and trial["status"] == 0.08
+        and trial["freshness"] == 0.01
+        for trial in trials
+    )
+
+
+def test_select_best_trial_uses_objective_then_tie_breaks() -> None:
+    best = tune_validity_reranker._select_best_trial(
+        [
+            tune_validity_reranker.TrialResult(
+                weights={
+                    "authority": 0.08,
+                    "scope": 0.04,
+                    "software": 0.08,
+                    "scope_family": 0.02,
+                    "version": 0.04,
+                    "status": 0.04,
+                    "freshness": 0.01,
+                },
+                objective=0.75,
+                metric_means={
+                    "factual_correctness": 0.8,
+                    "faithfulness": 0.7,
+                    "context_precision_without_reference": 0.75,
+                },
+                reranker_fingerprint="a",
+                prepared_rows=10,
+            ),
+            tune_validity_reranker.TrialResult(
+                weights={
+                    "authority": 0.04,
+                    "scope": 0.04,
+                    "software": 0.04,
+                    "scope_family": 0.02,
+                    "version": 0.04,
+                    "status": 0.04,
+                    "freshness": 0.01,
+                },
+                objective=0.75,
+                metric_means={
+                    "factual_correctness": 0.8,
+                    "faithfulness": 0.71,
+                    "context_precision_without_reference": 0.75,
+                },
+                reranker_fingerprint="b",
+                prepared_rows=10,
+            ),
+        ]
+    )
+
+    assert best.reranker_fingerprint == "b"
+
+
+def test_trial_progress_renderer_surfaces_retry_notice(capsys) -> None:
+    renderer = tune_validity_reranker._TrialProgressRenderer(
+        interactive=False,
+        log_interval_seconds=1.0,
+    )
+
+    renderer.update_prep(
+        trial_index=1,
+        total_trials=49,
+        event=PrepProgressEvent(
+            completed=0,
+            total=70,
+            successes=0,
+            failures=0,
+            elapsed_seconds=12.0,
+            mode="pipeline",
+            last_retry="id=ex-1 retry=2/3 reason=RuntimeError: transient",
+            retrying=True,
+        ),
+        best_objective=None,
+    )
+
+    captured = capsys.readouterr()
+
+    assert "retry=id=ex-1 retry=2/3 reason=RuntimeError: transient" in captured.err
+
+
+def test_select_best_trial_for_core_profile_prefers_covered_trial() -> None:
+    low_coverage = tune_validity_reranker.TrialResult(
+        weights={
+            "authority": 0.08,
+            "scope": 0.08,
+            "software": 0.0,
+            "scope_family": 0.0,
+            "version": 0.0,
+            "status": 0.08,
+            "freshness": 0.0,
+        },
+        objective=0.62,
+        metric_means={
+            "factual_correctness": 0.31,
+            "faithfulness": 0.69,
+            "context_precision_without_reference": 0.86,
+        },
+        reranker_fingerprint="low",
+        prepared_rows=25,
+    )
+    covered = tune_validity_reranker.TrialResult(
+        weights={
+            "authority": 0.04,
+            "scope": 0.04,
+            "software": 0.0,
+            "scope_family": 0.0,
+            "version": 0.0,
+            "status": 0.08,
+            "freshness": 0.0,
+        },
+        objective=0.58,
+        metric_means={
+            "factual_correctness": 0.35,
+            "faithfulness": 0.61,
+            "context_precision_without_reference": 0.79,
+        },
+        reranker_fingerprint="covered",
+        prepared_rows=63,
+    )
+
+    best = tune_validity_reranker._select_best_trial_for_profile(
+        [low_coverage, covered],
+        grid_profile=tune_validity_reranker.GRID_PROFILE_CORE,
+        min_prepared_rows=60,
+    )
+
+    assert best.reranker_fingerprint == "covered"
+
+
+def test_resolve_phase_two_trials_uses_distinct_covered_core_anchors() -> None:
+    phase_one_trials = [
+        tune_validity_reranker.TrialResult(
+            weights={
+                "authority": 0.04,
+                "scope": 0.04,
+                "software": 0.0,
+                "scope_family": 0.0,
+                "version": 0.0,
+                "status": 0.08,
+                "freshness": 0.0,
+            },
+            objective=0.57,
+            metric_means={
+                "factual_correctness": 0.34,
+                "faithfulness": 0.60,
+                "context_precision_without_reference": 0.79,
+            },
+            reranker_fingerprint="anchor-1a",
+            prepared_rows=64,
+        ),
+        tune_validity_reranker.TrialResult(
+            weights={
+                "authority": 0.04,
+                "scope": 0.04,
+                "software": 0.0,
+                "scope_family": 0.0,
+                "version": 0.0,
+                "status": 0.08,
+                "freshness": 0.01,
+            },
+            objective=0.575,
+            metric_means={
+                "factual_correctness": 0.341,
+                "faithfulness": 0.601,
+                "context_precision_without_reference": 0.791,
+            },
+            reranker_fingerprint="anchor-1b",
+            prepared_rows=65,
+        ),
+        tune_validity_reranker.TrialResult(
+            weights={
+                "authority": 0.08,
+                "scope": 0.04,
+                "software": 0.0,
+                "scope_family": 0.0,
+                "version": 0.0,
+                "status": 0.04,
+                "freshness": 0.0,
+            },
+            objective=0.56,
+            metric_means={
+                "factual_correctness": 0.33,
+                "faithfulness": 0.59,
+                "context_precision_without_reference": 0.80,
+            },
+            reranker_fingerprint="anchor-2",
+            prepared_rows=62,
+        ),
+    ]
+
+    anchors, phase_two_trials = tune_validity_reranker._resolve_phase_two_trials(
+        phase_one_trials,
+        anchor_count=2,
+        min_prepared_rows=60,
+    )
+
+    assert len(anchors) == 2
+    assert len(phase_two_trials) == 48
+    assert {
+        (
+            anchor.weights["authority"],
+            anchor.weights["scope"],
+            anchor.weights["status"],
+        )
+        for anchor in anchors
+    } == {
+        (0.04, 0.04, 0.08),
+        (0.08, 0.04, 0.04),
+    }
+
+
+def test_main_writes_weights_and_manifest(monkeypatch, tmp_path: Path) -> None:
+    output_path = tmp_path / "validity_reranker.dev_v3.yaml"
+    manifest_path = tmp_path / "validity_reranker.dev_v3.manifest.json"
+    dataset_path = tmp_path / "dev.jsonl"
+    dataset_path.write_text('{"id":"1","query":"Q1","expected_answer":"A1"}\n', encoding="utf-8")
+
+    monkeypatch.setattr(
+        tune_validity_reranker,
+        "_parse_args",
+        lambda: SimpleNamespace(
+            config_file=str(tmp_path / "config.yaml"),
+            dataset_path=str(dataset_path),
+            output_path=str(output_path),
+            manifest_path=str(manifest_path),
+            generation_workers=None,
+            grid_profile=tune_validity_reranker.GRID_PROFILE_FULL,
+            selection_min_prepared_rows=60,
+            exploration_anchor_count=2,
+        ),
+    )
+    monkeypatch.setattr(
+        tune_validity_reranker.GlobalConfig,
+        "load",
+        lambda path: SimpleNamespace(config_path=Path(path), raw={}),
+    )
+    monkeypatch.setattr(
+        tune_validity_reranker,
+        "load_raw_examples",
+        lambda path: [{"id": "1", "query": "Q1", "expected_answer": "A1"}],
+    )
+    monkeypatch.setattr(
+        tune_validity_reranker,
+        "_weight_trials",
+        lambda grid=None: [
+            {
+                "authority": 0.0,
+                "scope": 0.0,
+                "software": 0.0,
+                "scope_family": 0.0,
+                "version": 0.0,
+                "status": 0.0,
+                "freshness": 0.0,
+            },
+            {
+                "authority": 0.08,
+                "scope": 0.04,
+                "software": 0.08,
+                "scope_family": 0.02,
+                "version": 0.04,
+                "status": 0.04,
+                "freshness": 0.01,
+            },
+        ],
+    )
+
+    def _fake_run_trial(*, cfg, raw_examples, weights, generation_workers, progress_callback=None, phase_callback=None):  # noqa: ANN001
+        _ = cfg, raw_examples, generation_workers, progress_callback, phase_callback
+        objective = 0.5 if weights["authority"] == 0.0 else 0.8
+        return tune_validity_reranker.TrialResult(
+            weights=dict(weights),
+            objective=objective,
+            metric_means={
+                "factual_correctness": objective,
+                "faithfulness": objective,
+                "context_precision_without_reference": objective,
+            },
+            reranker_fingerprint="fp-best" if objective > 0.5 else "fp-base",
+            prepared_rows=1,
+        )
+
+    monkeypatch.setattr(tune_validity_reranker, "_run_trial", _fake_run_trial)
+
+    tune_validity_reranker.main()
+
+    assert output_path.exists()
+    assert manifest_path.exists()
+    assert "authority: 0.08" in output_path.read_text(encoding="utf-8")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest["selected_trial"]["reranker_fingerprint"] == "fp-best"
+
+
+def test_trial_rows_for_evaluation_drops_failed_rows() -> None:
+    cfg = SimpleNamespace(raw={"evaluation": {"preprocessing": {}}})
+    rows = [
+        {
+            "id": "ok",
+            "user_input": "Q1",
+            "reference": "A1",
+            "response": "R1",
+            "retrieved_contexts": ["ctx-1"],
+            "retrieved_context_ids": ["doc-1"],
+            "metadata": {},
+        },
+        {
+            "id": "failed",
+            "user_input": "Q2",
+            "reference": "A2",
+            "response": "",
+            "retrieved_contexts": [],
+            "retrieved_context_ids": [],
+            "metadata": {"source_error": "response is empty after 3 attempt(s)"},
+        },
+        {
+            "id": "blank",
+            "user_input": "Q3",
+            "reference": "A3",
+            "response": "   ",
+            "retrieved_contexts": ["ctx-3"],
+            "retrieved_context_ids": ["doc-3"],
+            "metadata": {},
+        },
+    ]
+
+    processed_rows, dropped_rows = tune_validity_reranker._trial_rows_for_evaluation(cfg, rows)
+
+    assert dropped_rows == 2
+    assert len(processed_rows) == 1
+    assert processed_rows[0]["id"] == "ok"
+
+
+def test_run_trial_returns_negative_infinity_when_no_rows_are_usable(monkeypatch) -> None:
+    monkeypatch.setattr(
+        tune_validity_reranker,
+        "build_container",
+        lambda cfg: SimpleNamespace(pipeline=object()),
+    )
+    monkeypatch.setattr(
+        tune_validity_reranker,
+        "build_prepared_rows",
+        lambda **kwargs: [
+            {
+                "id": "failed",
+                "user_input": "Q1",
+                "reference": "A1",
+                "response": "",
+                "retrieved_contexts": [],
+                "retrieved_context_ids": [],
+                "metadata": {"source_error": "response is empty after 3 attempt(s)"},
+            }
+        ],
+    )
+
+    result = tune_validity_reranker._run_trial(
+        cfg=SimpleNamespace(raw={}),
+        raw_examples=[{"id": "failed", "query": "Q1", "expected_answer": "A1"}],
+        weights={
+            "authority": 0.0,
+            "scope": 0.0,
+            "software": 0.0,
+            "scope_family": 0.0,
+            "version": 0.0,
+            "status": 0.0,
+            "freshness": 0.0,
+        },
+        generation_workers=1,
+    )
+
+    assert result.objective == float("-inf")
+    assert result.prepared_rows == 0
+
+
+def test_run_trial_passes_generation_retry_policy_from_config(monkeypatch) -> None:
+    seen_retry_policy = None
+
+    monkeypatch.setattr(
+        tune_validity_reranker,
+        "build_container",
+        lambda cfg: SimpleNamespace(pipeline=object()),
+    )
+
+    def _capture_build_prepared_rows(**kwargs):  # noqa: ANN003
+        nonlocal seen_retry_policy
+        seen_retry_policy = kwargs.get("retry_policy")
+        return [
+            {
+                "id": "ok",
+                "user_input": "Q1",
+                "reference": "A1",
+                "response": "R1",
+                "retrieved_contexts": ["ctx-1"],
+                "retrieved_context_ids": ["doc-1"],
+                "metadata": {},
+            }
+        ]
+
+    monkeypatch.setattr(
+        tune_validity_reranker,
+        "build_prepared_rows",
+        _capture_build_prepared_rows,
+    )
+    monkeypatch.setattr(
+        tune_validity_reranker,
+        "to_evaluation_dataset",
+        lambda rows: rows,
+    )
+
+    class _FakeSeries:
+        def __init__(self, values):
+            self._values = list(values)
+
+        def tolist(self):
+            return list(self._values)
+
+    class _FakeScores:
+        columns = [
+            "factual_correctness",
+            "faithfulness",
+            "context_precision_without_reference",
+        ]
+
+        def __getitem__(self, key):
+            values = {
+                "factual_correctness": [0.5],
+                "faithfulness": [0.6],
+                "context_precision_without_reference": [0.7],
+            }
+            return _FakeSeries(values[key])
+
+    class _EvaluatorFactory:
+        @staticmethod
+        def from_global_config(*args, **kwargs):  # noqa: ANN003
+            _ = args, kwargs
+
+            class _Instance:
+                def evaluate(self, **eval_kwargs):  # noqa: ANN003
+                    _ = eval_kwargs
+                    return SimpleNamespace(scores_df=_FakeScores())
+
+            return _Instance()
+
+    import sys
+    import types
+
+    monkeypatch.setitem(
+        sys.modules,
+        "polaris_rag.evaluation.evaluator",
+        types.SimpleNamespace(Evaluator=_EvaluatorFactory),
+    )
+
+    result = tune_validity_reranker._run_trial(
+        cfg=SimpleNamespace(
+            raw={
+                "evaluation": {
+                    "generation": {
+                        "workers": 2,
+                        "retries": {
+                            "max_attempts": 3,
+                            "initial_backoff_seconds": 0.0,
+                            "max_backoff_seconds": 0.0,
+                            "jitter_seconds": 0.0,
+                            "retry_on_empty_response": False,
+                        },
+                    }
+                }
+            }
+        ),
+        raw_examples=[{"id": "ok", "query": "Q1", "expected_answer": "A1"}],
+        weights={
+            "authority": 0.0,
+            "scope": 0.0,
+            "software": 0.0,
+            "scope_family": 0.0,
+            "version": 0.0,
+            "status": 0.0,
+            "freshness": 0.0,
+        },
+        generation_workers=None,
+    )
+
+    assert result.prepared_rows == 1
+    assert seen_retry_policy is not None
+    assert seen_retry_policy.max_attempts == 3
+    assert seen_retry_policy.retry_on_empty_response is False

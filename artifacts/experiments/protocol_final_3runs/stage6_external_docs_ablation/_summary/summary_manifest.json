@@ -1,0 +1,15 @@
+{
+  "stage_name": "stage6_external_docs_ablation",
+  "rows": 6,
+  "conditions": [
+    "all_docs_validity_aware",
+    "validity_aware"
+  ],
+  "metrics": [
+    "factual_correctness",
+    "faithfulness",
+    "context_recall",
+    "context_precision_without_reference"
+  ],
+  "comparison_repeat": "latest"
+}

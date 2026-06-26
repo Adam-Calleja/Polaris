@@ -1,0 +1,3 @@
+condition_name,preset_name,condition_fingerprint,rows,success_rows,failed_rows,mean_context_precision_without_reference,mean_context_recall,mean_factual_correctness,mean_faithfulness,mean_reference,mean_response,mean_user_input
+all_docs_validity_aware,all_docs_validity_aware,14f556f5514999eeb8eef525125461e8fc320092b134048e14365bac87faf3b1,30,30,0,0.6984374527408757,0.7763854079643553,nan,0.5018512750865692,,,
+validity_aware,validity_aware,e1b2db4c1bc5752d135b7fee80750e395d405cf2cf97e8c61f283b949460e145,30,30,0,0.7416592970331982,nan,0.25866666666666666,nan,,,
