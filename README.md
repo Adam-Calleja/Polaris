@@ -5,7 +5,37 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](pyproject.toml)
 [![Frontend: React + Vitest](https://img.shields.io/badge/frontend-React%20%2B%20Vitest-61dafb.svg)](frontend/package.json)
 
-Polaris is a Retrieval-Augmented Generation (RAG) system for HPC service support, built as a third-year project. It indexes Jira helpdesk tickets and documentation, then answers user questions using retrieval + LLM generation.
+Polaris is an end-to-end Retrieval-Augmented Generation (RAG) assistant for
+HPC service support. It ingests Jira tickets and HTML documentation, indexes
+them in Qdrant, retrieves source evidence, reranks context for authority and
+validity, and generates grounded answers through a FastAPI service and React UI.
+
+The project was built as a final-year dissertation against a private real-world
+HPC support corpus. This public version ships a synthetic demo corpus so the
+architecture, tests, UI, and evaluation harness can be inspected without
+exposing sensitive ticket data.
+
+## At a Glance
+
+| Area | What it demonstrates |
+| --- | --- |
+| Applied AI | RAG over mixed ticket/document sources, source-aware retrieval, grounded answer generation |
+| Backend engineering | Packaged Python service, FastAPI API, Docker Compose stack, configurable ingestion/evaluation CLIs |
+| Evaluation | RAGAS metrics, hand-annotated benchmark labels, repeated runs, MLflow artifacts and tracing |
+| Frontend | React SPA for assistant, evaluation, and system-inspection workflows |
+| Engineering hygiene | 400+ Python tests, Vitest frontend tests, CI, synthetic data, privacy-aware public release |
+
+## What to Look For
+
+- A full RAG pipeline: ingestion, chunking, embedding, retrieval, reranking,
+  prompt construction, generation, evaluation, and observability.
+- Reproducible public demo data under [`data/synthetic/`](data/synthetic/)
+  instead of private support tickets.
+- A tested Python package under [`src/polaris_rag`](src/polaris_rag) with CLI
+  entrypoints for ingestion, evaluation, benchmark analysis, and experiment
+  automation.
+- A React interface under [`frontend/`](frontend/) with assistant,
+  evaluation, and system views.
 
 > **Note on data:** Polaris was developed against a private corpus of real HPC support tickets, which is **not** included here. This public repository ships a small, **fully synthetic** ticket corpus and evaluation set (`data/synthetic/`) so the pipeline can be run and demonstrated without any real or sensitive data. See [Data Handling and Privacy](#data-handling-and-privacy).
 
